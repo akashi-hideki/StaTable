@@ -8,6 +8,68 @@
       "file": "threads/req_001.json"
     }
   ],
-  "specs": [],
-  "code_files": []
+  "specs": [
+    {
+      "name": "初期仕様.md",
+      "file": "specs\\初期仕様.md"
+    }
+  ],
+  "code_files": [],
+  "state": {
+    "code_editor": {
+      "tabs": [
+        {
+          "tab_name": "Untitled",
+          "type": "content",
+          "content": ""
+        }
+      ]
+    },
+    "debug_view": {
+      "log_filename": null
+    },
+    "prompt_builder": {
+      "materials": [],
+      "template": ""
+    },
+    "spec_editor": {
+      "tabs": [
+        {
+          "tab_name": "初期仕様.md",
+          "type": "file",
+          "current_file": "specs\\初期仕様.md"
+        }
+      ],
+      "insight": {
+        "result_text": ""
+      }
+    },
+    "mermaid_editor": {
+      "tabs": [
+        {
+          "tab_name": "Untitled",
+          "type": "content",
+          "content": ""
+        }
+      ]
+    }
+  },
+  "ai_services": [
+    {
+      "label": "ChatGPT",
+      "url": "https://chat.openai.com"
+    },
+    {
+      "label": "Copilot",
+      "url": "https://copilot.microsoft.com"
+    },
+    {
+      "label": "Gemini",
+      "url": "https://gemini.google.com"
+    },
+    {
+      "label": "DeepSeek",
+      "url": "https://chat.deepseek.com"
+    }
+  ]
 }
