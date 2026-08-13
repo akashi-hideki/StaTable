@@ -1,0 +1,13 @@
+{
+  "project_name": "StaTable",
+  "created": "2026-08-13T23:43:05.605396",
+  "threads": [
+    {
+      "id": "req_001",
+      "name": "要件定義",
+      "file": "threads/req_001.json"
+    }
+  ],
+  "specs": [],
+  "code_files": []
+}
