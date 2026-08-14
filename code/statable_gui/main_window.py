@@ -1,4 +1,5 @@
 import sys
+import tempfile
 from pathlib import Path
 from typing import Optional, List
 
@@ -15,6 +16,7 @@ from PySide6.QtWidgets import (
 # WebEngine対応
 try:
     from PySide6.QtWebEngineWidgets import QWebEngineView
+    from PySide6.QtWebEngineCore import QWebEngineSettings
     WEBENGINE_AVAILABLE = True
 except ImportError:
     WEBENGINE_AVAILABLE = False
@@ -63,7 +65,7 @@ def create_sample_state_machine() -> StateMachine:
     sm.add_transition(Transition("Active", "error", "err_code != 0", "log()", "Error"))
     sm.add_transition(Transition("Error", "", "retry_count < 3", "retry_count++", "Active"))
     sm.add_transition(Transition("Error", "", "retry_count >= 3", "", "Halt"))
-    # 複数条件の例（同じイベントに対して複数の遷移）
+    # 複数条件の例
     sm.add_transition(Transition("Active", "error", "err_code == 0", "ignore()", "Active"))
     return sm
 
@@ -81,18 +83,15 @@ class TransitionListDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        # イベント表示
         event_label = QLabel(f"イベント: {event_name if event_name else '完了遷移'}")
         layout.addWidget(event_label)
 
-        # テーブル
         self.table = QTableWidget(0, 4)
         self.table.setHorizontalHeaderLabels(["遷移条件", "動作", "遷移先", "表示タイトル"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setFont(QFont("Consolas", 10))
         layout.addWidget(self.table)
 
-        # ボタン
         btn_layout = QHBoxLayout()
         add_btn = QPushButton("行追加")
         add_btn.clicked.connect(self.add_row)
@@ -103,36 +102,31 @@ class TransitionListDialog(QDialog):
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
-        # OK/Cancel
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-        # 既存遷移を読み込み
         if existing_transitions:
             for trans in existing_transitions:
                 self.add_row(trans)
         else:
-            self.add_row()  # 空行1つ
+            self.add_row()
 
     def add_row(self, trans: Optional[Transition] = None):
         row = self.table.rowCount()
         self.table.insertRow(row)
 
-        # 遷移条件
         cond_item = QTableWidgetItem(trans.guard if trans else "")
         cond_item.setToolTip("C言語式（例：err_code != 0）")
         self.table.setItem(row, 0, cond_item)
 
-        # 動作
         act_item = QTableWidgetItem(trans.action if trans else "")
         act_item.setToolTip("実行する処理（例：log();）")
         self.table.setItem(row, 1, act_item)
 
-        # 遷移先（ドロップダウン）
         target_combo = QComboBox()
-        target_combo.addItem("")  # 内部遷移
+        target_combo.addItem("")
         target_combo.addItems(self.state_names)
         if trans and trans.target:
             idx = target_combo.findText(trans.target)
@@ -140,7 +134,6 @@ class TransitionListDialog(QDialog):
                 target_combo.setCurrentIndex(idx)
         self.table.setCellWidget(row, 2, target_combo)
 
-        # 表示タイトル（自動生成されるが手動編集も可能）
         title = self._generate_title(trans) if trans else ""
         title_item = QTableWidgetItem(title)
         title_item.setToolTip("表に表示する短いラベル（空なら自動生成）")
@@ -173,8 +166,8 @@ class TransitionListDialog(QDialog):
             if not title and (guard or action or target):
                 title = self._generate_title(Transition(source="", event="", guard=guard, action=action, target=target))
             transitions.append(Transition(
-                source="",  # 呼び出し側で設定
-                event="",   # 呼び出し側で設定
+                source="",
+                event="",
                 guard=guard,
                 action=action,
                 target=target,
@@ -216,7 +209,6 @@ class MatrixTableWidget(QTableWidget):
             for col, event in enumerate(events):
                 trans_list = self._find_transitions(state, event)
                 if trans_list:
-                    # 複数遷移を改行で表示
                     titles = [self._generate_title(t) for t in trans_list]
                     display = "\n".join(titles)
                     item = QTableWidgetItem(display)
@@ -263,10 +255,8 @@ class MatrixTableWidget(QTableWidget):
 
         if dlg.exec() == QDialog.Accepted:
             new_transitions = dlg.get_transitions()
-            # 既存のこのセルの遷移を削除
             self.sm.transitions = [t for t in self.sm.transitions
                                    if not (t.source == state and t.event == event_name)]
-            # 新しい遷移を追加
             for trans in new_transitions:
                 trans.source = state
                 trans.event = event_name
@@ -296,56 +286,86 @@ class MatrixTableWidget(QTableWidget):
 
 
 # ----------------------------------------------------------------------
-# Mermaidプレビューウィジェット
+# Mermaidプレビューウィジェット（動作確認済みの方式）
 # ----------------------------------------------------------------------
 class MermaidWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = QVBoxLayout(self)
+        self.web_view = None
+        self.text_view = None
+
         if WEBENGINE_AVAILABLE:
             self.web_view = QWebEngineView()
+            # ローカルファイルアクセスを許可
+            settings = self.web_view.settings()
+            settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
+            settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
             self.web_view.loadFinished.connect(self._on_load_finished)
             layout.addWidget(self.web_view)
+            StaTableLogger.debug("MermaidWidget: WebEngine available + file access enabled")
         else:
             self.text_view = QPlainTextEdit()
             self.text_view.setReadOnly(True)
             layout.addWidget(self.text_view)
-        StaTableLogger.debug("MermaidWidget initialized (WebEngine available: %s)", WEBENGINE_AVAILABLE)
+            self.text_view.setPlainText(
+                "QWebEngineViewが利用できません。\n"
+                "PySide6-Addonsをインストールしてください。\n"
+                "pip install PySide6-Addons"
+            )
+            StaTableLogger.warning("MermaidWidget: WebEngine NOT available")
 
     def set_mermaid_code(self, code: str):
-        if WEBENGINE_AVAILABLE:
-            # ResourcesフォルダのURLを取得
-            resources_dir = get_resource_path("")  # ディレクトリ
-            if resources_dir.exists():
-                base_url = QUrl.fromLocalFile(str(resources_dir))
-            else:
-                base_url = QUrl()
+        StaTableLogger.debug("MermaidWidget.set_mermaid_code called")
+        StaTableLogger.debug(f"Mermaid code:\n{code}")
 
-            html = """<!DOCTYPE html>
+        if self.web_view:
+            # mermaidwin.js の絶対URLを取得
+            mermaid_js_path = get_resource_path("mermaidwin.js")
+            if not mermaid_js_path.exists():
+                StaTableLogger.error(f"mermaidwin.js NOT found: {mermaid_js_path}")
+                return
+
+            js_abs_url = QUrl.fromLocalFile(str(mermaid_js_path)).toString()
+            StaTableLogger.debug(f"mermaidwin.js absolute URL: {js_abs_url}")
+
+            html = f"""<!DOCTYPE html>
 <html>
 <head>
-    <script src="mermaidwin.js"></script>
+    <meta charset="utf-8">
+    <script src="{js_abs_url}"></script>
     <script>
-        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+        mermaid.initialize({{ startOnLoad: false, theme: 'default' }});
+        function renderMermaid() {{
+            mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+        }}
+        window.addEventListener('load', renderMermaid);
     </script>
 </head>
 <body>
-    <pre class="mermaid">
-%s
-    </pre>
+<pre class="mermaid">
+{code}
+</pre>
 </body>
-</html>""" % code
+</html>"""
 
-            self.web_view.setHtml(html, base_url)
-            StaTableLogger.debug("Mermaid HTML set with baseUrl: %s", base_url.toString())
+            # 一時HTMLファイルを作成してロード
+            try:
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
+                    f.write(html)
+                    temp_path = f.name
+                StaTableLogger.debug(f"Temporary HTML created: {temp_path}")
+                self.web_view.load(QUrl.fromLocalFile(temp_path))
+            except Exception as e:
+                StaTableLogger.error(f"Failed to create temporary HTML: {e}")
         else:
             self.text_view.setPlainText(code)
 
     def _on_load_finished(self, ok: bool):
-        if ok and WEBENGINE_AVAILABLE:
-            # 念のため描画をトリガー
-            self.web_view.page().runJavaScript("mermaid.run();")
-            StaTableLogger.debug("Mermaid rendering triggered")
+        StaTableLogger.debug(f"WebEngine loadFinished: ok={ok}")
+        if ok and self.web_view:
+            StaTableLogger.debug("Executing renderMermaid() via JavaScript...")
+            self.web_view.page().runJavaScript("renderMermaid();")
 
 
 # ----------------------------------------------------------------------
@@ -406,7 +426,6 @@ class SettingsPanel(QWidget):
         StaTableLogger.debug("SettingsPanel initialized")
 
     def populate(self):
-        # 状態テーブル
         states = list(self.sm.states.values())
         self.state_table.setRowCount(len(states))
         for row, state in enumerate(states):
@@ -416,7 +435,7 @@ class SettingsPanel(QWidget):
             self.state_table.setItem(row, 3, QTableWidgetItem(state.exit))
             self.state_table.setItem(row, 4, QTableWidgetItem(state.do))
             self.state_table.setItem(row, 5, QTableWidgetItem(state.type.value))
-        # イベントテーブル
+
         events = list(self.sm.events.values())
         self.event_table.setRowCount(len(events))
         for row, event in enumerate(events):
@@ -481,7 +500,6 @@ class SettingsPanel(QWidget):
         StaTableLogger.debug(f"Event table item changed: row={item.row()}, col={item.column()}, text={item.text()}")
 
     def apply_changes(self):
-        """テーブル編集内容をステートマシンに反映"""
         # 状態テーブル
         for row in range(self.state_table.rowCount()):
             name = self.state_table.item(row, 0).text().strip() if self.state_table.item(row, 0) else ""
@@ -546,7 +564,6 @@ class StateMachineTab(QWidget):
         StaTableLogger.debug("StateMachineTab created")
 
     def update_mermaid(self):
-        # 設定変更を反映してからMermaid生成
         self.settings.apply_changes()
         code = generate_mermaid(self.sm)
         self.mermaid.set_mermaid_code(code)
