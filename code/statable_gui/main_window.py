@@ -28,6 +28,17 @@ from statable.mermaid_gen import generate_mermaid
 from .logger import StaTableLogger
 from .traceball import TraceBallWidget
 
+# ----------------------------------------------------------------------
+# ウィンドウ・プレビューのサイズ定数
+# ----------------------------------------------------------------------
+WINDOW_WIDTH = 1800
+WINDOW_HEIGHT = 1400          # 高さを増加
+MERMAID_PREVIEW_MIN_HEIGHT = 400   # Mermaidプレビューの最小高さ
+TABLE_PREVIEW_RATIO = 0.65    # テーブルとプレビューの分割比率（テーブル側）
+MAX_COLUMN_WIDTH = 400        # 状態遷移表の列の最大幅
+MIN_ROW_HEIGHT = 30           # 行の最小高さ
+MAX_ROW_HEIGHT = 100          # 行の最大高さ
+
 
 # ----------------------------------------------------------------------
 # リソースパス解決（EXE化対応・ディレクトリも返せる）
@@ -65,7 +76,6 @@ def create_sample_state_machine() -> StateMachine:
     sm.add_transition(Transition("Active", "error", "err_code != 0", "log()", "Error"))
     sm.add_transition(Transition("Error", "", "retry_count < 3", "retry_count++", "Active"))
     sm.add_transition(Transition("Error", "", "retry_count >= 3", "", "Halt"))
-    # 複数条件の例
     sm.add_transition(Transition("Active", "error", "err_code == 0", "ignore()", "Active"))
     return sm
 
@@ -177,7 +187,7 @@ class TransitionListDialog(QDialog):
 
 
 # ----------------------------------------------------------------------
-# 状態遷移マトリックステーブル
+# 状態遷移マトリックステーブル（サイズ調整対応）
 # ----------------------------------------------------------------------
 class MatrixTableWidget(QTableWidget):
     transition_changed = Signal()
@@ -185,14 +195,23 @@ class MatrixTableWidget(QTableWidget):
     def __init__(self, sm: StateMachine, parent=None):
         super().__init__(0, 0, parent)
         self.sm = sm
-        self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+
+        # 列幅・行高さをユーザーがドラッグで調整可能に
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.verticalHeader().setSectionResizeMode(QHeaderView.Interactive)
+
+        # 最後の列を伸縮させて余白を埋める
+        self.horizontalHeader().setStretchLastSection(True)
+
+        # 垂直ヘッダーの最小幅を設定
         self.verticalHeader().setMinimumWidth(120)
+
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setFocusPolicy(Qt.StrongFocus)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.cellDoubleClicked.connect(self.open_transition_dialog)
         self.setFont(QFont("Consolas", 10))
+
         self.populate()
         StaTableLogger.debug("MatrixTableWidget initialized")
 
@@ -219,6 +238,25 @@ class MatrixTableWidget(QTableWidget):
                     item = QTableWidgetItem("")
                     item.setData(Qt.UserRole, [])
                     self.setItem(row, col, item)
+
+        # 内容に合わせて列幅・行高さを自動調整
+        self.resizeColumnsToContents()
+        self.resizeRowsToContents()
+
+        # 列幅が広がりすぎないように最大幅を設定
+        for col in range(self.columnCount()):
+            current_width = self.columnWidth(col)
+            if current_width > MAX_COLUMN_WIDTH:
+                self.setColumnWidth(col, MAX_COLUMN_WIDTH)
+
+        # 行高さも最小値・最大値を設定
+        for row in range(self.rowCount()):
+            current_height = self.rowHeight(row)
+            if current_height < MIN_ROW_HEIGHT:
+                self.setRowHeight(row, MIN_ROW_HEIGHT)
+            elif current_height > MAX_ROW_HEIGHT:
+                self.setRowHeight(row, MAX_ROW_HEIGHT)
+
         StaTableLogger.debug(f"MatrixTable populated: {len(states)} states, {len(events)} events")
 
     def _find_transitions(self, state: str, event: str) -> List[Transition]:
@@ -320,7 +358,6 @@ class MermaidWidget(QWidget):
         StaTableLogger.debug(f"Mermaid code:\n{code}")
 
         if self.web_view:
-            # mermaidwin.js の絶対URLを取得
             mermaid_js_path = get_resource_path("mermaidwin.js")
             if not mermaid_js_path.exists():
                 StaTableLogger.error(f"mermaidwin.js NOT found: {mermaid_js_path}")
@@ -349,7 +386,6 @@ class MermaidWidget(QWidget):
 </body>
 </html>"""
 
-            # 一時HTMLファイルを作成してロード
             try:
                 with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
                     f.write(html)
@@ -550,7 +586,17 @@ class StateMachineTab(QWidget):
         self.mermaid = MermaidWidget()
         left_split.addWidget(self.table)
         left_split.addWidget(self.mermaid)
-        left_split.setSizes([700, 300])
+
+        # 分割比率を定数で設定
+        total_height = WINDOW_HEIGHT
+        table_height = int(total_height * TABLE_PREVIEW_RATIO)
+        mermaid_height = total_height - table_height
+        left_split.setSizes([table_height, mermaid_height])
+
+        # 最小サイズを設定
+        self.table.setMinimumHeight(300)
+        self.mermaid.setMinimumHeight(MERMAID_PREVIEW_MIN_HEIGHT)
+
         layout.addWidget(left_split, stretch=3)
 
         self.settings = SettingsPanel(sm)
@@ -577,7 +623,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("StaTable - 状態遷移表エディタ")
-        self.resize(1800, 1200)
+        self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
 
         self.logger = StaTableLogger()
         self.logger.debug("MainWindow initialization started")
