@@ -18,7 +18,6 @@ class StaTableLogger:
         self.logger = logging.getLogger("StaTable")
         self.logger.setLevel(logging.DEBUG)
 
-        # コンソールハンドラ
         console = logging.StreamHandler(sys.stdout)
         console.setLevel(logging.DEBUG)
         formatter = logging.Formatter(
@@ -27,23 +26,19 @@ class StaTableLogger:
         console.setFormatter(formatter)
         self.logger.addHandler(console)
 
-        # カスタムハンドラ（TraceBall用）
         self.trace_handler = _TraceBallHandler()
         self.trace_handler.setLevel(logging.DEBUG)
         self.trace_handler.setFormatter(formatter)
         self.logger.addHandler(self.trace_handler)
 
     def set_log_callback(self, callback: Callable[[str], None]):
-        """TraceBallウィジェットからログ表示用コールバックを設定"""
         self._log_callback = callback
         self.trace_handler.set_callback(callback)
 
     @classmethod
     def get_logger(cls) -> logging.Logger:
-        """標準logging.Loggerを返す"""
         return cls().logger
 
-    # 便利メソッド（可変引数対応）
     @classmethod
     def debug(cls, msg: str, *args, **kwargs):
         cls.get_logger().debug(msg, *args, **kwargs)
@@ -62,7 +57,6 @@ class StaTableLogger:
 
 
 class _TraceBallHandler(logging.Handler):
-    """TraceBallウィジェットへログを転送するハンドラ"""
     def __init__(self):
         super().__init__()
         self.callback: Optional[Callable[[str], None]] = None

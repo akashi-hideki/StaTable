@@ -16,7 +16,9 @@ def generate_mermaid(sm: StateMachine) -> str:
         if t.guard:
             label_parts.append(f"[{t.guard}]")
         if t.action:
-            label_parts.append(f"/ {t.action}")
+            # 動作が複数行の場合は簡略化（改行を ; に置換）
+            action_display = t.action.replace('\n', '; ')
+            label_parts.append(f"/ {action_display}")
         label = " ".join(label_parts).strip()
 
         if t.target:

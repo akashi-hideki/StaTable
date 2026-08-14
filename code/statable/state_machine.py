@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional
-from .model import State, Event, Transition
+from .model import State, Event, Transition, RoleFunction
 
 
 class StateMachine:
@@ -7,6 +7,7 @@ class StateMachine:
         self.states: Dict[str, State] = {}
         self.events: Dict[str, Event] = {}
         self.transitions: List[Transition] = []
+        self.role_functions: Dict[str, RoleFunction] = {}
         self.initial_state: Optional[str] = None
 
     def add_state(self, state: State):
@@ -32,3 +33,12 @@ class StateMachine:
         if state_name not in self.states:
             raise ValueError(f"State '{state_name}' not defined")
         self.initial_state = state_name
+
+    def add_role_function(self, rf: RoleFunction):
+        if rf.name in self.role_functions:
+            raise ValueError(f"Role function '{rf.name}' already exists")
+        self.role_functions[rf.name] = rf
+
+    def remove_role_function(self, name: str):
+        if name in self.role_functions:
+            del self.role_functions[name]
