@@ -1,15 +1,15 @@
 import sys
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, List
 
-from PySide6.QtCore import Qt, Signal, QObject
+from PySide6.QtCore import Qt, Signal, QUrl
 from PySide6.QtGui import QFont, QColor, QKeyEvent, QAction
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,
     QTableWidgetItem, QPushButton, QPlainTextEdit, QSplitter, QLabel,
     QHeaderView, QDialog, QFormLayout, QLineEdit, QComboBox,
     QDialogButtonBox, QTabWidget, QAbstractItemView, QMessageBox,
-    QInputDialog, QTabBar, QToolButton, QMenu, QFileDialog
+    QInputDialog, QToolButton
 )
 
 # WebEngine対応
@@ -28,16 +28,20 @@ from .traceball import TraceBallWidget
 
 
 # ----------------------------------------------------------------------
-# リソースパス解決（EXE化対応）
+# リソースパス解決（EXE化対応・ディレクトリも返せる）
 # ----------------------------------------------------------------------
-def get_resource_path(filename: str) -> Path:
+def get_resource_path(filename: str = "") -> Path:
+    """リソースファイルのパスを取得する。
+    PyInstallerでEXE化した場合は sys._MEIPASS 以下を参照する。
+    filename が空の場合は Resources ディレクトリ自体を返す。
+    """
     if getattr(sys, 'frozen', False):
         base_path = Path(sys._MEIPASS) / "Resources"
     else:
         base_path = Path(__file__).resolve().parent.parent / "Resources"
-    path = base_path / filename
-    StaTableLogger.debug(f"Resource path for '{filename}': {path}")
-    return path
+    if filename:
+        return base_path / filename
+    return base_path
 
 
 # ----------------------------------------------------------------------
@@ -45,9 +49,9 @@ def get_resource_path(filename: str) -> Path:
 # ----------------------------------------------------------------------
 def create_sample_state_machine() -> StateMachine:
     sm = StateMachine()
-    sm.add_state(State("Idle", entry="init()", description="初期状態"))
-    sm.add_state(State("Active", description="動作中"))
-    sm.add_state(State("Error", description="エラー状態"))
+    sm.add_state(State("Idle", entry="Idle_entry", description="初期状態"))
+    sm.add_state(State("Active", do="Active_do", description="動作中"))
+    sm.add_state(State("Error", entry="Error_entry", exit="Error_exit", description="エラー状態"))
     sm.add_state(State("Halt", type=StateType.FINAL, description="停止状態"))
     sm.add_event(Event("start", id=1, description="起動要求"))
     sm.add_event(Event("stop", id=2, description="停止要求"))
@@ -59,73 +63,131 @@ def create_sample_state_machine() -> StateMachine:
     sm.add_transition(Transition("Active", "error", "err_code != 0", "log()", "Error"))
     sm.add_transition(Transition("Error", "", "retry_count < 3", "retry_count++", "Active"))
     sm.add_transition(Transition("Error", "", "retry_count >= 3", "", "Halt"))
+    # 複数条件の例（同じイベントに対して複数の遷移）
+    sm.add_transition(Transition("Active", "error", "err_code == 0", "ignore()", "Active"))
     return sm
 
 
 # ----------------------------------------------------------------------
-# 遷移編集ダイアログ
+# 遷移編集ダイアログ（複数条件対応・一括編集）
 # ----------------------------------------------------------------------
-class TransitionDialog(QDialog):
-    def __init__(self, parent=None, state_names=None, event_name="",
-                 existing_title="", existing_target="", existing_guard="",
-                 existing_action="", existing_type="external"):
+class TransitionListDialog(QDialog):
+    """1セル内の複数の遷移条件を一括編集するダイアログ"""
+    def __init__(self, parent=None, state_names=None, event_name="", existing_transitions=None):
         super().__init__(parent)
-        self.setWindowTitle("遷移編集")
-        self.setMinimumWidth(450)
+        self.setWindowTitle("遷移編集（複数条件）")
+        self.setMinimumSize(700, 400)
+        self.state_names = state_names or []
 
-        layout = QFormLayout(self)
-        self.title_edit = QLineEdit(existing_title)
-        self.title_edit.setPlaceholderText("例：Active / init()")
-        layout.addRow("タイトル", self.title_edit)
+        layout = QVBoxLayout(self)
 
-        self.target_combo = QComboBox()
-        self.target_combo.addItem("")
-        if state_names:
-            self.target_combo.addItems(state_names)
-        if existing_target:
-            idx = self.target_combo.findText(existing_target)
-            if idx >= 0:
-                self.target_combo.setCurrentIndex(idx)
-        layout.addRow("遷移先", self.target_combo)
+        # イベント表示
+        event_label = QLabel(f"イベント: {event_name if event_name else '完了遷移'}")
+        layout.addWidget(event_label)
 
-        self.guard_edit = QLineEdit(existing_guard)
-        self.guard_edit.setPlaceholderText("C言語式（例：err_code != 0）")
-        layout.addRow("ガード", self.guard_edit)
+        # テーブル
+        self.table = QTableWidget(0, 4)
+        self.table.setHorizontalHeaderLabels(["遷移条件", "動作", "遷移先", "表示タイトル"])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.setFont(QFont("Consolas", 10))
+        layout.addWidget(self.table)
 
-        self.action_edit = QLineEdit(existing_action)
-        self.action_edit.setPlaceholderText("動作（例：log();）")
-        layout.addRow("動作", self.action_edit)
+        # ボタン
+        btn_layout = QHBoxLayout()
+        add_btn = QPushButton("行追加")
+        add_btn.clicked.connect(self.add_row)
+        del_btn = QPushButton("行削除")
+        del_btn.clicked.connect(self.delete_row)
+        btn_layout.addWidget(add_btn)
+        btn_layout.addWidget(del_btn)
+        btn_layout.addStretch()
+        layout.addLayout(btn_layout)
 
-        self.type_combo = QComboBox()
-        self.type_combo.addItems(["external", "internal", "local"])
-        if existing_type in ["external", "internal", "local"]:
-            self.type_combo.setCurrentText(existing_type)
-        layout.addRow("種別", self.type_combo)
-
-        self.event_label = QLabel(event_name if event_name else "完了遷移")
-        layout.addRow("イベント", self.event_label)
-
+        # OK/Cancel
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
-        layout.addRow(buttons)
+        layout.addWidget(buttons)
 
-    def get_data(self):
-        return {
-            "title": self.title_edit.text().strip(),
-            "target": self.target_combo.currentText().strip(),
-            "guard": self.guard_edit.text().strip(),
-            "action": self.action_edit.text().strip(),
-            "type": self.type_combo.currentText().strip(),
-        }
+        # 既存遷移を読み込み
+        if existing_transitions:
+            for trans in existing_transitions:
+                self.add_row(trans)
+        else:
+            self.add_row()  # 空行1つ
+
+    def add_row(self, trans: Optional[Transition] = None):
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+
+        # 遷移条件
+        cond_item = QTableWidgetItem(trans.guard if trans else "")
+        cond_item.setToolTip("C言語式（例：err_code != 0）")
+        self.table.setItem(row, 0, cond_item)
+
+        # 動作
+        act_item = QTableWidgetItem(trans.action if trans else "")
+        act_item.setToolTip("実行する処理（例：log();）")
+        self.table.setItem(row, 1, act_item)
+
+        # 遷移先（ドロップダウン）
+        target_combo = QComboBox()
+        target_combo.addItem("")  # 内部遷移
+        target_combo.addItems(self.state_names)
+        if trans and trans.target:
+            idx = target_combo.findText(trans.target)
+            if idx >= 0:
+                target_combo.setCurrentIndex(idx)
+        self.table.setCellWidget(row, 2, target_combo)
+
+        # 表示タイトル（自動生成されるが手動編集も可能）
+        title = self._generate_title(trans) if trans else ""
+        title_item = QTableWidgetItem(title)
+        title_item.setToolTip("表に表示する短いラベル（空なら自動生成）")
+        self.table.setItem(row, 3, title_item)
+
+    def _generate_title(self, trans: Optional[Transition]) -> str:
+        if not trans:
+            return ""
+        parts = [trans.target] if trans.target else ["(内部)"]
+        if trans.guard:
+            parts.append(f"[{trans.guard}]")
+        if trans.action:
+            parts.append(f"/ {trans.action}")
+        return " ".join(parts)
+
+    def delete_row(self):
+        row = self.table.currentRow()
+        if row >= 0:
+            self.table.removeRow(row)
+
+    def get_transitions(self) -> List[Transition]:
+        transitions = []
+        for row in range(self.table.rowCount()):
+            guard = self.table.item(row, 0).text().strip() if self.table.item(row, 0) else ""
+            action = self.table.item(row, 1).text().strip() if self.table.item(row, 1) else ""
+            target_widget = self.table.cellWidget(row, 2)
+            target = target_widget.currentText().strip() if target_widget else ""
+            title_item = self.table.item(row, 3)
+            title = title_item.text().strip() if title_item else ""
+            if not title and (guard or action or target):
+                title = self._generate_title(Transition(source="", event="", guard=guard, action=action, target=target))
+            transitions.append(Transition(
+                source="",  # 呼び出し側で設定
+                event="",   # 呼び出し側で設定
+                guard=guard,
+                action=action,
+                target=target,
+                transition_type="external"
+            ))
+        return transitions
 
 
 # ----------------------------------------------------------------------
 # 状態遷移マトリックステーブル
 # ----------------------------------------------------------------------
 class MatrixTableWidget(QTableWidget):
-    """状態遷移マトリックス表示・編集テーブル"""
-    transition_changed = Signal()  # 遷移変更シグナル
+    transition_changed = Signal()
 
     def __init__(self, sm: StateMachine, parent=None):
         super().__init__(0, 0, parent)
@@ -152,23 +214,23 @@ class MatrixTableWidget(QTableWidget):
 
         for row, state in enumerate(states):
             for col, event in enumerate(events):
-                trans = self._find_transition(state, event)
-                if trans:
-                    title = self._generate_title(trans)
-                    item = QTableWidgetItem(title)
-                    item.setData(Qt.UserRole, trans)
+                trans_list = self._find_transitions(state, event)
+                if trans_list:
+                    # 複数遷移を改行で表示
+                    titles = [self._generate_title(t) for t in trans_list]
+                    display = "\n".join(titles)
+                    item = QTableWidgetItem(display)
+                    item.setData(Qt.UserRole, trans_list)
+                    item.setToolTip("ダブルクリックまたは Enter で編集")
                     self.setItem(row, col, item)
                 else:
                     item = QTableWidgetItem("")
-                    item.setData(Qt.UserRole, None)
+                    item.setData(Qt.UserRole, [])
                     self.setItem(row, col, item)
         StaTableLogger.debug(f"MatrixTable populated: {len(states)} states, {len(events)} events")
 
-    def _find_transition(self, state: str, event: str):
-        for t in self.sm.transitions:
-            if t.source == state and t.event == event:
-                return t
-        return None
+    def _find_transitions(self, state: str, event: str) -> List[Transition]:
+        return [t for t in self.sm.transitions if t.source == state and t.event == event]
 
     def _generate_title(self, trans: Transition) -> str:
         if trans.target:
@@ -190,35 +252,28 @@ class MatrixTableWidget(QTableWidget):
             event_name = event
 
         item = self.item(row, col)
-        existing = item.data(Qt.UserRole) if item else None
+        existing_list = item.data(Qt.UserRole) if item else []
 
-        dlg = TransitionDialog(
+        dlg = TransitionListDialog(
             self,
             state_names=list(self.sm.states.keys()),
             event_name=event_name,
-            existing_title=existing and self._generate_title(existing) or "",
-            existing_target=existing.target if existing else "",
-            existing_guard=existing.guard if existing else "",
-            existing_action=existing.action if existing else "",
-            existing_type=existing.transition_type if existing else "external"
+            existing_transitions=existing_list
         )
 
         if dlg.exec() == QDialog.Accepted:
-            data = dlg.get_data()
-            if existing:
-                self.sm.transitions.remove(existing)
-            trans = Transition(
-                source=state,
-                event=event_name,
-                guard=data["guard"],
-                action=data["action"],
-                target=data["target"],
-                transition_type=data["type"]
-            )
-            self.sm.add_transition(trans)
+            new_transitions = dlg.get_transitions()
+            # 既存のこのセルの遷移を削除
+            self.sm.transitions = [t for t in self.sm.transitions
+                                   if not (t.source == state and t.event == event_name)]
+            # 新しい遷移を追加
+            for trans in new_transitions:
+                trans.source = state
+                trans.event = event_name
+                self.sm.add_transition(trans)
             self.populate()
             self.transition_changed.emit()
-            StaTableLogger.info(f"Transition updated: {state} -{event}-> {data['target'] or '(internal)'}")
+            StaTableLogger.info(f"Transition updated: {state} -{event_name or '完了'}-> {len(new_transitions)} transition(s)")
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_F2):
@@ -229,14 +284,13 @@ class MatrixTableWidget(QTableWidget):
         elif event.key() in (Qt.Key_Delete, Qt.Key_Backspace):
             current = self.currentItem()
             if current:
-                trans = current.data(Qt.UserRole)
-                if trans:
-                    self.sm.transitions.remove(trans)
+                trans_list = current.data(Qt.UserRole)
+                if trans_list:
+                    for trans in trans_list:
+                        self.sm.transitions.remove(trans)
                     self.populate()
                     self.transition_changed.emit()
-                    StaTableLogger.info(f"Transition deleted: {trans.source} -{trans.event}-> {trans.target or '(internal)'}")
-                else:
-                    StaTableLogger.debug("No transition to delete in this cell")
+                    StaTableLogger.info(f"Transition deleted: {len(trans_list)} transition(s)")
             return
         super().keyPressEvent(event)
 
@@ -250,6 +304,7 @@ class MermaidWidget(QWidget):
         layout = QVBoxLayout(self)
         if WEBENGINE_AVAILABLE:
             self.web_view = QWebEngineView()
+            self.web_view.loadFinished.connect(self._on_load_finished)
             layout.addWidget(self.web_view)
         else:
             self.text_view = QPlainTextEdit()
@@ -258,48 +313,45 @@ class MermaidWidget(QWidget):
         StaTableLogger.debug("MermaidWidget initialized (WebEngine available: %s)", WEBENGINE_AVAILABLE)
 
     def set_mermaid_code(self, code: str):
-        StaTableLogger.debug(f"Setting Mermaid code:\n{code}")
         if WEBENGINE_AVAILABLE:
-            mermaid_js = ""
-            try:
-                resource_path = get_resource_path("mermaidwin.js")
-                if resource_path.exists():
-                    mermaid_js = resource_path.read_text(encoding="utf-8")
-                    StaTableLogger.debug(f"Loaded mermaidwin.js from {resource_path}")
-                else:
-                    StaTableLogger.warning(f"mermaidwin.js not found at {resource_path}")
-            except Exception as e:
-                StaTableLogger.error(f"Failed to read mermaidwin.js: {e}")
+            # ResourcesフォルダのURLを取得
+            resources_dir = get_resource_path("")  # ディレクトリ
+            if resources_dir.exists():
+                base_url = QUrl.fromLocalFile(str(resources_dir))
+            else:
+                base_url = QUrl()
 
-            html = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <script>{mermaid_js}</script>
-                <script>
-                    document.addEventListener('DOMContentLoaded', function() {{
-                        mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
-                        mermaid.run();
-                    }});
-                </script>
-            </head>
-            <body>
-                <pre class="mermaid">
-{code}
-                </pre>
-            </body>
-            </html>
-            """
-            self.web_view.setHtml(html)
+            html = """<!DOCTYPE html>
+<html>
+<head>
+    <script src="mermaidwin.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</head>
+<body>
+    <pre class="mermaid">
+%s
+    </pre>
+</body>
+</html>""" % code
+
+            self.web_view.setHtml(html, base_url)
+            StaTableLogger.debug("Mermaid HTML set with baseUrl: %s", base_url.toString())
         else:
             self.text_view.setPlainText(code)
 
+    def _on_load_finished(self, ok: bool):
+        if ok and WEBENGINE_AVAILABLE:
+            # 念のため描画をトリガー
+            self.web_view.page().runJavaScript("mermaid.run();")
+            StaTableLogger.debug("Mermaid rendering triggered")
+
 
 # ----------------------------------------------------------------------
-# 状態/イベント設定パネル（各タブ内の右側）
+# 状態/イベント設定パネル
 # ----------------------------------------------------------------------
 class SettingsPanel(QWidget):
-    """状態一覧とイベント辞書を編集するパネル"""
     settings_changed = Signal()
 
     def __init__(self, sm: StateMachine, parent=None):
@@ -307,15 +359,14 @@ class SettingsPanel(QWidget):
         self.sm = sm
         layout = QVBoxLayout(self)
 
-        # タブで状態/イベントを切替
         self.tab = QTabWidget()
         layout.addWidget(self.tab)
 
         # 状態一覧タブ
         state_tab = QWidget()
         state_layout = QVBoxLayout(state_tab)
-        self.state_table = QTableWidget(0, 3)
-        self.state_table.setHorizontalHeaderLabels(["名称（英数字）", "内容（説明）", "タイプ"])
+        self.state_table = QTableWidget(0, 6)
+        self.state_table.setHorizontalHeaderLabels(["名称", "説明", "entry関数", "exit関数", "do関数", "タイプ"])
         self.state_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.state_table.setFont(QFont("Consolas", 10))
         state_layout.addWidget(self.state_table)
@@ -333,7 +384,7 @@ class SettingsPanel(QWidget):
         event_tab = QWidget()
         event_layout = QVBoxLayout(event_tab)
         self.event_table = QTableWidget(0, 3)
-        self.event_table.setHorizontalHeaderLabels(["名称（英数字）", "内容（説明）", "種類"])
+        self.event_table.setHorizontalHeaderLabels(["名称", "説明", "種類"])
         self.event_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.event_table.setFont(QFont("Consolas", 10))
         event_layout.addWidget(self.event_table)
@@ -359,22 +410,19 @@ class SettingsPanel(QWidget):
         states = list(self.sm.states.values())
         self.state_table.setRowCount(len(states))
         for row, state in enumerate(states):
-            name_item = QTableWidgetItem(state.name)
-            desc_item = QTableWidgetItem(state.description)
-            type_item = QTableWidgetItem(state.type.value)
-            self.state_table.setItem(row, 0, name_item)
-            self.state_table.setItem(row, 1, desc_item)
-            self.state_table.setItem(row, 2, type_item)
+            self.state_table.setItem(row, 0, QTableWidgetItem(state.name))
+            self.state_table.setItem(row, 1, QTableWidgetItem(state.description))
+            self.state_table.setItem(row, 2, QTableWidgetItem(state.entry))
+            self.state_table.setItem(row, 3, QTableWidgetItem(state.exit))
+            self.state_table.setItem(row, 4, QTableWidgetItem(state.do))
+            self.state_table.setItem(row, 5, QTableWidgetItem(state.type.value))
         # イベントテーブル
         events = list(self.sm.events.values())
         self.event_table.setRowCount(len(events))
         for row, event in enumerate(events):
-            name_item = QTableWidgetItem(event.name if event.name else "（完了）")
-            desc_item = QTableWidgetItem(event.description)
-            kind_item = QTableWidgetItem(event.kind.value)
-            self.event_table.setItem(row, 0, name_item)
-            self.event_table.setItem(row, 1, desc_item)
-            self.event_table.setItem(row, 2, kind_item)
+            self.event_table.setItem(row, 0, QTableWidgetItem(event.name if event.name else "（完了）"))
+            self.event_table.setItem(row, 1, QTableWidgetItem(event.description))
+            self.event_table.setItem(row, 2, QTableWidgetItem(event.kind.value))
         StaTableLogger.debug(f"Settings populated: {len(states)} states, {len(events)} events")
 
     def add_state(self):
@@ -382,7 +430,10 @@ class SettingsPanel(QWidget):
         self.state_table.insertRow(row)
         self.state_table.setItem(row, 0, QTableWidgetItem(""))
         self.state_table.setItem(row, 1, QTableWidgetItem(""))
-        self.state_table.setItem(row, 2, QTableWidgetItem("normal"))
+        self.state_table.setItem(row, 2, QTableWidgetItem(""))
+        self.state_table.setItem(row, 3, QTableWidgetItem(""))
+        self.state_table.setItem(row, 4, QTableWidgetItem(""))
+        self.state_table.setItem(row, 5, QTableWidgetItem("normal"))
         self.state_table.editItem(self.state_table.item(row, 0))
         StaTableLogger.debug("Add state row")
 
@@ -424,25 +475,32 @@ class SettingsPanel(QWidget):
                 self.event_table.removeRow(row)
 
     def on_state_table_item_changed(self, item):
-        # モデルへ反映（簡易実装：後で詳細化可能）
         StaTableLogger.debug(f"State table item changed: row={item.row()}, col={item.column()}, text={item.text()}")
 
     def on_event_table_item_changed(self, item):
         StaTableLogger.debug(f"Event table item changed: row={item.row()}, col={item.column()}, text={item.text()}")
 
     def apply_changes(self):
-        """テーブル編集内容をステートマシンに反映（必要に応じて）"""
+        """テーブル編集内容をステートマシンに反映"""
         # 状態テーブル
         for row in range(self.state_table.rowCount()):
             name = self.state_table.item(row, 0).text().strip() if self.state_table.item(row, 0) else ""
             desc = self.state_table.item(row, 1).text().strip() if self.state_table.item(row, 1) else ""
-            type_str = self.state_table.item(row, 2).text().strip() if self.state_table.item(row, 2) else "normal"
+            entry = self.state_table.item(row, 2).text().strip() if self.state_table.item(row, 2) else ""
+            exit_ = self.state_table.item(row, 3).text().strip() if self.state_table.item(row, 3) else ""
+            do = self.state_table.item(row, 4).text().strip() if self.state_table.item(row, 4) else ""
+            type_str = self.state_table.item(row, 5).text().strip() if self.state_table.item(row, 5) else "normal"
             if name:
                 if name in self.sm.states:
-                    self.sm.states[name].description = desc
-                    self.sm.states[name].type = StateType(type_str)
+                    st = self.sm.states[name]
+                    st.description = desc
+                    st.entry = entry
+                    st.exit = exit_
+                    st.do = do
+                    st.type = StateType(type_str)
                 else:
-                    self.sm.add_state(State(name, type=StateType(type_str), description=desc))
+                    self.sm.add_state(State(name, type=StateType(type_str), description=desc,
+                                             entry=entry, exit=exit_, do=do))
         # イベントテーブル
         for row in range(self.event_table.rowCount()):
             name = self.event_table.item(row, 0).text().strip() if self.event_table.item(row, 0) else ""
@@ -452,24 +510,23 @@ class SettingsPanel(QWidget):
             kind_str = self.event_table.item(row, 2).text().strip() if self.event_table.item(row, 2) else "signal"
             if name:
                 if name in self.sm.events:
-                    self.sm.events[name].description = desc
-                    self.sm.events[name].kind = EventKind(kind_str)
+                    ev = self.sm.events[name]
+                    ev.description = desc
+                    ev.kind = EventKind(kind_str)
                 else:
                     self.sm.add_event(Event(name, kind=EventKind(kind_str), description=desc))
         StaTableLogger.debug("Settings changes applied")
 
 
 # ----------------------------------------------------------------------
-# 単一タブのコンテンツ（状態遷移表＋Mermaid＋設定パネル）
+# 単一タブのコンテンツ
 # ----------------------------------------------------------------------
 class StateMachineTab(QWidget):
-    """1つの状態遷移表を保持するタブ"""
     def __init__(self, sm: StateMachine, parent=None):
         super().__init__(parent)
         self.sm = sm
         layout = QHBoxLayout(self)
 
-        # 左：垂直分割（マトリックス＋Mermaid）
         left_split = QSplitter(Qt.Vertical)
         self.table = MatrixTableWidget(sm)
         self.mermaid = MermaidWidget()
@@ -478,19 +535,19 @@ class StateMachineTab(QWidget):
         left_split.setSizes([700, 300])
         layout.addWidget(left_split, stretch=3)
 
-        # 右：設定パネル
         self.settings = SettingsPanel(sm)
         layout.addWidget(self.settings, stretch=1)
 
-        # シグナル接続：遷移変更→Mermaid更新
+        # シグナル接続
         self.table.transition_changed.connect(self.update_mermaid)
         self.settings.settings_changed.connect(self.update_mermaid)
 
-        # 初期表示
         self.update_mermaid()
         StaTableLogger.debug("StateMachineTab created")
 
     def update_mermaid(self):
+        # 設定変更を反映してからMermaid生成
+        self.settings.apply_changes()
         code = generate_mermaid(self.sm)
         self.mermaid.set_mermaid_code(code)
         StaTableLogger.info("Mermaid updated for current tab")
@@ -505,17 +562,15 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("StaTable - 状態遷移表エディタ")
         self.resize(1800, 1200)
 
-        # ログ初期化
         self.logger = StaTableLogger()
         self.logger.debug("MainWindow initialization started")
 
-        # メインのタブウィジェット
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
         self.tab_widget.tabCloseRequested.connect(self.close_tab)
         self.setCentralWidget(self.tab_widget)
 
-        # 「+」ボタンをタブバーに追加
+        # 「+」ボタン
         self.add_tab_button = QToolButton()
         self.add_tab_button.setText("+")
         self.add_tab_button.setToolTip("新しい状態遷移表を追加")
@@ -525,12 +580,12 @@ class MainWindow(QMainWindow):
         # メニュー
         self.create_menus()
 
-        # TraceBallドックを追加
+        # TraceBallドック
         self.traceball = TraceBallWidget(self)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.traceball)
-        self.traceball.hide()  # 初期は非表示
+        self.traceball.hide()
 
-        # 初期タブを追加
+        # 初期タブ
         sample_sm = create_sample_state_machine()
         self.add_state_machine_tab("アプリ", sample_sm)
 
@@ -538,7 +593,6 @@ class MainWindow(QMainWindow):
 
     def create_menus(self):
         menubar = self.menuBar()
-        # 表示メニュー
         view_menu = menubar.addMenu("表示")
         toggle_traceball = QAction("TraceBall表示", self)
         toggle_traceball.setCheckable(True)
@@ -546,31 +600,25 @@ class MainWindow(QMainWindow):
         toggle_traceball.toggled.connect(self.toggle_traceball)
         view_menu.addAction(toggle_traceball)
 
-        # ファイルメニュー
         file_menu = menubar.addMenu("ファイル")
         new_tab_action = QAction("新しい状態遷移表", self)
         new_tab_action.triggered.connect(self.add_new_tab)
         file_menu.addAction(new_tab_action)
 
-        self.logger.debug("Menus created")
-
     def add_new_tab(self):
-        """新しいタブを追加"""
         name, ok = QInputDialog.getText(self, "新しい状態遷移表", "タブ名を入力してください：")
         if ok and name:
-            sm = StateMachine()  # 空のステートマシン
+            sm = StateMachine()
             self.add_state_machine_tab(name, sm)
             self.logger.info(f"New tab added: {name}")
 
     def add_state_machine_tab(self, name: str, sm: StateMachine):
-        """指定された名前とステートマシンでタブを追加"""
         tab = StateMachineTab(sm)
         idx = self.tab_widget.addTab(tab, name)
         self.tab_widget.setCurrentIndex(idx)
         self.logger.debug(f"Tab '{name}' added at index {idx}")
 
     def close_tab(self, index: int):
-        """タブを閉じる"""
         if self.tab_widget.count() <= 1:
             QMessageBox.warning(self, "警告", "少なくとも1つのタブが必要です。")
             return
@@ -580,7 +628,6 @@ class MainWindow(QMainWindow):
         self.logger.info(f"Tab closed at index {index}")
 
     def toggle_traceball(self, checked: bool):
-        """TraceBallの表示/非表示"""
         if checked:
             self.traceball.show()
             self.logger.debug("TraceBall shown")

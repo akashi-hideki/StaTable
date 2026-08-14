@@ -43,22 +43,22 @@ class StaTableLogger:
         """標準logging.Loggerを返す"""
         return cls().logger
 
-    # 便利メソッド
+    # 便利メソッド（可変引数対応）
     @classmethod
-    def debug(cls, msg: str):
-        cls.get_logger().debug(msg)
+    def debug(cls, msg: str, *args, **kwargs):
+        cls.get_logger().debug(msg, *args, **kwargs)
 
     @classmethod
-    def info(cls, msg: str):
-        cls.get_logger().info(msg)
+    def info(cls, msg: str, *args, **kwargs):
+        cls.get_logger().info(msg, *args, **kwargs)
 
     @classmethod
-    def warning(cls, msg: str):
-        cls.get_logger().warning(msg)
+    def warning(cls, msg: str, *args, **kwargs):
+        cls.get_logger().warning(msg, *args, **kwargs)
 
     @classmethod
-    def error(cls, msg: str):
-        cls.get_logger().error(msg)
+    def error(cls, msg: str, *args, **kwargs):
+        cls.get_logger().error(msg, *args, **kwargs)
 
 
 class _TraceBallHandler(logging.Handler):
