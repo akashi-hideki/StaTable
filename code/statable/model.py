@@ -28,6 +28,7 @@ class State:
     entry: str = ""
     exit: str = ""
     do: str = ""
+    description: str = ""   # 追加
 
 
 @dataclass
