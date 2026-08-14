@@ -25,7 +25,8 @@ from .config import (
     get_resource_path, TABLE_PREVIEW_RATIO, WINDOW_HEIGHT,
     MERMAID_PREVIEW_MIN_HEIGHT, MAX_COLUMN_WIDTH, MIN_ROW_HEIGHT, MAX_ROW_HEIGHT
 )
-from .dialogs import TransitionListDialog, RoleFunctionDialog
+from .dialogs import TransitionListDialog
+from .role_function_dialog import RoleFunctionDialog
 
 
 class MatrixTableWidget(QTableWidget):
