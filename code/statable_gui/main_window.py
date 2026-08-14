@@ -1,37 +1,49 @@
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
-    QMainWindow, QTabWidget, QToolButton, QMessageBox, QInputDialog
+    QMainWindow, QTabWidget, QToolButton, QMessageBox, QInputDialog,
+    QFileDialog
 )
 
 from statable.state_machine import StateMachine
+from statable.xml_io import project_to_xml, project_from_xml
 
 from .logger import StaTableLogger
 from .traceball import TraceBallWidget
 from .config import WINDOW_WIDTH, WINDOW_HEIGHT
 from .sample_data import create_sample_state_machine
 from .widgets import StateMachineTab
+from .preferences import Preferences
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("StaTable - 状態遷移表エディタ")
+        self.setWindowTitle("StaTable - State Transition Editor")
         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
 
         self.logger = StaTableLogger()
         self.logger.debug("MainWindow initialization started")
+
+        # 設定（最終フォルダ等）を属性アクセスで利用
+        self.prefs = Preferences()
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
         self.tab_widget.tabCloseRequested.connect(self.close_tab)
         self.setCentralWidget(self.tab_widget)
 
+        # 「+」ボタン
         self.add_tab_button = QToolButton()
         self.add_tab_button.setText("+")
-        self.add_tab_button.setToolTip("新しい状態遷移表を追加")
+        self.add_tab_button.setToolTip("Add new state machine")
         self.add_tab_button.clicked.connect(self.add_new_tab)
         self.tab_widget.setCornerWidget(self.add_tab_button, Qt.TopRightCorner)
+
+        # ダブルクリックでタブ名変更
+        self.tab_widget.tabBarDoubleClicked.connect(self.rename_tab_at)
 
         self.create_menus()
 
@@ -39,31 +51,130 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.BottomDockWidgetArea, self.traceball)
         self.traceball.hide()
 
+        # 初期タブ
         sample_sm = create_sample_state_machine()
-        self.add_state_machine_tab("アプリ", sample_sm)
+        self.add_state_machine_tab("Application", sample_sm)
 
         self.logger.debug("MainWindow initialization completed")
 
     def create_menus(self):
         menubar = self.menuBar()
-        view_menu = menubar.addMenu("表示")
-        toggle_traceball = QAction("TraceBall表示", self)
+
+        # File menu
+        file_menu = menubar.addMenu("File")
+
+        open_action = QAction("Open Project...", self)
+        open_action.triggered.connect(self.open_project)
+        file_menu.addAction(open_action)
+
+        save_action = QAction("Save Project...", self)
+        save_action.triggered.connect(self.save_project)
+        file_menu.addAction(save_action)
+
+        rename_action = QAction("Rename Tab...", self)
+        rename_action.triggered.connect(self.rename_current_tab)
+        file_menu.addAction(rename_action)
+
+        file_menu.addSeparator()
+
+        new_tab_action = QAction("New State Machine", self)
+        new_tab_action.triggered.connect(self.add_new_tab)
+        file_menu.addAction(new_tab_action)
+
+        # View menu
+        view_menu = menubar.addMenu("View")
+
+        toggle_traceball = QAction("TraceBall", self)
         toggle_traceball.setCheckable(True)
         toggle_traceball.setChecked(False)
         toggle_traceball.toggled.connect(self.toggle_traceball)
         view_menu.addAction(toggle_traceball)
 
-        file_menu = menubar.addMenu("ファイル")
-        new_tab_action = QAction("新しい状態遷移表", self)
-        new_tab_action.triggered.connect(self.add_new_tab)
-        file_menu.addAction(new_tab_action)
+    # ------------------------------------------------------------------
+    # プロジェクト保存・読み込み
+    # ------------------------------------------------------------------
+    def save_project(self):
+        """全タブの内容を1つのXMLファイルに保存する"""
+        tabs = []
+        for index in range(self.tab_widget.count()):
+            tab = self.tab_widget.widget(index)
+            name = self.tab_widget.tabText(index)
+            tabs.append((name, tab.sm))
+
+        # 前回のフォルダを属性で取得
+        last_dir = self.prefs.last_project_dir
+        default_path = str(Path(last_dir) / "project.xml") if last_dir else "project.xml"
+
+        filepath, _ = QFileDialog.getSaveFileName(
+            self, "Save Project", default_path, "XML files (*.xml)"
+        )
+        if not filepath:
+            return
+        try:
+            project_to_xml(tabs, filepath)
+            # 成功したらフォルダを記憶
+            self.prefs.last_project_dir = str(Path(filepath).parent)
+            self.logger.info(f"Project saved to {filepath}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save project:\n{e}")
+            self.logger.error(f"Failed to save project: {filepath}, error: {e}")
+
+    def open_project(self):
+        """XMLファイルからプロジェクト全体を読み込む（既存タブは置き換え）"""
+        # 前回のフォルダを属性で取得
+        last_dir = self.prefs.last_project_dir
+        filepath, _ = QFileDialog.getOpenFileName(
+            self, "Open Project", last_dir, "XML files (*.xml)"
+        )
+        if not filepath:
+            return
+        try:
+            tabs = project_from_xml(filepath)
+            # 既存タブをすべて閉じる
+            self.close_all_tabs()
+            for name, sm in tabs:
+                self.add_state_machine_tab(name, sm)
+            # 成功したらフォルダを記憶
+            self.prefs.last_project_dir = str(Path(filepath).parent)
+            self.logger.info(f"Project loaded from {filepath}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to open project:\n{e}")
+            self.logger.error(f"Failed to open project: {filepath}, error: {e}")
+
+    def close_all_tabs(self):
+        """全タブを安全に閉じる"""
+        while self.tab_widget.count() > 0:
+            widget = self.tab_widget.widget(0)
+            self.tab_widget.removeTab(0)
+            widget.deleteLater()
+
+    # ------------------------------------------------------------------
+    # タブ操作
+    # ------------------------------------------------------------------
+    def rename_current_tab(self):
+        index = self.tab_widget.currentIndex()
+        if index >= 0:
+            self.rename_tab_at(index)
+
+    def rename_tab_at(self, index: int):
+        if index < 0:
+            return
+        current_name = self.tab_widget.tabText(index)
+        new_name, ok = QInputDialog.getText(
+            self, "Rename Tab", "Enter new tab name:", text=current_name
+        )
+        if ok and new_name.strip():
+            self.tab_widget.setTabText(index, new_name.strip())
+            self.logger.info(f"Tab renamed: {current_name} -> {new_name.strip()}")
 
     def add_new_tab(self):
-        name, ok = QInputDialog.getText(self, "新しい状態遷移表", "タブ名を入力してください：")
-        if ok and name:
+        name, ok = QInputDialog.getText(
+            self, "New State Machine", "Enter tab name:"
+        )
+        if ok and name.strip():
             sm = StateMachine()
-            self.add_state_machine_tab(name, sm)
-            self.logger.info(f"New tab added: {name}")
+            self.add_state_machine_tab(name.strip(), sm)
+            self.logger.info(f"New tab added: {name.strip()}")
 
     def add_state_machine_tab(self, name: str, sm: StateMachine):
         tab = StateMachineTab(sm)
@@ -72,8 +183,9 @@ class MainWindow(QMainWindow):
         self.logger.debug(f"Tab '{name}' added at index {idx}")
 
     def close_tab(self, index: int):
+        """タブを閉じる（最低1つのタブを維持する）"""
         if self.tab_widget.count() <= 1:
-            QMessageBox.warning(self, "警告", "少なくとも1つのタブが必要です。")
+            QMessageBox.warning(self, "Warning", "At least one tab is required.")
             return
         widget = self.tab_widget.widget(index)
         self.tab_widget.removeTab(index)

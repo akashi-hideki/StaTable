@@ -1,7 +1,7 @@
 import tempfile
 from typing import Optional, List
 
-from PySide6.QtCore import Qt, Signal, QUrl
+from PySide6.QtCore import Qt, Signal, QUrl, QTimer
 from PySide6.QtGui import QFont, QKeyEvent
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
@@ -120,6 +120,14 @@ class SettingsPanel(QWidget):
     def __init__(self, sm: StateMachine, parent=None):
         super().__init__(parent)
         self.sm = sm
+        self._updating = False  # プログラムからの更新中フラグ
+
+        # デバウンス用タイマー（300ms）
+        self._debounce_timer = QTimer()
+        self._debounce_timer.setSingleShot(True)
+        self._debounce_timer.setInterval(300)
+        self._debounce_timer.timeout.connect(self._emit_settings_changed)
+
         layout = QVBoxLayout(self)
 
         self.tab = QTabWidget()
@@ -189,7 +197,15 @@ class SettingsPanel(QWidget):
         self.populate()
         StaTableLogger.debug("SettingsPanel initialized")
 
+    def _emit_settings_changed(self):
+        """デバウンス後に設定変更シグナルを発火"""
+        if not self._updating:
+            self.settings_changed.emit()
+
     def populate(self):
+        """全テーブルをモデルから再構築"""
+        self._updating = True  # 更新中フラグを設定
+
         # 状態テーブル
         states = list(self.sm.states.values())
         self.state_table.setRowCount(len(states))
@@ -200,6 +216,7 @@ class SettingsPanel(QWidget):
             self.state_table.setItem(row, 3, QTableWidgetItem(state.exit))
             self.state_table.setItem(row, 4, QTableWidgetItem(state.do))
             self.state_table.setItem(row, 5, QTableWidgetItem(state.type.value))
+
         # イベントテーブル
         events = list(self.sm.events.values())
         self.event_table.setRowCount(len(events))
@@ -207,8 +224,11 @@ class SettingsPanel(QWidget):
             self.event_table.setItem(row, 0, QTableWidgetItem(event.name if event.name else "（完了）"))
             self.event_table.setItem(row, 1, QTableWidgetItem(event.description))
             self.event_table.setItem(row, 2, QTableWidgetItem(event.kind.value))
+
         # ロール関数テーブル
         self.populate_role_table()
+
+        self._updating = False  # 更新中フラグを解除
         StaTableLogger.debug(f"Settings populated: {len(states)} states, {len(events)} events, {len(self.sm.role_functions)} roles")
 
     def populate_role_table(self):
@@ -296,14 +316,18 @@ class SettingsPanel(QWidget):
 
     def on_state_table_item_changed(self, item):
         StaTableLogger.debug(f"State table item changed: row={item.row()}, col={item.column()}, text={item.text()}")
+        self._debounce_timer.start()
 
     def on_event_table_item_changed(self, item):
         StaTableLogger.debug(f"Event table item changed: row={item.row()}, col={item.column()}, text={item.text()}")
+        self._debounce_timer.start()
 
     def on_role_table_item_changed(self, item):
         StaTableLogger.debug(f"Role table item changed: row={item.row()}, col={item.column()}, text={item.text()}")
+        self._debounce_timer.start()
 
     def apply_changes(self):
+        """テーブル編集内容をステートマシンモデルに反映"""
         # 状態テーブル
         for row in range(self.state_table.rowCount()):
             name = self.state_table.item(row, 0).text().strip() if self.state_table.item(row, 0) else ""
@@ -380,6 +404,7 @@ class StateMachineTab(QWidget):
         self.settings = SettingsPanel(sm)
         layout.addWidget(self.settings, stretch=1)
 
+        # シグナル接続
         self.table.transition_changed.connect(self.update_mermaid)
         self.settings.settings_changed.connect(self.update_mermaid)
 
@@ -387,7 +412,9 @@ class StateMachineTab(QWidget):
         StaTableLogger.debug("StateMachineTab created")
 
     def update_mermaid(self):
+        """設定変更を反映し、状態遷移表とMermaidを更新する"""
         self.settings.apply_changes()
+        self.table.populate()      # 状態遷移表を再構築
         code = generate_mermaid(self.sm)
         self.mermaid.set_mermaid_code(code)
         StaTableLogger.info("Mermaid updated for current tab")
