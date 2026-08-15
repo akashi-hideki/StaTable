@@ -10,6 +10,7 @@ from PySide6.QtCore import Qt, Signal
 
 from statable.model import Transition
 from .action_edit_dialog import ActionEditDialog
+from .guard_edit_dialog import GuardEditDialog
 from .global_defs import GlobalDefinitions
 from .logger import StaTableLogger
 
@@ -20,11 +21,9 @@ class TransitionTable(QTableWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # 編集トリガーを無効化して、ダブルクリックをシグナルとして扱う
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
-        """マウスダブルクリックをログ出力し、シグナルを発火する"""
         pos = event.position().toPoint()
         item = self.itemAt(pos)
         if item:
@@ -33,8 +32,6 @@ class TransitionTable(QTableWidget):
             self.cell_double_clicked_any.emit(row, col)
         else:
             StaTableLogger.debug("TransitionTable.mouseDoubleClickEvent: no item at position")
-        # 親クラスの処理は呼ばない（シグナルを二重に発火させない）
-        # super().mouseDoubleClickEvent(event)  # 必要なら呼んでも良い
 
 
 class TransitionListDialog(QDialog):
@@ -93,22 +90,45 @@ class TransitionListDialog(QDialog):
 
     def on_cell_double_clicked(self, row, col):
         StaTableLogger.debug(f"TransitionListDialog.on_cell_double_clicked: row={row}, col={col}")
-        if col != 1:
-            StaTableLogger.debug("  -> Ignored (not action column)")
-            return
 
-        item = self.table.item(row, 1)
-        if item:
-            current_action = item.text()
-            StaTableLogger.debug(f"  -> Reading action from QTableWidgetItem: '{current_action[:50]}...'")
+        if col == 0:   # 遷移条件
+            self.open_guard_editor(row)
+        elif col == 1:  # 動作
+            self.open_action_editor(row)
         else:
-            current_action = ""
-            StaTableLogger.debug("  -> No action item found")
+            StaTableLogger.debug("  -> Ignored (not editable column)")
 
-        StaTableLogger.debug(
-            f"  -> Opening ActionEditDialog (roles={len(self.role_functions)}, "
-            f"global_defs={len(self.global_defs.variables)} vars, {len(self.global_defs.flags)} flags)"
+    def open_guard_editor(self, row):
+        """遷移条件セルをダブルクリックしたときの処理"""
+        item = self.table.item(row, 0)
+        if not item:
+            item = QTableWidgetItem("")
+            self.table.setItem(row, 0, item)
+
+        current_guard = item.text()
+        StaTableLogger.debug(f"  -> Opening GuardEditDialog (guard='{current_guard[:50]}...')")
+
+        dlg = GuardEditDialog(
+            self,
+            guard_text=current_guard,
+            global_defs=self.global_defs,
+            role_functions=self.role_functions
         )
+        if dlg.exec() == QDialog.Accepted:
+            new_guard = dlg.get_guard_text()
+            item.setText(new_guard)
+            StaTableLogger.debug(f"  -> Guard updated: '{new_guard[:50]}...'")
+
+    def open_action_editor(self, row):
+        """動作セルをダブルクリックしたときの処理"""
+        item = self.table.item(row, 1)
+        if not item:
+            item = QTableWidgetItem("")
+            self.table.setItem(row, 1, item)
+
+        current_action = item.text()
+        StaTableLogger.debug(f"  -> Opening ActionEditDialog (action='{current_action[:50]}...')")
+
         dlg = ActionEditDialog(
             self,
             action_text=current_action,
@@ -117,16 +137,8 @@ class TransitionListDialog(QDialog):
         )
         if dlg.exec() == QDialog.Accepted:
             new_action = dlg.get_action_text()
-            StaTableLogger.debug(f"  -> ActionEditDialog accepted. New action length={len(new_action)}")
-            if item:
-                item.setText(new_action)
-                StaTableLogger.debug("  -> Updated QTableWidgetItem with new action")
-            else:
-                new_item = QTableWidgetItem(new_action)
-                self.table.setItem(row, 1, new_item)
-                StaTableLogger.debug("  -> Created new QTableWidgetItem for action")
-        else:
-            StaTableLogger.debug("  -> ActionEditDialog cancelled")
+            item.setText(new_action)
+            StaTableLogger.debug(f"  -> Action updated: '{new_action[:50]}...'")
 
     def add_row(self, trans: Optional[Transition] = None):
         row = self.table.rowCount()
@@ -135,14 +147,13 @@ class TransitionListDialog(QDialog):
 
         # 遷移条件
         cond_item = QTableWidgetItem(trans.guard if trans else "")
-        cond_item.setToolTip("C言語式（例：err_code != 0）")
+        cond_item.setToolTip("ダブルクリックで条件編集")
         self.table.setItem(row, 0, cond_item)
 
-        # 動作（QTableWidgetItem を使用）
+        # 動作
         action_item = QTableWidgetItem(trans.action if trans else "")
-        action_item.setToolTip("ダブルクリックで編集ダイアログを開きます")
-        display_text = action_item.text().replace('\n', ' ; ')
-        action_item.setText(display_text)
+        action_item.setToolTip("ダブルクリックで動作編集")
+        action_item.setText(action_item.text().replace('\n', ' ; '))
         self.table.setItem(row, 1, action_item)
 
         # 遷移先（ドロップダウン）

@@ -15,6 +15,34 @@ from .dialogs import TransitionListDialog
 from .global_defs import GlobalDefinitions
 
 
+def _truncate_text(text: str, max_chars: int = 40) -> str:
+    """長いテキストを省略表示する"""
+    if not text:
+        return ""
+    lines = text.split('\n')
+    first_line = lines[0].strip() if lines else ""
+    if len(first_line) > max_chars:
+        return first_line[:max_chars].rstrip() + "..."
+    if len(lines) > 1:
+        return first_line + " ..."
+    return first_line
+
+
+def _build_transition_tooltip(trans: Transition) -> str:
+    """遷移の完全な情報をツールチップ用に整形"""
+    parts = []
+    parts.append(f"遷移先: {trans.target if trans.target else '(内部)'}")
+    if trans.event:
+        parts.append(f"イベント: {trans.event}")
+    else:
+        parts.append("イベント: 完了遷移")
+    if trans.guard:
+        parts.append(f"条件:\n{trans.guard}")
+    if trans.action:
+        parts.append(f"動作:\n{trans.action}")
+    return "\n".join(parts)
+
+
 class MatrixTableWidget(QTableWidget):
     """状態遷移マトリックス表示・編集テーブル（行=イベント、列=状態）"""
     transition_changed = Signal()
@@ -23,10 +51,6 @@ class MatrixTableWidget(QTableWidget):
         super().__init__(0, 0, parent)
         self.sm = sm
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
-        StaTableLogger.debug(
-            f"MatrixTableWidget.__init__: global_defs id={id(self.global_defs)}, "
-            f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
-        )
 
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.verticalHeader().setSectionResizeMode(QHeaderView.Interactive)
@@ -55,15 +79,22 @@ class MatrixTableWidget(QTableWidget):
             for col, state in enumerate(states):
                 trans_list = self._find_transitions(state, event)
                 if trans_list:
+                    # セル表示用タイトル（短縮版）
                     titles = [self._generate_title(t) for t in trans_list]
                     display = "\n".join(titles)
                     item = QTableWidgetItem(display)
                     item.setData(Qt.UserRole, trans_list)
-                    item.setToolTip("ダブルクリックまたは Enter で編集")
+
+                    # ★ 全文ツールチップを設定
+                    tooltips = [_build_transition_tooltip(t) for t in trans_list]
+                    full_tooltip = "\n\n".join(tooltips)
+                    item.setToolTip(full_tooltip)
+
                     self.setItem(row, col, item)
                 else:
                     item = QTableWidgetItem("")
                     item.setData(Qt.UserRole, [])
+                    item.setToolTip("遷移なし")
                     self.setItem(row, col, item)
 
         self.resizeColumnsToContents()
@@ -87,15 +118,24 @@ class MatrixTableWidget(QTableWidget):
         return [t for t in self.sm.transitions if t.source == state and t.event == event]
 
     def _generate_title(self, trans: Transition) -> str:
+        """セルに表示する短いタイトル"""
+        parts = []
         if trans.target:
-            parts = [trans.target]
-            if trans.guard:
-                parts.append(f"[{trans.guard}]")
-            if trans.action:
-                parts.append(f"/ {trans.action}")
-            return " ".join(parts)
+            parts.append(trans.target)
         else:
-            return f"internal: {trans.event or '完了'} / {trans.action}".strip()
+            parts.append("(内部)")
+
+        # ガード条件は短縮表示
+        if trans.guard:
+            guard_display = _truncate_text(trans.guard, 30)
+            parts.append(f"[{guard_display}]")
+
+        # アクションも短縮表示（あくまで概要）
+        if trans.action:
+            action_display = _truncate_text(trans.action, 30)
+            parts.append(f"/ {action_display}")
+
+        return " ".join(parts)
 
     def open_transition_dialog(self, row: int, col: int):
         state = self.horizontalHeaderItem(col).text() if self.horizontalHeaderItem(col) else ""
@@ -105,7 +145,6 @@ class MatrixTableWidget(QTableWidget):
         else:
             event_name = event
         StaTableLogger.debug(f"MatrixTableWidget.open_transition_dialog: row={row}, col={col}, state='{state}', event='{event_name}'")
-        StaTableLogger.debug(f"  -> global_defs: {len(self.global_defs.variables)} vars, {len(self.global_defs.flags)} flags")
 
         item = self.item(row, col)
         existing_list = item.data(Qt.UserRole) if item else []

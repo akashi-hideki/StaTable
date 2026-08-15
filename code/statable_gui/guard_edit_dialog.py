@@ -18,7 +18,7 @@ class GuardLineEdit(QLineEdit):
     register_flag_requested = Signal(str)
 
     def __init__(self, text="", parent=None):
-        super().__init__(text, parent)   # ★ 文字列として渡す
+        super().__init__(text, parent)
         self.setFont(QFont("Consolas", 10))
 
     def contextMenuEvent(self, event):
@@ -36,7 +36,7 @@ class GuardLineEdit(QLineEdit):
 class GuardEditDialog(QDialog):
     """遷移条件（ガード）を編集するダイアログ（複数行を論理演算子で結合）"""
 
-    LOGICAL_OPS = ["", "AND", "OR", "XOR", "NAND", "NOR"]   # 先頭行は空
+    LOGICAL_OPS = ["", "AND", "OR", "XOR", "NAND", "NOR"]
 
     def __init__(self, parent=None, guard_text="", global_defs=None, role_functions=None):
         super().__init__(parent)
@@ -81,9 +81,9 @@ class GuardEditDialog(QDialog):
         # 行追加・削除ボタン
         btn_layout = QHBoxLayout()
         add_btn = QPushButton("行追加")
-        add_btn.clicked.connect(lambda: self.add_condition_row())   # ★ lambda で引数なし
+        add_btn.clicked.connect(lambda: self.add_condition_row())
         del_btn = QPushButton("行削除")
-        del_btn.clicked.connect(lambda: self.delete_condition_row()) # ★ lambda で引数なし
+        del_btn.clicked.connect(lambda: self.delete_condition_row())
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
         btn_layout.addStretch()
@@ -112,14 +112,14 @@ class GuardEditDialog(QDialog):
         combo = QComboBox()
         combo.addItems(self.LOGICAL_OPS)
         if row == 0:
-            combo.setCurrentText("")      # 先頭行は空
+            combo.setCurrentText("")
             combo.setEnabled(False)
         else:
             combo.setCurrentText(operator)
         self.condition_table.setCellWidget(row, 0, combo)
 
         # 条件式入力
-        line_edit = GuardLineEdit(text)   # ★ 文字列を渡す（bool混入なし）
+        line_edit = GuardLineEdit(text)
         line_edit.register_variable_requested.connect(self.register_variable_from_selection)
         line_edit.register_flag_requested.connect(self.register_flag_from_selection)
         self.condition_table.setCellWidget(row, 1, line_edit)
@@ -133,7 +133,6 @@ class GuardEditDialog(QDialog):
             self._update_operator_enabled()
 
     def _update_operator_enabled(self):
-        # 先頭行の演算子を無効化・空にする
         if self.condition_table.rowCount() > 0:
             combo = self.condition_table.cellWidget(0, 0)
             if combo:
@@ -147,13 +146,16 @@ class GuardEditDialog(QDialog):
             self.add_condition_row()
             return
 
-        # 改行で分割
-        lines = [line.strip() for line in guard_text.split('\n') if line.strip()]
+        # 改行があれば行分割、なければ旧形式として1行扱い
+        if '\n' in guard_text:
+            lines = [line.strip() for line in guard_text.split('\n') if line.strip()]
+        else:
+            lines = [guard_text.strip()]
+
         if not lines:
             self.add_condition_row()
             return
 
-        # 各行について、先頭の論理演算子を検出
         for i, line in enumerate(lines):
             operator = "AND"
             text = line
@@ -164,7 +166,7 @@ class GuardEditDialog(QDialog):
                     text = line[len(op) + 1:].strip()
                     break
             if i == 0:
-                operator = ""   # 先頭行は演算子なし
+                operator = ""
             self.add_condition_row(text, operator)
 
         self._update_operator_enabled()
@@ -225,7 +227,7 @@ class GuardEditDialog(QDialog):
     # 結果取得
     # ------------------------------------------------------------------
     def get_guard_text(self) -> str:
-        """テーブルの内容を論理演算子で連結して返す"""
+        """テーブルの内容を論理演算子で連結して返す（改行区切り）"""
         parts = []
         for row in range(self.condition_table.rowCount()):
             line_edit = self.condition_table.cellWidget(row, 1)
@@ -240,4 +242,4 @@ class GuardEditDialog(QDialog):
                 combo = self.condition_table.cellWidget(row, 0)
                 op = combo.currentText() if combo else "AND"
                 parts.append(f"{op} {cond_text}")
-        return " ".join(parts)
+        return "\n".join(parts)   # ★ 改行で連結して構造を保持
