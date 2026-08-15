@@ -69,6 +69,12 @@ class ActionEditDialog(QDialog):
         left_widget = QWidget()
         left_layout = QVBoxLayout(left_widget)
 
+        # ★ 一覧タイトル
+        list_title_label = QLabel("グローバル変数・イベントフラグ一覧")
+        list_title_font = QFont("sans-serif", 10, QFont.Bold)
+        list_title_label.setFont(list_title_font)
+        left_layout.addWidget(list_title_label)
+
         left_layout.addWidget(QLabel("検索（前方一致）:"))
         self.search_edit = QLineEdit()
         self.search_edit.setPlaceholderText("メンバ名・グループ名を入力")
@@ -91,7 +97,7 @@ class ActionEditDialog(QDialog):
         reg_btn_layout.addWidget(add_flag_btn)
         left_layout.addLayout(reg_btn_layout)
 
-        # ★ グローバル定義を開くボタン
+        # グローバル定義を開くボタン
         open_defs_btn = QPushButton("グローバル定義を開く...")
         open_defs_btn.clicked.connect(self.open_global_definitions)
         left_layout.addWidget(open_defs_btn)
