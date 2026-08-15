@@ -6,7 +6,7 @@ from PySide6.QtGui import QFont, QKeyEvent
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
     QPushButton, QPlainTextEdit, QSplitter, QLabel, QHeaderView,
-    QTabWidget, QAbstractItemView, QMessageBox
+    QTabWidget, QAbstractItemView, QMessageBox, QDialog
 )
 
 try:
@@ -28,6 +28,8 @@ from .config import (
 from .matrix_table import MatrixTableWidget
 from .dialogs import TransitionListDialog
 from .role_function_dialog import RoleFunctionDialog
+from .action_edit_dialog import ActionEditDialog
+from .global_defs import GlobalDefinitions
 
 
 # ----------------------------------------------------------------------
@@ -42,7 +44,6 @@ class MermaidWidget(QWidget):
 
         if WEBENGINE_AVAILABLE:
             self.web_view = QWebEngineView()
-            # ローカルファイルアクセスを許可
             settings = self.web_view.settings()
             settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
             settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
@@ -117,19 +118,18 @@ class MermaidWidget(QWidget):
 class SettingsPanel(QWidget):
     settings_changed = Signal()
 
-    def __init__(self, sm: StateMachine, parent=None):
+    def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None, parent=None):
         super().__init__(parent)
         self.sm = sm
-        self._updating = False  # プログラムからの更新中フラグ
+        self.global_defs = global_defs if global_defs else GlobalDefinitions()
+        self._updating = False
 
-        # デバウンス用タイマー（300ms）
         self._debounce_timer = QTimer()
         self._debounce_timer.setSingleShot(True)
         self._debounce_timer.setInterval(300)
         self._debounce_timer.timeout.connect(self._emit_settings_changed)
 
         layout = QVBoxLayout(self)
-
         self.tab = QTabWidget()
         layout.addWidget(self.tab)
 
@@ -194,30 +194,35 @@ class SettingsPanel(QWidget):
         self.event_table.itemChanged.connect(self.on_event_table_item_changed)
         self.role_table.itemChanged.connect(self.on_role_table_item_changed)
 
+        # 状態一覧のセルダブルクリックでActionEditDialogを開く
+        self.state_table.cellDoubleClicked.connect(self.on_state_table_cell_double_clicked)
+
         self.populate()
         StaTableLogger.debug("SettingsPanel initialized")
 
     def _emit_settings_changed(self):
-        """デバウンス後に設定変更シグナルを発火"""
         if not self._updating:
             self.settings_changed.emit()
 
     def populate(self):
-        """全テーブルをモデルから再構築"""
-        self._updating = True  # 更新中フラグを設定
+        self._updating = True
 
-        # 状態テーブル
         states = list(self.sm.states.values())
         self.state_table.setRowCount(len(states))
         for row, state in enumerate(states):
             self.state_table.setItem(row, 0, QTableWidgetItem(state.name))
             self.state_table.setItem(row, 1, QTableWidgetItem(state.description))
-            self.state_table.setItem(row, 2, QTableWidgetItem(state.entry))
-            self.state_table.setItem(row, 3, QTableWidgetItem(state.exit))
-            self.state_table.setItem(row, 4, QTableWidgetItem(state.do))
+            entry_item = QTableWidgetItem(state.entry)
+            entry_item.setToolTip("ダブルクリックで編集")
+            self.state_table.setItem(row, 2, entry_item)
+            exit_item = QTableWidgetItem(state.exit)
+            exit_item.setToolTip("ダブルクリックで編集")
+            self.state_table.setItem(row, 3, exit_item)
+            do_item = QTableWidgetItem(state.do)
+            do_item.setToolTip("ダブルクリックで編集")
+            self.state_table.setItem(row, 4, do_item)
             self.state_table.setItem(row, 5, QTableWidgetItem(state.type.value))
 
-        # イベントテーブル
         events = list(self.sm.events.values())
         self.event_table.setRowCount(len(events))
         for row, event in enumerate(events):
@@ -225,10 +230,9 @@ class SettingsPanel(QWidget):
             self.event_table.setItem(row, 1, QTableWidgetItem(event.description))
             self.event_table.setItem(row, 2, QTableWidgetItem(event.kind.value))
 
-        # ロール関数テーブル
         self.populate_role_table()
 
-        self._updating = False  # 更新中フラグを解除
+        self._updating = False
         StaTableLogger.debug(f"Settings populated: {len(states)} states, {len(events)} events, {len(self.sm.role_functions)} roles")
 
     def populate_role_table(self):
@@ -242,6 +246,33 @@ class SettingsPanel(QWidget):
             self.role_table.setItem(row, 4, QTableWidgetItem(rf.arg1_name))
             self.role_table.setItem(row, 5, QTableWidgetItem(rf.arg2_type))
             self.role_table.setItem(row, 6, QTableWidgetItem(rf.arg2_name))
+    def on_state_table_cell_double_clicked(self, row, col):
+        StaTableLogger.debug(f"SettingsPanel.on_state_table_cell_double_clicked: row={row}, col={col}")
+        if col not in (2, 3, 4):
+            StaTableLogger.debug("  -> Ignored (not entry/exit/do column)")
+            return
+
+        item = self.state_table.item(row, col)
+        current_text = item.text() if item else ""
+        StaTableLogger.debug(f"  -> current text: '{current_text[:50]}...'")
+
+        dlg = ActionEditDialog(
+            self,
+            action_text=current_text,
+            role_functions=self.sm.role_functions,
+            global_defs=self.global_defs
+        )
+        if dlg.exec() == QDialog.Accepted:
+            new_text = dlg.get_action_text()
+            StaTableLogger.debug(f"  -> ActionEditDialog accepted, new length={len(new_text)}")
+            if item:
+                item.setText(new_text)
+            else:
+                item = QTableWidgetItem(new_text)
+                self.state_table.setItem(row, col, item)
+            self.settings_changed.emit()
+        else:
+            StaTableLogger.debug("  -> ActionEditDialog cancelled")
 
     def add_state(self):
         row = self.state_table.rowCount()
@@ -327,7 +358,6 @@ class SettingsPanel(QWidget):
         self._debounce_timer.start()
 
     def apply_changes(self):
-        """テーブル編集内容をステートマシンモデルに反映"""
         # 状態テーブル
         for row in range(self.state_table.rowCount()):
             name = self.state_table.item(row, 0).text().strip() if self.state_table.item(row, 0) else ""
@@ -380,13 +410,15 @@ class SettingsPanel(QWidget):
 # 単一タブのコンテンツ
 # ----------------------------------------------------------------------
 class StateMachineTab(QWidget):
-    def __init__(self, sm: StateMachine, parent=None):
+    def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None, parent=None):
         super().__init__(parent)
         self.sm = sm
+        self.global_defs = global_defs if global_defs else GlobalDefinitions()
+
         layout = QHBoxLayout(self)
 
         left_split = QSplitter(Qt.Vertical)
-        self.table = MatrixTableWidget(sm)
+        self.table = MatrixTableWidget(sm, global_defs=self.global_defs)
         self.mermaid = MermaidWidget()
         left_split.addWidget(self.table)
         left_split.addWidget(self.mermaid)
@@ -401,10 +433,9 @@ class StateMachineTab(QWidget):
 
         layout.addWidget(left_split, stretch=3)
 
-        self.settings = SettingsPanel(sm)
+        self.settings = SettingsPanel(sm, global_defs=self.global_defs)
         layout.addWidget(self.settings, stretch=1)
 
-        # シグナル接続
         self.table.transition_changed.connect(self.update_mermaid)
         self.settings.settings_changed.connect(self.update_mermaid)
 
@@ -412,9 +443,8 @@ class StateMachineTab(QWidget):
         StaTableLogger.debug("StateMachineTab created")
 
     def update_mermaid(self):
-        """設定変更を反映し、状態遷移表とMermaidを更新する"""
         self.settings.apply_changes()
-        self.table.populate()      # 状態遷移表を再構築
+        self.table.populate()
         code = generate_mermaid(self.sm)
         self.mermaid.set_mermaid_code(code)
         StaTableLogger.info("Mermaid updated for current tab")

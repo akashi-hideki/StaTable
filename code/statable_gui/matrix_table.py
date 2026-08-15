@@ -12,24 +12,21 @@ from statable.state_machine import StateMachine
 from .logger import StaTableLogger
 from .config import MAX_COLUMN_WIDTH, MIN_ROW_HEIGHT, MAX_ROW_HEIGHT
 from .dialogs import TransitionListDialog
+from .global_defs import GlobalDefinitions
 
 
 class MatrixTableWidget(QTableWidget):
     """状態遷移マトリックス表示・編集テーブル（行=イベント、列=状態）"""
     transition_changed = Signal()
 
-    def __init__(self, sm: StateMachine, parent=None):
+    def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None, parent=None):
         super().__init__(0, 0, parent)
         self.sm = sm
+        self.global_defs = global_defs if global_defs else GlobalDefinitions()
 
-        # 列幅・行高さをユーザーがドラッグで調整可能に
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.verticalHeader().setSectionResizeMode(QHeaderView.Interactive)
-
-        # 最後の列を伸縮させて余白を埋める
         self.horizontalHeader().setStretchLastSection(True)
-
-        # 垂直ヘッダー（イベント名）の最小幅を設定
         self.verticalHeader().setMinimumWidth(120)
 
         self.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -42,7 +39,6 @@ class MatrixTableWidget(QTableWidget):
         StaTableLogger.debug("MatrixTableWidget initialized")
 
     def populate(self):
-        """状態遷移マトリックスを再構築（行=イベント、列=状態）"""
         states = list(self.sm.states.keys())
         events = list(self.sm.events.keys())
         self.clear()
@@ -98,27 +94,30 @@ class MatrixTableWidget(QTableWidget):
             return f"internal: {trans.event or '完了'} / {trans.action}".strip()
 
     def open_transition_dialog(self, row: int, col: int):
-        """行=イベント、列=状態として遷移編集ダイアログを開く"""
         state = self.horizontalHeaderItem(col).text() if self.horizontalHeaderItem(col) else ""
         event = self.verticalHeaderItem(row).text() if self.verticalHeaderItem(row) else ""
         if event == "完了":
             event_name = ""
         else:
             event_name = event
+        StaTableLogger.debug(f"MatrixTableWidget.open_transition_dialog: row={row}, col={col}, state='{state}', event='{event_name}'")
 
         item = self.item(row, col)
         existing_list = item.data(Qt.UserRole) if item else []
+        StaTableLogger.debug(f"  -> existing transitions: {len(existing_list)}")
 
         dlg = TransitionListDialog(
             self,
             state_names=list(self.sm.states.keys()),
             event_name=event_name,
             existing_transitions=existing_list,
-            role_functions=self.sm.role_functions
+            role_functions=self.sm.role_functions,
+            global_defs=self.global_defs
         )
 
         if dlg.exec() == QDialog.Accepted:
             new_transitions = dlg.get_transitions()
+            StaTableLogger.debug(f"  -> TransitionListDialog accepted, {len(new_transitions)} transitions")
             self.sm.transitions = [t for t in self.sm.transitions
                                    if not (t.source == state and t.event == event_name)]
             for trans in new_transitions:
@@ -128,6 +127,8 @@ class MatrixTableWidget(QTableWidget):
             self.populate()
             self.transition_changed.emit()
             StaTableLogger.info(f"Transition updated: {state} -{event_name or '完了'}-> {len(new_transitions)} transition(s)")
+        else:
+            StaTableLogger.debug("  -> TransitionListDialog cancelled")
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_F2):

@@ -16,6 +16,8 @@ from .config import WINDOW_WIDTH, WINDOW_HEIGHT
 from .sample_data import create_sample_state_machine
 from .widgets import StateMachineTab
 from .preferences import Preferences
+from .global_defs import GlobalDefinitions
+from .global_defs_dialog import GlobalDefinitionsDialog
 
 
 class MainWindow(QMainWindow):
@@ -27,8 +29,11 @@ class MainWindow(QMainWindow):
         self.logger = StaTableLogger()
         self.logger.debug("MainWindow initialization started")
 
-        # 設定（最終フォルダ等）を属性アクセスで利用
+        # 環境設定
         self.prefs = Preferences()
+
+        # グローバル変数・イベントフラグ定義（プロジェクト全体で共有）
+        self.global_defs = GlobalDefinitions()
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
@@ -62,7 +67,6 @@ class MainWindow(QMainWindow):
 
         # File menu
         file_menu = menubar.addMenu("File")
-
         open_action = QAction("Open Project...", self)
         open_action.triggered.connect(self.open_project)
         file_menu.addAction(open_action)
@@ -81,27 +85,35 @@ class MainWindow(QMainWindow):
         new_tab_action.triggered.connect(self.add_new_tab)
         file_menu.addAction(new_tab_action)
 
+        # Edit menu
+        edit_menu = menubar.addMenu("Edit")
+        global_defs_action = QAction("Global Definitions...", self)
+        global_defs_action.triggered.connect(self.open_global_defs_dialog)
+        edit_menu.addAction(global_defs_action)
+
         # View menu
         view_menu = menubar.addMenu("View")
-
         toggle_traceball = QAction("TraceBall", self)
         toggle_traceball.setCheckable(True)
         toggle_traceball.setChecked(False)
         toggle_traceball.toggled.connect(self.toggle_traceball)
         view_menu.addAction(toggle_traceball)
 
+    def open_global_defs_dialog(self):
+        """グローバル変数・イベントフラグ定義ダイアログを開く"""
+        dlg = GlobalDefinitionsDialog(self.global_defs, self)
+        dlg.exec()
+
     # ------------------------------------------------------------------
-    # プロジェクト保存・読み込み
+    # プロジェクト保存・読み込み（既存）
     # ------------------------------------------------------------------
     def save_project(self):
-        """全タブの内容を1つのXMLファイルに保存する"""
         tabs = []
         for index in range(self.tab_widget.count()):
             tab = self.tab_widget.widget(index)
             name = self.tab_widget.tabText(index)
             tabs.append((name, tab.sm))
 
-        # 前回のフォルダを属性で取得
         last_dir = self.prefs.last_project_dir
         default_path = str(Path(last_dir) / "project.xml") if last_dir else "project.xml"
 
@@ -112,7 +124,6 @@ class MainWindow(QMainWindow):
             return
         try:
             project_to_xml(tabs, filepath)
-            # 成功したらフォルダを記憶
             self.prefs.last_project_dir = str(Path(filepath).parent)
             self.logger.info(f"Project saved to {filepath}")
         except Exception as e:
@@ -120,8 +131,6 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Failed to save project: {filepath}, error: {e}")
 
     def open_project(self):
-        """XMLファイルからプロジェクト全体を読み込む（既存タブは置き換え）"""
-        # 前回のフォルダを属性で取得
         last_dir = self.prefs.last_project_dir
         filepath, _ = QFileDialog.getOpenFileName(
             self, "Open Project", last_dir, "XML files (*.xml)"
@@ -130,11 +139,9 @@ class MainWindow(QMainWindow):
             return
         try:
             tabs = project_from_xml(filepath)
-            # 既存タブをすべて閉じる
             self.close_all_tabs()
             for name, sm in tabs:
                 self.add_state_machine_tab(name, sm)
-            # 成功したらフォルダを記憶
             self.prefs.last_project_dir = str(Path(filepath).parent)
             self.logger.info(f"Project loaded from {filepath}")
         except Exception as e:
@@ -142,7 +149,6 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Failed to open project: {filepath}, error: {e}")
 
     def close_all_tabs(self):
-        """全タブを安全に閉じる"""
         while self.tab_widget.count() > 0:
             widget = self.tab_widget.widget(0)
             self.tab_widget.removeTab(0)
@@ -177,13 +183,13 @@ class MainWindow(QMainWindow):
             self.logger.info(f"New tab added: {name.strip()}")
 
     def add_state_machine_tab(self, name: str, sm: StateMachine):
-        tab = StateMachineTab(sm)
+        # ★ global_defs をタブへ渡す
+        tab = StateMachineTab(sm, global_defs=self.global_defs)
         idx = self.tab_widget.addTab(tab, name)
         self.tab_widget.setCurrentIndex(idx)
         self.logger.debug(f"Tab '{name}' added at index {idx}")
 
     def close_tab(self, index: int):
-        """タブを閉じる（最低1つのタブを維持する）"""
         if self.tab_widget.count() <= 1:
             QMessageBox.warning(self, "Warning", "At least one tab is required.")
             return
