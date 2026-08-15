@@ -8,22 +8,20 @@ def generate_mermaid(sm: StateMachine) -> str:
     if sm.initial_state:
         lines.append(f"    [*] --> {sm.initial_state}")
 
-    # 遷移のみを出力（entry/exit/do は図には含めない）
+    # 遷移のみを出力（アクションは表示しない）
     for t in sm.transitions:
         label_parts = []
         if t.event:
             label_parts.append(t.event)
         if t.guard:
             label_parts.append(f"[{t.guard}]")
-        if t.action:
-            # 動作が複数行の場合は簡略化（改行を ; に置換）
-            action_display = t.action.replace('\n', '; ')
-            label_parts.append(f"/ {action_display}")
+        # ★ アクション（動作）はMermaidには表示しない
         label = " ".join(label_parts).strip()
 
         if t.target:
             lines.append(f"    {t.source} --> {t.target} : {label}")
         else:
+            # 内部遷移の場合もアクションを表示しない
             lines.append(f"    note right of {t.source} : internal: {label}")
 
     return "\n".join(lines)
