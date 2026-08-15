@@ -35,7 +35,7 @@ class TransitionListDialog(QDialog):
         self.table.setFont(QFont("Consolas", 10))
         layout.addWidget(self.table)
 
-        # ダブルクリックで動作編集ダイアログを開く
+        # ダブルクリックで動作編集ダイアログを開く（動作列のみ）
         self.table.cellDoubleClicked.connect(self.on_cell_double_clicked)
 
         # ボタン
@@ -62,8 +62,10 @@ class TransitionListDialog(QDialog):
             self.add_row()
 
     def on_cell_double_clicked(self, row, col):
-        """テーブルセルのダブルクリックで動作編集ダイアログを開く"""
-        # 動作列（1列目）の編集に限定
+        """テーブルセルのダブルクリックで動作編集ダイアログを開く（動作列のみ）"""
+        if col != 1:  # 動作列は1列目（0始まり）
+            return
+
         action_widget = self.table.cellWidget(row, 1)
         if action_widget and isinstance(action_widget, QTextEdit):
             current_action = action_widget.toPlainText()

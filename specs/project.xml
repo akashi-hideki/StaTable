@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Project>
+    <Tab name="Application">
+        <StateMachine initial="Idle">
+            <States>
+                <State name="Idle" type="normal" parent="" entry="Idle_entry" exit="" do="" description="初期状態" />
+                <State name="Active" type="normal" parent="" entry="" exit="" do="Active_do" description="動作中" />
+                <State name="Error" type="normal" parent="" entry="Error_entry" exit="Error_exit" do="" description="エラー状態" />
+                <State name="Halt" type="final" parent="" entry="" exit="" do="" description="停止状態" />
+                <State name="Pause" type="normal" parent="" entry="" exit="" do="" description="一時停止" />
+            </States>
+            <Events>
+                <Event name="start" id="1" kind="signal" params="" priority="0" description="起動要求" />
+                <Event name="stop" id="2" kind="signal" params="" priority="0" description="停止要求" />
+                <Event name="error" id="3" kind="signal" params="uint8_t err_code" priority="0" description="エラー通知" />
+                <Event name="" id="0" kind="signal" params="" priority="0" description="完了遷移" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="Sensor_Init" description="センサ初期化" return_type="int" arg1_type="uint8_t" arg1_name="channel" arg2_type="uint32_t" arg2_name="timeout_ms" />
+                <RoleFunction name="Error_Log" description="エラーログ出力" return_type="void" arg1_type="int" arg1_name="err_code" arg2_type="int" arg2_name="level" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="Idle" event="start" guard="" action="init()" target="Active" transition_type="external" />
+                <Transition source="Active" event="stop" guard="" action="stop()" target="Idle" transition_type="external" />
+                <Transition source="Error" event="" guard="retry_count &lt; 3" action="retry_count++" target="Active" transition_type="external" />
+                <Transition source="Error" event="" guard="retry_count &gt;= 3" action="" target="Halt" transition_type="external" />
+                <Transition source="Active" event="error" guard="err_code != 0" action="log()" target="Error" transition_type="external" />
+                <Transition source="Active" event="error" guard="err_code == 0" action="ignore()" target="Active" transition_type="external" />
+                <Transition source="Active" event="error" guard="stop_key == 1" action="Stop()" target="Pause" transition_type="external" />
+                <Transition source="Pause" event="start" guard="" action="Start" target="Active" transition_type="external" />
+            </Transitions>
+        </StateMachine>
+    </Tab>
+</Project>
