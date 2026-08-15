@@ -66,6 +66,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
             "action": t.action,
             "target": t.target,
             "transition_type": t.transition_type,
+            "title": t.title,   # ★ titleを保存
         }
         ET.SubElement(trans_elem, "Transition", **attrs)
 
@@ -79,7 +80,7 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
     # ★ 初期状態は States 追加後に設定するため、ここでは一旦読み飛ばす
     initial_state_name = elem.get("initial")
 
-    # States を先に追加
+    # States
     for state_elem in elem.find("States"):
         state = State(
             name=state_elem.get("name", ""),
@@ -128,10 +129,11 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             action=trans_elem.get("action", ""),
             target=trans_elem.get("target", ""),
             transition_type=trans_elem.get("transition_type", "external"),
+            title=trans_elem.get("title", ""),   # ★ titleを復元
         )
         sm.add_transition(trans)
 
-    # ★ 初期状態を最後に設定
+    # 初期状態はState追加後に設定
     if initial_state_name:
         sm.set_initial(initial_state_name)
 
@@ -144,6 +146,7 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
 def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
     root = ET.Element("GlobalDefinitions")
 
+    # SystemVariables
     vars_elem = ET.SubElement(root, "SystemVariables")
     for var in defs.variables:
         attrs = {
@@ -156,6 +159,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
         }
         ET.SubElement(vars_elem, "Variable", **attrs)
 
+    # EventFlags
     flags_elem = ET.SubElement(root, "EventFlags")
     for flag in defs.flags:
         attrs = {
@@ -173,6 +177,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
 def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
     defs = GlobalDefinitions()
 
+    # SystemVariables
     vars_elem = elem.find("SystemVariables")
     if vars_elem is not None:
         for var_elem in vars_elem:
@@ -186,6 +191,7 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
             )
             defs.variables.append(var)
 
+    # EventFlags
     flags_elem = elem.find("EventFlags")
     if flags_elem is not None:
         for flag_elem in flags_elem:
@@ -232,6 +238,7 @@ def project_to_xml(
     global_defs: GlobalDefinitions,
     filepath: str
 ) -> None:
+    """プロジェクト全体（タブ＋グローバル定義）をXMLファイルに保存する"""
     root = ET.Element("Project")
 
     # グローバル定義
@@ -249,8 +256,10 @@ def project_to_xml(
     tree.write(filepath, encoding="utf-8", xml_declaration=True)
 
 
-def project_from_xml(filepath: str) -> Tuple[List[Tuple[str, StateMachine]], GlobalDefinitions]:
-    """プロジェクトXMLファイルからタブ一覧を読み込む"""
+def project_from_xml(
+    filepath: str
+) -> Tuple[List[Tuple[str, StateMachine]], GlobalDefinitions]:
+    """プロジェクトXMLファイルからタブ一覧とグローバル定義を読み込む"""
     tree = ET.parse(filepath)
     root = tree.getroot()
 
@@ -259,8 +268,10 @@ def project_from_xml(filepath: str) -> Tuple[List[Tuple[str, StateMachine]], Glo
     if gd_elem is not None:
         global_defs = global_defs_from_element(gd_elem)
     else:
-        global_defs = GlobalDefinitions()  # 後方互換
+        # 後方互換：グローバル定義がない旧形式
+        global_defs = GlobalDefinitions()
 
+    # 各タブ
     tabs = []
     for tab_elem in root.findall("Tab"):
         name = tab_elem.get("name", "Untitled")

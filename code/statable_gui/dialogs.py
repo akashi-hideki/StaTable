@@ -21,9 +21,11 @@ class TransitionTable(QTableWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # 編集トリガーを無効化して、ダブルクリックをシグナルとして扱う
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
+        """マウスダブルクリックをログ出力し、シグナルを発火する"""
         pos = event.position().toPoint()
         item = self.itemAt(pos)
         if item:
@@ -32,6 +34,7 @@ class TransitionTable(QTableWidget):
             self.cell_double_clicked_any.emit(row, col)
         else:
             StaTableLogger.debug("TransitionTable.mouseDoubleClickEvent: no item at position")
+        # 親クラスの処理は呼ばない（二重発火を防ぐ）
 
 
 class TransitionListDialog(QDialog):
@@ -67,9 +70,9 @@ class TransitionListDialog(QDialog):
 
         btn_layout = QHBoxLayout()
         add_btn = QPushButton("行追加")
-        add_btn.clicked.connect(self.add_row)
+        add_btn.clicked.connect(lambda: self.add_row())   # ★ lambda で引数なし
         del_btn = QPushButton("行削除")
-        del_btn.clicked.connect(self.delete_row)
+        del_btn.clicked.connect(lambda: self.delete_row()) # ★ lambda で引数なし
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
         btn_layout.addStretch()
@@ -88,6 +91,9 @@ class TransitionListDialog(QDialog):
 
         StaTableLogger.debug("TransitionListDialog initialization completed")
 
+    # ------------------------------------------------------------------
+    # セルダブルクリック
+    # ------------------------------------------------------------------
     def on_cell_double_clicked(self, row, col):
         StaTableLogger.debug(f"TransitionListDialog.on_cell_double_clicked: row={row}, col={col}")
 
@@ -105,7 +111,8 @@ class TransitionListDialog(QDialog):
             item = QTableWidgetItem("")
             self.table.setItem(row, 0, item)
 
-        current_guard = item.text()
+        # 元のガード文字列を取得（UserRole に保持している）
+        current_guard = item.data(Qt.UserRole) if item.data(Qt.UserRole) else ""
         StaTableLogger.debug(f"  -> Opening GuardEditDialog (guard='{current_guard[:50]}...')")
 
         dlg = GuardEditDialog(
@@ -116,7 +123,9 @@ class TransitionListDialog(QDialog):
         )
         if dlg.exec() == QDialog.Accepted:
             new_guard = dlg.get_guard_text()
-            item.setText(new_guard)
+            # 表示用テキスト（改行を ; に置換）と元テキストを更新
+            item.setText(new_guard.replace('\n', ' ; '))
+            item.setData(Qt.UserRole, new_guard)
             StaTableLogger.debug(f"  -> Guard updated: '{new_guard[:50]}...'")
 
     def open_action_editor(self, row):
@@ -126,7 +135,8 @@ class TransitionListDialog(QDialog):
             item = QTableWidgetItem("")
             self.table.setItem(row, 1, item)
 
-        current_action = item.text()
+        # 元のアクション文字列を取得（UserRole に保持している）
+        current_action = item.data(Qt.UserRole) if item.data(Qt.UserRole) else ""
         StaTableLogger.debug(f"  -> Opening ActionEditDialog (action='{current_action[:50]}...')")
 
         dlg = ActionEditDialog(
@@ -137,23 +147,31 @@ class TransitionListDialog(QDialog):
         )
         if dlg.exec() == QDialog.Accepted:
             new_action = dlg.get_action_text()
-            item.setText(new_action)
+            # 表示用テキスト（改行を ; に置換）と元テキストを更新
+            item.setText(new_action.replace('\n', ' ; '))
+            item.setData(Qt.UserRole, new_action)
             StaTableLogger.debug(f"  -> Action updated: '{new_action[:50]}...'")
 
+    # ------------------------------------------------------------------
+    # 行追加・削除
+    # ------------------------------------------------------------------
     def add_row(self, trans: Optional[Transition] = None):
         row = self.table.rowCount()
         self.table.insertRow(row)
         StaTableLogger.debug(f"TransitionListDialog.add_row: row={row}")
 
-        # 遷移条件
+        # 遷移条件（元テキストは UserRole に保持）
         cond_item = QTableWidgetItem(trans.guard if trans else "")
         cond_item.setToolTip("ダブルクリックで条件編集")
+        cond_item.setData(Qt.UserRole, trans.guard if trans else "")
         self.table.setItem(row, 0, cond_item)
 
-        # 動作
-        action_item = QTableWidgetItem(trans.action if trans else "")
+        # 動作（表示用は改行を ; に置換、元テキストは UserRole に保持）
+        action_text = trans.action if trans else ""
+        action_display = action_text.replace('\n', ' ; ')
+        action_item = QTableWidgetItem(action_display)
         action_item.setToolTip("ダブルクリックで動作編集")
-        action_item.setText(action_item.text().replace('\n', ' ; '))
+        action_item.setData(Qt.UserRole, action_text)
         self.table.setItem(row, 1, action_item)
 
         # 遷移先（ドロップダウン）
@@ -172,29 +190,40 @@ class TransitionListDialog(QDialog):
         title_item.setToolTip("表に表示する短いラベル（空なら自動生成）")
         self.table.setItem(row, 3, title_item)
 
-    def _generate_title(self, trans: Optional[Transition]) -> str:
-        if not trans:
-            return ""
-        parts = [trans.target] if trans.target else ["(内部)"]
-        if trans.guard:
-            parts.append(f"[{trans.guard}]")
-        if trans.action:
-            parts.append(f"/ {trans.action}")
-        return " ".join(parts)
-
     def delete_row(self):
         row = self.table.currentRow()
         if row >= 0:
             self.table.removeRow(row)
             StaTableLogger.debug(f"TransitionListDialog.delete_row: row={row}")
 
+    def _generate_title(self, trans: Optional[Transition]) -> str:
+        """セルに表示する短いタイトル（改行は ; に置換）"""
+        if not trans:
+            return ""
+        parts = [trans.target] if trans.target else ["(内部)"]
+        if trans.guard:
+            guard_display = trans.guard.replace('\n', ' ; ')
+            parts.append(f"[{guard_display}]")
+        if trans.action:
+            action_display = trans.action.replace('\n', ' ; ')
+            parts.append(f"/ {action_display}")
+        return " ".join(parts)
+
+    # ------------------------------------------------------------------
+    # 結果取得
+    # ------------------------------------------------------------------
     def get_transitions(self) -> List[Transition]:
         StaTableLogger.debug("TransitionListDialog.get_transitions called")
         transitions = []
         for row in range(self.table.rowCount()):
-            guard = self.table.item(row, 0).text().strip() if self.table.item(row, 0) else ""
+            # ガードは UserRole から取得（改行維持）
+            guard_item = self.table.item(row, 0)
+            guard = guard_item.data(Qt.UserRole) if guard_item else ""
+
+            # アクションも UserRole から取得（改行維持）
             action_item = self.table.item(row, 1)
-            action = action_item.text().strip() if action_item else ""
+            action = action_item.data(Qt.UserRole) if action_item else ""
+
             target_widget = self.table.cellWidget(row, 2)
             target = target_widget.currentText().strip() if target_widget else ""
             title_item = self.table.item(row, 3)
@@ -207,7 +236,8 @@ class TransitionListDialog(QDialog):
                 guard=guard,
                 action=action,
                 target=target,
-                transition_type="external"
+                transition_type="external",
+                title=title
             ))
         StaTableLogger.debug(f"  -> {len(transitions)} transitions collected")
         return transitions

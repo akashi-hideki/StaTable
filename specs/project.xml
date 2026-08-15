@@ -4,7 +4,6 @@
         <SystemVariables>
             <Variable name="battery_voltage" type="uint16_t" unit="mV" default_value="0" group="Power" description="バッテリ電圧" />
             <Variable name="motor_current" type="int16_t" unit="mA" default_value="0" group="Motor" description="モータ電流" />
-            <Variable name="Inpedancse" type="uint16_t" unit="ohm" default_value="200" group="Motor" description="" />
         </SystemVariables>
         <EventFlags>
             <Flag name="EVT_START_REQ" min_value="0" max_value="1" group="SystemEvents" description="起動要求" />
@@ -34,8 +33,8 @@
                 <Transition source="Active" event="stop" guard="" action="stop()" target="Idle" transition_type="external" />
                 <Transition source="Active" event="error" guard="err_code != 0" action="log()" target="Error" transition_type="external" />
                 <Transition source="Active" event="error" guard="err_code == 0" action="ignore()" target="Active" transition_type="external" />
-                <Transition source="Error" event="" guard="retry_count &lt; 3&#10;AND motor_current&gt;200" action="retry_count++ ; motor_current=battery_voltage/Inpedancse" target="Active" transition_type="external" />
-                <Transition source="Error" event="" guard="retry_count &gt;= 3" action="motor_current= 0" target="Halt" transition_type="external" />
+                <Transition source="Error" event="" guard="retry_count &lt; 3" action="retry_count++;&#10;battery_voltage = generator_voltage/Inpdedance;" target="Active" transition_type="external" />
+                <Transition source="Error" event="" guard="retry_count &gt;= 3" action="" target="Halt" transition_type="external" />
             </Transitions>
         </StateMachine>
     </Tab>
