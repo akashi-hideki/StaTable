@@ -122,6 +122,10 @@ class SettingsPanel(QWidget):
         super().__init__(parent)
         self.sm = sm
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
+        StaTableLogger.debug(
+            f"SettingsPanel.__init__: global_defs id={id(self.global_defs)}, "
+            f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
+        )
         self._updating = False
 
         self._debounce_timer = QTimer()
@@ -246,6 +250,7 @@ class SettingsPanel(QWidget):
             self.role_table.setItem(row, 4, QTableWidgetItem(rf.arg1_name))
             self.role_table.setItem(row, 5, QTableWidgetItem(rf.arg2_type))
             self.role_table.setItem(row, 6, QTableWidgetItem(rf.arg2_name))
+
     def on_state_table_cell_double_clicked(self, row, col):
         StaTableLogger.debug(f"SettingsPanel.on_state_table_cell_double_clicked: row={row}, col={col}")
         if col not in (2, 3, 4):
@@ -414,6 +419,10 @@ class StateMachineTab(QWidget):
         super().__init__(parent)
         self.sm = sm
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
+        StaTableLogger.debug(
+            f"StateMachineTab.__init__: global_defs id={id(self.global_defs)}, "
+            f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
+        )
 
         layout = QHBoxLayout(self)
 

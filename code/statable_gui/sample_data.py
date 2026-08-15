@@ -1,5 +1,6 @@
 from statable.model import State, Event, Transition, StateType, EventKind, RoleFunction
 from statable.state_machine import StateMachine
+from .global_defs import GlobalDefinitions, SystemVariable, EventFlag
 
 
 def create_sample_state_machine() -> StateMachine:
@@ -36,3 +37,24 @@ def create_sample_state_machine() -> StateMachine:
         arg2_type="int", arg2_name="level"
     ))
     return sm
+
+
+def create_sample_global_defs() -> GlobalDefinitions:
+    defs = GlobalDefinitions()
+    defs.variables.append(SystemVariable(
+        name="battery_voltage", type="uint16_t", unit="mV",
+        default_value="0", group="Power", description="バッテリ電圧"
+    ))
+    defs.variables.append(SystemVariable(
+        name="motor_current", type="int16_t", unit="mA",
+        default_value="0", group="Motor", description="モータ電流"
+    ))
+    defs.flags.append(EventFlag(
+        name="EVT_START_REQ", min_value=0, max_value=1,
+        group="SystemEvents", description="起動要求"
+    ))
+    defs.flags.append(EventFlag(
+        name="EVT_MODE", min_value=0, max_value=3,
+        group="SystemEvents", description="モード指示"
+    ))
+    return defs

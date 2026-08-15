@@ -16,7 +16,7 @@ from .logger import StaTableLogger
 
 class TransitionTable(QTableWidget):
     """ダブルクリックイベントを確実に捕捉するためのテーブル"""
-    cell_double_clicked_any = Signal(int, int)   # 行, 列
+    cell_double_clicked_any = Signal(int, int)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -48,7 +48,11 @@ class TransitionListDialog(QDialog):
         self.role_functions = role_functions or {}
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
 
-        StaTableLogger.debug(f"TransitionListDialog __init__: event='{event_name}', states={len(self.state_names)}, roles={len(self.role_functions)}, global_defs={len(self.global_defs.variables)} vars, {len(self.global_defs.flags)} flags")
+        StaTableLogger.debug(
+            f"TransitionListDialog.__init__: event='{event_name}', "
+            f"states={len(self.state_names)}, roles={len(self.role_functions)}, "
+            f"global_defs={len(self.global_defs.variables)} vars, {len(self.global_defs.flags)} flags"
+        )
 
         layout = QVBoxLayout(self)
 
@@ -89,7 +93,7 @@ class TransitionListDialog(QDialog):
 
     def on_cell_double_clicked(self, row, col):
         StaTableLogger.debug(f"TransitionListDialog.on_cell_double_clicked: row={row}, col={col}")
-        if col != 1:  # 動作列のみ
+        if col != 1:
             StaTableLogger.debug("  -> Ignored (not action column)")
             return
 
@@ -101,7 +105,10 @@ class TransitionListDialog(QDialog):
             current_action = ""
             StaTableLogger.debug("  -> No action item found")
 
-        StaTableLogger.debug(f"  -> Opening ActionEditDialog (roles={len(self.role_functions)}, global_defs={len(self.global_defs.variables)} vars, {len(self.global_defs.flags)} flags)")
+        StaTableLogger.debug(
+            f"  -> Opening ActionEditDialog (roles={len(self.role_functions)}, "
+            f"global_defs={len(self.global_defs.variables)} vars, {len(self.global_defs.flags)} flags)"
+        )
         dlg = ActionEditDialog(
             self,
             action_text=current_action,

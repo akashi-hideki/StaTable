@@ -23,6 +23,10 @@ class MatrixTableWidget(QTableWidget):
         super().__init__(0, 0, parent)
         self.sm = sm
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
+        StaTableLogger.debug(
+            f"MatrixTableWidget.__init__: global_defs id={id(self.global_defs)}, "
+            f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
+        )
 
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.verticalHeader().setSectionResizeMode(QHeaderView.Interactive)
@@ -101,6 +105,7 @@ class MatrixTableWidget(QTableWidget):
         else:
             event_name = event
         StaTableLogger.debug(f"MatrixTableWidget.open_transition_dialog: row={row}, col={col}, state='{state}', event='{event_name}'")
+        StaTableLogger.debug(f"  -> global_defs: {len(self.global_defs.variables)} vars, {len(self.global_defs.flags)} flags")
 
         item = self.item(row, col)
         existing_list = item.data(Qt.UserRole) if item else []

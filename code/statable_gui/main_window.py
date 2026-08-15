@@ -13,7 +13,7 @@ from statable.xml_io import project_to_xml, project_from_xml
 from .logger import StaTableLogger
 from .traceball import TraceBallWidget
 from .config import WINDOW_WIDTH, WINDOW_HEIGHT
-from .sample_data import create_sample_state_machine
+from .sample_data import create_sample_state_machine, create_sample_global_defs
 from .widgets import StateMachineTab
 from .preferences import Preferences
 from .global_defs import GlobalDefinitions
@@ -32,8 +32,12 @@ class MainWindow(QMainWindow):
         # 環境設定
         self.prefs = Preferences()
 
-        # グローバル変数・イベントフラグ定義（プロジェクト全体で共有）
-        self.global_defs = GlobalDefinitions()
+        # グローバル変数・イベントフラグ定義（サンプルデータで初期化）
+        self.global_defs = create_sample_global_defs()
+        StaTableLogger.debug(
+            f"MainWindow.global_defs: id={id(self.global_defs)}, "
+            f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
+        )
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
@@ -67,6 +71,7 @@ class MainWindow(QMainWindow):
 
         # File menu
         file_menu = menubar.addMenu("File")
+
         open_action = QAction("Open Project...", self)
         open_action.triggered.connect(self.open_project)
         file_menu.addAction(open_action)
@@ -105,7 +110,7 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     # ------------------------------------------------------------------
-    # プロジェクト保存・読み込み（既存）
+    # プロジェクト保存・読み込み
     # ------------------------------------------------------------------
     def save_project(self):
         tabs = []
@@ -183,7 +188,7 @@ class MainWindow(QMainWindow):
             self.logger.info(f"New tab added: {name.strip()}")
 
     def add_state_machine_tab(self, name: str, sm: StateMachine):
-        # ★ global_defs をタブへ渡す
+        # global_defs をタブへ渡す
         tab = StateMachineTab(sm, global_defs=self.global_defs)
         idx = self.tab_widget.addTab(tab, name)
         self.tab_widget.setCurrentIndex(idx)
