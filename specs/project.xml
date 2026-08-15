@@ -1,5 +1,16 @@
 <?xml version='1.0' encoding='utf-8'?>
 <Project>
+    <GlobalDefinitions>
+        <SystemVariables>
+            <Variable name="battery_voltage" type="uint16_t" unit="mV" default_value="0" group="Power" description="バッテリ電圧" />
+            <Variable name="motor_current" type="int16_t" unit="mA" default_value="0" group="Motor" description="モータ電流" />
+            <Variable name="DC_voltage" type="uint16_t" unit="V" default_value="0" group="Generator" description="発電機" />
+        </SystemVariables>
+        <EventFlags>
+            <Flag name="EVT_START_REQ" min_value="0" max_value="1" group="SystemEvents" description="起動要求" />
+            <Flag name="EVT_MODE" min_value="0" max_value="3" group="SystemEvents" description="モード指示" />
+        </EventFlags>
+    </GlobalDefinitions>
     <Tab name="Application">
         <StateMachine initial="Idle">
             <States>
@@ -22,12 +33,11 @@
             <Transitions>
                 <Transition source="Idle" event="start" guard="" action="init()" target="Active" transition_type="external" />
                 <Transition source="Active" event="stop" guard="" action="stop()" target="Idle" transition_type="external" />
-                <Transition source="Error" event="" guard="retry_count &lt; 3" action="retry_count++" target="Active" transition_type="external" />
-                <Transition source="Error" event="" guard="retry_count &gt;= 3" action="" target="Halt" transition_type="external" />
                 <Transition source="Active" event="error" guard="err_code != 0" action="log()" target="Error" transition_type="external" />
                 <Transition source="Active" event="error" guard="err_code == 0" action="ignore()" target="Active" transition_type="external" />
-                <Transition source="Active" event="error" guard="stop_key == 1" action="Stop()" target="Pause" transition_type="external" />
-                <Transition source="Pause" event="start" guard="" action="Start" target="Active" transition_type="external" />
+                <Transition source="Error" event="" guard="retry_count &lt; 3" action="retry_count++&#10;battery_voltage=0&#10;DC_voltage=0;" target="Active" transition_type="external" />
+                <Transition source="Error" event="" guard="retry_count &gt;= 3" action="" target="Halt" transition_type="external" />
+                <Transition source="Pause" event="start" guard="" action="" target="Active" transition_type="external" />
             </Transitions>
         </StateMachine>
     </Tab>

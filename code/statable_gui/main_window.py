@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 
 from statable.state_machine import StateMachine
 from statable.xml_io import project_to_xml, project_from_xml
+from statable.global_defs import GlobalDefinitions
 
 from .logger import StaTableLogger
 from .traceball import TraceBallWidget
@@ -16,7 +17,6 @@ from .config import WINDOW_WIDTH, WINDOW_HEIGHT
 from .sample_data import create_sample_state_machine, create_sample_global_defs
 from .widgets import StateMachineTab
 from .preferences import Preferences
-from .global_defs import GlobalDefinitions
 from .global_defs_dialog import GlobalDefinitionsDialog
 
 
@@ -113,6 +113,7 @@ class MainWindow(QMainWindow):
     # プロジェクト保存・読み込み
     # ------------------------------------------------------------------
     def save_project(self):
+        """全タブとグローバル定義を1つのXMLファイルに保存する"""
         tabs = []
         for index in range(self.tab_widget.count()):
             tab = self.tab_widget.widget(index)
@@ -128,7 +129,7 @@ class MainWindow(QMainWindow):
         if not filepath:
             return
         try:
-            project_to_xml(tabs, filepath)
+            project_to_xml(tabs, self.global_defs, filepath)   # ★ グローバル定義を渡す
             self.prefs.last_project_dir = str(Path(filepath).parent)
             self.logger.info(f"Project saved to {filepath}")
         except Exception as e:
@@ -136,6 +137,7 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Failed to save project: {filepath}, error: {e}")
 
     def open_project(self):
+        """XMLファイルからプロジェクト全体（タブ＋グローバル定義）を読み込む"""
         last_dir = self.prefs.last_project_dir
         filepath, _ = QFileDialog.getOpenFileName(
             self, "Open Project", last_dir, "XML files (*.xml)"
@@ -143,10 +145,13 @@ class MainWindow(QMainWindow):
         if not filepath:
             return
         try:
-            tabs = project_from_xml(filepath)
+            tabs, global_defs = project_from_xml(filepath)   # ★ グローバル定義も返る
+            # タブを置き換え
             self.close_all_tabs()
             for name, sm in tabs:
                 self.add_state_machine_tab(name, sm)
+            # グローバル定義を置き換え
+            self.global_defs = global_defs
             self.prefs.last_project_dir = str(Path(filepath).parent)
             self.logger.info(f"Project loaded from {filepath}")
         except Exception as e:
