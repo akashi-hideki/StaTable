@@ -10,11 +10,11 @@ from PySide6.QtWidgets import (
 from statable.state_machine import StateMachine
 from statable.xml_io import project_to_xml, project_from_xml
 from statable.global_defs import GlobalDefinitions
+from statable.sample_data import create_sample_state_machine, create_sample_global_defs
 
 from .logger import StaTableLogger
 from .traceball import TraceBallWidget
 from .config import WINDOW_WIDTH, WINDOW_HEIGHT
-from .sample_data import create_sample_state_machine, create_sample_global_defs
 from .widgets import StateMachineTab
 from .preferences import Preferences
 from .global_defs_dialog import GlobalDefinitionsDialog
@@ -35,6 +35,7 @@ class MainWindow(QMainWindow):
 
         # グローバル変数・イベントフラグ・割り込み・デバイス・タイマ設定
         self.global_defs = create_sample_global_defs()
+        self.global_defs.add_timer_variables()   # ★ 念のため再登録
         StaTableLogger.debug(
             f"MainWindow.global_defs: id={id(self.global_defs)}, "
             f"vars={len(self.global_defs.variables)}, "
@@ -75,7 +76,6 @@ class MainWindow(QMainWindow):
 
         # File menu
         file_menu = menubar.addMenu("File")
-
         open_action = QAction("Open Project...", self)
         open_action.triggered.connect(self.open_project)
         file_menu.addAction(open_action)
@@ -112,12 +112,10 @@ class MainWindow(QMainWindow):
         toggle_traceball.toggled.connect(self.toggle_traceball)
         view_menu.addAction(toggle_traceball)
 
-    # ------------------------------------------------------------------
-    # 各設定ダイアログ起動
-    # ------------------------------------------------------------------
     def open_global_defs_dialog(self):
         """グローバル変数・イベントフラグ定義ダイアログを開く"""
         StaTableLogger.debug("MainWindow.open_global_defs_dialog called")
+        self.global_defs.add_timer_variables()   # ★ 開く前に再登録
         dlg = GlobalDefinitionsDialog(self.global_defs, self)
         dlg.exec()
         StaTableLogger.debug("GlobalDefinitionsDialog closed")
@@ -126,7 +124,6 @@ class MainWindow(QMainWindow):
         """割り込み処理・デバイスリソース・タイマ設定ダイアログを開く"""
         StaTableLogger.debug("MainWindow.open_interrupt_settings called")
 
-        # 全タブからイベント名とロール関数を収集
         event_names = []
         role_functions = {}
         for index in range(self.tab_widget.count()):
@@ -135,7 +132,6 @@ class MainWindow(QMainWindow):
                 event_names.extend(tab.sm.events.keys())
                 role_functions.update(tab.sm.role_functions)
 
-        # 重複を除く
         event_names = list(set(event_names))
 
         StaTableLogger.debug(
@@ -151,9 +147,6 @@ class MainWindow(QMainWindow):
         dlg.exec()
         StaTableLogger.debug("InterruptHandlerEditDialog closed")
 
-    # ------------------------------------------------------------------
-    # プロジェクト保存・読み込み
-    # ------------------------------------------------------------------
     def save_project(self):
         """全タブとグローバル定義を1つのXMLファイルに保存する"""
         tabs = []
@@ -171,7 +164,7 @@ class MainWindow(QMainWindow):
         if not filepath:
             return
         try:
-            project_to_xml(tabs, self.global_defs, filepath)   # ★ グローバル定義を渡す
+            project_to_xml(tabs, self.global_defs, filepath)
             self.prefs.last_project_dir = str(Path(filepath).parent)
             self.logger.info(f"Project saved to {filepath}")
         except Exception as e:
@@ -187,13 +180,12 @@ class MainWindow(QMainWindow):
         if not filepath:
             return
         try:
-            tabs, global_defs = project_from_xml(filepath)   # ★ グローバル定義も返る
-            # タブを置き換え
+            tabs, global_defs = project_from_xml(filepath)
             self.close_all_tabs()
             for name, sm in tabs:
                 self.add_state_machine_tab(name, sm)
-            # グローバル定義を置き換え
             self.global_defs = global_defs
+            self.global_defs.add_timer_variables()   # ★ 読み込み後にも再登録
             self.prefs.last_project_dir = str(Path(filepath).parent)
             self.logger.info(f"Project loaded from {filepath}")
         except Exception as e:
@@ -201,15 +193,11 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Failed to open project: {filepath}, error: {e}")
 
     def close_all_tabs(self):
-        """全タブを安全に閉じる"""
         while self.tab_widget.count() > 0:
             widget = self.tab_widget.widget(0)
             self.tab_widget.removeTab(0)
             widget.deleteLater()
 
-    # ------------------------------------------------------------------
-    # タブ操作
-    # ------------------------------------------------------------------
     def rename_current_tab(self):
         index = self.tab_widget.currentIndex()
         if index >= 0:
@@ -236,7 +224,6 @@ class MainWindow(QMainWindow):
             self.logger.info(f"New tab added: {name.strip()}")
 
     def add_state_machine_tab(self, name: str, sm: StateMachine):
-        # global_defs をタブへ渡す
         tab = StateMachineTab(sm, global_defs=self.global_defs)
         idx = self.tab_widget.addTab(tab, name)
         self.tab_widget.setCurrentIndex(idx)

@@ -1,6 +1,8 @@
-from statable.model import State, Event, Transition, StateType, EventKind, RoleFunction
-from statable.state_machine import StateMachine
-from statable.global_defs import (
+"""サンプルデータ生成（ビジネスロジック層）"""
+
+from .model import State, Event, Transition, StateType, EventKind, RoleFunction
+from .state_machine import StateMachine
+from .global_defs import (
     GlobalDefinitions, SystemVariable, EventFlag,
     InterruptHandlerDef, InterruptAction,
     DevicePlaceholderDef, TimerBaseDef, TimerDerivedDef,
@@ -8,16 +10,25 @@ from statable.global_defs import (
 
 
 def create_sample_state_machine() -> StateMachine:
+    """サンプルの状態遷移マシンを作成する"""
     sm = StateMachine()
+
+    # 状態定義
     sm.add_state(State("Idle", entry="Idle_entry", description="初期状態"))
     sm.add_state(State("Active", do="Active_do", description="動作中"))
     sm.add_state(State("Error", entry="Error_entry", exit="Error_exit", description="エラー状態"))
     sm.add_state(State("Halt", type=StateType.FINAL, description="停止状態"))
+
+    # イベント辞書
     sm.add_event(Event("start", id=1, description="起動要求"))
     sm.add_event(Event("stop", id=2, description="停止要求"))
     sm.add_event(Event("error", id=3, params=["uint8_t err_code"], description="エラー通知"))
     sm.add_event(Event("", id=0, kind=EventKind.SIGNAL, description="完了遷移"))
+
+    # 初期状態
     sm.set_initial("Idle")
+
+    # 遷移定義
     sm.add_transition(Transition("Idle", "start", "", "init()", "Active"))
     sm.add_transition(Transition("Active", "stop", "", "stop()", "Idle"))
     sm.add_transition(Transition("Active", "error", "err_code != 0", "log()", "Error"))
@@ -25,7 +36,7 @@ def create_sample_state_machine() -> StateMachine:
     sm.add_transition(Transition("Error", "", "retry_count >= 3", "", "Halt"))
     sm.add_transition(Transition("Active", "error", "err_code == 0", "ignore()", "Active"))
 
-    # ロール関数のサンプル
+    # ロール関数
     sm.add_role_function(RoleFunction(
         name="Sensor_Init",
         description="センサ初期化",
@@ -40,11 +51,12 @@ def create_sample_state_machine() -> StateMachine:
         arg1_type="int", arg1_name="err_code",
         arg2_type="int", arg2_name="level"
     ))
+
     return sm
 
 
 def create_sample_global_defs() -> GlobalDefinitions:
-    """サンプルのグローバル変数・イベントフラグ定義を作成"""
+    """サンプルのグローバル変数・イベントフラグ・割り込み・デバイス・タイマ設定を作成する"""
     defs = GlobalDefinitions()
 
     # グローバル変数
@@ -85,7 +97,7 @@ def create_sample_global_defs() -> GlobalDefinitions:
         ]
     ))
 
-    # デバイスリソース
+    # デバイスリソース仮定義
     defs.placeholders.append(DevicePlaceholderDef(
         name="TIMER0_IRQ_FLAG",
         description="タイマ0割り込みフラグクリア用レジスタ"
