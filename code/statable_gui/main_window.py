@@ -18,6 +18,7 @@ from .sample_data import create_sample_state_machine, create_sample_global_defs
 from .widgets import StateMachineTab
 from .preferences import Preferences
 from .global_defs_dialog import GlobalDefinitionsDialog
+from .interrupt_handler_edit_dialog import InterruptHandlerEditDialog
 
 
 class MainWindow(QMainWindow):
@@ -32,11 +33,14 @@ class MainWindow(QMainWindow):
         # 環境設定
         self.prefs = Preferences()
 
-        # グローバル変数・イベントフラグ定義（サンプルデータで初期化）
+        # グローバル変数・イベントフラグ・割り込み・デバイス・タイマ設定
         self.global_defs = create_sample_global_defs()
         StaTableLogger.debug(
             f"MainWindow.global_defs: id={id(self.global_defs)}, "
-            f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
+            f"vars={len(self.global_defs.variables)}, "
+            f"flags={len(self.global_defs.flags)}, "
+            f"interrupts={len(self.global_defs.interrupts)}, "
+            f"placeholders={len(self.global_defs.placeholders)}"
         )
 
         self.tab_widget = QTabWidget()
@@ -85,16 +89,20 @@ class MainWindow(QMainWindow):
         file_menu.addAction(rename_action)
 
         file_menu.addSeparator()
-
         new_tab_action = QAction("New State Machine", self)
         new_tab_action.triggered.connect(self.add_new_tab)
         file_menu.addAction(new_tab_action)
 
         # Edit menu
         edit_menu = menubar.addMenu("Edit")
+
         global_defs_action = QAction("Global Definitions...", self)
         global_defs_action.triggered.connect(self.open_global_defs_dialog)
         edit_menu.addAction(global_defs_action)
+
+        interrupt_action = QAction("Interrupt Settings...", self)
+        interrupt_action.triggered.connect(self.open_interrupt_settings)
+        edit_menu.addAction(interrupt_action)
 
         # View menu
         view_menu = menubar.addMenu("View")
@@ -104,10 +112,44 @@ class MainWindow(QMainWindow):
         toggle_traceball.toggled.connect(self.toggle_traceball)
         view_menu.addAction(toggle_traceball)
 
+    # ------------------------------------------------------------------
+    # 各設定ダイアログ起動
+    # ------------------------------------------------------------------
     def open_global_defs_dialog(self):
         """グローバル変数・イベントフラグ定義ダイアログを開く"""
+        StaTableLogger.debug("MainWindow.open_global_defs_dialog called")
         dlg = GlobalDefinitionsDialog(self.global_defs, self)
         dlg.exec()
+        StaTableLogger.debug("GlobalDefinitionsDialog closed")
+
+    def open_interrupt_settings(self):
+        """割り込み処理・デバイスリソース・タイマ設定ダイアログを開く"""
+        StaTableLogger.debug("MainWindow.open_interrupt_settings called")
+
+        # 全タブからイベント名とロール関数を収集
+        event_names = []
+        role_functions = {}
+        for index in range(self.tab_widget.count()):
+            tab = self.tab_widget.widget(index)
+            if hasattr(tab, 'sm'):
+                event_names.extend(tab.sm.events.keys())
+                role_functions.update(tab.sm.role_functions)
+
+        # 重複を除く
+        event_names = list(set(event_names))
+
+        StaTableLogger.debug(
+            f"  event_names={len(event_names)}, role_functions={len(role_functions)}"
+        )
+
+        dlg = InterruptHandlerEditDialog(
+            global_defs=self.global_defs,
+            event_names=event_names,
+            role_functions=role_functions,
+            parent=self
+        )
+        dlg.exec()
+        StaTableLogger.debug("InterruptHandlerEditDialog closed")
 
     # ------------------------------------------------------------------
     # プロジェクト保存・読み込み
@@ -159,6 +201,7 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Failed to open project: {filepath}, error: {e}")
 
     def close_all_tabs(self):
+        """全タブを安全に閉じる"""
         while self.tab_widget.count() > 0:
             widget = self.tab_widget.widget(0)
             self.tab_widget.removeTab(0)

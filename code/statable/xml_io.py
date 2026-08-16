@@ -3,7 +3,11 @@ from typing import List, Tuple
 
 from .model import State, Event, Transition, StateType, EventKind, RoleFunction
 from .state_machine import StateMachine
-from .global_defs import GlobalDefinitions, SystemVariable, EventFlag
+from .global_defs import (
+    GlobalDefinitions, SystemVariable, EventFlag,
+    InterruptHandlerDef, InterruptAction,
+    DevicePlaceholderDef, TimerBaseDef, TimerDerivedDef,
+)
 
 
 # ----------------------------------------------------------------------
@@ -66,7 +70,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
             "action": t.action,
             "target": t.target,
             "transition_type": t.transition_type,
-            "title": t.title,   # ★ titleを保存
+            "title": t.title,
         }
         ET.SubElement(trans_elem, "Transition", **attrs)
 
@@ -129,7 +133,7 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             action=trans_elem.get("action", ""),
             target=trans_elem.get("target", ""),
             transition_type=trans_elem.get("transition_type", "external"),
-            title=trans_elem.get("title", ""),   # ★ titleを復元
+            title=trans_elem.get("title", ""),
         )
         sm.add_transition(trans)
 
@@ -141,7 +145,7 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
 
 
 # ----------------------------------------------------------------------
-# GlobalDefinitions <-> Element 変換
+# GlobalDefinitions <-> Element 変換（割り込み・デバイス・タイマ対応）
 # ----------------------------------------------------------------------
 def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
     root = ET.Element("GlobalDefinitions")
@@ -170,6 +174,48 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
             "description": flag.description,
         }
         ET.SubElement(flags_elem, "Flag", **attrs)
+
+    # Interrupts
+    if defs.interrupts:
+        intrs_elem = ET.SubElement(root, "Interrupts")
+        for intr in defs.interrupts:
+            attrs = {
+                "name": intr.name,
+                "description": intr.description,
+                "event_name": intr.event_name,
+                "is_timer": "true" if intr.is_timer else "false",
+            }
+            intr_elem = ET.SubElement(intrs_elem, "Interrupt", **attrs)
+            for act in intr.actions:
+                act_attrs = {
+                    "guard": act.guard,
+                    "action": act.action,
+                }
+                ET.SubElement(intr_elem, "Action", **act_attrs)
+
+    # DevicePlaceholders
+    if defs.placeholders:
+        ph_elem = ET.SubElement(root, "DevicePlaceholders")
+        for ph in defs.placeholders:
+            attrs = {
+                "name": ph.name,
+                "description": ph.description,
+            }
+            ET.SubElement(ph_elem, "Placeholder", **attrs)
+
+    # TimerBase
+    timer_elem = ET.SubElement(root, "TimerBase")
+    timer_elem.set("variable_name", defs.timer_base.variable_name)
+    timer_elem.set("unit", defs.timer_base.unit)
+    timer_elem.set("data_type", defs.timer_base.data_type)
+    for derived in defs.timer_base.derived:
+        d_attrs = {
+            "period_name": derived.period_name,
+            "multiplier": str(derived.multiplier),
+            "variable_name": derived.variable_name,
+            "data_type": derived.data_type,
+        }
+        ET.SubElement(timer_elem, "Derived", **d_attrs)
 
     return root
 
@@ -208,6 +254,59 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 description=flag_elem.get("description", ""),
             )
             defs.flags.append(flag)
+
+    # Interrupts
+    intrs_elem = elem.find("Interrupts")
+    if intrs_elem is not None:
+        for intr_elem in intrs_elem:
+            actions = []
+            for act_elem in intr_elem.findall("Action"):
+                actions.append(InterruptAction(
+                    guard=act_elem.get("guard", ""),
+                    action=act_elem.get("action", ""),
+                ))
+            intr = InterruptHandlerDef(
+                name=intr_elem.get("name", ""),
+                description=intr_elem.get("description", ""),
+                event_name=intr_elem.get("event_name", ""),
+                is_timer=intr_elem.get("is_timer", "false").lower() == "true",
+                actions=actions,
+            )
+            defs.interrupts.append(intr)
+
+    # DevicePlaceholders
+    ph_elem = elem.find("DevicePlaceholders")
+    if ph_elem is not None:
+        for ph in ph_elem:
+            defs.placeholders.append(DevicePlaceholderDef(
+                name=ph.get("name", ""),
+                description=ph.get("description", ""),
+            ))
+
+    # TimerBase
+    timer_elem = elem.find("TimerBase")
+    if timer_elem is not None:
+        derived_list = []
+        for d_elem in timer_elem.findall("Derived"):
+            try:
+                mult = int(d_elem.get("multiplier", "1"))
+            except ValueError:
+                mult = 1
+            derived_list.append(TimerDerivedDef(
+                period_name=d_elem.get("period_name", ""),
+                multiplier=mult,
+                variable_name=d_elem.get("variable_name", ""),
+                data_type=d_elem.get("data_type", "uint8_t"),
+            ))
+        defs.timer_base = TimerBaseDef(
+            variable_name=timer_elem.get("variable_name", "g_system_tick"),
+            unit=timer_elem.get("unit", "1ms"),
+            data_type=timer_elem.get("data_type", "volatile uint32_t"),
+            derived=derived_list,
+        )
+
+    # タイマ変数をグローバル変数として自動登録
+    defs.add_timer_variables()
 
     return defs
 
@@ -256,10 +355,7 @@ def project_to_xml(
     tree.write(filepath, encoding="utf-8", xml_declaration=True)
 
 
-def project_from_xml(
-    filepath: str
-) -> Tuple[List[Tuple[str, StateMachine]], GlobalDefinitions]:
-    """プロジェクトXMLファイルからタブ一覧とグローバル定義を読み込む"""
+def project_from_xml(filepath: str) -> Tuple[List[Tuple[str, StateMachine]], GlobalDefinitions]:
     tree = ET.parse(filepath)
     root = tree.getroot()
 

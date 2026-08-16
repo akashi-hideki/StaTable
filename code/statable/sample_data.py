@@ -1,6 +1,10 @@
 from statable.model import State, Event, Transition, StateType, EventKind, RoleFunction
 from statable.state_machine import StateMachine
-from statable_gui.global_defs import GlobalDefinitions, SystemVariable, EventFlag
+from statable.global_defs import (
+    GlobalDefinitions, SystemVariable, EventFlag,
+    InterruptHandlerDef, InterruptAction,
+    DevicePlaceholderDef, TimerBaseDef, TimerDerivedDef,
+)
 
 
 def create_sample_state_machine() -> StateMachine:
@@ -43,38 +47,63 @@ def create_sample_global_defs() -> GlobalDefinitions:
     """サンプルのグローバル変数・イベントフラグ定義を作成"""
     defs = GlobalDefinitions()
 
-    # グローバル変数のサンプル
+    # グローバル変数
     defs.variables.append(SystemVariable(
-        name="battery_voltage",
-        type="uint16_t",
-        unit="mV",
-        default_value="0",
-        group="Power",
-        description="バッテリ電圧"
+        name="battery_voltage", type="uint16_t", unit="mV",
+        default_value="0", group="Power", description="バッテリ電圧"
     ))
     defs.variables.append(SystemVariable(
-        name="motor_current",
-        type="int16_t",
-        unit="mA",
-        default_value="0",
-        group="Motor",
-        description="モータ電流"
+        name="motor_current", type="int16_t", unit="mA",
+        default_value="0", group="Motor", description="モータ電流"
     ))
 
-    # イベントフラグのサンプル
+    # イベントフラグ
     defs.flags.append(EventFlag(
-        name="EVT_START_REQ",
-        min_value=0,
-        max_value=1,
-        group="SystemEvents",
-        description="起動要求"
+        name="EVT_START_REQ", min_value=0, max_value=1,
+        group="SystemEvents", description="起動要求"
     ))
     defs.flags.append(EventFlag(
-        name="EVT_MODE",
-        min_value=0,
-        max_value=3,
-        group="SystemEvents",
-        description="モード指示"
+        name="EVT_MODE", min_value=0, max_value=3,
+        group="SystemEvents", description="モード指示"
     ))
+
+    # 割り込み処理
+    defs.interrupts.append(InterruptHandlerDef(
+        name="TIMER0",
+        description="1ms周期タイマ",
+        event_name="tick",
+        is_timer=True,
+        actions=[
+            InterruptAction(
+                guard="g_tick_100ms >= 5",
+                action="StateMachine_EnqueueEvent(EVENT_TICK);"
+            ),
+            InterruptAction(
+                guard="",
+                action="g_system_tick++;\nUpdateDerivedTimers();"
+            ),
+        ]
+    ))
+
+    # デバイスリソース
+    defs.placeholders.append(DevicePlaceholderDef(
+        name="TIMER0_IRQ_FLAG",
+        description="タイマ0割り込みフラグクリア用レジスタ"
+    ))
+
+    # タイマ設定
+    defs.timer_base = TimerBaseDef(
+        variable_name="g_system_tick",
+        unit="1ms",
+        data_type="volatile uint32_t",
+        derived=[
+            TimerDerivedDef(period_name="10ms", multiplier=10, variable_name="g_tick_10ms", data_type="uint8_t"),
+            TimerDerivedDef(period_name="100ms", multiplier=100, variable_name="g_tick_100ms", data_type="uint8_t"),
+            TimerDerivedDef(period_name="1s", multiplier=1000, variable_name="g_tick_1s", data_type="uint16_t"),
+        ]
+    )
+
+    # ★ タイマ変数をグローバル変数として自動登録
+    defs.add_timer_variables()
 
     return defs

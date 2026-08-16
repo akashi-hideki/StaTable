@@ -1,7 +1,6 @@
 """割り込み処理・デバイスリソース・タイマ設定の管理ダイアログ（条件付きアクションテーブル方式）"""
 
 import sys
-from dataclasses import dataclass, field
 from typing import Optional, List
 
 from PySide6.QtCore import Qt
@@ -13,57 +12,20 @@ from PySide6.QtWidgets import (
     QAbstractItemView, QSpinBox, QCheckBox, QFormLayout, QSplitter, QMenu
 )
 
-from statable.global_defs import GlobalDefinitions
+from statable.global_defs import (
+    GlobalDefinitions,
+    InterruptHandlerDef,
+    InterruptAction,
+    DevicePlaceholderDef,
+    TimerBaseDef,
+    TimerDerivedDef,
+)
+
 from .symbol_picker import SymbolPickerWidget
 from .guard_edit_dialog import GuardEditDialog
 from .action_edit_dialog import ActionEditDialog
 from .global_defs_dialog import VariableEditDialog, FlagEditDialog
 from .logger import StaTableLogger
-
-
-# ----------------------------------------------------------------------
-# データモデル
-# ----------------------------------------------------------------------
-@dataclass
-class InterruptAction:
-    """割り込み処理内の条件付きアクション"""
-    guard: str = ""        # ガード条件（空なら無条件）
-    action: str = ""       # 動作コード
-
-
-@dataclass
-class InterruptHandlerDef:
-    """割り込み処理定義"""
-    name: str
-    description: str = ""
-    event_name: str = ""
-    is_timer: bool = False
-    actions: List[InterruptAction] = field(default_factory=list)   # 複数ペア
-
-
-@dataclass
-class DevicePlaceholderDef:
-    """デバイスリソース仮定義"""
-    name: str
-    description: str = ""
-
-
-@dataclass
-class TimerDerivedDef:
-    """派生タイマ変数定義"""
-    period_name: str
-    multiplier: int
-    variable_name: str
-    data_type: str = "uint8_t"
-
-
-@dataclass
-class TimerBaseDef:
-    """タイマ刻み変数定義"""
-    variable_name: str = "g_system_tick"
-    unit: str = "1ms"
-    data_type: str = "volatile uint32_t"
-    derived: List[TimerDerivedDef] = field(default_factory=list)
 
 
 # ----------------------------------------------------------------------
@@ -182,13 +144,13 @@ class InterruptEditDialog(QDialog):
         # ガード条件（読み取り専用）
         guard_item = QTableWidgetItem(guard.replace('\n', ' ; ') if guard else "")
         guard_item.setToolTip("ダブルクリックでガード条件を編集")
-        guard_item.setData(Qt.UserRole, guard)   # 元テキスト保持
+        guard_item.setData(Qt.UserRole, guard)
         self.action_table.setItem(row, 0, guard_item)
 
         # 動作コード（読み取り専用）
         action_item = QTableWidgetItem(action.replace('\n', ' ; ') if action else "")
         action_item.setToolTip("ダブルクリックで動作コードを編集")
-        action_item.setData(Qt.UserRole, action)  # 元テキスト保持
+        action_item.setData(Qt.UserRole, action)
         self.action_table.setItem(row, 1, action_item)
 
     def delete_action_row(self):
@@ -200,7 +162,7 @@ class InterruptEditDialog(QDialog):
         """ガード条件または動作コードを編集"""
         StaTableLogger.debug(f"on_action_double_clicked: row={row}, col={col}")
 
-        if col == 0:  # ガード条件
+        if col == 0:
             item = self.action_table.item(row, 0)
             if not item:
                 return
@@ -216,7 +178,7 @@ class InterruptEditDialog(QDialog):
                 item.setText(new_guard.replace('\n', ' ; '))
                 item.setData(Qt.UserRole, new_guard)
 
-        elif col == 1:  # 動作コード
+        elif col == 1:
             item = self.action_table.item(row, 1)
             if not item:
                 return
@@ -379,20 +341,14 @@ class InterruptHandlerEditDialog(QDialog):
 
     def __init__(
         self,
-        interrupts: List[InterruptHandlerDef],
-        placeholders: List[DevicePlaceholderDef],
-        timer_base: TimerBaseDef,
+        global_defs: GlobalDefinitions,
         event_names: Optional[List[str]] = None,
-        global_defs: Optional[GlobalDefinitions] = None,
         role_functions: Optional[dict] = None,
         parent=None
     ):
         super().__init__(parent)
-        self.interrupts = interrupts
-        self.placeholders = placeholders
-        self.timer_base = timer_base
+        self.global_defs = global_defs
         self.event_names = event_names or []
-        self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.role_functions = role_functions if role_functions is not None else {}
 
         self.setWindowTitle("割り込み処理・デバイスリソース・タイマ設定")
@@ -446,7 +402,7 @@ class InterruptHandlerEditDialog(QDialog):
 
     def refresh_interrupt_table(self):
         self.interrupt_table.setRowCount(0)
-        for intr in self.interrupts:
+        for intr in self.global_defs.interrupts:
             row = self.interrupt_table.rowCount()
             self.interrupt_table.insertRow(row)
             self.interrupt_table.setItem(row, 0, QTableWidgetItem(intr.name))
@@ -457,9 +413,9 @@ class InterruptHandlerEditDialog(QDialog):
 
     def on_interrupt_double_clicked(self, row, col):
         StaTableLogger.debug(f"on_interrupt_double_clicked: row={row}, col={col}")
-        if row < 0 or row >= len(self.interrupts):
+        if row < 0 or row >= len(self.global_defs.interrupts):
             return
-        target = self.interrupts[row]
+        target = self.global_defs.interrupts[row]
         dlg = InterruptEditDialog(
             self,
             event_names=self.event_names,
@@ -472,7 +428,7 @@ class InterruptHandlerEditDialog(QDialog):
             if not new_intr.name:
                 QMessageBox.warning(self, "警告", "割り込み名を入力してください。")
                 return
-            self.interrupts[row] = new_intr
+            self.global_defs.interrupts[row] = new_intr
             self.refresh_interrupt_table()
 
     def add_interrupt(self):
@@ -487,13 +443,13 @@ class InterruptHandlerEditDialog(QDialog):
             if not intr.name:
                 QMessageBox.warning(self, "警告", "割り込み名を入力してください。")
                 return
-            self.interrupts.append(intr)
+            self.global_defs.interrupts.append(intr)
             self.refresh_interrupt_table()
 
     def delete_interrupt(self):
         row = self.interrupt_table.currentRow()
-        if 0 <= row < len(self.interrupts):
-            self.interrupts.pop(row)
+        if 0 <= row < len(self.global_defs.interrupts):
+            self.global_defs.interrupts.pop(row)
             self.refresh_interrupt_table()
 
     # ------------------------------------------------------------------
@@ -523,7 +479,7 @@ class InterruptHandlerEditDialog(QDialog):
 
     def refresh_placeholder_table(self):
         self.placeholder_table.setRowCount(0)
-        for ph in self.placeholders:
+        for ph in self.global_defs.placeholders:
             row = self.placeholder_table.rowCount()
             self.placeholder_table.insertRow(row)
             self.placeholder_table.setItem(row, 0, QTableWidgetItem(ph.name))
@@ -531,16 +487,16 @@ class InterruptHandlerEditDialog(QDialog):
 
     def on_placeholder_double_clicked(self, row, col):
         StaTableLogger.debug(f"on_placeholder_double_clicked: row={row}, col={col}")
-        if row < 0 or row >= len(self.placeholders):
+        if row < 0 or row >= len(self.global_defs.placeholders):
             return
-        target = self.placeholders[row]
+        target = self.global_defs.placeholders[row]
         dlg = DevicePlaceholderEditDialog(self, placeholder=target)
         if dlg.exec() == QDialog.Accepted:
             new_ph = dlg.get_placeholder()
             if not new_ph.name:
                 QMessageBox.warning(self, "警告", "仮定義名を入力してください。")
                 return
-            self.placeholders[row] = new_ph
+            self.global_defs.placeholders[row] = new_ph
             self.refresh_placeholder_table()
 
     def add_placeholder(self):
@@ -550,13 +506,13 @@ class InterruptHandlerEditDialog(QDialog):
             if not ph.name:
                 QMessageBox.warning(self, "警告", "仮定義名を入力してください。")
                 return
-            self.placeholders.append(ph)
+            self.global_defs.placeholders.append(ph)
             self.refresh_placeholder_table()
 
     def delete_placeholder(self):
         row = self.placeholder_table.currentRow()
-        if 0 <= row < len(self.placeholders):
-            self.placeholders.pop(row)
+        if 0 <= row < len(self.global_defs.placeholders):
+            self.global_defs.placeholders.pop(row)
             self.refresh_placeholder_table()
 
     # ------------------------------------------------------------------
@@ -595,13 +551,13 @@ class InterruptHandlerEditDialog(QDialog):
 
     def refresh_timer_table(self):
         # 基準変数
-        self.base_display.setItem(0, 0, QTableWidgetItem(self.timer_base.variable_name))
-        self.base_display.setItem(0, 1, QTableWidgetItem(self.timer_base.unit))
-        self.base_display.setItem(0, 2, QTableWidgetItem(self.timer_base.data_type))
+        self.base_display.setItem(0, 0, QTableWidgetItem(self.global_defs.timer_base.variable_name))
+        self.base_display.setItem(0, 1, QTableWidgetItem(self.global_defs.timer_base.unit))
+        self.base_display.setItem(0, 2, QTableWidgetItem(self.global_defs.timer_base.data_type))
 
         # 派生タイマ
         self.derived_table.setRowCount(0)
-        for d in self.timer_base.derived:
+        for d in self.global_defs.timer_base.derived:
             row = self.derived_table.rowCount()
             self.derived_table.insertRow(row)
             self.derived_table.setItem(row, 0, QTableWidgetItem(d.period_name))
@@ -611,29 +567,31 @@ class InterruptHandlerEditDialog(QDialog):
 
     def on_base_double_clicked(self, row, col):
         StaTableLogger.debug(f"on_base_double_clicked: row={row}, col={col}")
-        dlg = TimerBaseEditDialog(self, timer_base=self.timer_base)
+        dlg = TimerBaseEditDialog(self, timer_base=self.global_defs.timer_base)
         if dlg.exec() == QDialog.Accepted:
             var, unit, typ = dlg.get_values()
             if not var:
                 QMessageBox.warning(self, "警告", "基準変数名を入力してください。")
                 return
-            self.timer_base.variable_name = var
-            self.timer_base.unit = unit
-            self.timer_base.data_type = typ
+            self.global_defs.timer_base.variable_name = var
+            self.global_defs.timer_base.unit = unit
+            self.global_defs.timer_base.data_type = typ
+            self.global_defs.add_timer_variables()
             self.refresh_timer_table()
 
     def on_derived_double_clicked(self, row, col):
         StaTableLogger.debug(f"on_derived_double_clicked: row={row}, col={col}")
-        if row < 0 or row >= len(self.timer_base.derived):
+        if row < 0 or row >= len(self.global_defs.timer_base.derived):
             return
-        target = self.timer_base.derived[row]
+        target = self.global_defs.timer_base.derived[row]
         dlg = TimerDerivedEditDialog(self, derived=target)
         if dlg.exec() == QDialog.Accepted:
             new_d = dlg.get_derived()
             if not new_d.period_name:
                 QMessageBox.warning(self, "警告", "周期名を入力してください。")
                 return
-            self.timer_base.derived[row] = new_d
+            self.global_defs.timer_base.derived[row] = new_d
+            self.global_defs.add_timer_variables()
             self.refresh_timer_table()
 
     def add_derived(self):
@@ -643,11 +601,13 @@ class InterruptHandlerEditDialog(QDialog):
             if not d.period_name:
                 QMessageBox.warning(self, "警告", "周期名を入力してください。")
                 return
-            self.timer_base.derived.append(d)
+            self.global_defs.timer_base.derived.append(d)
+            self.global_defs.add_timer_variables()
             self.refresh_timer_table()
 
     def delete_derived(self):
         row = self.derived_table.currentRow()
-        if 0 <= row < len(self.timer_base.derived):
-            self.timer_base.derived.pop(row)
+        if 0 <= row < len(self.global_defs.timer_base.derived):
+            self.global_defs.timer_base.derived.pop(row)
+            self.global_defs.add_timer_variables()
             self.refresh_timer_table()
