@@ -31,6 +31,7 @@ def _truncate_text(text: str, max_chars: int = 40) -> str:
 def _build_transition_tooltip(trans: Transition) -> str:
     """遷移の完全な情報をツールチップ用に整形"""
     parts = []
+    parts.append(f"タイトル: {trans.title}")
     parts.append(f"遷移先: {trans.target if trans.target else '(内部)'}")
     if trans.event:
         parts.append(f"イベント: {trans.event}")
@@ -82,7 +83,6 @@ class MatrixTableWidget(QTableWidget):
         self.setRowCount(len(events))
         self.setColumnCount(len(states))
         self.setHorizontalHeaderLabels(states)
-        self.setVerticalHeaderLabels([e if e else "完了" for e in events])
 
         # イベントヘッダに配送タイプを含める
         event_labels = []
@@ -96,17 +96,14 @@ class MatrixTableWidget(QTableWidget):
             for col, state in enumerate(states):
                 trans_list = self._find_transitions(state, event)
                 if trans_list:
-                    # セル表示用タイトル（短縮版）
-                    titles = [self._generate_title(t) for t in trans_list]
+                    # タイトルを優先表示
+                    titles = [t.title if t.title and t.title != "(無題遷移)" else self._generate_title(t) for t in trans_list]
                     display = "\n".join(titles)
                     item = QTableWidgetItem(display)
                     item.setData(Qt.UserRole, trans_list)
-
-                    # ★ 全文ツールチップを設定
                     tooltips = [_build_transition_tooltip(t) for t in trans_list]
                     full_tooltip = "\n\n".join(tooltips)
                     item.setToolTip(full_tooltip)
-
                     self.setItem(row, col, item)
                 else:
                     item = QTableWidgetItem("")
@@ -132,27 +129,20 @@ class MatrixTableWidget(QTableWidget):
         StaTableLogger.debug(f"MatrixTable populated: {len(events)} events, {len(states)} states")
 
     def _find_transitions(self, state: str, event: str) -> List[Transition]:
-        """指定セル（状態×イベント）の遷移候補を返す"""
         return self.sm.get_transitions_for_cell(state, event)
 
     def _generate_title(self, trans: Transition) -> str:
-        """セルに表示する短いタイトル"""
         parts = []
         if trans.target:
             parts.append(trans.target)
         else:
             parts.append("(内部)")
-
-        # ガード条件は短縮表示
         if trans.condition:
             condition_display = _truncate_text(trans.condition, 30)
             parts.append(f"[{condition_display}]")
-
-        # アクションも短縮表示（あくまで概要）
         if trans.action:
             action_display = _truncate_text(trans.action, 30)
             parts.append(f"/ {action_display}")
-
         return " ".join(parts)
 
     def open_transition_dialog(self, row: int, col: int):

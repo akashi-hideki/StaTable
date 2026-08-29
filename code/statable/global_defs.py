@@ -13,6 +13,11 @@ class SystemVariable:
     default_value: str = ""
     group: str = ""
     description: str = ""
+    title: str = ""   # ★ タイトル追加
+
+    def __post_init__(self):
+        if not self.title:
+            self.title = f"変数: {self.name}"
 
 
 @dataclass
@@ -23,6 +28,11 @@ class EventFlag:
     max_value: int
     group: str = ""
     description: str = ""
+    title: str = ""   # ★ タイトル追加
+
+    def __post_init__(self):
+        if not self.title:
+            self.title = f"フラグ: {self.name}"
 
     @property
     def bit_width(self) -> int:
@@ -34,8 +44,8 @@ class EventFlag:
 @dataclass
 class InterruptAction:
     """割り込み処理内の条件付きアクション"""
-    condition: str = ""     # ★ 状態遷移条件（旧 guard）
-    action: str = ""        # 動作コード
+    condition: str = ""
+    action: str = ""
 
 
 @dataclass
@@ -43,9 +53,14 @@ class InterruptHandlerDef:
     """割り込み処理定義"""
     name: str
     description: str = ""
-    event_names: List[str] = field(default_factory=list)   # ★ 複数イベント対応
+    event_names: List[str] = field(default_factory=list)
     is_timer: bool = False
     actions: List[InterruptAction] = field(default_factory=list)
+    title: str = ""   # ★ タイトル追加
+
+    def __post_init__(self):
+        if not self.title:
+            self.title = f"割り込み: {self.name}"
 
 
 @dataclass
@@ -53,6 +68,11 @@ class DevicePlaceholderDef:
     """デバイスリソース仮定義"""
     name: str
     description: str = ""
+    title: str = ""   # ★ タイトル追加
+
+    def __post_init__(self):
+        if not self.title:
+            self.title = f"デバイス: {self.name}"
 
 
 @dataclass
@@ -62,6 +82,11 @@ class TimerDerivedDef:
     multiplier: int
     variable_name: str
     data_type: str = "uint8_t"
+    title: str = ""   # ★ タイトル追加
+
+    def __post_init__(self):
+        if not self.title:
+            self.title = f"タイマ: {self.variable_name}"
 
 
 @dataclass
@@ -71,6 +96,11 @@ class TimerBaseDef:
     unit: str = "1ms"
     data_type: str = "volatile uint32_t"
     derived: List[TimerDerivedDef] = field(default_factory=list)
+    title: str = ""   # ★ タイトル追加
+
+    def __post_init__(self):
+        if not self.title:
+            self.title = f"タイマ基準: {self.variable_name}"
 
 
 @dataclass
@@ -79,11 +109,16 @@ class EventQueueDef:
     name: str
     size: int
     element_type: str
-    event_ids: List[str] = field(default_factory=list)   # ★ 関連イベントID
+    event_ids: List[str] = field(default_factory=list)
     priority_enabled: bool = False
     interrupt_safe: bool = True
     rtos_enabled: bool = False
     description: str = ""
+    title: str = ""   # ★ タイトル追加
+
+    def __post_init__(self):
+        if not self.title:
+            self.title = f"キュー: {self.name}"
 
 
 class GlobalDefinitions:
@@ -109,7 +144,8 @@ class GlobalDefinitions:
             unit=self.timer_base.unit,
             default_value="0",
             group="Timer",
-            description="タイマ基準変数"
+            description="タイマ基準変数",
+            title=self.timer_base.title,
         ))
 
         # 派生タイマ変数
@@ -120,7 +156,8 @@ class GlobalDefinitions:
                 unit=d.period_name,
                 default_value="0",
                 group="Timer",
-                description=f"派生タイマ変数（{d.period_name}）"
+                description=f"派生タイマ変数（{d.period_name}）",
+                title=d.title,
             ))
 
     # グループ名の取得

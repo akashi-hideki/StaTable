@@ -1,4 +1,4 @@
-"""状態遷移イベント定義ダイアログ"""
+"""状態遷移イベント定義ダイアログ（タイトル編集対応版）"""
 
 from typing import Optional, List
 
@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 
 from statable.state_machine import StateMachine
 from statable.model import Event, EventDeliveryType, EventSourceLayer, EventKind
+from statable.global_defs import GlobalDefinitions
 from .logger import StaTableLogger
 
 
@@ -47,13 +48,21 @@ class EventEditDialog(QDialog):
         form = QFormLayout()
         layout.addLayout(form)
 
+        # タイトル入力欄（必須・仮タイトル自動設定）
+        self.title_edit = QLineEdit()
+        if event:
+            self.title_edit.setText(event.title)
+        self.title_edit.setPlaceholderText("一覧に表示されるラベル（空なら自動設定）")
+        self.title_edit.setToolTip("このイベントのタイトルを入力してください。空の場合は自動で仮タイトルが設定されます。")
+        form.addRow("タイトル *", self.title_edit)
+
         # イベント名
         self.name_edit = QLineEdit()
         if event:
             self.name_edit.setText(event.name)
         form.addRow("イベント名", self.name_edit)
 
-        # イベントID（数値）
+        # イベントID
         self.id_spin = QSpinBox()
         self.id_spin.setRange(0, 65535)
         if event and event.id is not None:
@@ -125,7 +134,7 @@ class EventEditDialog(QDialog):
 
         # OK/Cancel
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
+        buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
@@ -134,6 +143,14 @@ class EventEditDialog(QDialog):
     def _on_data_check_toggled(self, checked: bool):
         self.data_type_combo.setEnabled(checked)
         self.data_name_edit.setEnabled(checked)
+
+    def _on_accept(self):
+        """OKボタン：タイトルが空なら仮タイトルを自動設定"""
+        if not self.title_edit.text().strip():
+            auto_title = f"イベント: {self.name_edit.text().strip() or '(無名)'}"
+            self.title_edit.setText(auto_title)
+            StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
+        self.accept()
 
     def get_event(self) -> Event:
         source_layer = EventSourceLayer.MIDDLEWARE if self.layer_middleware.isChecked() else EventSourceLayer.DRIVER
@@ -148,17 +165,19 @@ class EventEditDialog(QDialog):
             source_layer=source_layer,
             data_type=data_type,
             data_name=data_name,
+            title=self.title_edit.text().strip(),
         )
 
 
 class EventDefinitionDialog(QDialog):
     """状態遷移イベント定義一覧ダイアログ"""
 
-    def __init__(self, sm: StateMachine, parent=None):
+    def __init__(self, sm: StateMachine, global_defs: Optional[GlobalDefinitions] = None, parent=None):
         super().__init__(parent)
         self.sm = sm
+        self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.setWindowTitle("状態遷移イベント定義")
-        self.setMinimumSize(1000, 650)
+        self.setMinimumSize(1100, 650)
 
         layout = QVBoxLayout(self)
 
@@ -166,19 +185,20 @@ class EventDefinitionDialog(QDialog):
         search_layout = QHBoxLayout()
         search_layout.addWidget(QLabel("検索（前方一致）:"))
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("イベント名・説明")
+        self.search_edit.setPlaceholderText("タイトル・イベント名・説明")
         self.search_edit.textChanged.connect(self.refresh_table)
         search_layout.addWidget(self.search_edit)
         layout.addLayout(search_layout)
 
-        # イベント一覧テーブル
-        self.table = DoubleClickTable(0, 6)
+        # イベント一覧テーブル（タイトル列追加・直接編集可能）
+        self.table = DoubleClickTable(0, 7)
         self.table.setHorizontalHeaderLabels([
-            "イベント名", "ID", "発生源", "配送タイプ", "付随データ", "説明"
+            "タイトル", "イベント名", "ID", "発生源", "配送タイプ", "付随データ", "説明"
         ])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setFont(QFont("Consolas", 10))
         self.table.cellDoubleClicked.connect(self.on_double_clicked)
+        self.table.itemChanged.connect(self.on_item_changed)
         layout.addWidget(self.table, stretch=1)
 
         # ボタン
@@ -207,20 +227,45 @@ class EventDefinitionDialog(QDialog):
         for event in events:
             name = event.name if event.name else "（完了）"
             desc = event.description
-            if query and not (name.lower().startswith(query) or desc.lower().startswith(query)):
+            title = event.title
+            if query and not (
+                title.lower().startswith(query) or
+                name.lower().startswith(query) or
+                desc.lower().startswith(query)
+            ):
                 continue
             row = self.table.rowCount()
             self.table.insertRow(row)
-            self.table.setItem(row, 0, QTableWidgetItem(name))
-            self.table.setItem(row, 1, QTableWidgetItem(str(event.id) if event.id is not None else ""))
-            self.table.setItem(row, 2, QTableWidgetItem(event.source_layer.value))
-            self.table.setItem(row, 3, QTableWidgetItem(event.delivery_type.value))
+
+            # タイトル（直接編集可能）
+            title_item = QTableWidgetItem(title)
+            title_item.setToolTip("このイベントのタイトル。直接編集できます。")
+            self.table.setItem(row, 0, title_item)
+
+            self.table.setItem(row, 1, QTableWidgetItem(name))
+            self.table.setItem(row, 2, QTableWidgetItem(str(event.id) if event.id is not None else ""))
+            self.table.setItem(row, 3, QTableWidgetItem(event.source_layer.value))
+            self.table.setItem(row, 4, QTableWidgetItem(event.delivery_type.value))
             data_text = f"{event.data_type} {event.data_name}" if event.data_type else ""
-            self.table.setItem(row, 4, QTableWidgetItem(data_text))
-            self.table.setItem(row, 5, QTableWidgetItem(event.description))
+            self.table.setItem(row, 5, QTableWidgetItem(data_text))
+            self.table.setItem(row, 6, QTableWidgetItem(event.description))
+
+    def on_item_changed(self, item):
+        """タイトル列が直接編集されたときの処理"""
+        if item.column() == 0:
+            row = item.row()
+            name_item = self.table.item(row, 1)
+            if name_item:
+                name = name_item.text()
+                if name == "（完了）":
+                    name = ""
+                if name in self.sm.events:
+                    new_title = item.text().strip() or f"イベント: {name or '(完了)'}"
+                    self.sm.events[name].title = new_title
+                    StaTableLogger.debug(f"Event title edited directly: '{name}' -> '{new_title}'")
 
     def _find_event_by_row(self, row: int) -> Optional[Event]:
-        name_item = self.table.item(row, 0)
+        name_item = self.table.item(row, 1)
         if not name_item:
             return None
         name = name_item.text()
@@ -230,6 +275,8 @@ class EventDefinitionDialog(QDialog):
 
     def on_double_clicked(self, row, col):
         StaTableLogger.debug(f"on_double_clicked: row={row}, col={col}")
+        if col == 0:
+            return  # タイトル列は直接編集
         event = self._find_event_by_row(row)
         if not event:
             return
@@ -245,12 +292,20 @@ class EventDefinitionDialog(QDialog):
                 if new_event.name in self.sm.events:
                     QMessageBox.warning(self, "警告", f"イベント '{new_event.name}' は既に存在します。")
                     return
-                del self.sm.events[old_name]
-                # 遷移のイベント名も更新
+                # 元の位置を維持して辞書を再構築
+                new_events = {}
+                for key, value in self.sm.events.items():
+                    if key == old_name:
+                        new_events[new_event.name] = new_event
+                    else:
+                        new_events[key] = value
+                self.sm.events = new_events
                 for trans in self.sm.transitions:
                     if trans.event == old_name:
                         trans.event = new_event.name
-            self.sm.events[new_event.name] = new_event
+            else:
+                self.sm.events[old_name] = new_event
+
             self.refresh_table()
             StaTableLogger.info(f"Event updated: {new_event.name}")
 
@@ -279,7 +334,7 @@ class EventDefinitionDialog(QDialog):
         # 依存チェック
         transitions = self.sm.get_transitions_for_event(event.name)
         if transitions:
-            msg = f"イベント '{event.name or '(完了)'}' は削除できません。\n\n以下の遷移で使用されています：\n\n"
+            msg = f"イベント '{event.title}' は削除できません。\n\n以下の遷移で使用されています：\n\n"
             for trans in transitions:
                 msg += f"  - {trans.source} → {trans.target} [条件: {trans.condition or 'なし'}]\n"
             msg += "\n先にこれらの遷移を削除してください。"
@@ -291,13 +346,13 @@ class EventDefinitionDialog(QDialog):
             if event.name in intr.event_names:
                 QMessageBox.warning(
                     self, "警告",
-                    f"イベント '{event.name}' は割り込み処理 '{intr.name}' で使用されています。\n先に割り込み処理の定義を変更してください。"
+                    f"イベント '{event.title}' は割り込み処理 '{intr.title}' で使用されています。\n先に割り込み処理の定義を変更してください。"
                 )
                 return
 
         reply = QMessageBox.question(
             self, "確認",
-            f"イベント '{event.name or '(完了)'}' を削除しますか？",
+            f"イベント '{event.title}' を削除しますか？",
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:

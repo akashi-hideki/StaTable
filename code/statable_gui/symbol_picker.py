@@ -1,7 +1,7 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QListWidget,
-    QListWidgetItem, QPushButton, QLabel
+    QListWidgetItem, QPushButton, QLabel, QDialog
 )
 from PySide6.QtGui import QFont
 
@@ -13,7 +13,7 @@ from .logger import StaTableLogger
 class SymbolPickerWidget(QWidget):
     """グローバル変数・イベントフラグ・ロール関数戻り値を選択する共通ウィジェット"""
 
-    insert_requested = Signal(str)   # ダブルクリック時に挿入する文字列を通知
+    insert_requested = Signal(str)
 
     def __init__(self, parent=None, global_defs=None, role_functions=None):
         super().__init__(parent)
@@ -31,7 +31,7 @@ class SymbolPickerWidget(QWidget):
         search_label = QLabel("検索（前方一致）:")
         layout.addWidget(search_label)
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("メンバ名・グループ名を入力")
+        self.search_edit.setPlaceholderText("タイトル・メンバ名・グループ名を入力")
         self.search_edit.textChanged.connect(self.refresh_list)
         layout.addWidget(self.search_edit)
 
@@ -70,11 +70,13 @@ class SymbolPickerWidget(QWidget):
 
         # グローバル変数
         for var in self.global_defs.variables:
-            if self._matches(var.name, var.group, query):
-                item = QListWidgetItem(f"変数: {var.name}")
+            if self._matches(var.title, var.name, var.group, query):
+                item = QListWidgetItem(f"変数: {var.title}")
                 item.setData(Qt.UserRole, var.name)
                 item.setToolTip(
                     f"種別: グローバル変数\n"
+                    f"タイトル: {var.title}\n"
+                    f"名前: {var.name}\n"
                     f"型: {var.type}\n"
                     f"単位: {var.unit}\n"
                     f"初期値: {var.default_value}\n"
@@ -85,11 +87,13 @@ class SymbolPickerWidget(QWidget):
 
         # イベントフラグ
         for flag in self.global_defs.flags:
-            if self._matches(flag.name, flag.group, query):
-                item = QListWidgetItem(f"フラグ: {flag.name}")
+            if self._matches(flag.title, flag.name, flag.group, query):
+                item = QListWidgetItem(f"フラグ: {flag.title}")
                 item.setData(Qt.UserRole, flag.name)
                 item.setToolTip(
                     f"種別: イベントフラグ\n"
+                    f"タイトル: {flag.title}\n"
+                    f"名前: {flag.name}\n"
                     f"最小値: {flag.min_value}\n"
                     f"最大値: {flag.max_value}\n"
                     f"ビット幅: {flag.bit_width} bit\n"
@@ -101,7 +105,7 @@ class SymbolPickerWidget(QWidget):
         # ロール関数戻り値（一時変数）
         for func_name in self.role_functions.keys():
             temp_var = f"rv_{func_name}"
-            if self._matches(temp_var, "", query) or self._matches(func_name, "", query):
+            if self._matches(temp_var, func_name, "", query):
                 item = QListWidgetItem(f"戻り値: {temp_var}")
                 item.setData(Qt.UserRole, temp_var)
                 item.setToolTip(
@@ -113,11 +117,15 @@ class SymbolPickerWidget(QWidget):
 
         StaTableLogger.debug(f"SymbolPickerWidget: {self.list_widget.count()} items displayed")
 
-    def _matches(self, name: str, group: str, query: str) -> bool:
+    def _matches(self, title: str, name: str, group: str, query: str) -> bool:
         if not query:
             return True
         q = query.lower()
-        return name.lower().startswith(q) or group.lower().startswith(q)
+        return (
+            title.lower().startswith(q) or
+            name.lower().startswith(q) or
+            group.lower().startswith(q)
+        )
 
     # ------------------------------------------------------------------
     # ダブルクリック

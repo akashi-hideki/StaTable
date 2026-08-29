@@ -1,4 +1,4 @@
-"""イベントキュー定義ダイアログ（イベントID関連付け対応版）"""
+"""イベントキュー定義ダイアログ（タイトル編集対応版）"""
 
 from typing import Optional, List
 
@@ -51,6 +51,14 @@ class EventQueueEditDialog(QDialog):
         form = QFormLayout()
         layout.addLayout(form)
 
+        # タイトル入力欄（必須・仮タイトル自動設定）
+        self.title_edit = QLineEdit()
+        if queue_def:
+            self.title_edit.setText(queue_def.title)
+        self.title_edit.setPlaceholderText("一覧に表示されるラベル（空なら自動設定）")
+        self.title_edit.setToolTip("このキューのタイトルを入力してください。空の場合は自動で仮タイトルが設定されます。")
+        form.addRow("タイトル *", self.title_edit)
+
         # キュー名
         self.name_edit = QLineEdit()
         if queue_def:
@@ -97,7 +105,7 @@ class EventQueueEditDialog(QDialog):
         self.safe_check.setChecked(queue_def.interrupt_safe if queue_def else True)
         form.addRow("割込保護", self.safe_check)
 
-        # RTOS使用（将来拡張）
+        # RTOS使用
         self.rtos_check = QCheckBox()
         self.rtos_check.setChecked(queue_def.rtos_enabled if queue_def else False)
         form.addRow("RTOS使用", self.rtos_check)
@@ -109,11 +117,19 @@ class EventQueueEditDialog(QDialog):
         form.addRow("説明", self.desc_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
+        buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
         StaTableLogger.debug("EventQueueEditDialog initialized")
+
+    def _on_accept(self):
+        """OKボタン：タイトルが空なら仮タイトルを自動設定"""
+        if not self.title_edit.text().strip():
+            auto_title = f"キュー: {self.name_edit.text().strip() or '(無名)'}"
+            self.title_edit.setText(auto_title)
+            StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
+        self.accept()
 
     def get_queue_def(self) -> EventQueueDef:
         event_ids = []
@@ -130,6 +146,7 @@ class EventQueueEditDialog(QDialog):
             interrupt_safe=self.safe_check.isChecked(),
             rtos_enabled=self.rtos_check.isChecked(),
             description=self.desc_edit.text().strip(),
+            title=self.title_edit.text().strip(),
         )
 
 
@@ -146,7 +163,7 @@ class EventQueueDefsDialog(QDialog):
         self.global_defs = global_defs
         self.event_names = event_names or []
         self.setWindowTitle("イベントキュー定義")
-        self.setMinimumSize(1000, 600)
+        self.setMinimumSize(1100, 600)
 
         layout = QVBoxLayout(self)
 
@@ -154,18 +171,19 @@ class EventQueueDefsDialog(QDialog):
         search_layout = QHBoxLayout()
         search_layout.addWidget(QLabel("検索（前方一致）:"))
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("キュー名・説明")
+        self.search_edit.setPlaceholderText("タイトル・キュー名・説明")
         self.search_edit.textChanged.connect(self.refresh_table)
         search_layout.addWidget(self.search_edit)
         layout.addLayout(search_layout)
 
-        # 一覧テーブル
-        self.table = DoubleClickTable(0, 8)
+        # 一覧テーブル（タイトル列追加・直接編集可能）
+        self.table = DoubleClickTable(0, 9)
         self.table.setHorizontalHeaderLabels([
-            "キュー名", "サイズ", "要素型", "関連イベント", "優先度", "割込保護", "RTOS", "説明"
+            "タイトル", "キュー名", "サイズ", "要素型", "関連イベント", "優先度", "割込保護", "RTOS", "説明"
         ])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.cellDoubleClicked.connect(self.on_double_clicked)
+        self.table.itemChanged.connect(self.on_item_changed)
         layout.addWidget(self.table)
 
         # ボタン
@@ -195,23 +213,48 @@ class EventQueueDefsDialog(QDialog):
                 continue
             row = self.table.rowCount()
             self.table.insertRow(row)
-            self.table.setItem(row, 0, QTableWidgetItem(q.name))
-            self.table.setItem(row, 1, QTableWidgetItem(str(q.size)))
-            self.table.setItem(row, 2, QTableWidgetItem(q.element_type))
-            self.table.setItem(row, 3, QTableWidgetItem(", ".join(q.event_ids)))
-            self.table.setItem(row, 4, QTableWidgetItem("あり" if q.priority_enabled else "なし"))
-            self.table.setItem(row, 5, QTableWidgetItem("あり" if q.interrupt_safe else "なし"))
-            self.table.setItem(row, 6, QTableWidgetItem("あり" if q.rtos_enabled else "なし"))
-            self.table.setItem(row, 7, QTableWidgetItem(q.description))
+
+            title_item = QTableWidgetItem(q.title)
+            title_item.setToolTip("このキューのタイトル。直接編集できます。")
+            self.table.setItem(row, 0, title_item)
+
+            self.table.setItem(row, 1, QTableWidgetItem(q.name))
+            self.table.setItem(row, 2, QTableWidgetItem(str(q.size)))
+            self.table.setItem(row, 3, QTableWidgetItem(q.element_type))
+            self.table.setItem(row, 4, QTableWidgetItem(", ".join(q.event_ids)))
+            self.table.setItem(row, 5, QTableWidgetItem("あり" if q.priority_enabled else "なし"))
+            self.table.setItem(row, 6, QTableWidgetItem("あり" if q.interrupt_safe else "なし"))
+            self.table.setItem(row, 7, QTableWidgetItem("あり" if q.rtos_enabled else "なし"))
+            self.table.setItem(row, 8, QTableWidgetItem(q.description))
 
     def _matches(self, q: EventQueueDef, query: str) -> bool:
         """検索フィルタ（前方一致）"""
         if not query:
             return True
-        return q.name.lower().startswith(query) or q.description.lower().startswith(query)
+        return (
+            q.title.lower().startswith(query) or
+            q.name.lower().startswith(query) or
+            q.description.lower().startswith(query)
+        )
+
+    def on_item_changed(self, item):
+        """タイトル列が直接編集されたときの処理"""
+        if item.column() == 0:
+            row = item.row()
+            name_item = self.table.item(row, 1)
+            if name_item and row < len(self.global_defs.event_queues):
+                name = name_item.text()
+                for q in self.global_defs.event_queues:
+                    if q.name == name:
+                        new_title = item.text().strip() or f"キュー: {name}"
+                        q.title = new_title
+                        StaTableLogger.debug(f"Queue title edited directly: '{name}' -> '{new_title}'")
+                        break
 
     def on_double_clicked(self, row, col):
         StaTableLogger.debug(f"on_double_clicked: row={row}, col={col}")
+        if col == 0:
+            return  # タイトル列は直接編集
         if row < 0 or row >= len(self.global_defs.event_queues):
             return
         target = self.global_defs.event_queues[row]

@@ -1,7 +1,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QComboBox,
+    QDialog, QVBoxLayout, QHBoxLayout, QComboBox, QLineEdit,
     QPushButton, QLabel, QDialogButtonBox, QPlainTextEdit, QSplitter,
     QWidget
 )
@@ -14,7 +14,7 @@ from .logger import StaTableLogger
 class ConditionEditDialog(QDialog):
     """状態遷移条件を編集するダイアログ"""
 
-    def __init__(self, parent=None, condition_text="", global_defs=None, role_functions=None):
+    def __init__(self, parent=None, condition_text="", title="", global_defs=None, role_functions=None):
         super().__init__(parent)
         self.setWindowTitle("状態遷移条件編集")
         self.setMinimumSize(900, 650)
@@ -23,17 +23,22 @@ class ConditionEditDialog(QDialog):
 
         StaTableLogger.debug(
             f"ConditionEditDialog.__init__: condition_text_len={len(condition_text)}, "
-            f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
+            f"title='{title}', vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
         )
 
         main_layout = QVBoxLayout(self)
 
-        # タイトル
-        title_label = QLabel("状態遷移条件編集")
-        title_font = QFont("sans-serif", 14, QFont.Bold)
-        title_label.setFont(title_font)
-        title_label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(title_label)
+        # タイトル入力欄（必須・仮タイトル自動設定）
+        title_layout = QHBoxLayout()
+        title_label = QLabel("タイトル *")
+        title_label.setFont(QFont("sans-serif", 10, QFont.Bold))
+        self.title_edit = QLineEdit()
+        self.title_edit.setText(title)
+        self.title_edit.setPlaceholderText("一覧に表示されるラベル（空なら自動設定）")
+        self.title_edit.setToolTip("この条件のタイトルを入力してください。空の場合は自動で仮タイトルが設定されます。")
+        title_layout.addWidget(title_label)
+        title_layout.addWidget(self.title_edit, stretch=1)
+        main_layout.addLayout(title_layout)
 
         # ロール関数選択・挿入バー
         role_bar = QHBoxLayout()
@@ -79,7 +84,7 @@ class ConditionEditDialog(QDialog):
 
         # OK/Cancel
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
+        buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         main_layout.addWidget(buttons)
 
@@ -102,7 +107,26 @@ class ConditionEditDialog(QDialog):
         StaTableLogger.debug(f"ConditionEditDialog.insert_symbol: '{text}'")
         self.condition_edit.insertPlainText(text)
 
+    def _on_accept(self):
+        """OKボタン：タイトルが空なら仮タイトルを自動設定"""
+        if not self.title_edit.text().strip():
+            condition_text = self.condition_edit.toPlainText().strip()
+            if condition_text:
+                # 条件式の先頭20文字を仮タイトルに
+                first_line = condition_text.split('\n')[0].strip()
+                auto_title = first_line[:20] + ("..." if len(first_line) > 20 else "")
+            else:
+                auto_title = "(無題条件)"
+            self.title_edit.setText(auto_title)
+            StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
+        self.accept()
+
     def get_condition_text(self) -> str:
         text = self.condition_edit.toPlainText().strip()
         StaTableLogger.debug(f"get_condition_text: length={len(text)}")
         return text
+
+    def get_title(self) -> str:
+        title = self.title_edit.text().strip()
+        StaTableLogger.debug(f"get_title: '{title}'")
+        return title

@@ -14,16 +14,11 @@ from .global_defs import (
 )
 
 
-# ----------------------------------------------------------------------
-# StateMachine <-> Element 変換
-# ----------------------------------------------------------------------
 def state_machine_to_element(sm: StateMachine) -> ET.Element:
-    """StateMachine を XML Element に変換する"""
     root = ET.Element("StateMachine")
     if sm.initial_state:
         root.set("initial", sm.initial_state)
 
-    # States
     states_elem = ET.SubElement(root, "States")
     for state in sm.states.values():
         attrs = {
@@ -37,7 +32,6 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
         }
         ET.SubElement(states_elem, "State", **attrs)
 
-    # Events
     events_elem = ET.SubElement(root, "Events")
     for event in sm.events.values():
         attrs = {
@@ -51,10 +45,10 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
             "source_layer": event.source_layer.value,
             "data_type": event.data_type,
             "data_name": event.data_name,
+            "title": event.title,
         }
         ET.SubElement(events_elem, "Event", **attrs)
 
-    # RoleFunctions
     roles_elem = ET.SubElement(root, "RoleFunctions")
     for rf in sm.role_functions.values():
         attrs = {
@@ -65,10 +59,10 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
             "arg1_name": rf.arg1_name,
             "arg2_type": rf.arg2_type,
             "arg2_name": rf.arg2_name,
+            "title": rf.title,
         }
         ET.SubElement(roles_elem, "RoleFunction", **attrs)
 
-    # Transitions
     trans_elem = ET.SubElement(root, "Transitions")
     for t in sm.transitions:
         attrs = {
@@ -86,13 +80,9 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
 
 
 def state_machine_from_element(elem: ET.Element) -> StateMachine:
-    """XML Element から StateMachine を構築する"""
     sm = StateMachine()
-
-    # ★ 初期状態は States 追加後に設定するため、ここでは一旦読み飛ばす
     initial_state_name = elem.get("initial")
 
-    # States
     for state_elem in elem.find("States"):
         state = State(
             name=state_elem.get("name", ""),
@@ -105,7 +95,6 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
         )
         sm.add_state(state)
 
-    # Events
     for event_elem in elem.find("Events"):
         params_str = event_elem.get("params", "")
         params = [p.strip() for p in params_str.split(",") if p.strip()] if params_str else []
@@ -120,10 +109,10 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             source_layer=EventSourceLayer(event_elem.get("source_layer", "driver")),
             data_type=event_elem.get("data_type", ""),
             data_name=event_elem.get("data_name", ""),
+            title=event_elem.get("title", ""),
         )
         sm.add_event(event)
 
-    # RoleFunctions
     for rf_elem in elem.find("RoleFunctions"):
         rf = RoleFunction(
             name=rf_elem.get("name", ""),
@@ -133,10 +122,10 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             arg1_name=rf_elem.get("arg1_name", "arg1"),
             arg2_type=rf_elem.get("arg2_type", "int"),
             arg2_name=rf_elem.get("arg2_name", "arg2"),
+            title=rf_elem.get("title", ""),
         )
         sm.add_role_function(rf)
 
-    # Transitions
     for trans_elem in elem.find("Transitions"):
         trans = Transition(
             source=trans_elem.get("source", ""),
@@ -149,20 +138,15 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
         )
         sm.add_transition(trans)
 
-    # 初期状態はState追加後に設定
     if initial_state_name:
         sm.set_initial(initial_state_name)
 
     return sm
 
 
-# ----------------------------------------------------------------------
-# GlobalDefinitions <-> Element 変換（割り込み・デバイス・タイマ・イベントキュー対応）
-# ----------------------------------------------------------------------
 def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
     root = ET.Element("GlobalDefinitions")
 
-    # SystemVariables
     vars_elem = ET.SubElement(root, "SystemVariables")
     for var in defs.variables:
         attrs = {
@@ -172,10 +156,10 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
             "default_value": var.default_value,
             "group": var.group,
             "description": var.description,
+            "title": var.title,
         }
         ET.SubElement(vars_elem, "Variable", **attrs)
 
-    # EventFlags
     flags_elem = ET.SubElement(root, "EventFlags")
     for flag in defs.flags:
         attrs = {
@@ -184,10 +168,10 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
             "max_value": str(flag.max_value),
             "group": flag.group,
             "description": flag.description,
+            "title": flag.title,
         }
         ET.SubElement(flags_elem, "Flag", **attrs)
 
-    # Interrupts
     if defs.interrupts:
         intrs_elem = ET.SubElement(root, "Interrupts")
         for intr in defs.interrupts:
@@ -196,6 +180,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
                 "description": intr.description,
                 "event_names": ",".join(intr.event_names),
                 "is_timer": "true" if intr.is_timer else "false",
+                "title": intr.title,
             }
             intr_elem = ET.SubElement(intrs_elem, "Interrupt", **attrs)
             for act in intr.actions:
@@ -205,31 +190,31 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
                 }
                 ET.SubElement(intr_elem, "Action", **act_attrs)
 
-    # DevicePlaceholders
     if defs.placeholders:
         ph_elem = ET.SubElement(root, "DevicePlaceholders")
         for ph in defs.placeholders:
             attrs = {
                 "name": ph.name,
                 "description": ph.description,
+                "title": ph.title,
             }
             ET.SubElement(ph_elem, "Placeholder", **attrs)
 
-    # TimerBase
     timer_elem = ET.SubElement(root, "TimerBase")
     timer_elem.set("variable_name", defs.timer_base.variable_name)
     timer_elem.set("unit", defs.timer_base.unit)
     timer_elem.set("data_type", defs.timer_base.data_type)
+    timer_elem.set("title", defs.timer_base.title)
     for derived in defs.timer_base.derived:
         d_attrs = {
             "period_name": derived.period_name,
             "multiplier": str(derived.multiplier),
             "variable_name": derived.variable_name,
             "data_type": derived.data_type,
+            "title": derived.title,
         }
         ET.SubElement(timer_elem, "Derived", **d_attrs)
 
-    # EventQueues
     if defs.event_queues:
         queues_elem = ET.SubElement(root, "EventQueues")
         for q in defs.event_queues:
@@ -242,6 +227,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
                 "interrupt_safe": "true" if q.interrupt_safe else "false",
                 "rtos_enabled": "true" if q.rtos_enabled else "false",
                 "description": q.description,
+                "title": q.title,
             }
             ET.SubElement(queues_elem, "Queue", **attrs)
 
@@ -251,7 +237,6 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
 def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
     defs = GlobalDefinitions()
 
-    # SystemVariables
     vars_elem = elem.find("SystemVariables")
     if vars_elem is not None:
         for var_elem in vars_elem:
@@ -262,10 +247,10 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 default_value=var_elem.get("default_value", ""),
                 group=var_elem.get("group", ""),
                 description=var_elem.get("description", ""),
+                title=var_elem.get("title", ""),
             )
             defs.variables.append(var)
 
-    # EventFlags
     flags_elem = elem.find("EventFlags")
     if flags_elem is not None:
         for flag_elem in flags_elem:
@@ -280,10 +265,10 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 max_value=max_val,
                 group=flag_elem.get("group", ""),
                 description=flag_elem.get("description", ""),
+                title=flag_elem.get("title", ""),
             )
             defs.flags.append(flag)
 
-    # Interrupts
     intrs_elem = elem.find("Interrupts")
     if intrs_elem is not None:
         for intr_elem in intrs_elem:
@@ -301,19 +286,19 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 event_names=event_names,
                 is_timer=intr_elem.get("is_timer", "false").lower() == "true",
                 actions=actions,
+                title=intr_elem.get("title", ""),
             )
             defs.interrupts.append(intr)
 
-    # DevicePlaceholders
     ph_elem = elem.find("DevicePlaceholders")
     if ph_elem is not None:
         for ph in ph_elem:
             defs.placeholders.append(DevicePlaceholderDef(
                 name=ph.get("name", ""),
                 description=ph.get("description", ""),
+                title=ph.get("title", ""),
             ))
 
-    # TimerBase
     timer_elem = elem.find("TimerBase")
     if timer_elem is not None:
         derived_list = []
@@ -327,15 +312,16 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 multiplier=mult,
                 variable_name=d_elem.get("variable_name", ""),
                 data_type=d_elem.get("data_type", "uint8_t"),
+                title=d_elem.get("title", ""),
             ))
         defs.timer_base = TimerBaseDef(
             variable_name=timer_elem.get("variable_name", "g_system_tick"),
             unit=timer_elem.get("unit", "1ms"),
             data_type=timer_elem.get("data_type", "volatile uint32_t"),
             derived=derived_list,
+            title=timer_elem.get("title", ""),
         )
 
-    # EventQueues
     queues_elem = elem.find("EventQueues")
     if queues_elem is not None:
         for q_elem in queues_elem:
@@ -354,19 +340,15 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 interrupt_safe=q_elem.get("interrupt_safe", "true").lower() == "true",
                 rtos_enabled=q_elem.get("rtos_enabled", "false").lower() == "true",
                 description=q_elem.get("description", ""),
+                title=q_elem.get("title", ""),
             ))
 
-    # タイマ変数をグローバル変数として自動登録
     defs.add_timer_variables()
 
     return defs
 
 
-# ----------------------------------------------------------------------
-# 単一 StateMachine のファイル保存/読み込み（互換用）
-# ----------------------------------------------------------------------
 def state_machine_to_xml(sm: StateMachine, filepath: str) -> None:
-    """StateMachine を XML ファイルに保存する"""
     root = state_machine_to_element(sm)
     tree = ET.ElementTree(root)
     ET.indent(tree, space="    ")
@@ -374,27 +356,19 @@ def state_machine_to_xml(sm: StateMachine, filepath: str) -> None:
 
 
 def state_machine_from_xml(filepath: str) -> StateMachine:
-    """XML ファイルから StateMachine を読み込む"""
     tree = ET.parse(filepath)
     root = tree.getroot()
     return state_machine_from_element(root)
 
 
-# ----------------------------------------------------------------------
-# プロジェクト全体（複数タブ＋グローバル定義）の保存/読み込み
-# ----------------------------------------------------------------------
 def project_to_xml(
     tabs: List[Tuple[str, StateMachine]],
     global_defs: GlobalDefinitions,
     filepath: str
 ) -> None:
-    """プロジェクト全体（タブ＋グローバル定義）をXMLファイルに保存する"""
     root = ET.Element("Project")
-
-    # グローバル定義
     root.append(global_defs_to_element(global_defs))
 
-    # 各タブ
     for name, sm in tabs:
         tab_elem = ET.SubElement(root, "Tab")
         tab_elem.set("name", name)
@@ -410,15 +384,12 @@ def project_from_xml(filepath: str) -> Tuple[List[Tuple[str, StateMachine]], Glo
     tree = ET.parse(filepath)
     root = tree.getroot()
 
-    # グローバル定義
     gd_elem = root.find("GlobalDefinitions")
     if gd_elem is not None:
         global_defs = global_defs_from_element(gd_elem)
     else:
-        # 後方互換：グローバル定義がない旧形式
         global_defs = GlobalDefinitions()
 
-    # 各タブ
     tabs = []
     for tab_elem in root.findall("Tab"):
         name = tab_elem.get("name", "Untitled")

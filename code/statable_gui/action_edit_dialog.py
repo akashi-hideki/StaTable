@@ -1,8 +1,8 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QTextEdit, QComboBox,
-    QPushButton, QLabel, QDialogButtonBox, QMessageBox, QLineEdit,
+    QDialog, QVBoxLayout, QHBoxLayout, QTextEdit, QComboBox, QLineEdit,
+    QPushButton, QLabel, QDialogButtonBox, QMessageBox,
     QSplitter, QWidget, QMenu
 )
 
@@ -16,7 +16,7 @@ from .logger import StaTableLogger
 class ActionEditDialog(QDialog):
     """遷移の動作（ロール関数呼び出し・生コード）を編集するダイアログ"""
 
-    def __init__(self, parent=None, action_text="", role_functions=None, global_defs=None):
+    def __init__(self, parent=None, action_text="", title="", role_functions=None, global_defs=None):
         super().__init__(parent)
         self.setWindowTitle("動作編集")
         self.setMinimumSize(900, 650)
@@ -24,21 +24,24 @@ class ActionEditDialog(QDialog):
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
 
         StaTableLogger.debug(
-            f"ActionEditDialog.__init__: "
-            f"action_text_len={len(action_text)}, "
-            f"roles={len(self.role_functions)}, "
-            f"vars={len(self.global_defs.variables)}, "
-            f"flags={len(self.global_defs.flags)}"
+            f"ActionEditDialog.__init__: action_text_len={len(action_text)}, "
+            f"title='{title}', roles={len(self.role_functions)}, "
+            f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
         )
 
         main_layout = QVBoxLayout(self)
 
-        # タイトル
-        title_label = QLabel("動作編集")
-        title_font = QFont("sans-serif", 14, QFont.Bold)
-        title_label.setFont(title_font)
-        title_label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(title_label)
+        # タイトル入力欄（必須・仮タイトル自動設定）
+        title_layout = QHBoxLayout()
+        title_label = QLabel("タイトル *")
+        title_label.setFont(QFont("sans-serif", 10, QFont.Bold))
+        self.title_edit = QLineEdit()
+        self.title_edit.setText(title)
+        self.title_edit.setPlaceholderText("一覧に表示されるラベル（空なら自動設定）")
+        self.title_edit.setToolTip("この動作のタイトルを入力してください。空の場合は自動で仮タイトルが設定されます。")
+        title_layout.addWidget(title_label)
+        title_layout.addWidget(self.title_edit, stretch=1)
+        main_layout.addLayout(title_layout)
 
         # ロール関数選択・挿入バー
         role_bar = QHBoxLayout()
@@ -86,7 +89,7 @@ class ActionEditDialog(QDialog):
 
         # OK/Cancel
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
+        buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         main_layout.addWidget(buttons)
 
@@ -201,7 +204,25 @@ class ActionEditDialog(QDialog):
             self.global_defs.flags.append(flag)
             self.symbol_picker.refresh_list()
 
+    def _on_accept(self):
+        """OKボタン：タイトルが空なら仮タイトルを自動設定"""
+        if not self.title_edit.text().strip():
+            action_text = self.action_edit.toPlainText().strip()
+            if action_text:
+                first_line = action_text.split('\n')[0].strip()
+                auto_title = first_line[:20] + ("..." if len(first_line) > 20 else "")
+            else:
+                auto_title = "(無題動作)"
+            self.title_edit.setText(auto_title)
+            StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
+        self.accept()
+
     def get_action_text(self) -> str:
         text = self.action_edit.toPlainText().strip()
         StaTableLogger.debug(f"get_action_text: length={len(text)}")
         return text
+
+    def get_title(self) -> str:
+        title = self.title_edit.text().strip()
+        StaTableLogger.debug(f"get_title: '{title}'")
+        return title

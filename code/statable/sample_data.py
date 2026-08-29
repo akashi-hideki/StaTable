@@ -30,6 +30,7 @@ def create_sample_state_machine() -> StateMachine:
         description="起動要求",
         delivery_type=EventDeliveryType.DIRECT,
         source_layer=EventSourceLayer.MIDDLEWARE,
+        title="起動要求",
     ))
     sm.add_event(Event(
         name="STOP",
@@ -37,6 +38,7 @@ def create_sample_state_machine() -> StateMachine:
         description="停止要求",
         delivery_type=EventDeliveryType.DIRECT,
         source_layer=EventSourceLayer.MIDDLEWARE,
+        title="停止要求",
     ))
     sm.add_event(Event(
         name="ERROR",
@@ -46,6 +48,7 @@ def create_sample_state_machine() -> StateMachine:
         source_layer=EventSourceLayer.DRIVER,
         data_type="uint8_t",
         data_name="err_code",
+        title="エラー通知",
     ))
     sm.add_event(Event(
         name="TIMER0_OVERFLOW",
@@ -53,6 +56,7 @@ def create_sample_state_machine() -> StateMachine:
         description="1msタイマ満了",
         delivery_type=EventDeliveryType.DOUBLE,
         source_layer=EventSourceLayer.DRIVER,
+        title="タイマ満了",
     ))
     sm.add_event(Event(
         name="",
@@ -61,18 +65,18 @@ def create_sample_state_machine() -> StateMachine:
         description="完了遷移",
         delivery_type=EventDeliveryType.DIRECT,
         source_layer=EventSourceLayer.MIDDLEWARE,
+        title="完了遷移",
     ))
 
     # 初期状態
     sm.set_initial("Idle")
 
-    # 遷移定義（状態遷移条件を condition で記述）
-    sm.add_transition(Transition("Idle", "START", "", "init()", "Active"))
-    sm.add_transition(Transition("Active", "STOP", "", "stop()", "Idle"))
-    sm.add_transition(Transition("Active", "ERROR", "err_code != 0", "log()", "Error"))
-    sm.add_transition(Transition("Error", "", "retry_count < 3", "retry_count++", "Active"))
-    sm.add_transition(Transition("Error", "", "retry_count >= 3", "", "Halt"))
-    sm.add_transition(Transition("Active", "ERROR", "err_code == 0", "ignore()", "Active"))
+    sm.add_transition(Transition("Idle", "START", "", "init()", "Active", title="起動"))
+    sm.add_transition(Transition("Active", "STOP", "", "stop()", "Idle", title="停止"))
+    sm.add_transition(Transition("Active", "ERROR", "err_code != 0", "log()", "Error", title="エラーへ"))
+    sm.add_transition(Transition("Error", "", "retry_count < 3", "retry_count++", "Active", title="リトライ"))
+    sm.add_transition(Transition("Error", "", "retry_count >= 3", "", "Halt", title="停止へ"))
+    sm.add_transition(Transition("Active", "ERROR", "err_code == 0", "ignore()", "Active", title="無視"))
 
     # ロール関数
     sm.add_role_function(RoleFunction(
@@ -80,14 +84,16 @@ def create_sample_state_machine() -> StateMachine:
         description="センサ初期化",
         return_type="int",
         arg1_type="uint8_t", arg1_name="channel",
-        arg2_type="uint32_t", arg2_name="timeout_ms"
+        arg2_type="uint32_t", arg2_name="timeout_ms",
+        title="センサ初期化",
     ))
     sm.add_role_function(RoleFunction(
         name="Error_Log",
         description="エラーログ出力",
         return_type="void",
         arg1_type="int", arg1_name="err_code",
-        arg2_type="int", arg2_name="level"
+        arg2_type="int", arg2_name="level",
+        title="エラーログ出力",
     ))
 
     return sm
@@ -100,21 +106,25 @@ def create_sample_global_defs() -> GlobalDefinitions:
     # グローバル変数
     defs.variables.append(SystemVariable(
         name="battery_voltage", type="uint16_t", unit="mV",
-        default_value="0", group="Power", description="バッテリ電圧"
+        default_value="0", group="Power", description="バッテリ電圧",
+        title="バッテリ電圧",
     ))
     defs.variables.append(SystemVariable(
         name="motor_current", type="int16_t", unit="mA",
-        default_value="0", group="Motor", description="モータ電流"
+        default_value="0", group="Motor", description="モータ電流",
+        title="モータ電流",
     ))
 
     # イベントフラグ
     defs.flags.append(EventFlag(
         name="EVT_START_REQ", min_value=0, max_value=1,
-        group="SystemEvents", description="起動要求"
+        group="SystemEvents", description="起動要求",
+        title="起動要求フラグ",
     ))
     defs.flags.append(EventFlag(
         name="EVT_MODE", min_value=0, max_value=3,
-        group="SystemEvents", description="モード指示"
+        group="SystemEvents", description="モード指示",
+        title="モード指示フラグ",
     ))
 
     # 割り込み処理（複数イベント対応）
@@ -124,21 +134,17 @@ def create_sample_global_defs() -> GlobalDefinitions:
         event_names=["TIMER0_OVERFLOW"],
         is_timer=True,
         actions=[
-            InterruptAction(
-                condition="g_tick_100ms >= 5",
-                action="StateMachine_EnqueueEvent(EVENT_TICK);"
-            ),
-            InterruptAction(
-                condition="",
-                action="g_system_tick++;\nUpdateDerivedTimers();"
-            ),
-        ]
+            InterruptAction(condition="g_tick_100ms >= 5", action="StateMachine_EnqueueEvent(EVENT_TICK);"),
+            InterruptAction(condition="", action="g_system_tick++;\nUpdateDerivedTimers();"),
+        ],
+        title="タイマ0割り込み",
     ))
 
     # デバイスリソース仮定義
     defs.placeholders.append(DevicePlaceholderDef(
         name="TIMER0_IRQ_FLAG",
-        description="タイマ0割り込みフラグクリア用レジスタ"
+        description="タイマ0割り込みフラグクリア用レジスタ",
+        title="タイマ0 IRQフラグ",
     ))
 
     # タイマ設定
@@ -147,10 +153,11 @@ def create_sample_global_defs() -> GlobalDefinitions:
         unit="1ms",
         data_type="volatile uint32_t",
         derived=[
-            TimerDerivedDef(period_name="10ms", multiplier=10, variable_name="g_tick_10ms", data_type="uint8_t"),
-            TimerDerivedDef(period_name="100ms", multiplier=100, variable_name="g_tick_100ms", data_type="uint8_t"),
-            TimerDerivedDef(period_name="1s", multiplier=1000, variable_name="g_tick_1s", data_type="uint16_t"),
-        ]
+            TimerDerivedDef(period_name="10ms", multiplier=10, variable_name="g_tick_10ms", data_type="uint8_t", title="10msタイマ"),
+            TimerDerivedDef(period_name="100ms", multiplier=100, variable_name="g_tick_100ms", data_type="uint8_t", title="100msタイマ"),
+            TimerDerivedDef(period_name="1s", multiplier=1000, variable_name="g_tick_1s", data_type="uint16_t", title="1sタイマ"),
+        ],
+        title="システムタイマ基準",
     )
 
     # イベントキュー定義（イベントIDと関連付け）
@@ -162,7 +169,8 @@ def create_sample_global_defs() -> GlobalDefinitions:
         priority_enabled=False,
         interrupt_safe=True,
         rtos_enabled=False,
-        description="UART受信キュー"
+        description="UART受信キュー",
+        title="UART受信キュー",
     ))
 
     # タイマ変数をグローバル変数として自動登録

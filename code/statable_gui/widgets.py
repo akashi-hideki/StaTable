@@ -30,7 +30,7 @@ from .dialogs import TransitionListDialog
 from .role_function_dialog import RoleFunctionDialog
 from .action_edit_dialog import ActionEditDialog
 from .global_defs import GlobalDefinitions
-from .event_definition_dialog import EventDefinitionDialog   # ★ 新設
+from .event_definition_dialog import EventDefinitionDialog
 
 
 # ----------------------------------------------------------------------
@@ -155,9 +155,9 @@ class SettingsPanel(QWidget):
         # ロール関数タブ
         role_tab = QWidget()
         role_layout = QVBoxLayout(role_tab)
-        self.role_table = QTableWidget(0, 7)
+        self.role_table = QTableWidget(0, 8)
         self.role_table.setHorizontalHeaderLabels([
-            "関数名", "説明", "戻り値型", "引数1型", "引数1名", "引数2型", "引数2名"
+            "タイトル", "関数名", "説明", "戻り値型", "引数1型", "引数1名", "引数2型", "引数2名"
         ])
         self.role_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.role_table.setFont(QFont("Consolas", 10))
@@ -220,23 +220,22 @@ class SettingsPanel(QWidget):
         roles = list(self.sm.role_functions.values())
         self.role_table.setRowCount(len(roles))
         for row, rf in enumerate(roles):
-            self.role_table.setItem(row, 0, QTableWidgetItem(rf.name))
-            self.role_table.setItem(row, 1, QTableWidgetItem(rf.description))
-            self.role_table.setItem(row, 2, QTableWidgetItem(rf.return_type))
-            self.role_table.setItem(row, 3, QTableWidgetItem(rf.arg1_type))
-            self.role_table.setItem(row, 4, QTableWidgetItem(rf.arg1_name))
-            self.role_table.setItem(row, 5, QTableWidgetItem(rf.arg2_type))
-            self.role_table.setItem(row, 6, QTableWidgetItem(rf.arg2_name))
+            self.role_table.setItem(row, 0, QTableWidgetItem(rf.title))
+            self.role_table.setItem(row, 1, QTableWidgetItem(rf.name))
+            self.role_table.setItem(row, 2, QTableWidgetItem(rf.description))
+            self.role_table.setItem(row, 3, QTableWidgetItem(rf.return_type))
+            self.role_table.setItem(row, 4, QTableWidgetItem(rf.arg1_type))
+            self.role_table.setItem(row, 5, QTableWidgetItem(rf.arg1_name))
+            self.role_table.setItem(row, 6, QTableWidgetItem(rf.arg2_type))
+            self.role_table.setItem(row, 7, QTableWidgetItem(rf.arg2_name))
 
     def on_state_table_cell_double_clicked(self, row, col):
         StaTableLogger.debug(f"SettingsPanel.on_state_table_cell_double_clicked: row={row}, col={col}")
         if col not in (2, 3, 4):
-            StaTableLogger.debug("  -> Ignored (not entry/exit/do column)")
             return
 
         item = self.state_table.item(row, col)
         current_text = item.text() if item else ""
-        StaTableLogger.debug(f"  -> current text: '{current_text[:50]}...'")
 
         dlg = ActionEditDialog(
             self,
@@ -246,15 +245,12 @@ class SettingsPanel(QWidget):
         )
         if dlg.exec() == QDialog.Accepted:
             new_text = dlg.get_action_text()
-            StaTableLogger.debug(f"  -> ActionEditDialog accepted, new length={len(new_text)}")
             if item:
                 item.setText(new_text)
             else:
                 item = QTableWidgetItem(new_text)
                 self.state_table.setItem(row, col, item)
             self.settings_changed.emit()
-        else:
-            StaTableLogger.debug("  -> ActionEditDialog cancelled")
 
     def add_state(self):
         row = self.state_table.rowCount()
@@ -280,7 +276,7 @@ class SettingsPanel(QWidget):
     def open_event_definition(self):
         """状態遷移イベント定義ダイアログを開く"""
         StaTableLogger.debug("SettingsPanel.open_event_definition called")
-        dlg = EventDefinitionDialog(self.sm, self)
+        dlg = EventDefinitionDialog(self.sm, self.global_defs, self)
         if dlg.exec() == QDialog.Accepted:
             self.settings_changed.emit()
             StaTableLogger.info("Event definitions updated")
@@ -300,7 +296,7 @@ class SettingsPanel(QWidget):
     def delete_role_function(self):
         row = self.role_table.currentRow()
         if row >= 0:
-            name = self.role_table.item(row, 0).text().strip() if self.role_table.item(row, 0) else ""
+            name = self.role_table.item(row, 1).text().strip() if self.role_table.item(row, 1) else ""
             if name and name in self.sm.role_functions:
                 self.sm.remove_role_function(name)
                 self.populate_role_table()
@@ -310,11 +306,9 @@ class SettingsPanel(QWidget):
                 self.role_table.removeRow(row)
 
     def on_state_table_item_changed(self, item):
-        StaTableLogger.debug(f"State table item changed: row={item.row()}, col={item.column()}, text={item.text()}")
         self._debounce_timer.start()
 
     def on_role_table_item_changed(self, item):
-        StaTableLogger.debug(f"Role table item changed: row={item.row()}, col={item.column()}, text={item.text()}")
         self._debounce_timer.start()
 
     def apply_changes(self):
@@ -341,15 +335,16 @@ class SettingsPanel(QWidget):
         # ロール関数テーブル
         self.sm.role_functions.clear()
         for row in range(self.role_table.rowCount()):
-            name = self.role_table.item(row, 0).text().strip() if self.role_table.item(row, 0) else ""
+            title = self.role_table.item(row, 0).text().strip() if self.role_table.item(row, 0) else ""
+            name = self.role_table.item(row, 1).text().strip() if self.role_table.item(row, 1) else ""
             if name:
-                desc = self.role_table.item(row, 1).text().strip() if self.role_table.item(row, 1) else ""
-                ret = self.role_table.item(row, 2).text().strip() if self.role_table.item(row, 2) else "int"
-                a1t = self.role_table.item(row, 3).text().strip() if self.role_table.item(row, 3) else "int"
-                a1n = self.role_table.item(row, 4).text().strip() if self.role_table.item(row, 4) else "arg1"
-                a2t = self.role_table.item(row, 5).text().strip() if self.role_table.item(row, 5) else "int"
-                a2n = self.role_table.item(row, 6).text().strip() if self.role_table.item(row, 6) else "arg2"
-                self.sm.add_role_function(RoleFunction(name, desc, ret, a1t, a1n, a2t, a2n))
+                desc = self.role_table.item(row, 2).text().strip() if self.role_table.item(row, 2) else ""
+                ret = self.role_table.item(row, 3).text().strip() if self.role_table.item(row, 3) else "int"
+                a1t = self.role_table.item(row, 4).text().strip() if self.role_table.item(row, 4) else "int"
+                a1n = self.role_table.item(row, 5).text().strip() if self.role_table.item(row, 5) else "arg1"
+                a2t = self.role_table.item(row, 6).text().strip() if self.role_table.item(row, 6) else "int"
+                a2n = self.role_table.item(row, 7).text().strip() if self.role_table.item(row, 7) else "arg2"
+                self.sm.add_role_function(RoleFunction(name, desc, ret, a1t, a1n, a2t, a2n, title))
         StaTableLogger.debug("Settings changes applied")
 
 

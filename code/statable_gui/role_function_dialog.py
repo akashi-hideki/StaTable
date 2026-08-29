@@ -11,8 +11,15 @@ class RoleFunctionDialog(QDialog):
     def __init__(self, parent=None, role_function=None):
         super().__init__(parent)
         self.setWindowTitle("ロール関数編集")
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(450)
         layout = QFormLayout(self)
+
+        # タイトル入力欄（必須・仮タイトル自動設定）
+        self.title_edit = QLineEdit()
+        self.title_edit.setText(role_function.title if role_function else "")
+        self.title_edit.setPlaceholderText("一覧に表示されるラベル（空なら自動設定）")
+        self.title_edit.setToolTip("このロール関数のタイトルを入力してください。空の場合は自動で仮タイトルが設定されます。")
+        layout.addRow("タイトル *", self.title_edit)
 
         self.name_edit = QLineEdit()
         self.name_edit.setText(role_function.name if role_function else "")
@@ -41,11 +48,19 @@ class RoleFunctionDialog(QDialog):
         layout.addRow("引数2名", self.arg2_name_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
+        buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
 
         StaTableLogger.debug("RoleFunctionDialog initialized")
+
+    def _on_accept(self):
+        """OKボタン：タイトルが空なら仮タイトルを自動設定"""
+        if not self.title_edit.text().strip():
+            auto_title = f"ロール関数: {self.name_edit.text().strip() or '(無名)'}"
+            self.title_edit.setText(auto_title)
+            StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
+        self.accept()
 
     def get_role_function(self) -> RoleFunction:
         return RoleFunction(
@@ -55,5 +70,6 @@ class RoleFunctionDialog(QDialog):
             arg1_type=self.arg1_type_edit.text().strip(),
             arg1_name=self.arg1_name_edit.text().strip(),
             arg2_type=self.arg2_type_edit.text().strip(),
-            arg2_name=self.arg2_name_edit.text().strip()
+            arg2_name=self.arg2_name_edit.text().strip(),
+            title=self.title_edit.text().strip(),
         )

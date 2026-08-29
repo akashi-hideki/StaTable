@@ -22,15 +22,15 @@ class EventKind(Enum):
 
 class EventDeliveryType(Enum):
     """イベントの配送方法"""
-    DIRECT = "direct"      # メインループ内で直接呼び出し
-    QUEUE = "queue"        # イベントキュー経由
-    DOUBLE = "double"      # ISRから使用されるDIRECTが自動変換された場合のみ
+    DIRECT = "direct"
+    QUEUE = "queue"
+    DOUBLE = "double"
 
 
 class EventSourceLayer(Enum):
     """イベントの発生源レイヤ"""
-    DRIVER = "driver"      # ドライバ層
-    MIDDLEWARE = "middleware"  # ミドル層
+    DRIVER = "driver"
+    MIDDLEWARE = "middleware"
 
 
 @dataclass
@@ -54,20 +54,29 @@ class Event:
     priority: int = 0
     description: str = ""
     delivery_type: EventDeliveryType = EventDeliveryType.DIRECT
-    source_layer: EventSourceLayer = EventSourceLayer.DRIVER   # ★ 発生源レイヤ
-    data_type: str = ""          # ★ 付随データ型（空ならデータなし）
-    data_name: str = ""          # ★ 付随データ変数名
+    source_layer: EventSourceLayer = EventSourceLayer.DRIVER
+    data_type: str = ""
+    data_name: str = ""
+    title: str = ""   # ★ タイトル追加
+
+    def __post_init__(self):
+        if not self.title:
+            self.title = f"イベント: {self.name}" if self.name else "イベント: （完了）"
 
 
 @dataclass
 class Transition:
     source: str
     event: str
-    condition: str = ""          # ★ 状態遷移条件（旧 guard）
+    condition: str = ""
     action: str = ""
     target: str = ""
     transition_type: str = "external"
     title: str = ""
+
+    def __post_init__(self):
+        if not self.title:
+            self.title = "(無題遷移)"
 
 
 @dataclass
@@ -80,3 +89,8 @@ class RoleFunction:
     arg1_name: str = "arg1"
     arg2_type: str = "int"
     arg2_name: str = "arg2"
+    title: str = ""   # ★ タイトル追加
+
+    def __post_init__(self):
+        if not self.title:
+            self.title = f"ロール関数: {self.name}"

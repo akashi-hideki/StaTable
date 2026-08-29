@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QMainWindow, QTabWidget, QToolButton, QMessageBox, QInputDialog,
-    QFileDialog
+    QFileDialog, QDialog
 )
 
 from statable.state_machine import StateMachine
@@ -139,8 +139,7 @@ class MainWindow(QMainWindow):
         if current_tab is None or not hasattr(current_tab, 'sm'):
             QMessageBox.warning(self, "Warning", "状態遷移タブがありません。")
             return
-
-        dlg = EventDefinitionDialog(current_tab.sm, self)
+        dlg = EventDefinitionDialog(current_tab.sm, self.global_defs, self)
         if dlg.exec() == QDialog.Accepted:
             current_tab.update_mermaid()
             StaTableLogger.info("Event definitions updated")
@@ -148,7 +147,6 @@ class MainWindow(QMainWindow):
     def open_event_delivery_settings(self):
         """イベント配送設定ダイアログを開く"""
         StaTableLogger.debug("MainWindow.open_event_delivery_settings called")
-
         current_tab = self.tab_widget.currentWidget()
         if current_tab is None or not hasattr(current_tab, 'sm'):
             QMessageBox.warning(self, "Warning", "状態遷移タブがありません。")
