@@ -1,4 +1,4 @@
-"""割り込み処理・デバイスリソース・タイマ設定の管理ダイアログ（タイトル編集対応版）"""
+"""割り込み処理・デバイスリソース・タイマ設定の管理ダイアログ（複数タイマ対応版）"""
 
 from typing import Optional, List
 
@@ -8,7 +8,8 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
     QTableWidget, QTableWidgetItem, QPushButton, QLabel, QHeaderView,
     QComboBox, QLineEdit, QDialogButtonBox, QMessageBox,
-    QAbstractItemView, QSpinBox, QCheckBox, QFormLayout
+    QAbstractItemView, QSpinBox, QCheckBox, QFormLayout,
+    QInputDialog
 )
 
 from statable.global_defs import (
@@ -25,9 +26,6 @@ from .action_edit_dialog import ActionEditDialog
 from .logger import StaTableLogger
 
 
-# ----------------------------------------------------------------------
-# 一覧テーブル（ダブルクリックを確実に捕捉）
-# ----------------------------------------------------------------------
 class DoubleClickTable(QTableWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -46,9 +44,6 @@ class DoubleClickTable(QTableWidget):
             StaTableLogger.debug("DoubleClickTable.mouseDoubleClickEvent: no item")
 
 
-# ----------------------------------------------------------------------
-# 割り込み処理編集ダイアログ（条件付きアクションテーブル）
-# ----------------------------------------------------------------------
 class InterruptEditDialog(QDialog):
     def __init__(
         self,
@@ -67,17 +62,14 @@ class InterruptEditDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        # タイトル
         title = QLabel("割り込み処理編集")
         title.setFont(QFont("sans-serif", 14, QFont.Bold))
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
 
-        # 基本情報フォーム
         form = QFormLayout()
         layout.addLayout(form)
 
-        # タイトル入力欄（必須・仮タイトル自動設定）
         self.title_edit = QLineEdit()
         if interrupt:
             self.title_edit.setText(interrupt.title)
@@ -97,7 +89,6 @@ class InterruptEditDialog(QDialog):
         self.desc_edit.setToolTip("この割り込み処理の説明を入力してください")
         form.addRow("説明", self.desc_edit)
 
-        # イベント名（編集可能コンボボックス）
         self.event_combo = QComboBox()
         self.event_combo.setEditable(True)
         self.event_combo.setInsertPolicy(QComboBox.NoInsert)
@@ -111,7 +102,6 @@ class InterruptEditDialog(QDialog):
         )
         form.addRow("イベント名", self.event_combo)
 
-        # タイマ割り込みフラグ
         self.timer_check = QCheckBox()
         self.timer_check.setChecked(interrupt.is_timer if interrupt else False)
         self.timer_check.setToolTip("タイマ割り込みの場合にチェックしてください")
@@ -126,14 +116,12 @@ class InterruptEditDialog(QDialog):
         help_label.setStyleSheet("color: gray; font-size: 11px;")
         layout.addWidget(help_label)
 
-        # アクションテーブル（ガード条件＋動作コード）
         self.action_table = DoubleClickTable(0, 2)
         self.action_table.setHorizontalHeaderLabels(["状態遷移条件", "動作コード"])
         self.action_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.action_table.cellDoubleClicked.connect(self.on_action_double_clicked)
         layout.addWidget(self.action_table, stretch=1)
 
-        # 行追加・削除ボタン
         btn_layout = QHBoxLayout()
         add_btn = QPushButton("行追加")
         add_btn.clicked.connect(lambda: self.add_action_row())
@@ -144,13 +132,11 @@ class InterruptEditDialog(QDialog):
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
-        # OK/Cancel
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-        # 初期データ読み込み
         if interrupt and interrupt.actions:
             for act in interrupt.actions:
                 self.add_action_row(act.condition, act.action)
@@ -160,17 +146,14 @@ class InterruptEditDialog(QDialog):
         StaTableLogger.debug("InterruptEditDialog initialized")
 
     def add_action_row(self, condition: str = "", action: str = ""):
-        """アクションテーブルに1行追加"""
         row = self.action_table.rowCount()
         self.action_table.insertRow(row)
 
-        # ガード条件（読み取り専用）
         condition_item = QTableWidgetItem(condition.replace('\n', ' ; ') if condition else "")
         condition_item.setToolTip("ダブルクリックで状態遷移条件を編集")
         condition_item.setData(Qt.UserRole, condition)
         self.action_table.setItem(row, 0, condition_item)
 
-        # 動作コード（読み取り専用）
         action_item = QTableWidgetItem(action.replace('\n', ' ; ') if action else "")
         action_item.setToolTip("ダブルクリックで動作コードを編集")
         action_item.setData(Qt.UserRole, action)
@@ -182,7 +165,6 @@ class InterruptEditDialog(QDialog):
             self.action_table.removeRow(row)
 
     def on_action_double_clicked(self, row, col):
-        """ガード条件または動作コードを編集"""
         StaTableLogger.debug(f"on_action_double_clicked: row={row}, col={col}")
 
         if col == 0:
@@ -218,7 +200,6 @@ class InterruptEditDialog(QDialog):
                 item.setData(Qt.UserRole, new_action)
 
     def _on_accept(self):
-        """OKボタン：タイトルが空なら仮タイトルを自動設定"""
         if not self.title_edit.text().strip():
             auto_title = f"割り込み: {self.name_edit.text().strip() or '(無名)'}"
             self.title_edit.setText(auto_title)
@@ -226,7 +207,6 @@ class InterruptEditDialog(QDialog):
         self.accept()
 
     def get_interrupt(self) -> InterruptHandlerDef:
-        """編集結果を取得"""
         actions = []
         for row in range(self.action_table.rowCount()):
             condition_item = self.action_table.item(row, 0)
@@ -253,9 +233,6 @@ class InterruptEditDialog(QDialog):
         )
 
 
-# ----------------------------------------------------------------------
-# デバイスリソース仮定義編集ダイアログ
-# ----------------------------------------------------------------------
 class DevicePlaceholderEditDialog(QDialog):
     def __init__(self, parent=None, placeholder: Optional[DevicePlaceholderDef] = None):
         super().__init__(parent)
@@ -299,9 +276,6 @@ class DevicePlaceholderEditDialog(QDialog):
         )
 
 
-# ----------------------------------------------------------------------
-# タイマ基準編集ダイアログ
-# ----------------------------------------------------------------------
 class TimerBaseEditDialog(QDialog):
     def __init__(self, parent=None, timer_base: TimerBaseDef = None):
         super().__init__(parent)
@@ -331,6 +305,12 @@ class TimerBaseEditDialog(QDialog):
             self.type_edit.setText(timer_base.data_type)
         form.addRow("型", self.type_edit)
 
+        self.interrupt_edit = QLineEdit()
+        if timer_base:
+            self.interrupt_edit.setText(timer_base.interrupt_name)
+        self.interrupt_edit.setPlaceholderText("このタイマを駆動する割り込み名（任意）")
+        form.addRow("割り込み名", self.interrupt_edit)
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
@@ -342,18 +322,16 @@ class TimerBaseEditDialog(QDialog):
             self.title_edit.setText(auto_title)
         self.accept()
 
-    def get_values(self) -> tuple:
-        return (
-            self.var_edit.text().strip(),
-            self.unit_edit.text().strip(),
-            self.type_edit.text().strip(),
-            self.title_edit.text().strip(),
+    def get_timer_base(self) -> TimerBaseDef:
+        return TimerBaseDef(
+            variable_name=self.var_edit.text().strip(),
+            unit=self.unit_edit.text().strip(),
+            data_type=self.type_edit.text().strip(),
+            title=self.title_edit.text().strip(),
+            interrupt_name=self.interrupt_edit.text().strip(),
         )
 
 
-# ----------------------------------------------------------------------
-# 派生タイマ編集ダイアログ
-# ----------------------------------------------------------------------
 class TimerDerivedEditDialog(QDialog):
     def __init__(self, parent=None, derived: Optional[TimerDerivedDef] = None):
         super().__init__(parent)
@@ -410,9 +388,6 @@ class TimerDerivedEditDialog(QDialog):
         )
 
 
-# ----------------------------------------------------------------------
-# メインダイアログ
-# ----------------------------------------------------------------------
 class InterruptHandlerEditDialog(QDialog):
     """割り込み処理・デバイスリソース・タイマ設定をまとめて管理するダイアログ"""
 
@@ -446,7 +421,7 @@ class InterruptHandlerEditDialog(QDialog):
 
         self.refresh_interrupt_table()
         self.refresh_placeholder_table()
-        self.refresh_timer_table()
+        self.refresh_timer_tabs()
 
         StaTableLogger.debug("InterruptHandlerEditDialog initialized")
 
@@ -595,101 +570,222 @@ class InterruptHandlerEditDialog(QDialog):
             self.refresh_placeholder_table()
 
     # ------------------------------------------------------------------
-    # タイマ設定タブ
+    # タイマ設定タブ（複数基準タイマ対応）
     # ------------------------------------------------------------------
     def _create_timer_tab(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
-        # 基準変数表示（ダブルクリックで編集）
-        self.base_display = DoubleClickTable(1, 4)
-        self.base_display.setHorizontalHeaderLabels(["タイトル", "基準変数名", "単位", "型"])
-        self.base_display.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.base_display.setRowCount(1)
-        self.base_display.cellDoubleClicked.connect(self.on_base_double_clicked)
-        layout.addWidget(self.base_display)
+        # 基準タイマ用タブ
+        self.timer_tabs = QTabWidget()
+        self.timer_tabs.setTabsClosable(True)
+        self.timer_tabs.tabCloseRequested.connect(self.close_timer_tab)
+        self.timer_tabs.tabBarDoubleClicked.connect(self.rename_timer_tab)
+        layout.addWidget(self.timer_tabs)
+
+        # 「+」ボタン
+        add_timer_btn = QPushButton("+")
+        add_timer_btn.setFixedWidth(30)
+        add_timer_btn.setToolTip("基準タイマを追加")
+        add_timer_btn.clicked.connect(self.add_timer_base)
+        layout.addWidget(add_timer_btn, alignment=Qt.AlignRight)
+
+        return widget
+
+    def refresh_timer_tabs(self):
+        """全基準タイマをタブとして表示"""
+        self.timer_tabs.clear()
+
+        all_timers = [self.global_defs.timer_base] + self.global_defs.extra_timers
+        for timer in all_timers:
+            tab = self._create_timer_base_tab(timer)
+            self.timer_tabs.addTab(tab, timer.title)
+
+    def _create_timer_base_tab(self, timer: TimerBaseDef) -> QWidget:
+        """1つの基準タイマの編集タブを作成"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        form = QFormLayout()
+        layout.addLayout(form)
+
+        # タイトル（編集可能・タブ名と連動）
+        title_edit = QLineEdit(timer.title)
+        title_edit.textChanged.connect(lambda text, t=timer: self._on_timer_title_changed(t, text))
+        form.addRow("タイトル *", title_edit)
+
+        var_edit = QLineEdit(timer.variable_name)
+        var_edit.textChanged.connect(lambda text, t=timer: self._on_timer_var_changed(t, text))
+        form.addRow("基準変数名", var_edit)
+
+        unit_edit = QLineEdit(timer.unit)
+        unit_edit.textChanged.connect(lambda text, t=timer: self._on_timer_unit_changed(t, text))
+        form.addRow("単位", unit_edit)
+
+        type_edit = QLineEdit(timer.data_type)
+        type_edit.textChanged.connect(lambda text, t=timer: self._on_timer_type_changed(t, text))
+        form.addRow("型", type_edit)
+
+        interrupt_edit = QLineEdit(timer.interrupt_name)
+        interrupt_edit.textChanged.connect(lambda text, t=timer: self._on_timer_interrupt_changed(t, text))
+        interrupt_edit.setPlaceholderText("割り込み名（任意）")
+        form.addRow("割り込み名", interrupt_edit)
+
+        # 編集ボタン
+        edit_btn = QPushButton("基準タイマ編集...")
+        edit_btn.clicked.connect(lambda _checked, t=timer: self.edit_timer_base(t))
+        form.addRow("", edit_btn)
 
         layout.addWidget(QLabel("派生タイマ変数:"))
-        self.derived_table = DoubleClickTable(0, 5)
-        self.derived_table.setHorizontalHeaderLabels(["タイトル", "周期名", "倍率", "変数名", "型"])
-        self.derived_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.derived_table.cellDoubleClicked.connect(self.on_derived_double_clicked)
-        layout.addWidget(self.derived_table)
+        derived_table = DoubleClickTable(0, 5)
+        derived_table.setHorizontalHeaderLabels(["タイトル", "周期名", "倍率", "変数名", "型"])
+        derived_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        derived_table.cellDoubleClicked.connect(lambda row, col, t=timer: self.on_derived_double_clicked(t, row, col))
+        layout.addWidget(derived_table)
 
+        # 派生タイマ用ボタン
         btn_layout = QHBoxLayout()
         add_btn = QPushButton("追加")
-        add_btn.clicked.connect(self.add_derived)
+        add_btn.clicked.connect(lambda _checked, t=timer: self.add_derived(t))
         del_btn = QPushButton("削除")
-        del_btn.clicked.connect(self.delete_derived)
+        del_btn.clicked.connect(lambda _checked, t=timer: self.delete_derived(t))
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
+        self._refresh_derived_table(derived_table, timer)
+
         return widget
 
-    def refresh_timer_table(self):
-        # 基準変数
-        self.base_display.setItem(0, 0, QTableWidgetItem(self.global_defs.timer_base.title))
-        self.base_display.setItem(0, 1, QTableWidgetItem(self.global_defs.timer_base.variable_name))
-        self.base_display.setItem(0, 2, QTableWidgetItem(self.global_defs.timer_base.unit))
-        self.base_display.setItem(0, 3, QTableWidgetItem(self.global_defs.timer_base.data_type))
+    def _refresh_derived_table(self, table: DoubleClickTable, timer: TimerBaseDef):
+        """指定されたタイマの派生タイマをテーブルに表示"""
+        table.setRowCount(0)
+        for d in timer.derived:
+            row = table.rowCount()
+            table.insertRow(row)
+            table.setItem(row, 0, QTableWidgetItem(d.title))
+            table.setItem(row, 1, QTableWidgetItem(d.period_name))
+            table.setItem(row, 2, QTableWidgetItem(str(d.multiplier)))
+            table.setItem(row, 3, QTableWidgetItem(d.variable_name))
+            table.setItem(row, 4, QTableWidgetItem(d.data_type))
 
-        # 派生タイマ
-        self.derived_table.setRowCount(0)
-        for d in self.global_defs.timer_base.derived:
-            row = self.derived_table.rowCount()
-            self.derived_table.insertRow(row)
-            self.derived_table.setItem(row, 0, QTableWidgetItem(d.title))
-            self.derived_table.setItem(row, 1, QTableWidgetItem(d.period_name))
-            self.derived_table.setItem(row, 2, QTableWidgetItem(str(d.multiplier)))
-            self.derived_table.setItem(row, 3, QTableWidgetItem(d.variable_name))
-            self.derived_table.setItem(row, 4, QTableWidgetItem(d.data_type))
+    def _on_timer_title_changed(self, timer: TimerBaseDef, text: str):
+        timer.title = text.strip() or f"タイマ基準: {timer.variable_name}"
+        all_timers = [self.global_defs.timer_base] + self.global_defs.extra_timers
+        for i, t in enumerate(all_timers):
+            if t is timer:
+                self.timer_tabs.setTabText(i, timer.title)
+                break
 
-    def on_base_double_clicked(self, row, col):
-        StaTableLogger.debug(f"on_base_double_clicked: row={row}, col={col}")
-        dlg = TimerBaseEditDialog(self, timer_base=self.global_defs.timer_base)
+    def _on_timer_var_changed(self, timer: TimerBaseDef, text: str):
+        timer.variable_name = text.strip()
+        self.global_defs.add_timer_variables()
+
+    def _on_timer_unit_changed(self, timer: TimerBaseDef, text: str):
+        timer.unit = text.strip()
+        self.global_defs.add_timer_variables()
+
+    def _on_timer_type_changed(self, timer: TimerBaseDef, text: str):
+        timer.data_type = text.strip()
+        self.global_defs.add_timer_variables()
+
+    def _on_timer_interrupt_changed(self, timer: TimerBaseDef, text: str):
+        timer.interrupt_name = text.strip()
+
+    def add_timer_base(self):
+        dlg = TimerBaseEditDialog(self)
         if dlg.exec() == QDialog.Accepted:
-            var, unit, typ, title = dlg.get_values()
-            if not var:
+            new_timer = dlg.get_timer_base()
+            if not new_timer.variable_name:
                 QMessageBox.warning(self, "警告", "基準変数名を入力してください。")
                 return
-            self.global_defs.timer_base.variable_name = var
-            self.global_defs.timer_base.unit = unit
-            self.global_defs.timer_base.data_type = typ
-            self.global_defs.timer_base.title = title
+            self.global_defs.extra_timers.append(new_timer)
             self.global_defs.add_timer_variables()
-            self.refresh_timer_table()
+            self.refresh_timer_tabs()
+            StaTableLogger.info(f"Timer base added: {new_timer.title}")
 
-    def on_derived_double_clicked(self, row, col):
-        StaTableLogger.debug(f"on_derived_double_clicked: row={row}, col={col}")
-        if row < 0 or row >= len(self.global_defs.timer_base.derived):
+    def edit_timer_base(self, timer: TimerBaseDef):
+        dlg = TimerBaseEditDialog(self, timer_base=timer)
+        if dlg.exec() == QDialog.Accepted:
+            new_timer = dlg.get_timer_base()
+            if not new_timer.variable_name:
+                QMessageBox.warning(self, "警告", "基準変数名を入力してください。")
+                return
+            timer.variable_name = new_timer.variable_name
+            timer.unit = new_timer.unit
+            timer.data_type = new_timer.data_type
+            timer.title = new_timer.title
+            timer.interrupt_name = new_timer.interrupt_name
+            self.global_defs.add_timer_variables()
+            self.refresh_timer_tabs()
+            StaTableLogger.info(f"Timer base updated: {timer.title}")
+
+    def close_timer_tab(self, index: int):
+        if index == 0:
+            QMessageBox.warning(self, "警告", "メインタイマは削除できません。")
             return
-        target = self.global_defs.timer_base.derived[row]
+        all_timers = [self.global_defs.timer_base] + self.global_defs.extra_timers
+        if 0 <= index < len(all_timers):
+            timer = all_timers[index]
+            reply = QMessageBox.question(
+                self, "確認",
+                f"基準タイマ '{timer.title}' を削除しますか？",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            if reply == QMessageBox.Yes:
+                self.global_defs.extra_timers.pop(index - 1)
+                self.global_defs.add_timer_variables()
+                self.refresh_timer_tabs()
+                StaTableLogger.info(f"Timer base deleted: {timer.title}")
+
+    def rename_timer_tab(self, index: int):
+        all_timers = [self.global_defs.timer_base] + self.global_defs.extra_timers
+        if 0 <= index < len(all_timers):
+            current = all_timers[index]
+            new_name, ok = QInputDialog.getText(
+                self, "タイマ名変更", "新しいタイマ名を入力してください：",
+                text=current.title
+            )
+            if ok and new_name.strip():
+                current.title = new_name.strip()
+                self.timer_tabs.setTabText(index, current.title)
+                self.global_defs.add_timer_variables()
+                StaTableLogger.info(f"Timer tab renamed: {current.title}")
+
+    def on_derived_double_clicked(self, timer: TimerBaseDef, row: int, col: int):
+        StaTableLogger.debug(f"on_derived_double_clicked: timer='{timer.title}', row={row}, col={col}")
+        if row < 0 or row >= len(timer.derived):
+            return
+        target = timer.derived[row]
         dlg = TimerDerivedEditDialog(self, derived=target)
         if dlg.exec() == QDialog.Accepted:
             new_d = dlg.get_derived()
             if not new_d.period_name:
                 QMessageBox.warning(self, "警告", "周期名を入力してください。")
                 return
-            self.global_defs.timer_base.derived[row] = new_d
+            timer.derived[row] = new_d
             self.global_defs.add_timer_variables()
-            self.refresh_timer_table()
+            self.refresh_timer_tabs()
 
-    def add_derived(self):
+    def add_derived(self, timer: TimerBaseDef):
         dlg = TimerDerivedEditDialog(self)
         if dlg.exec() == QDialog.Accepted:
             d = dlg.get_derived()
             if not d.period_name:
                 QMessageBox.warning(self, "警告", "周期名を入力してください。")
                 return
-            self.global_defs.timer_base.derived.append(d)
+            timer.derived.append(d)
             self.global_defs.add_timer_variables()
-            self.refresh_timer_table()
+            self.refresh_timer_tabs()
 
-    def delete_derived(self):
-        row = self.derived_table.currentRow()
-        if 0 <= row < len(self.global_defs.timer_base.derived):
-            self.global_defs.timer_base.derived.pop(row)
-            self.global_defs.add_timer_variables()
-            self.refresh_timer_table()
+    def delete_derived(self, timer: TimerBaseDef):
+        current_widget = self.timer_tabs.currentWidget()
+        if current_widget:
+            table = current_widget.findChild(DoubleClickTable)
+            if table:
+                row = table.currentRow()
+                if 0 <= row < len(timer.derived):
+                    timer.derived.pop(row)
+                    self.global_defs.add_timer_variables()
+                    self.refresh_timer_tabs()

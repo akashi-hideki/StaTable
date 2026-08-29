@@ -144,9 +144,58 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
     return sm
 
 
+# ----------------------------------------------------------------------
+# GlobalDefinitions <-> Element 変換
+# ----------------------------------------------------------------------
+def _timer_to_element(parent: ET.Element, timer: TimerBaseDef, tag: str = "Timer"):
+    """タイマ基準変数をXML要素に変換"""
+    elem = ET.SubElement(parent, tag)
+    elem.set("variable_name", timer.variable_name)
+    elem.set("unit", timer.unit)
+    elem.set("data_type", timer.data_type)
+    elem.set("title", timer.title)
+    elem.set("interrupt_name", timer.interrupt_name)
+    for derived in timer.derived:
+        d_attrs = {
+            "period_name": derived.period_name,
+            "multiplier": str(derived.multiplier),
+            "variable_name": derived.variable_name,
+            "data_type": derived.data_type,
+            "title": derived.title,
+        }
+        ET.SubElement(elem, "Derived", **d_attrs)
+    return elem
+
+
+def _timer_from_element(elem: ET.Element) -> TimerBaseDef:
+    """XML要素からタイマ基準変数を構築"""
+    derived_list = []
+    for d_elem in elem.findall("Derived"):
+        try:
+            mult = int(d_elem.get("multiplier", "1"))
+        except ValueError:
+            mult = 1
+        derived_list.append(TimerDerivedDef(
+            period_name=d_elem.get("period_name", ""),
+            multiplier=mult,
+            variable_name=d_elem.get("variable_name", ""),
+            data_type=d_elem.get("data_type", "uint8_t"),
+            title=d_elem.get("title", ""),
+        ))
+    return TimerBaseDef(
+        variable_name=elem.get("variable_name", "g_system_tick"),
+        unit=elem.get("unit", "1ms"),
+        data_type=elem.get("data_type", "volatile uint32_t"),
+        derived=derived_list,
+        title=elem.get("title", ""),
+        interrupt_name=elem.get("interrupt_name", ""),
+    )
+
+
 def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
     root = ET.Element("GlobalDefinitions")
 
+    # SystemVariables
     vars_elem = ET.SubElement(root, "SystemVariables")
     for var in defs.variables:
         attrs = {
@@ -160,6 +209,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
         }
         ET.SubElement(vars_elem, "Variable", **attrs)
 
+    # EventFlags
     flags_elem = ET.SubElement(root, "EventFlags")
     for flag in defs.flags:
         attrs = {
@@ -172,6 +222,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
         }
         ET.SubElement(flags_elem, "Flag", **attrs)
 
+    # Interrupts
     if defs.interrupts:
         intrs_elem = ET.SubElement(root, "Interrupts")
         for intr in defs.interrupts:
@@ -190,6 +241,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
                 }
                 ET.SubElement(intr_elem, "Action", **act_attrs)
 
+    # DevicePlaceholders
     if defs.placeholders:
         ph_elem = ET.SubElement(root, "DevicePlaceholders")
         for ph in defs.placeholders:
@@ -200,21 +252,17 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
             }
             ET.SubElement(ph_elem, "Placeholder", **attrs)
 
+    # TimerBase（メインタイマ）
     timer_elem = ET.SubElement(root, "TimerBase")
-    timer_elem.set("variable_name", defs.timer_base.variable_name)
-    timer_elem.set("unit", defs.timer_base.unit)
-    timer_elem.set("data_type", defs.timer_base.data_type)
-    timer_elem.set("title", defs.timer_base.title)
-    for derived in defs.timer_base.derived:
-        d_attrs = {
-            "period_name": derived.period_name,
-            "multiplier": str(derived.multiplier),
-            "variable_name": derived.variable_name,
-            "data_type": derived.data_type,
-            "title": derived.title,
-        }
-        ET.SubElement(timer_elem, "Derived", **d_attrs)
+    _timer_to_element(timer_elem, defs.timer_base, tag="Timer")
 
+    # ExtraTimers（追加タイマ）
+    if defs.extra_timers:
+        extras_elem = ET.SubElement(root, "ExtraTimers")
+        for timer in defs.extra_timers:
+            _timer_to_element(extras_elem, timer, tag="Timer")
+
+    # EventQueues
     if defs.event_queues:
         queues_elem = ET.SubElement(root, "EventQueues")
         for q in defs.event_queues:
@@ -237,6 +285,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
 def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
     defs = GlobalDefinitions()
 
+    # SystemVariables
     vars_elem = elem.find("SystemVariables")
     if vars_elem is not None:
         for var_elem in vars_elem:
@@ -251,6 +300,7 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
             )
             defs.variables.append(var)
 
+    # EventFlags
     flags_elem = elem.find("EventFlags")
     if flags_elem is not None:
         for flag_elem in flags_elem:
@@ -269,6 +319,7 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
             )
             defs.flags.append(flag)
 
+    # Interrupts
     intrs_elem = elem.find("Interrupts")
     if intrs_elem is not None:
         for intr_elem in intrs_elem:
@@ -290,6 +341,7 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
             )
             defs.interrupts.append(intr)
 
+    # DevicePlaceholders
     ph_elem = elem.find("DevicePlaceholders")
     if ph_elem is not None:
         for ph in ph_elem:
@@ -299,29 +351,20 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 title=ph.get("title", ""),
             ))
 
+    # TimerBase（メインタイマ）
     timer_elem = elem.find("TimerBase")
     if timer_elem is not None:
-        derived_list = []
-        for d_elem in timer_elem.findall("Derived"):
-            try:
-                mult = int(d_elem.get("multiplier", "1"))
-            except ValueError:
-                mult = 1
-            derived_list.append(TimerDerivedDef(
-                period_name=d_elem.get("period_name", ""),
-                multiplier=mult,
-                variable_name=d_elem.get("variable_name", ""),
-                data_type=d_elem.get("data_type", "uint8_t"),
-                title=d_elem.get("title", ""),
-            ))
-        defs.timer_base = TimerBaseDef(
-            variable_name=timer_elem.get("variable_name", "g_system_tick"),
-            unit=timer_elem.get("unit", "1ms"),
-            data_type=timer_elem.get("data_type", "volatile uint32_t"),
-            derived=derived_list,
-            title=timer_elem.get("title", ""),
-        )
+        timer_elem_inner = timer_elem.find("Timer")
+        if timer_elem_inner is not None:
+            defs.timer_base = _timer_from_element(timer_elem_inner)
 
+    # ExtraTimers（追加タイマ）
+    extras_elem = elem.find("ExtraTimers")
+    if extras_elem is not None:
+        for timer_elem_inner in extras_elem.findall("Timer"):
+            defs.extra_timers.append(_timer_from_element(timer_elem_inner))
+
+    # EventQueues
     queues_elem = elem.find("EventQueues")
     if queues_elem is not None:
         for q_elem in queues_elem:
@@ -343,11 +386,15 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 title=q_elem.get("title", ""),
             ))
 
+    # タイマ変数をグローバル変数として自動登録
     defs.add_timer_variables()
 
     return defs
 
 
+# ----------------------------------------------------------------------
+# 単一 StateMachine のファイル保存/読み込み（互換用）
+# ----------------------------------------------------------------------
 def state_machine_to_xml(sm: StateMachine, filepath: str) -> None:
     root = state_machine_to_element(sm)
     tree = ET.ElementTree(root)
@@ -361,6 +408,9 @@ def state_machine_from_xml(filepath: str) -> StateMachine:
     return state_machine_from_element(root)
 
 
+# ----------------------------------------------------------------------
+# プロジェクト全体（複数タブ＋グローバル定義）の保存/読み込み
+# ----------------------------------------------------------------------
 def project_to_xml(
     tabs: List[Tuple[str, StateMachine]],
     global_defs: GlobalDefinitions,
