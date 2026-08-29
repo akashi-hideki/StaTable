@@ -1,6 +1,5 @@
 """グローバル変数・イベントフラグ定義管理画面（コンボボックス編集対応）"""
 
-import sys
 from typing import Optional, List
 
 from PySide6.QtCore import Qt, Signal
@@ -13,7 +12,8 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate, QCompleter
 )
 
-from .global_defs import SystemVariable, EventFlag, GlobalDefinitions
+from statable.global_defs import SystemVariable, EventFlag, GlobalDefinitions
+from .logger import StaTableLogger
 
 
 # ----------------------------------------------------------------------
@@ -486,6 +486,7 @@ class GlobalDefinitionsDialog(QDialog):
 
         self.refresh_variables()
         self.refresh_flags()
+        StaTableLogger.debug("GlobalDefinitionsDialog initialized")
 
     def _create_variable_tab(self):
         widget = QWidget()

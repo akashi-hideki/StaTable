@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, List, Dict
+from typing import Optional, List
 
 
 class StateType(Enum):
@@ -20,6 +20,19 @@ class EventKind(Enum):
     CHANGE = "change"
 
 
+class EventDeliveryType(Enum):
+    """イベントの配送方法"""
+    DIRECT = "direct"      # メインループ内で直接呼び出し
+    QUEUE = "queue"        # イベントキュー経由
+    DOUBLE = "double"      # ISRから使用されるDIRECTが自動変換された場合のみ
+
+
+class EventSourceLayer(Enum):
+    """イベントの発生源レイヤ"""
+    DRIVER = "driver"      # ドライバ層
+    MIDDLEWARE = "middleware"  # ミドル層
+
+
 @dataclass
 class State:
     name: str
@@ -33,27 +46,33 @@ class State:
 
 @dataclass
 class Event:
+    """状態遷移イベント（ドライバ層・ミドル層から通知される）"""
     name: str
     id: Optional[int] = None
     kind: EventKind = EventKind.SIGNAL
     params: List[str] = field(default_factory=list)
     priority: int = 0
     description: str = ""
+    delivery_type: EventDeliveryType = EventDeliveryType.DIRECT
+    source_layer: EventSourceLayer = EventSourceLayer.DRIVER   # ★ 発生源レイヤ
+    data_type: str = ""          # ★ 付随データ型（空ならデータなし）
+    data_name: str = ""          # ★ 付随データ変数名
 
 
 @dataclass
 class Transition:
     source: str
     event: str
-    guard: str = ""
+    condition: str = ""          # ★ 状態遷移条件（旧 guard）
     action: str = ""
     target: str = ""
     transition_type: str = "external"
-    title: str = ""   # ★ 表示タイトル（省略時は自動生成）
+    title: str = ""
 
 
 @dataclass
 class RoleFunction:
+    """ロール関数（状態遷移条件・動作をまとめて実装する関数）"""
     name: str
     description: str = ""
     return_type: str = "int"

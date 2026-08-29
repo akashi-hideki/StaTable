@@ -1,16 +1,14 @@
-from typing import Optional
-
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTextEdit, QComboBox,
     QPushButton, QLabel, QDialogButtonBox, QMessageBox, QLineEdit,
-    QListWidget, QListWidgetItem, QSplitter, QWidget, QMenu
+    QSplitter, QWidget, QMenu
 )
-from PySide6.QtGui import QFont
-from PySide6.QtCore import Qt
 
 from .role_function_dialog import RoleFunctionDialog
-from .global_defs import GlobalDefinitions, SystemVariable, EventFlag
-from .global_defs_dialog import GlobalDefinitionsDialog, VariableEditDialog, FlagEditDialog
+from .global_defs import GlobalDefinitions
+from .global_defs_dialog import VariableEditDialog, FlagEditDialog
 from .symbol_picker import SymbolPickerWidget
 from .logger import StaTableLogger
 

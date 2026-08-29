@@ -34,8 +34,8 @@ class EventFlag:
 @dataclass
 class InterruptAction:
     """割り込み処理内の条件付きアクション"""
-    guard: str = ""        # ガード条件（空なら無条件）
-    action: str = ""       # 動作コード
+    condition: str = ""     # ★ 状態遷移条件（旧 guard）
+    action: str = ""        # 動作コード
 
 
 @dataclass
@@ -43,7 +43,7 @@ class InterruptHandlerDef:
     """割り込み処理定義"""
     name: str
     description: str = ""
-    event_name: str = ""
+    event_names: List[str] = field(default_factory=list)   # ★ 複数イベント対応
     is_timer: bool = False
     actions: List[InterruptAction] = field(default_factory=list)
 
@@ -79,6 +79,7 @@ class EventQueueDef:
     name: str
     size: int
     element_type: str
+    event_ids: List[str] = field(default_factory=list)   # ★ 関連イベントID
     priority_enabled: bool = False
     interrupt_safe: bool = True
     rtos_enabled: bool = False
@@ -94,7 +95,7 @@ class GlobalDefinitions:
         self.interrupts: List[InterruptHandlerDef] = []
         self.placeholders: List[DevicePlaceholderDef] = []
         self.timer_base: TimerBaseDef = TimerBaseDef()
-        self.event_queues: List[EventQueueDef] = []   # ★ 追加
+        self.event_queues: List[EventQueueDef] = []
 
     def add_timer_variables(self):
         """タイマ基準変数・派生タイマ変数をグローバル変数として登録する"""

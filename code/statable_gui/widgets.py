@@ -30,6 +30,7 @@ from .dialogs import TransitionListDialog
 from .role_function_dialog import RoleFunctionDialog
 from .action_edit_dialog import ActionEditDialog
 from .global_defs import GlobalDefinitions
+from .event_definition_dialog import EventDefinitionDialog   # ★ 新設
 
 
 # ----------------------------------------------------------------------
@@ -113,7 +114,7 @@ class MermaidWidget(QWidget):
 
 
 # ----------------------------------------------------------------------
-# 状態/イベント設定パネル
+# 状態設定パネル（イベント辞書タブを廃止）
 # ----------------------------------------------------------------------
 class SettingsPanel(QWidget):
     settings_changed = Signal()
@@ -122,10 +123,6 @@ class SettingsPanel(QWidget):
         super().__init__(parent)
         self.sm = sm
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
-        StaTableLogger.debug(
-            f"SettingsPanel.__init__: global_defs id={id(self.global_defs)}, "
-            f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
-        )
         self._updating = False
 
         self._debounce_timer = QTimer()
@@ -155,24 +152,6 @@ class SettingsPanel(QWidget):
         state_layout.addLayout(btn_state)
         self.tab.addTab(state_tab, "状態一覧")
 
-        # イベント辞書タブ
-        event_tab = QWidget()
-        event_layout = QVBoxLayout(event_tab)
-        self.event_table = QTableWidget(0, 3)
-        self.event_table.setHorizontalHeaderLabels(["名称", "説明", "種類"])
-        self.event_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.event_table.setFont(QFont("Consolas", 10))
-        event_layout.addWidget(self.event_table)
-        btn_event = QHBoxLayout()
-        add_event_btn = QPushButton("追加")
-        add_event_btn.clicked.connect(self.add_event)
-        del_event_btn = QPushButton("削除")
-        del_event_btn.clicked.connect(self.delete_event)
-        btn_event.addWidget(add_event_btn)
-        btn_event.addWidget(del_event_btn)
-        event_layout.addLayout(btn_event)
-        self.tab.addTab(event_tab, "イベント辞書")
-
         # ロール関数タブ
         role_tab = QWidget()
         role_layout = QVBoxLayout(role_tab)
@@ -191,11 +170,16 @@ class SettingsPanel(QWidget):
         btn_role.addWidget(add_role_btn)
         btn_role.addWidget(del_role_btn)
         role_layout.addLayout(btn_role)
+
+        # イベント定義ボタン（新設）
+        event_btn = QPushButton("イベント定義...")
+        event_btn.clicked.connect(self.open_event_definition)
+        role_layout.addWidget(event_btn)
+
         self.tab.addTab(role_tab, "ロール関数")
 
         # 変更検知
         self.state_table.itemChanged.connect(self.on_state_table_item_changed)
-        self.event_table.itemChanged.connect(self.on_event_table_item_changed)
         self.role_table.itemChanged.connect(self.on_role_table_item_changed)
 
         # 状態一覧のセルダブルクリックでActionEditDialogを開く
@@ -227,17 +211,10 @@ class SettingsPanel(QWidget):
             self.state_table.setItem(row, 4, do_item)
             self.state_table.setItem(row, 5, QTableWidgetItem(state.type.value))
 
-        events = list(self.sm.events.values())
-        self.event_table.setRowCount(len(events))
-        for row, event in enumerate(events):
-            self.event_table.setItem(row, 0, QTableWidgetItem(event.name if event.name else "（完了）"))
-            self.event_table.setItem(row, 1, QTableWidgetItem(event.description))
-            self.event_table.setItem(row, 2, QTableWidgetItem(event.kind.value))
-
         self.populate_role_table()
 
         self._updating = False
-        StaTableLogger.debug(f"Settings populated: {len(states)} states, {len(events)} events, {len(self.sm.role_functions)} roles")
+        StaTableLogger.debug(f"Settings populated: {len(states)} states, {len(self.sm.role_functions)} roles")
 
     def populate_role_table(self):
         roles = list(self.sm.role_functions.values())
@@ -282,12 +259,8 @@ class SettingsPanel(QWidget):
     def add_state(self):
         row = self.state_table.rowCount()
         self.state_table.insertRow(row)
-        self.state_table.setItem(row, 0, QTableWidgetItem(""))
-        self.state_table.setItem(row, 1, QTableWidgetItem(""))
-        self.state_table.setItem(row, 2, QTableWidgetItem(""))
-        self.state_table.setItem(row, 3, QTableWidgetItem(""))
-        self.state_table.setItem(row, 4, QTableWidgetItem(""))
-        self.state_table.setItem(row, 5, QTableWidgetItem("normal"))
+        for col, default in enumerate(["", "", "", "", "", "normal"]):
+            self.state_table.setItem(row, col, QTableWidgetItem(default))
         self.state_table.editItem(self.state_table.item(row, 0))
         StaTableLogger.debug("Add state row")
 
@@ -304,31 +277,16 @@ class SettingsPanel(QWidget):
             else:
                 self.state_table.removeRow(row)
 
-    def add_event(self):
-        row = self.event_table.rowCount()
-        self.event_table.insertRow(row)
-        self.event_table.setItem(row, 0, QTableWidgetItem(""))
-        self.event_table.setItem(row, 1, QTableWidgetItem(""))
-        self.event_table.setItem(row, 2, QTableWidgetItem("signal"))
-        self.event_table.editItem(self.event_table.item(row, 0))
-        StaTableLogger.debug("Add event row")
-
-    def delete_event(self):
-        row = self.event_table.currentRow()
-        if row >= 0:
-            name = self.event_table.item(row, 0).text().strip() if self.event_table.item(row, 0) else ""
-            if name == "（完了）":
-                name = ""
-            if name and name in self.sm.events:
-                self.sm.transitions = [t for t in self.sm.transitions if t.event != name]
-                del self.sm.events[name]
-                self.populate()
-                self.settings_changed.emit()
-                StaTableLogger.info(f"Event deleted: {name}")
-            else:
-                self.event_table.removeRow(row)
+    def open_event_definition(self):
+        """状態遷移イベント定義ダイアログを開く"""
+        StaTableLogger.debug("SettingsPanel.open_event_definition called")
+        dlg = EventDefinitionDialog(self.sm, self)
+        if dlg.exec() == QDialog.Accepted:
+            self.settings_changed.emit()
+            StaTableLogger.info("Event definitions updated")
 
     def add_role_function(self):
+        StaTableLogger.debug("SettingsPanel.add_role_function called")
         dlg = RoleFunctionDialog(self)
         if dlg.exec() == QDialog.Accepted:
             rf = dlg.get_role_function()
@@ -347,15 +305,12 @@ class SettingsPanel(QWidget):
                 self.sm.remove_role_function(name)
                 self.populate_role_table()
                 self.settings_changed.emit()
+                StaTableLogger.info(f"Role function deleted: {name}")
             else:
                 self.role_table.removeRow(row)
 
     def on_state_table_item_changed(self, item):
         StaTableLogger.debug(f"State table item changed: row={item.row()}, col={item.column()}, text={item.text()}")
-        self._debounce_timer.start()
-
-    def on_event_table_item_changed(self, item):
-        StaTableLogger.debug(f"Event table item changed: row={item.row()}, col={item.column()}, text={item.text()}")
         self._debounce_timer.start()
 
     def on_role_table_item_changed(self, item):
@@ -382,20 +337,7 @@ class SettingsPanel(QWidget):
                 else:
                     self.sm.add_state(State(name, type=StateType(type_str), description=desc,
                                              entry=entry, exit=exit_, do=do))
-        # イベントテーブル
-        for row in range(self.event_table.rowCount()):
-            name = self.event_table.item(row, 0).text().strip() if self.event_table.item(row, 0) else ""
-            if name == "（完了）":
-                name = ""
-            desc = self.event_table.item(row, 1).text().strip() if self.event_table.item(row, 1) else ""
-            kind_str = self.event_table.item(row, 2).text().strip() if self.event_table.item(row, 2) else "signal"
-            if name:
-                if name in self.sm.events:
-                    ev = self.sm.events[name]
-                    ev.description = desc
-                    ev.kind = EventKind(kind_str)
-                else:
-                    self.sm.add_event(Event(name, kind=EventKind(kind_str), description=desc))
+
         # ロール関数テーブル
         self.sm.role_functions.clear()
         for row in range(self.role_table.rowCount()):

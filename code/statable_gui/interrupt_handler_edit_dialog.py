@@ -1,6 +1,5 @@
-"""割り込み処理・デバイスリソース・タイマ設定の管理ダイアログ（条件付きアクションテーブル方式）"""
+"""割り込み処理・デバイスリソース・タイマ設定の管理ダイアログ（状態遷移条件対応版）"""
 
-import sys
 from typing import Optional, List
 
 from PySide6.QtCore import Qt
@@ -8,8 +7,8 @@ from PySide6.QtGui import QFont, QMouseEvent
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
     QTableWidget, QTableWidgetItem, QPushButton, QLabel, QHeaderView,
-    QComboBox, QLineEdit, QTextEdit, QDialogButtonBox, QMessageBox,
-    QAbstractItemView, QSpinBox, QCheckBox, QFormLayout, QSplitter, QMenu
+    QComboBox, QLineEdit, QDialogButtonBox, QMessageBox,
+    QAbstractItemView, QSpinBox, QCheckBox, QFormLayout
 )
 
 from statable.global_defs import (
@@ -22,9 +21,8 @@ from statable.global_defs import (
 )
 
 from .symbol_picker import SymbolPickerWidget
-from .guard_edit_dialog import GuardEditDialog
+from .condition_edit_dialog import ConditionEditDialog
 from .action_edit_dialog import ActionEditDialog
-from .global_defs_dialog import VariableEditDialog, FlagEditDialog
 from .logger import StaTableLogger
 
 
@@ -94,8 +92,8 @@ class InterruptEditDialog(QDialog):
         self.event_combo = QComboBox()
         self.event_combo.setEditable(True)
         self.event_combo.addItems(self.event_names)
-        if interrupt:
-            self.event_combo.setCurrentText(interrupt.event_name)
+        if interrupt and interrupt.event_names:
+            self.event_combo.setCurrentText(interrupt.event_names[0])
         form.addRow("イベント名", self.event_combo)
 
         # タイマ割り込みフラグ
@@ -107,7 +105,7 @@ class InterruptEditDialog(QDialog):
 
         # アクションテーブル（ガード条件＋動作コード）
         self.action_table = DoubleClickTable(0, 2)
-        self.action_table.setHorizontalHeaderLabels(["ガード条件", "動作コード"])
+        self.action_table.setHorizontalHeaderLabels(["状態遷移条件", "動作コード"])
         self.action_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.action_table.cellDoubleClicked.connect(self.on_action_double_clicked)
         layout.addWidget(self.action_table, stretch=1)
@@ -132,20 +130,22 @@ class InterruptEditDialog(QDialog):
         # 初期データ読み込み
         if interrupt and interrupt.actions:
             for act in interrupt.actions:
-                self.add_action_row(act.guard, act.action)
+                self.add_action_row(act.condition, act.action)
         else:
             self.add_action_row()
 
-    def add_action_row(self, guard: str = "", action: str = ""):
+        StaTableLogger.debug("InterruptEditDialog initialized")
+
+    def add_action_row(self, condition: str = "", action: str = ""):
         """アクションテーブルに1行追加"""
         row = self.action_table.rowCount()
         self.action_table.insertRow(row)
 
         # ガード条件（読み取り専用）
-        guard_item = QTableWidgetItem(guard.replace('\n', ' ; ') if guard else "")
-        guard_item.setToolTip("ダブルクリックでガード条件を編集")
-        guard_item.setData(Qt.UserRole, guard)
-        self.action_table.setItem(row, 0, guard_item)
+        condition_item = QTableWidgetItem(condition.replace('\n', ' ; ') if condition else "")
+        condition_item.setToolTip("ダブルクリックで状態遷移条件を編集")
+        condition_item.setData(Qt.UserRole, condition)
+        self.action_table.setItem(row, 0, condition_item)
 
         # 動作コード（読み取り専用）
         action_item = QTableWidgetItem(action.replace('\n', ' ; ') if action else "")
@@ -166,17 +166,17 @@ class InterruptEditDialog(QDialog):
             item = self.action_table.item(row, 0)
             if not item:
                 return
-            current_guard = item.data(Qt.UserRole) if item.data(Qt.UserRole) else ""
-            dlg = GuardEditDialog(
+            current_condition = item.data(Qt.UserRole) if item.data(Qt.UserRole) else ""
+            dlg = ConditionEditDialog(
                 self,
-                guard_text=current_guard,
+                condition_text=current_condition,
                 global_defs=self.global_defs,
                 role_functions=self.role_functions
             )
             if dlg.exec() == QDialog.Accepted:
-                new_guard = dlg.get_guard_text()
-                item.setText(new_guard.replace('\n', ' ; '))
-                item.setData(Qt.UserRole, new_guard)
+                new_condition = dlg.get_condition_text()
+                item.setText(new_condition.replace('\n', ' ; '))
+                item.setData(Qt.UserRole, new_condition)
 
         elif col == 1:
             item = self.action_table.item(row, 1)
@@ -198,21 +198,24 @@ class InterruptEditDialog(QDialog):
         """編集結果を取得"""
         actions = []
         for row in range(self.action_table.rowCount()):
-            guard_item = self.action_table.item(row, 0)
+            condition_item = self.action_table.item(row, 0)
             action_item = self.action_table.item(row, 1)
-            if not guard_item or not action_item:
+            if not condition_item or not action_item:
                 continue
-            guard = guard_item.data(Qt.UserRole) if guard_item.data(Qt.UserRole) else ""
+            condition = condition_item.data(Qt.UserRole) if condition_item.data(Qt.UserRole) else ""
             action = action_item.data(Qt.UserRole) if action_item.data(Qt.UserRole) else ""
-            # 両方空の行はスキップ
-            if not guard and not action:
+            if not condition and not action:
                 continue
             actions.append(InterruptAction(guard=guard, action=action))
+
+        event_names = []
+        if self.event_combo.currentText().strip():
+            event_names.append(self.event_combo.currentText().strip())
 
         return InterruptHandlerDef(
             name=self.name_edit.text().strip(),
             description=self.desc_edit.text().strip(),
-            event_name=self.event_combo.currentText().strip(),
+            event_names=event_names,
             is_timer=self.timer_check.isChecked(),
             actions=actions,
         )
@@ -407,7 +410,7 @@ class InterruptHandlerEditDialog(QDialog):
             self.interrupt_table.insertRow(row)
             self.interrupt_table.setItem(row, 0, QTableWidgetItem(intr.name))
             self.interrupt_table.setItem(row, 1, QTableWidgetItem(intr.description))
-            self.interrupt_table.setItem(row, 2, QTableWidgetItem(intr.event_name))
+            self.interrupt_table.setItem(row, 2, QTableWidgetItem(", ".join(intr.event_names)))
             self.interrupt_table.setItem(row, 3, QTableWidgetItem("✔" if intr.is_timer else ""))
             self.interrupt_table.setItem(row, 4, QTableWidgetItem(str(len(intr.actions))))
 
@@ -610,4 +613,4 @@ class InterruptHandlerEditDialog(QDialog):
         if 0 <= row < len(self.global_defs.timer_base.derived):
             self.global_defs.timer_base.derived.pop(row)
             self.global_defs.add_timer_variables()
-            self.refresh_timer_table()
+            self.refresh_t

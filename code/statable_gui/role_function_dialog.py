@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (
 )
 
 from statable.model import RoleFunction
+from .logger import StaTableLogger
 
 
 class RoleFunctionDialog(QDialog):
@@ -43,6 +44,8 @@ class RoleFunctionDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
+
+        StaTableLogger.debug("RoleFunctionDialog initialized")
 
     def get_role_function(self) -> RoleFunction:
         return RoleFunction(

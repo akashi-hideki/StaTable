@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialog
 )
 
-from statable.model import Transition
+from statable.model import Transition, EventDeliveryType
 from statable.state_machine import StateMachine
 
 from .logger import StaTableLogger
@@ -36,11 +36,20 @@ def _build_transition_tooltip(trans: Transition) -> str:
         parts.append(f"イベント: {trans.event}")
     else:
         parts.append("イベント: 完了遷移")
-    if trans.guard:
-        parts.append(f"条件:\n{trans.guard}")
+    if trans.condition:
+        parts.append(f"状態遷移条件:\n{trans.condition}")
     if trans.action:
         parts.append(f"動作:\n{trans.action}")
     return "\n".join(parts)
+
+
+def _event_header_label(event_name: str, delivery_type) -> str:
+    """イベント名に配送タイプのプレフィックスを付ける"""
+    if delivery_type == EventDeliveryType.QUEUE:
+        return f"[Q] {event_name}"
+    elif delivery_type == EventDeliveryType.DOUBLE:
+        return f"[D] {event_name}"
+    return event_name
 
 
 class MatrixTableWidget(QTableWidget):
@@ -74,6 +83,14 @@ class MatrixTableWidget(QTableWidget):
         self.setColumnCount(len(states))
         self.setHorizontalHeaderLabels(states)
         self.setVerticalHeaderLabels([e if e else "完了" for e in events])
+
+        # イベントヘッダに配送タイプを含める
+        event_labels = []
+        for event_name in events:
+            event_obj = self.sm.events.get(event_name)
+            delivery = event_obj.delivery_type if event_obj else EventDeliveryType.DIRECT
+            event_labels.append(_event_header_label(event_name if event_name else "完了", delivery))
+        self.setVerticalHeaderLabels(event_labels)
 
         for row, event in enumerate(events):
             for col, state in enumerate(states):
@@ -115,7 +132,8 @@ class MatrixTableWidget(QTableWidget):
         StaTableLogger.debug(f"MatrixTable populated: {len(events)} events, {len(states)} states")
 
     def _find_transitions(self, state: str, event: str) -> List[Transition]:
-        return [t for t in self.sm.transitions if t.source == state and t.event == event]
+        """指定セル（状態×イベント）の遷移候補を返す"""
+        return self.sm.get_transitions_for_cell(state, event)
 
     def _generate_title(self, trans: Transition) -> str:
         """セルに表示する短いタイトル"""
@@ -126,9 +144,9 @@ class MatrixTableWidget(QTableWidget):
             parts.append("(内部)")
 
         # ガード条件は短縮表示
-        if trans.guard:
-            guard_display = _truncate_text(trans.guard, 30)
-            parts.append(f"[{guard_display}]")
+        if trans.condition:
+            condition_display = _truncate_text(trans.condition, 30)
+            parts.append(f"[{condition_display}]")
 
         # アクションも短縮表示（あくまで概要）
         if trans.action:
@@ -139,11 +157,15 @@ class MatrixTableWidget(QTableWidget):
 
     def open_transition_dialog(self, row: int, col: int):
         state = self.horizontalHeaderItem(col).text() if self.horizontalHeaderItem(col) else ""
-        event = self.verticalHeaderItem(row).text() if self.verticalHeaderItem(row) else ""
-        if event == "完了":
+        raw_event = self.verticalHeaderItem(row).text() if self.verticalHeaderItem(row) else ""
+        event_name = raw_event
+        if event_name.startswith("[Q] "):
+            event_name = event_name[4:]
+        elif event_name.startswith("[D] "):
+            event_name = event_name[4:]
+        if event_name == "完了":
             event_name = ""
-        else:
-            event_name = event
+
         StaTableLogger.debug(f"MatrixTableWidget.open_transition_dialog: row={row}, col={col}, state='{state}', event='{event_name}'")
 
         item = self.item(row, col)
@@ -186,7 +208,7 @@ class MatrixTableWidget(QTableWidget):
                 trans_list = current.data(Qt.UserRole)
                 if trans_list:
                     for trans in trans_list:
-                        self.sm.transitions.remove(trans)
+                        self.sm.remove_transition(trans)
                     self.populate()
                     self.transition_changed.emit()
                     StaTableLogger.info(f"Transition deleted: {len(trans_list)} transition(s)")

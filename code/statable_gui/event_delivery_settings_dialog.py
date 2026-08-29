@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QFont, QMouseEvent
 
-from statable.state_machine import StateMachine          # ★ 正しいモジュール
+from statable.state_machine import StateMachine
 from statable.model import Event, EventDeliveryType
 from statable.global_defs import GlobalDefinitions
 from .logger import StaTableLogger
@@ -29,7 +29,10 @@ class DoubleClickTable(QTableWidget):
         item = self.itemAt(pos)
         if item:
             row = item.row()
+            StaTableLogger.debug(f"DoubleClickTable.mouseDoubleClickEvent: row={row}")
             self.cellDoubleClicked.emit(row, item.column())
+        else:
+            StaTableLogger.debug("DoubleClickTable.mouseDoubleClickEvent: no item")
 
 
 class EventDeliverySettingsDialog(QDialog):
@@ -58,8 +61,8 @@ class EventDeliverySettingsDialog(QDialog):
         layout.addWidget(self.auto_convert_check)
 
         # イベント一覧テーブル
-        self.table = DoubleClickTable(0, 4)
-        self.table.setHorizontalHeaderLabels(["イベント名", "配送タイプ", "ISR使用", "変換後"])
+        self.table = DoubleClickTable(0, 5)
+        self.table.setHorizontalHeaderLabels(["イベント名", "発生源", "配送タイプ", "ISR使用", "変換後"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setFont(QFont("Consolas", 10))
         layout.addWidget(self.table, stretch=1)
@@ -96,26 +99,32 @@ class EventDeliverySettingsDialog(QDialog):
             name_item.setFlags(name_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, 0, name_item)
 
+            # 発生源
+            source_item = QTableWidgetItem(event.source_layer.value)
+            source_item.setFlags(source_item.flags() & ~Qt.ItemIsEditable)
+            self.table.setItem(row, 1, source_item)
+
             # 配送タイプコンボ
             combo = QComboBox()
             combo.addItem("DIRECT", EventDeliveryType.DIRECT)
             combo.addItem("QUEUE", EventDeliveryType.QUEUE)
+            combo.addItem("DOUBLE", EventDeliveryType.DOUBLE)
             idx = combo.findData(event.delivery_type)
             if idx >= 0:
                 combo.setCurrentIndex(idx)
             combo.currentIndexChanged.connect(lambda _index, r=row: self._on_delivery_changed(r))
-            self.table.setCellWidget(row, 1, combo)
+            self.table.setCellWidget(row, 2, combo)
 
             # ISR使用列（読み取り専用）
             isr_used = self._check_isr_usage(event.name)
             isr_item = QTableWidgetItem("あり" if isr_used else "")
             isr_item.setFlags(isr_item.flags() & ~Qt.ItemIsEditable)
-            self.table.setItem(row, 2, isr_item)
+            self.table.setItem(row, 3, isr_item)
 
             # 変換後列（読み取り専用）
             converted_item = QTableWidgetItem()
             converted_item.setFlags(converted_item.flags() & ~Qt.ItemIsEditable)
-            self.table.setItem(row, 3, converted_item)
+            self.table.setItem(row, 4, converted_item)
 
         self._update_converted_column()
 
@@ -124,10 +133,10 @@ class EventDeliverySettingsDialog(QDialog):
         if not event_name:
             return False
         for intr in self.global_defs.interrupts:
-            if intr.event_name == event_name:
+            if event_name in intr.event_names:
                 return True
             for act in intr.actions:
-                combined = act.guard + "\n" + act.action
+                combined = act.condition + "\n" + act.action
                 if event_name in combined:
                     return True
         return False
@@ -153,15 +162,15 @@ class EventDeliverySettingsDialog(QDialog):
             if event_name == "（完了）":
                 event_name = ""
 
-            combo = self.table.cellWidget(row, 1)
+            combo = self.table.cellWidget(row, 2)
             if not combo:
                 continue
             current_type = combo.currentData()
-            isr_used = self.table.item(row, 2).text() == "あり"
+            isr_used = self.table.item(row, 3).text() == "あり"
             converted = current_type
             if auto and isr_used and current_type == EventDeliveryType.DIRECT:
                 converted = EventDeliveryType.DOUBLE
-            converted_item = self.table.item(row, 3)
+            converted_item = self.table.item(row, 4)
             if converted_item:
                 converted_item.setText(converted.value if converted else "")
 
@@ -172,7 +181,7 @@ class EventDeliverySettingsDialog(QDialog):
             event_name = event_name_item.text() if event_name_item else ""
             if event_name == "（完了）":
                 event_name = ""
-            combo = self.table.cellWidget(row, 1)
+            combo = self.table.cellWidget(row, 2)
             if combo and event_name in self.sm.events:
                 self.sm.events[event_name].delivery_type = combo.currentData()
         self.accept()

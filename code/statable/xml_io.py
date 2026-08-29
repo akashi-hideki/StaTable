@@ -1,12 +1,16 @@
 import xml.etree.ElementTree as ET
 from typing import List, Tuple
 
-from .model import State, Event, Transition, StateType, EventKind, RoleFunction
+from .model import (
+    State, Event, Transition, StateType, EventKind, RoleFunction,
+    EventDeliveryType, EventSourceLayer,
+)
 from .state_machine import StateMachine
 from .global_defs import (
     GlobalDefinitions, SystemVariable, EventFlag,
     InterruptHandlerDef, InterruptAction,
     DevicePlaceholderDef, TimerBaseDef, TimerDerivedDef,
+    EventQueueDef,
 )
 
 
@@ -43,6 +47,10 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
             "params": ",".join(event.params),
             "priority": str(event.priority),
             "description": event.description,
+            "delivery_type": event.delivery_type.value,
+            "source_layer": event.source_layer.value,
+            "data_type": event.data_type,
+            "data_name": event.data_name,
         }
         ET.SubElement(events_elem, "Event", **attrs)
 
@@ -66,7 +74,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
         attrs = {
             "source": t.source,
             "event": t.event,
-            "guard": t.guard,
+            "condition": t.condition,
             "action": t.action,
             "target": t.target,
             "transition_type": t.transition_type,
@@ -108,6 +116,10 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             params=params,
             priority=int(event_elem.get("priority", 0)),
             description=event_elem.get("description", ""),
+            delivery_type=EventDeliveryType(event_elem.get("delivery_type", "direct")),
+            source_layer=EventSourceLayer(event_elem.get("source_layer", "driver")),
+            data_type=event_elem.get("data_type", ""),
+            data_name=event_elem.get("data_name", ""),
         )
         sm.add_event(event)
 
@@ -129,7 +141,7 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
         trans = Transition(
             source=trans_elem.get("source", ""),
             event=trans_elem.get("event", ""),
-            guard=trans_elem.get("guard", ""),
+            condition=trans_elem.get("condition", ""),
             action=trans_elem.get("action", ""),
             target=trans_elem.get("target", ""),
             transition_type=trans_elem.get("transition_type", "external"),
@@ -145,7 +157,7 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
 
 
 # ----------------------------------------------------------------------
-# GlobalDefinitions <-> Element 変換（割り込み・デバイス・タイマ対応）
+# GlobalDefinitions <-> Element 変換（割り込み・デバイス・タイマ・イベントキュー対応）
 # ----------------------------------------------------------------------
 def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
     root = ET.Element("GlobalDefinitions")
@@ -182,13 +194,13 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
             attrs = {
                 "name": intr.name,
                 "description": intr.description,
-                "event_name": intr.event_name,
+                "event_names": ",".join(intr.event_names),
                 "is_timer": "true" if intr.is_timer else "false",
             }
             intr_elem = ET.SubElement(intrs_elem, "Interrupt", **attrs)
             for act in intr.actions:
                 act_attrs = {
-                    "guard": act.guard,
+                    "condition": act.condition,
                     "action": act.action,
                 }
                 ET.SubElement(intr_elem, "Action", **act_attrs)
@@ -216,6 +228,22 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
             "data_type": derived.data_type,
         }
         ET.SubElement(timer_elem, "Derived", **d_attrs)
+
+    # EventQueues
+    if defs.event_queues:
+        queues_elem = ET.SubElement(root, "EventQueues")
+        for q in defs.event_queues:
+            attrs = {
+                "name": q.name,
+                "size": str(q.size),
+                "element_type": q.element_type,
+                "event_ids": ",".join(q.event_ids),
+                "priority_enabled": "true" if q.priority_enabled else "false",
+                "interrupt_safe": "true" if q.interrupt_safe else "false",
+                "rtos_enabled": "true" if q.rtos_enabled else "false",
+                "description": q.description,
+            }
+            ET.SubElement(queues_elem, "Queue", **attrs)
 
     return root
 
@@ -262,13 +290,15 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
             actions = []
             for act_elem in intr_elem.findall("Action"):
                 actions.append(InterruptAction(
-                    guard=act_elem.get("guard", ""),
+                    condition=act_elem.get("condition", ""),
                     action=act_elem.get("action", ""),
                 ))
+            event_names_str = intr_elem.get("event_names", "")
+            event_names = [e.strip() for e in event_names_str.split(",") if e.strip()] if event_names_str else []
             intr = InterruptHandlerDef(
                 name=intr_elem.get("name", ""),
                 description=intr_elem.get("description", ""),
-                event_name=intr_elem.get("event_name", ""),
+                event_names=event_names,
                 is_timer=intr_elem.get("is_timer", "false").lower() == "true",
                 actions=actions,
             )
@@ -304,6 +334,27 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
             data_type=timer_elem.get("data_type", "volatile uint32_t"),
             derived=derived_list,
         )
+
+    # EventQueues
+    queues_elem = elem.find("EventQueues")
+    if queues_elem is not None:
+        for q_elem in queues_elem:
+            event_ids_str = q_elem.get("event_ids", "")
+            event_ids = [e.strip() for e in event_ids_str.split(",") if e.strip()] if event_ids_str else []
+            try:
+                size = int(q_elem.get("size", "8"))
+            except ValueError:
+                size = 8
+            defs.event_queues.append(EventQueueDef(
+                name=q_elem.get("name", ""),
+                size=size,
+                element_type=q_elem.get("element_type", "uint8_t"),
+                event_ids=event_ids,
+                priority_enabled=q_elem.get("priority_enabled", "false").lower() == "true",
+                interrupt_safe=q_elem.get("interrupt_safe", "true").lower() == "true",
+                rtos_enabled=q_elem.get("rtos_enabled", "false").lower() == "true",
+                description=q_elem.get("description", ""),
+            ))
 
     # タイマ変数をグローバル変数として自動登録
     defs.add_timer_variables()

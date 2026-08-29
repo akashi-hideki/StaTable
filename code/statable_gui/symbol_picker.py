@@ -57,6 +57,7 @@ class SymbolPickerWidget(QWidget):
         layout.addWidget(open_defs_btn)
 
         self.refresh_list()
+        StaTableLogger.debug("SymbolPickerWidget initialized")
 
     # ------------------------------------------------------------------
     # 一覧更新

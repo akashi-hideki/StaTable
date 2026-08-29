@@ -1,13 +1,13 @@
 from .state_machine import StateMachine
 
 
-def _truncate_guard(guard: str, max_chars: int = 50) -> str:
-    """長いガード条件を省略表示する（改行は先頭行のみ）"""
-    if not guard:
+def _truncate_condition(condition: str, max_chars: int = 50) -> str:
+    """長い状態遷移条件を省略表示する（改行は先頭行のみ）"""
+    if not condition:
         return ""
 
     # 改行がある場合は先頭行だけ使用
-    lines = guard.split('\n')
+    lines = condition.split('\n')
     first_line = lines[0].strip() if lines else ""
     if not first_line:
         return ""
@@ -32,8 +32,8 @@ def generate_mermaid(sm: StateMachine) -> str:
             label_parts.append(t.event)
 
         # ガード条件は短縮して表示
-        if t.guard:
-            label_parts.append(f"[{_truncate_guard(t.guard)}]")
+        if t.condition:
+            label_parts.append(f"[{_truncate_condition(t.condition)}]")
 
         # アクション（動作）は表示しない
         label = " ".join(label_parts).strip()

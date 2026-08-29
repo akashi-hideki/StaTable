@@ -19,6 +19,8 @@ from .widgets import StateMachineTab
 from .preferences import Preferences
 from .global_defs_dialog import GlobalDefinitionsDialog
 from .interrupt_handler_edit_dialog import InterruptHandlerEditDialog
+from .event_definition_dialog import EventDefinitionDialog
+from .event_delivery_settings_dialog import EventDeliverySettingsDialog
 
 
 class MainWindow(QMainWindow):
@@ -35,7 +37,7 @@ class MainWindow(QMainWindow):
 
         # グローバル変数・イベントフラグ・割り込み・デバイス・タイマ設定
         self.global_defs = create_sample_global_defs()
-        self.global_defs.add_timer_variables()   # ★ 念のため再登録
+        self.global_defs.add_timer_variables()
         StaTableLogger.debug(
             f"MainWindow.global_defs: id={id(self.global_defs)}, "
             f"vars={len(self.global_defs.variables)}, "
@@ -100,6 +102,14 @@ class MainWindow(QMainWindow):
         global_defs_action.triggered.connect(self.open_global_defs_dialog)
         edit_menu.addAction(global_defs_action)
 
+        event_defs_action = QAction("Event Definitions...", self)
+        event_defs_action.triggered.connect(self.open_event_definition_dialog)
+        edit_menu.addAction(event_defs_action)
+
+        delivery_settings_action = QAction("Event Delivery Settings...", self)
+        delivery_settings_action.triggered.connect(self.open_event_delivery_settings)
+        edit_menu.addAction(delivery_settings_action)
+
         interrupt_action = QAction("Interrupt Settings...", self)
         interrupt_action.triggered.connect(self.open_interrupt_settings)
         edit_menu.addAction(interrupt_action)
@@ -115,10 +125,46 @@ class MainWindow(QMainWindow):
     def open_global_defs_dialog(self):
         """グローバル変数・イベントフラグ定義ダイアログを開く"""
         StaTableLogger.debug("MainWindow.open_global_defs_dialog called")
-        self.global_defs.add_timer_variables()   # ★ 開く前に再登録
+        self.global_defs.add_timer_variables()
         dlg = GlobalDefinitionsDialog(self.global_defs, self)
         dlg.exec()
         StaTableLogger.debug("GlobalDefinitionsDialog closed")
+
+    def open_event_definition_dialog(self):
+        """状態遷移イベント定義ダイアログを開く"""
+        StaTableLogger.debug("MainWindow.open_event_definition_dialog called")
+
+        # 現在のタブの StateMachine を取得
+        current_tab = self.tab_widget.currentWidget()
+        if current_tab is None or not hasattr(current_tab, 'sm'):
+            QMessageBox.warning(self, "Warning", "状態遷移タブがありません。")
+            return
+
+        dlg = EventDefinitionDialog(current_tab.sm, self)
+        if dlg.exec() == QDialog.Accepted:
+            current_tab.update_mermaid()
+            StaTableLogger.info("Event definitions updated")
+
+    def open_event_delivery_settings(self):
+        """イベント配送設定ダイアログを開く"""
+        StaTableLogger.debug("MainWindow.open_event_delivery_settings called")
+
+        current_tab = self.tab_widget.currentWidget()
+        if current_tab is None or not hasattr(current_tab, 'sm'):
+            QMessageBox.warning(self, "Warning", "状態遷移タブがありません。")
+            return
+
+        auto_convert = self.prefs.auto_convert_isr_direct_to_double
+        dlg = EventDeliverySettingsDialog(
+            current_tab.sm,
+            self.global_defs,
+            auto_convert=auto_convert,
+            parent=self
+        )
+        if dlg.exec() == QDialog.Accepted:
+            self.prefs.auto_convert_isr_direct_to_double = dlg.get_auto_convert()
+            current_tab.update_mermaid()
+            StaTableLogger.info("Event delivery settings updated")
 
     def open_interrupt_settings(self):
         """割り込み処理・デバイスリソース・タイマ設定ダイアログを開く"""
@@ -185,7 +231,7 @@ class MainWindow(QMainWindow):
             for name, sm in tabs:
                 self.add_state_machine_tab(name, sm)
             self.global_defs = global_defs
-            self.global_defs.add_timer_variables()   # ★ 読み込み後にも再登録
+            self.global_defs.add_timer_variables()
             self.prefs.last_project_dir = str(Path(filepath).parent)
             self.logger.info(f"Project loaded from {filepath}")
         except Exception as e:

@@ -1,6 +1,9 @@
 """サンプルデータ生成（ビジネスロジック層）"""
 
-from .model import State, Event, Transition, StateType, EventKind, RoleFunction, EventDeliveryType
+from .model import (
+    State, Event, Transition, StateType, EventKind,
+    RoleFunction, EventDeliveryType, EventSourceLayer,
+)
 from .state_machine import StateMachine
 from .global_defs import (
     GlobalDefinitions, SystemVariable, EventFlag,
@@ -20,22 +23,56 @@ def create_sample_state_machine() -> StateMachine:
     sm.add_state(State("Error", entry="Error_entry", exit="Error_exit", description="エラー状態"))
     sm.add_state(State("Halt", type=StateType.FINAL, description="停止状態"))
 
-    # イベント辞書（delivery_type を明示）
-    sm.add_event(Event("start", id=1, description="起動要求", delivery_type=EventDeliveryType.DIRECT))
-    sm.add_event(Event("stop", id=2, description="停止要求", delivery_type=EventDeliveryType.DIRECT))
-    sm.add_event(Event("error", id=3, params=["uint8_t err_code"], description="エラー通知", delivery_type=EventDeliveryType.QUEUE))
-    sm.add_event(Event("", id=0, kind=EventKind.SIGNAL, description="完了遷移", delivery_type=EventDeliveryType.DIRECT))
+    # 状態遷移イベント定義
+    sm.add_event(Event(
+        name="START",
+        id=1,
+        description="起動要求",
+        delivery_type=EventDeliveryType.DIRECT,
+        source_layer=EventSourceLayer.MIDDLEWARE,
+    ))
+    sm.add_event(Event(
+        name="STOP",
+        id=2,
+        description="停止要求",
+        delivery_type=EventDeliveryType.DIRECT,
+        source_layer=EventSourceLayer.MIDDLEWARE,
+    ))
+    sm.add_event(Event(
+        name="ERROR",
+        id=3,
+        description="エラー通知",
+        delivery_type=EventDeliveryType.QUEUE,
+        source_layer=EventSourceLayer.DRIVER,
+        data_type="uint8_t",
+        data_name="err_code",
+    ))
+    sm.add_event(Event(
+        name="TIMER0_OVERFLOW",
+        id=4,
+        description="1msタイマ満了",
+        delivery_type=EventDeliveryType.DOUBLE,
+        source_layer=EventSourceLayer.DRIVER,
+    ))
+    sm.add_event(Event(
+        name="",
+        id=0,
+        kind=EventKind.SIGNAL,
+        description="完了遷移",
+        delivery_type=EventDeliveryType.DIRECT,
+        source_layer=EventSourceLayer.MIDDLEWARE,
+    ))
 
     # 初期状態
     sm.set_initial("Idle")
 
-    # 遷移定義
-    sm.add_transition(Transition("Idle", "start", "", "init()", "Active"))
-    sm.add_transition(Transition("Active", "stop", "", "stop()", "Idle"))
-    sm.add_transition(Transition("Active", "error", "err_code != 0", "log()", "Error"))
+    # 遷移定義（状態遷移条件を condition で記述）
+    sm.add_transition(Transition("Idle", "START", "", "init()", "Active"))
+    sm.add_transition(Transition("Active", "STOP", "", "stop()", "Idle"))
+    sm.add_transition(Transition("Active", "ERROR", "err_code != 0", "log()", "Error"))
     sm.add_transition(Transition("Error", "", "retry_count < 3", "retry_count++", "Active"))
     sm.add_transition(Transition("Error", "", "retry_count >= 3", "", "Halt"))
-    sm.add_transition(Transition("Active", "error", "err_code == 0", "ignore()", "Active"))
+    sm.add_transition(Transition("Active", "ERROR", "err_code == 0", "ignore()", "Active"))
 
     # ロール関数
     sm.add_role_function(RoleFunction(
@@ -80,19 +117,19 @@ def create_sample_global_defs() -> GlobalDefinitions:
         group="SystemEvents", description="モード指示"
     ))
 
-    # 割り込み処理
+    # 割り込み処理（複数イベント対応）
     defs.interrupts.append(InterruptHandlerDef(
         name="TIMER0",
         description="1ms周期タイマ",
-        event_name="tick",   # イベント名：サンプルでは未使用? 実際は "tick" イベントが存在しないので修正
+        event_names=["TIMER0_OVERFLOW"],
         is_timer=True,
         actions=[
             InterruptAction(
-                guard="g_tick_100ms >= 5",
+                condition="g_tick_100ms >= 5",
                 action="StateMachine_EnqueueEvent(EVENT_TICK);"
             ),
             InterruptAction(
-                guard="",
+                condition="",
                 action="g_system_tick++;\nUpdateDerivedTimers();"
             ),
         ]
@@ -116,11 +153,12 @@ def create_sample_global_defs() -> GlobalDefinitions:
         ]
     )
 
-    # イベントキュー定義
+    # イベントキュー定義（イベントIDと関連付け）
     defs.event_queues.append(EventQueueDef(
         name="UartQueue",
         size=16,
         element_type="uint8_t",
+        event_ids=["ERROR"],
         priority_enabled=False,
         interrupt_safe=True,
         rtos_enabled=False,
