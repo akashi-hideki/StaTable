@@ -73,8 +73,20 @@ class TimerBaseDef:
     derived: List[TimerDerivedDef] = field(default_factory=list)
 
 
+@dataclass
+class EventQueueDef:
+    """イベントキュー定義"""
+    name: str
+    size: int
+    element_type: str
+    priority_enabled: bool = False
+    interrupt_safe: bool = True
+    rtos_enabled: bool = False
+    description: str = ""
+
+
 class GlobalDefinitions:
-    """グローバル変数・イベントフラグ・割り込み処理・デバイスリソース・タイマ設定の管理クラス"""
+    """グローバル変数・イベントフラグ・割り込み処理・デバイスリソース・タイマ設定・イベントキューの管理クラス"""
 
     def __init__(self):
         self.variables: List[SystemVariable] = []
@@ -82,6 +94,7 @@ class GlobalDefinitions:
         self.interrupts: List[InterruptHandlerDef] = []
         self.placeholders: List[DevicePlaceholderDef] = []
         self.timer_base: TimerBaseDef = TimerBaseDef()
+        self.event_queues: List[EventQueueDef] = []   # ★ 追加
 
     def add_timer_variables(self):
         """タイマ基準変数・派生タイマ変数をグローバル変数として登録する"""

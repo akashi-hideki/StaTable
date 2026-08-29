@@ -1,11 +1,12 @@
 """サンプルデータ生成（ビジネスロジック層）"""
 
-from .model import State, Event, Transition, StateType, EventKind, RoleFunction
+from .model import State, Event, Transition, StateType, EventKind, RoleFunction, EventDeliveryType
 from .state_machine import StateMachine
 from .global_defs import (
     GlobalDefinitions, SystemVariable, EventFlag,
     InterruptHandlerDef, InterruptAction,
     DevicePlaceholderDef, TimerBaseDef, TimerDerivedDef,
+    EventQueueDef,
 )
 
 
@@ -19,11 +20,11 @@ def create_sample_state_machine() -> StateMachine:
     sm.add_state(State("Error", entry="Error_entry", exit="Error_exit", description="エラー状態"))
     sm.add_state(State("Halt", type=StateType.FINAL, description="停止状態"))
 
-    # イベント辞書
-    sm.add_event(Event("start", id=1, description="起動要求"))
-    sm.add_event(Event("stop", id=2, description="停止要求"))
-    sm.add_event(Event("error", id=3, params=["uint8_t err_code"], description="エラー通知"))
-    sm.add_event(Event("", id=0, kind=EventKind.SIGNAL, description="完了遷移"))
+    # イベント辞書（delivery_type を明示）
+    sm.add_event(Event("start", id=1, description="起動要求", delivery_type=EventDeliveryType.DIRECT))
+    sm.add_event(Event("stop", id=2, description="停止要求", delivery_type=EventDeliveryType.DIRECT))
+    sm.add_event(Event("error", id=3, params=["uint8_t err_code"], description="エラー通知", delivery_type=EventDeliveryType.QUEUE))
+    sm.add_event(Event("", id=0, kind=EventKind.SIGNAL, description="完了遷移", delivery_type=EventDeliveryType.DIRECT))
 
     # 初期状態
     sm.set_initial("Idle")
@@ -56,7 +57,7 @@ def create_sample_state_machine() -> StateMachine:
 
 
 def create_sample_global_defs() -> GlobalDefinitions:
-    """サンプルのグローバル変数・イベントフラグ・割り込み・デバイス・タイマ設定を作成する"""
+    """サンプルのグローバル変数・イベントフラグ・割り込み・デバイス・タイマ・イベントキュー設定を作成する"""
     defs = GlobalDefinitions()
 
     # グローバル変数
@@ -83,7 +84,7 @@ def create_sample_global_defs() -> GlobalDefinitions:
     defs.interrupts.append(InterruptHandlerDef(
         name="TIMER0",
         description="1ms周期タイマ",
-        event_name="tick",
+        event_name="tick",   # イベント名：サンプルでは未使用? 実際は "tick" イベントが存在しないので修正
         is_timer=True,
         actions=[
             InterruptAction(
@@ -115,7 +116,18 @@ def create_sample_global_defs() -> GlobalDefinitions:
         ]
     )
 
-    # ★ タイマ変数をグローバル変数として自動登録
+    # イベントキュー定義
+    defs.event_queues.append(EventQueueDef(
+        name="UartQueue",
+        size=16,
+        element_type="uint8_t",
+        priority_enabled=False,
+        interrupt_safe=True,
+        rtos_enabled=False,
+        description="UART受信キュー"
+    ))
+
+    # タイマ変数をグローバル変数として自動登録
     defs.add_timer_variables()
 
     return defs
