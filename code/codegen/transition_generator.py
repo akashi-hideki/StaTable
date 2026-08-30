@@ -1,6 +1,6 @@
 # codegen/transition_generator.py
 """
-状態遷移関数生成モジュール（完全データ駆動版）
+状態遷移関数生成モジュール（完全データ駆動版・修正済み）
 """
 
 import sys
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class TransitionGenerator:
-    """状態遷移関数生成クラス（完全データ駆動）"""
+    """状態遷移関数生成クラス（完全データ駆動・修正済み）"""
     
     def __init__(self):
         self.mapper = CTypeMapper()
@@ -85,24 +85,24 @@ class TransitionGenerator:
         
         self.process_steps = [
             {'action': 'template', 'key': 'func_comment'},
-            {'action': 'template', 'key': 'func_signature'},
+            {'action': 'template', 'key': 'func_signature', 'format': {'func_name': '{func_name}'}},
             {'action': 'template', 'key': 'func_open'},
             {'action': 'blank'},
-            {'action': 'template', 'key': 'null_check'},
+            {'action': 'template', 'key': 'null_check', 'format': {'log_error': '{log_error}'}},
             {'action': 'blank'},
-            {'action': 'template', 'key': 'range_check'},
+            {'action': 'template', 'key': 'range_check', 'format': {'log_error': '{log_error}'}},
             {'action': 'blank'},
-            {'action': 'template', 'key': 'entry_log'},
+            {'action': 'template', 'key': 'entry_log', 'format': {'func_name': '{func_name}', 'log_debug': '{log_debug}'}},
             {'action': 'blank'},
             {'action': 'template', 'key': 'table_ref'},
             {'action': 'blank'},
-            {'action': 'template', 'key': 'condition_check'},
+            {'action': 'template', 'key': 'condition_check', 'format': {'log_debug': '{log_debug}'}},
             {'action': 'blank'},
             {'action': 'template', 'key': 'action_execute'},
             {'action': 'blank'},
-            {'action': 'template', 'key': 'transition_execute'},
+            {'action': 'template', 'key': 'transition_execute', 'format': {'log_info': '{log_info}'}},
             {'action': 'blank'},
-            {'action': 'template', 'key': 'exit_log'},
+            {'action': 'template', 'key': 'exit_log', 'format': {'func_name': '{func_name}', 'log_debug': '{log_debug}'}},
             {'action': 'blank'},
             {'action': 'template', 'key': 'func_close'},
         ]
@@ -180,29 +180,39 @@ class TransitionGenerator:
             'events': list(state_machine.events.values()),
         }
     
+    # ===== 修正: プレースホルダ解決 =====
     def _replace_placeholders(self, template, params):
+        """プレースホルダを置換"""
         result = template
         for key, value in params.items():
             result = result.replace('{' + key + '}', str(value))
         return result
     
+    def _resolve_value(self, value, context):
+        """値をコンテキストから解決"""
+        if isinstance(value, str) and value.startswith('{') and value.endswith('}'):
+            key = value[1:-1]
+            return str(context.get(key, value))
+        return str(value)
+    
     def _execute_template_step(self, step, context):
+        """テンプレートステップ実行（修正版）"""
         template_key = step.get('key', '')
         templates = step.get('templates', self.process_templates)
         template = templates.get(template_key, '')
+        
         if not template:
             return []
         
+        # フォーマットパラメータを解決
         format_params = step.get('format', {})
         resolved_params = {}
         for key, value in format_params.items():
-            if isinstance(value, str) and value.startswith('{') and value.endswith('}'):
-                context_key = value[1:-1]
-                resolved_params[key] = context.get(context_key, value)
-            else:
-                resolved_params[key] = value
+            resolved_params[key] = self._resolve_value(value, context)
         
+        # プレースホルダを置換
         formatted = self._replace_placeholders(template, resolved_params)
+        
         return [formatted]
     
     def _execute_blank_step(self, step, context):

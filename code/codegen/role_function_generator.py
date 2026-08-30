@@ -1,6 +1,6 @@
 # codegen/role_function_generator.py
 """
-ロール関数生成モジュール（完全データ駆動版）
+ロール関数生成モジュール（完全データ駆動版・修正済み）
 """
 
 import sys
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class RoleFunctionGenerator:
-    """ロール関数生成クラス（完全データ駆動）"""
+    """ロール関数生成クラス（完全データ駆動・修正済み）"""
     
     def __init__(self):
         self.mapper = CTypeMapper()
@@ -52,6 +52,7 @@ class RoleFunctionGenerator:
             'default': '実行結果（0: 成功, 0以外: エラー）',
         }
         
+        # 修正: ポインタ表記を統一（*の後にスペースなし）
         self.standard_args = [
             ('current_state', 'STATE_t *', '現在の状態ポインタ'),
             ('ctx', 'SystemContext_t *', 'システムコンテキストポインタ'),
@@ -93,55 +94,85 @@ class RoleFunctionGenerator:
         log_func = getattr(logger, level, logger.debug)
         log_func(message)
     
+    def _has_custom_args(self, func):
+        """カスタム引数があるか判定"""
+        arg1_type = getattr(func, 'arg1_type', '')
+        arg1_name = getattr(func, 'arg1_name', '')
+        arg2_type = getattr(func, 'arg2_type', '')
+        arg2_name = getattr(func, 'arg2_name', '')
+        
+        has_arg1 = bool(arg1_type and arg1_name and arg1_name != 'arg1')
+        has_arg2 = bool(arg2_type and arg2_name and arg2_name != 'arg2')
+        
+        return has_arg1, has_arg2
+    
     def _collect_args(self, func):
+        """引数情報を収集（デフォルト引数を除外）"""
         args = list(self.standard_args)
-        if getattr(func, 'arg1_type', '') and getattr(func, 'arg1_name', ''):
-            args.append((self.naming.sanitize_identifier(func.arg1_name),
-                        self.mapper.map_type(func.arg1_type), '引数1'))
-        if getattr(func, 'arg2_type', '') and getattr(func, 'arg2_name', ''):
-            args.append((self.naming.sanitize_identifier(func.arg2_name),
-                        self.mapper.map_type(func.arg2_type), '引数2'))
+        
+        has_arg1, has_arg2 = self._has_custom_args(func)
+        
+        if has_arg1:
+            args.append((
+                self.naming.sanitize_identifier(getattr(func, 'arg1_name', '')),
+                self.mapper.map_type(getattr(func, 'arg1_type', 'void')),
+                '引数1'
+            ))
+        
+        if has_arg2:
+            args.append((
+                self.naming.sanitize_identifier(getattr(func, 'arg2_name', '')),
+                self.mapper.map_type(getattr(func, 'arg2_type', 'void')),
+                '引数2'
+            ))
+        
         return args
     
-    def _count_args(self, func):
-        count = 0
-        if getattr(func, 'arg1_type', '') and getattr(func, 'arg1_name', ''):
-            count += 1
-        if getattr(func, 'arg2_type', '') and getattr(func, 'arg2_name', ''):
-            count += 1
-        return count
-    
     def _generate_args_str(self, func):
+        """引数文字列を生成（ポインタ表記修正済み）"""
         indent = self.strings['indent_1']
-        lines = [f"{indent}STATE_t *current_state,",
-                 f"{indent}SystemContext_t *ctx"]
+        args = self._collect_args(func)
         
-        if getattr(func, 'arg1_type', '') and getattr(func, 'arg1_name', ''):
-            arg1_type = self.mapper.map_type(func.arg1_type)
-            arg1_name = self.naming.sanitize_identifier(func.arg1_name)
-            lines.append(f"{indent}{arg1_type} {arg1_name}")
+        arg_lines = []
+        for arg_name, arg_type, arg_desc in args:
+            # 修正: *の後にスペースを入れない
+            if '*' in arg_type:
+                # 'STATE_t *' → 'STATE_t *'
+                # 'SystemContext_t *' → 'SystemContext_t *'
+                # そのまま使用（呼び出し側で正しく結合）
+                arg_lines.append(f"{indent}{arg_type}{arg_name}")
+            else:
+                arg_lines.append(f"{indent}{arg_type} {arg_name}")
         
-        if getattr(func, 'arg2_type', '') and getattr(func, 'arg2_name', ''):
-            arg2_type = self.mapper.map_type(func.arg2_type)
-            arg2_name = self.naming.sanitize_identifier(func.arg2_name)
-            lines.append(f"{indent}{arg2_type} {arg2_name}")
-        
-        return ',\n'.join(lines)
+        return ',\n'.join(arg_lines)
     
     def _generate_function_name(self, func):
+        """ロール関数名を生成"""
         prefix = self.templates.FUNCTION_NAMES['role_func_prefix']
-        return f"{prefix}_{self.naming.to_pascal_case(getattr(func, 'name', 'unnamed'))}"
+        name = getattr(func, 'name', 'unnamed')
+        pascal_name = self.naming.to_pascal_case(name)
+        return f"{prefix}_{pascal_name}"
     
     def _execute_comment_step(self, step, context):
+        """コメントステップ実行"""
         func = context['func']
         lines = ["/**"]
-        title = getattr(func, 'title', '') or getattr(func, 'name', 'unnamed')
-        lines.append(f" * @brief  ロール関数: {title}")
+        
+        name = getattr(func, 'name', 'unnamed')
+        title = getattr(func, 'title', '')
+        
+        if title and title != f"ロール関数: {name}":
+            lines.append(f" * @brief  ロール関数: {title}")
+        else:
+            lines.append(f" * @brief  ロール関数: {name}")
+        
         if getattr(func, 'description', ''):
             lines.append(f" * @note   {func.description}")
+        
         args = self._collect_args(func)
         for arg_name, arg_type, arg_desc in args:
             lines.append(f" * @param  {arg_name}  {arg_desc}")
+        
         return_type = getattr(func, 'return_type', 'void')
         return_comment = self.return_comments.get(return_type, self.return_comments['default'])
         lines.append(f" * @return {return_comment}")
@@ -149,17 +180,20 @@ class RoleFunctionGenerator:
         return lines
     
     def _execute_signature_step(self, step, context):
+        """シグネチャステップ実行"""
         func = context['func']
         return_type = self.mapper.map_type(getattr(func, 'return_type', 'void'))
         func_name = self._generate_function_name(func)
         return [f"{return_type} {func_name}("]
     
     def _execute_semicolon_step(self, step, context):
+        """セミコロンステップ実行"""
         func = context['func']
         args = self._generate_args_str(func)
         return [args, ");"]
     
     def _execute_open_brace_step(self, step, context):
+        """開き波括弧ステップ実行"""
         func = context['func']
         args = self._generate_args_str(func)
         return [args, ")", "{"]
@@ -218,10 +252,13 @@ class RoleFunctionGenerator:
         self._log_debug(f"Generating call: {getattr(func, 'name', 'unknown')}")
         func_name = self._generate_function_name(func)
         args = ["current_state", "ctx"]
-        if getattr(func, 'arg1_type', '') and getattr(func, 'arg1_name', ''):
-            args.append(self.naming.sanitize_identifier(func.arg1_name))
-        if getattr(func, 'arg2_type', '') and getattr(func, 'arg2_name', ''):
-            args.append(self.naming.sanitize_identifier(func.arg2_name))
+        
+        has_arg1, has_arg2 = self._has_custom_args(func)
+        if has_arg1:
+            args.append(self.naming.sanitize_identifier(getattr(func, 'arg1_name', '')))
+        if has_arg2:
+            args.append(self.naming.sanitize_identifier(getattr(func, 'arg2_name', '')))
+        
         return f"{func_name}({', '.join(args)})"
     
     def generate_function(self, generation_type, func):
