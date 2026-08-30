@@ -12,11 +12,14 @@ class StructMemberDef:
     bit_width: int = 0
     description: str = ""
     title: str = ""
+    array_size: int = 0
 
     def __post_init__(self):
         if not self.title:
             if self.bit_width > 0:
                 self.title = f"{self.name}:{self.bit_width}"
+            elif self.array_size > 0:
+                self.title = f"{self.name}[{self.array_size}]"
             else:
                 self.title = f"メンバ: {self.name}"
 
@@ -44,10 +47,14 @@ class SystemVariable:
     group: str = ""
     description: str = ""
     title: str = ""
+    array_size: int = 0
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"変数: {self.name}"
+            if self.array_size > 0:
+                self.title = f"{self.name}[{self.array_size}]"
+            else:
+                self.title = f"変数: {self.name}"
 
 
 @dataclass

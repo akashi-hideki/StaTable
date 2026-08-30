@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QMainWindow, QTabWidget, QToolButton, QMessageBox, QInputDialog,
-    QFileDialog, QDialog
+    QFileDialog, QDialog, QToolBar
 )
 
 from statable.state_machine import StateMachine
@@ -21,6 +21,7 @@ from .global_defs_dialog import GlobalDefinitionsDialog
 from .interrupt_handler_edit_dialog import InterruptHandlerEditDialog
 from .event_definition_dialog import EventDefinitionDialog
 from .event_delivery_settings_dialog import EventDeliverySettingsDialog
+from .common_widgets import TypeManagerDialog
 
 
 class MainWindow(QMainWindow):
@@ -62,6 +63,7 @@ class MainWindow(QMainWindow):
         self.tab_widget.tabBarDoubleClicked.connect(self.rename_tab_at)
 
         self.create_menus()
+        self.create_toolbar()
 
         self.traceball = TraceBallWidget(self)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.traceball)
@@ -72,6 +74,72 @@ class MainWindow(QMainWindow):
         self.add_state_machine_tab("Application", sample_sm)
 
         self.logger.debug("MainWindow initialization completed")
+
+    def create_toolbar(self):
+        toolbar = QToolBar("メインツールバー", self)
+        toolbar.setMovable(False)
+        toolbar.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self.addToolBar(Qt.TopToolBarArea, toolbar)
+
+        global_defs_btn = QAction("グローバル定義", self)
+        global_defs_btn.setToolTip("グローバル変数・イベントフラグ定義を開く")
+        global_defs_btn.triggered.connect(self.open_global_defs_dialog)
+        toolbar.addAction(global_defs_btn)
+
+        type_defs_btn = QAction("型定義", self)
+        type_defs_btn.setToolTip("ユーザー定義型（構造体）を管理")
+        type_defs_btn.triggered.connect(self.open_type_manager)
+        toolbar.addAction(type_defs_btn)
+
+        event_defs_btn = QAction("イベント定義", self)
+        event_defs_btn.setToolTip("状態遷移イベント定義を開く")
+        event_defs_btn.triggered.connect(self.open_event_definition_dialog)
+        toolbar.addAction(event_defs_btn)
+
+        delivery_btn = QAction("イベント配送設定", self)
+        delivery_btn.setToolTip("イベント配送タイプ設定を開く")
+        delivery_btn.triggered.connect(self.open_event_delivery_settings)
+        toolbar.addAction(delivery_btn)
+
+        interrupt_btn = QAction("割り込み設定", self)
+        interrupt_btn.setToolTip("割り込み処理・デバイスリソース・タイマ設定を開く")
+        interrupt_btn.triggered.connect(self.open_interrupt_settings)
+        toolbar.addAction(interrupt_btn)
+
+        toolbar.addSeparator()
+
+        open_btn = QAction("開く", self)
+        open_btn.setToolTip("プロジェクトを開く")
+        open_btn.triggered.connect(self.open_project)
+        toolbar.addAction(open_btn)
+
+        save_btn = QAction("保存", self)
+        save_btn.setToolTip("プロジェクトを保存")
+        save_btn.triggered.connect(self.save_project)
+        toolbar.addAction(save_btn)
+
+        toolbar.addSeparator()
+
+        new_tab_btn = QAction("新規タブ", self)
+        new_tab_btn.setToolTip("新しい状態遷移タブを追加")
+        new_tab_btn.triggered.connect(self.add_new_tab)
+        toolbar.addAction(new_tab_btn)
+
+        rename_btn = QAction("タブ名変更", self)
+        rename_btn.setToolTip("現在のタブ名を変更")
+        rename_btn.triggered.connect(self.rename_current_tab)
+        toolbar.addAction(rename_btn)
+
+        toolbar.addSeparator()
+
+        traceball_btn = QAction("ログ表示", self)
+        traceball_btn.setCheckable(True)
+        traceball_btn.setChecked(False)
+        traceball_btn.setToolTip("TraceBallログの表示/非表示")
+        traceball_btn.toggled.connect(self.toggle_traceball)
+        toolbar.addAction(traceball_btn)
+
+        StaTableLogger.debug("Toolbar created")
 
     def create_menus(self):
         menubar = self.menuBar()
@@ -102,6 +170,10 @@ class MainWindow(QMainWindow):
         global_defs_action.triggered.connect(self.open_global_defs_dialog)
         edit_menu.addAction(global_defs_action)
 
+        type_defs_action = QAction("Type Definitions...", self)
+        type_defs_action.triggered.connect(self.open_type_manager)
+        edit_menu.addAction(type_defs_action)
+
         event_defs_action = QAction("Event Definitions...", self)
         event_defs_action.triggered.connect(self.open_event_definition_dialog)
         edit_menu.addAction(event_defs_action)
@@ -121,6 +193,13 @@ class MainWindow(QMainWindow):
         toggle_traceball.setChecked(False)
         toggle_traceball.toggled.connect(self.toggle_traceball)
         view_menu.addAction(toggle_traceball)
+
+    def open_type_manager(self):
+        """ユーザー定義型管理ダイアログを開く"""
+        StaTableLogger.debug("MainWindow.open_type_manager called")
+        dlg = TypeManagerDialog(self, self.global_defs)
+        dlg.exec()
+        StaTableLogger.debug("TypeManagerDialog closed")
 
     def open_global_defs_dialog(self):
         """グローバル変数・イベントフラグ定義ダイアログを開く"""
@@ -154,10 +233,8 @@ class MainWindow(QMainWindow):
 
         auto_convert = self.prefs.auto_convert_isr_direct_to_double
         dlg = EventDeliverySettingsDialog(
-            current_tab.sm,
-            self.global_defs,
-            auto_convert=auto_convert,
-            parent=self
+            current_tab.sm, self.global_defs,
+            auto_convert=auto_convert, parent=self
         )
         if dlg.exec() == QDialog.Accepted:
             self.prefs.auto_convert_isr_direct_to_double = dlg.get_auto_convert()
@@ -177,11 +254,6 @@ class MainWindow(QMainWindow):
                 role_functions.update(tab.sm.role_functions)
 
         event_names = list(set(event_names))
-
-        StaTableLogger.debug(
-            f"  event_names={len(event_names)}, role_functions={len(role_functions)}"
-        )
-
         dlg = InterruptHandlerEditDialog(
             global_defs=self.global_defs,
             event_names=event_names,

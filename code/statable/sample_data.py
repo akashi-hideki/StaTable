@@ -67,7 +67,7 @@ def create_sample_state_machine() -> StateMachine:
 def create_sample_global_defs() -> GlobalDefinitions:
     defs = GlobalDefinitions()
 
-    # ユーザー定義型（構造体＋ビットフィールド）
+    # ユーザー定義型（構造体＋ビットフィールド＋配列）
     defs.custom_types.append(CustomTypeDef(
         name="SystemStatus_t",
         description="システムステータス構造体",
@@ -82,9 +82,27 @@ def create_sample_global_defs() -> GlobalDefinitions:
         ]
     ))
 
+    defs.custom_types.append(CustomTypeDef(
+        name="DataPacket_t",
+        description="データパケット構造体",
+        title="データパケット",
+        members=[
+            StructMemberDef(name="data", data_type="uint8_t",
+                            description="データ配列", title="データ配列",
+                            array_size=64),
+            StructMemberDef(name="length", data_type="uint16_t",
+                            description="データ長", title="データ長"),
+        ]
+    ))
+
+    # グローバル変数（配列対応）
     defs.variables.append(SystemVariable(name="battery_voltage", type="uint16_t", unit="mV",
                                          default_value="0", group="Power",
                                          description="バッテリ電圧", title="バッテリ電圧"))
+    defs.variables.append(SystemVariable(name="payload", type="uint8_t", unit="bytes",
+                                         default_value="", group="Communication",
+                                         description="受信データバッファ", title="受信バッファ",
+                                         array_size=64))
     defs.variables.append(SystemVariable(name="system_status", type="SystemStatus_t",
                                          group="System", description="システムステータス",
                                          title="システムステータス"))
