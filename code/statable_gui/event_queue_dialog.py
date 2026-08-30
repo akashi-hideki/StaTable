@@ -1,4 +1,4 @@
-"""イベントキュー定義ダイアログ（タイトル編集対応版）"""
+"""イベントキュー定義ダイアログ"""
 
 from typing import Optional, List
 
@@ -6,12 +6,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QMouseEvent
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QLabel, QHeaderView, QComboBox, QLineEdit, QSpinBox,
+    QPushButton, QLabel, QHeaderView, QLineEdit, QSpinBox,
     QCheckBox, QFormLayout, QDialogButtonBox, QMessageBox, QAbstractItemView,
     QWidget, QListWidget, QListWidgetItem
 )
 
 from statable.global_defs import GlobalDefinitions, EventQueueDef
+from .common_widgets import TitleEditWidget, TypeComboBox
 from .logger import StaTableLogger
 
 
@@ -26,74 +27,50 @@ class DoubleClickTable(QTableWidget):
         pos = event.position().toPoint()
         item = self.itemAt(pos)
         if item:
-            row = item.row()
-            StaTableLogger.debug(f"DoubleClickTable.mouseDoubleClickEvent: row={row}")
-            self.cellDoubleClicked.emit(row, item.column())
-        else:
-            StaTableLogger.debug("DoubleClickTable.mouseDoubleClickEvent: no item")
+            self.cellDoubleClicked.emit(item.row(), item.column())
 
 
 class EventQueueEditDialog(QDialog):
-    """イベントキュー編集ダイアログ"""
-
-    def __init__(
-        self,
-        parent=None,
-        queue_def: Optional[EventQueueDef] = None,
-        event_names: Optional[List[str]] = None,
-    ):
+    def __init__(self, parent=None, queue_def: Optional[EventQueueDef] = None,
+                 event_names: Optional[List[str]] = None, global_defs=None):
         super().__init__(parent)
+        self.global_defs = global_defs if global_defs else GlobalDefinitions()
+        self.event_names = event_names or []
         self.setWindowTitle("イベントキュー編集")
         self.setMinimumWidth(500)
-        self.event_names = event_names or []
 
         layout = QVBoxLayout(self)
         form = QFormLayout()
         layout.addLayout(form)
 
         # タイトル入力欄（必須・仮タイトル自動設定）
-        self.title_edit = QLineEdit()
-        if queue_def:
-            self.title_edit.setText(queue_def.title)
-        self.title_edit.setPlaceholderText("一覧に表示されるラベル（空なら自動設定）")
-        self.title_edit.setToolTip("このキューのタイトルを入力してください。空の場合は自動で仮タイトルが設定されます。")
-        form.addRow("タイトル *", self.title_edit)
+        self.title_widget = TitleEditWidget(self, title=queue_def.title if queue_def else "")
+        form.addRow("", self.title_widget)
 
         # キュー名
-        self.name_edit = QLineEdit()
-        if queue_def:
-            self.name_edit.setText(queue_def.name)
+        self.name_edit = QLineEdit(queue_def.name if queue_def else "")
         form.addRow("キュー名", self.name_edit)
 
         # サイズ
         self.size_spin = QSpinBox()
         self.size_spin.setRange(2, 256)
-        if queue_def:
-            self.size_spin.setValue(queue_def.size)
-        else:
-            self.size_spin.setValue(8)
+        self.size_spin.setValue(queue_def.size if queue_def else 8)
         form.addRow("サイズ", self.size_spin)
 
         # 要素型
-        self.type_combo = QComboBox()
-        self.type_combo.setEditable(True)
-        self.type_combo.addItems(["uint8_t", "uint16_t", "uint32_t", "uint64_t"])
+        self.type_combo = TypeComboBox(self, global_defs=self.global_defs)
         if queue_def:
-            self.type_combo.setCurrentText(queue_def.element_type)
+            self.type_combo.set_current_text(queue_def.element_type)
         form.addRow("要素型", self.type_combo)
 
         # 関連イベント選択リスト
-        form.addRow("関連イベント:", QLabel(""))
         self.event_list = QListWidget()
         for event_name in self.event_names:
             item = QListWidgetItem(event_name)
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(
-                Qt.Checked if queue_def and event_name in queue_def.event_ids
-                else Qt.Unchecked
-            )
+            item.setCheckState(Qt.Checked if queue_def and event_name in queue_def.event_ids else Qt.Unchecked)
             self.event_list.addItem(item)
-        form.addRow("", self.event_list)
+        form.addRow("関連イベント", self.event_list)
 
         # 優先度付き
         self.priority_check = QCheckBox()
@@ -111,9 +88,7 @@ class EventQueueEditDialog(QDialog):
         form.addRow("RTOS使用", self.rtos_check)
 
         # 説明
-        self.desc_edit = QLineEdit()
-        if queue_def:
-            self.desc_edit.setText(queue_def.description)
+        self.desc_edit = QLineEdit(queue_def.description if queue_def else "")
         form.addRow("説明", self.desc_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -125,10 +100,8 @@ class EventQueueEditDialog(QDialog):
 
     def _on_accept(self):
         """OKボタン：タイトルが空なら仮タイトルを自動設定"""
-        if not self.title_edit.text().strip():
-            auto_title = f"キュー: {self.name_edit.text().strip() or '(無名)'}"
-            self.title_edit.setText(auto_title)
-            StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
+        auto_title = f"キュー: {self.name_edit.text().strip() or '(無名)'}"
+        self.title_widget.ensure_title(auto_title)
         self.accept()
 
     def get_queue_def(self) -> EventQueueDef:
@@ -140,25 +113,19 @@ class EventQueueEditDialog(QDialog):
         return EventQueueDef(
             name=self.name_edit.text().strip(),
             size=self.size_spin.value(),
-            element_type=self.type_combo.currentText().strip(),
+            element_type=self.type_combo.current_text(),
             event_ids=event_ids,
             priority_enabled=self.priority_check.isChecked(),
             interrupt_safe=self.safe_check.isChecked(),
             rtos_enabled=self.rtos_check.isChecked(),
             description=self.desc_edit.text().strip(),
-            title=self.title_edit.text().strip(),
+            title=self.title_widget.get_title(),
         )
 
 
 class EventQueueDefsDialog(QDialog):
     """イベントキュー定義一覧ダイアログ"""
-
-    def __init__(
-        self,
-        global_defs: GlobalDefinitions,
-        event_names: Optional[List[str]] = None,
-        parent=None
-    ):
+    def __init__(self, global_defs: GlobalDefinitions, event_names: Optional[List[str]] = None, parent=None):
         super().__init__(parent)
         self.global_defs = global_defs
         self.event_names = event_names or []
@@ -178,9 +145,7 @@ class EventQueueDefsDialog(QDialog):
 
         # 一覧テーブル（タイトル列追加・直接編集可能）
         self.table = DoubleClickTable(0, 9)
-        self.table.setHorizontalHeaderLabels([
-            "タイトル", "キュー名", "サイズ", "要素型", "関連イベント", "優先度", "割込保護", "RTOS", "説明"
-        ])
+        self.table.setHorizontalHeaderLabels(["タイトル", "キュー名", "サイズ", "要素型", "関連イベント", "優先度", "割込保護", "RTOS", "説明"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.cellDoubleClicked.connect(self.on_double_clicked)
         self.table.itemChanged.connect(self.on_item_changed)
@@ -243,22 +208,18 @@ class EventQueueDefsDialog(QDialog):
             row = item.row()
             name_item = self.table.item(row, 1)
             if name_item and row < len(self.global_defs.event_queues):
-                name = name_item.text()
                 for q in self.global_defs.event_queues:
-                    if q.name == name:
-                        new_title = item.text().strip() or f"キュー: {name}"
-                        q.title = new_title
-                        StaTableLogger.debug(f"Queue title edited directly: '{name}' -> '{new_title}'")
+                    if q.name == name_item.text():
+                        q.title = item.text().strip() or f"キュー: {q.name}"
                         break
 
     def on_double_clicked(self, row, col):
-        StaTableLogger.debug(f"on_double_clicked: row={row}, col={col}")
         if col == 0:
-            return  # タイトル列は直接編集
+            return
         if row < 0 or row >= len(self.global_defs.event_queues):
             return
         target = self.global_defs.event_queues[row]
-        dlg = EventQueueEditDialog(self, queue_def=target, event_names=self.event_names)
+        dlg = EventQueueEditDialog(self, queue_def=target, event_names=self.event_names, global_defs=self.global_defs)
         if dlg.exec() == QDialog.Accepted:
             new_q = dlg.get_queue_def()
             if not new_q.name:
@@ -266,10 +227,9 @@ class EventQueueDefsDialog(QDialog):
                 return
             self.global_defs.event_queues[row] = new_q
             self.refresh_table()
-            StaTableLogger.info(f"Queue updated: {new_q.name}")
 
     def add_queue(self):
-        dlg = EventQueueEditDialog(self, event_names=self.event_names)
+        dlg = EventQueueEditDialog(self, event_names=self.event_names, global_defs=self.global_defs)
         if dlg.exec() == QDialog.Accepted:
             q = dlg.get_queue_def()
             if not q.name:
@@ -277,11 +237,9 @@ class EventQueueDefsDialog(QDialog):
                 return
             self.global_defs.event_queues.append(q)
             self.refresh_table()
-            StaTableLogger.info(f"Queue added: {q.name}")
 
     def delete_queue(self):
         row = self.table.currentRow()
         if 0 <= row < len(self.global_defs.event_queues):
             self.global_defs.event_queues.pop(row)
             self.refresh_table()
-            StaTableLogger.info("Queue deleted")

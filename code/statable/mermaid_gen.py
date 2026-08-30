@@ -2,11 +2,11 @@ from .state_machine import StateMachine
 
 
 def _truncate_condition(condition: str, max_chars: int = 50) -> str:
-    """é•·ã„çŠ¶æ…‹é·ç§»æ¡ä»¶ã‚’çœç•¥è¡¨ç¤ºã™ã‚‹ï¼ˆæ”¹è¡Œã¯å…ˆé ­è¡Œã®ã¿ï¼‰"""
+    """’·‚¢ó‘Ô‘JˆÚğŒ‚ğÈ—ª•\¦‚·‚éi‰üs‚Íæ“ªs‚Ì‚İj"""
     if not condition:
         return ""
 
-    # æ”¹è¡ŒãŒã‚ã‚‹å ´åˆã¯å…ˆé ­è¡Œã ã‘ä½¿ç”¨
+    # ‰üs‚ª‚ ‚éê‡‚Íæ“ªs‚¾‚¯g—p
     lines = condition.split('\n')
     first_line = lines[0].strip() if lines else ""
     if not first_line:
@@ -14,7 +14,7 @@ def _truncate_condition(condition: str, max_chars: int = 50) -> str:
 
     if len(first_line) > max_chars:
         return first_line[:max_chars].rstrip() + "..."
-    # 2è¡Œç›®ä»¥é™ãŒã‚ã‚Œã°çœç•¥è¨˜å·ã‚’ä»˜ä¸
+    # 2s–ÚˆÈ~‚ª‚ ‚ê‚ÎÈ—ª‹L†‚ğ•t—^
     if len(lines) > 1:
         return first_line + " ..."
     return first_line
@@ -31,11 +31,11 @@ def generate_mermaid(sm: StateMachine) -> str:
         if t.event:
             label_parts.append(t.event)
 
-        # ã‚¬ãƒ¼ãƒ‰æ¡ä»¶ã¯çŸ­ç¸®ã—ã¦è¡¨ç¤º
+        # ƒK[ƒhğŒ‚Í’Zk‚µ‚Ä•\¦
         if t.condition:
             label_parts.append(f"[{_truncate_condition(t.condition)}]")
 
-        # ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ï¼ˆå‹•ä½œï¼‰ã¯è¡¨ç¤ºã—ãªã„
+        # ƒAƒNƒVƒ‡ƒ“i“®ìj‚Í•\¦‚µ‚È‚¢
         label = " ".join(label_parts).strip()
 
         if t.target:

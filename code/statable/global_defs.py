@@ -1,7 +1,37 @@
-"""グローバル変数・イベントフラグ・割り込み処理・デバイスリソース・タイマ設定のデータモデル"""
+"""グローバル変数・イベントフラグ・割り込み処理・デバイスリソース・タイマ設定・ユーザー定義型のデータモデル"""
 
 from dataclasses import dataclass, field
 from typing import List, Optional
+
+
+@dataclass
+class StructMemberDef:
+    """構造体メンバ定義"""
+    name: str
+    data_type: str
+    bit_width: int = 0
+    description: str = ""
+    title: str = ""
+
+    def __post_init__(self):
+        if not self.title:
+            if self.bit_width > 0:
+                self.title = f"{self.name}:{self.bit_width}"
+            else:
+                self.title = f"メンバ: {self.name}"
+
+
+@dataclass
+class CustomTypeDef:
+    """ユーザー定義型（構造体など）"""
+    name: str
+    description: str = ""
+    members: List[StructMemberDef] = field(default_factory=list)
+    title: str = ""
+
+    def __post_init__(self):
+        if not self.title:
+            self.title = f"型: {self.name}"
 
 
 @dataclass
@@ -13,7 +43,7 @@ class SystemVariable:
     default_value: str = ""
     group: str = ""
     description: str = ""
-    title: str = ""   # ★ タイトル追加
+    title: str = ""
 
     def __post_init__(self):
         if not self.title:
@@ -28,7 +58,7 @@ class EventFlag:
     max_value: int
     group: str = ""
     description: str = ""
-    title: str = ""   # ★ タイトル追加
+    title: str = ""
 
     def __post_init__(self):
         if not self.title:
@@ -56,7 +86,7 @@ class InterruptHandlerDef:
     event_names: List[str] = field(default_factory=list)
     is_timer: bool = False
     actions: List[InterruptAction] = field(default_factory=list)
-    title: str = ""   # ★ タイトル追加
+    title: str = ""
 
     def __post_init__(self):
         if not self.title:
@@ -68,7 +98,7 @@ class DevicePlaceholderDef:
     """デバイスリソース仮定義"""
     name: str
     description: str = ""
-    title: str = ""   # ★ タイトル追加
+    title: str = ""
 
     def __post_init__(self):
         if not self.title:
@@ -82,7 +112,7 @@ class TimerDerivedDef:
     multiplier: int
     variable_name: str
     data_type: str = "uint8_t"
-    title: str = ""   # ★ タイトル追加
+    title: str = ""
 
     def __post_init__(self):
         if not self.title:
@@ -96,7 +126,8 @@ class TimerBaseDef:
     unit: str = "1ms"
     data_type: str = "volatile uint32_t"
     derived: List[TimerDerivedDef] = field(default_factory=list)
-    title: str = ""   # ★ タイトル追加
+    title: str = ""
+    interrupt_name: str = ""
 
     def __post_init__(self):
         if not self.title:
@@ -114,7 +145,7 @@ class EventQueueDef:
     interrupt_safe: bool = True
     rtos_enabled: bool = False
     description: str = ""
-    title: str = ""   # ★ タイトル追加
+    title: str = ""
 
     def __post_init__(self):
         if not self.title:
@@ -122,7 +153,7 @@ class EventQueueDef:
 
 
 class GlobalDefinitions:
-    """グローバル変数・イベントフラグ・割り込み処理・デバイスリソース・タイマ設定・イベントキューの管理クラス"""
+    """グローバル変数・イベントフラグ・割り込み処理・デバイスリソース・タイマ設定・イベントキュー・ユーザー定義型の管理クラス"""
 
     def __init__(self):
         self.variables: List[SystemVariable] = []
@@ -130,35 +161,37 @@ class GlobalDefinitions:
         self.interrupts: List[InterruptHandlerDef] = []
         self.placeholders: List[DevicePlaceholderDef] = []
         self.timer_base: TimerBaseDef = TimerBaseDef()
+        self.extra_timers: List[TimerBaseDef] = []
         self.event_queues: List[EventQueueDef] = []
+        self.custom_types: List[CustomTypeDef] = []
 
     def add_timer_variables(self):
         """タイマ基準変数・派生タイマ変数をグローバル変数として登録する"""
         # 既存のタイマ変数を一旦削除（グループ "Timer" として再登録）
         self.variables = [v for v in self.variables if v.group != "Timer"]
 
+        all_timers = [self.timer_base] + self.extra_timers
         # 基準変数
-        self.variables.append(SystemVariable(
-            name=self.timer_base.variable_name,
-            type=self.timer_base.data_type,
-            unit=self.timer_base.unit,
-            default_value="0",
-            group="Timer",
-            description="タイマ基準変数",
-            title=self.timer_base.title,
-        ))
-
-        # 派生タイマ変数
-        for d in self.timer_base.derived:
+        for timer in all_timers:
             self.variables.append(SystemVariable(
-                name=d.variable_name,
-                type=d.data_type,
-                unit=d.period_name,
+                name=timer.variable_name,
+                type=timer.data_type,
+                unit=timer.unit,
                 default_value="0",
                 group="Timer",
-                description=f"派生タイマ変数（{d.period_name}）",
-                title=d.title,
+                description="タイマ基準変数",
+                title=timer.title,
             ))
+            for d in timer.derived:
+                self.variables.append(SystemVariable(
+                    name=d.variable_name,
+                    type=d.data_type,
+                    unit=d.period_name,
+                    default_value="0",
+                    group="Timer",
+                    description=f"派生タイマ変数（{d.period_name}）",
+                    title=d.title,
+                ))
 
     # グループ名の取得
     def variable_groups(self) -> List[str]:
@@ -166,3 +199,6 @@ class GlobalDefinitions:
 
     def flag_groups(self) -> List[str]:
         return sorted({f.group for f in self.flags if f.group})
+
+    def custom_type_names(self) -> List[str]:
+        return sorted({t.name for t in self.custom_types})

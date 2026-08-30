@@ -57,7 +57,7 @@ class Event:
     source_layer: EventSourceLayer = EventSourceLayer.DRIVER
     data_type: str = ""
     data_name: str = ""
-    title: str = ""   # ★ タイトル追加
+    title: str = ""
 
     def __post_init__(self):
         if not self.title:
@@ -89,7 +89,7 @@ class RoleFunction:
     arg1_name: str = "arg1"
     arg2_type: str = "int"
     arg2_name: str = "arg2"
-    title: str = ""   # ★ タイトル追加
+    title: str = ""
 
     def __post_init__(self):
         if not self.title:

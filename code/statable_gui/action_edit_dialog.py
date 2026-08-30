@@ -1,7 +1,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QTextEdit, QComboBox, QLineEdit,
+    QDialog, QVBoxLayout, QHBoxLayout, QTextEdit, QComboBox,
     QPushButton, QLabel, QDialogButtonBox, QMessageBox,
     QSplitter, QWidget, QMenu
 )
@@ -9,12 +9,13 @@ from PySide6.QtWidgets import (
 from .role_function_dialog import RoleFunctionDialog
 from .global_defs import GlobalDefinitions
 from .global_defs_dialog import VariableEditDialog, FlagEditDialog
+from .common_widgets import TitleEditWidget
 from .symbol_picker import SymbolPickerWidget
 from .logger import StaTableLogger
 
 
 class ActionEditDialog(QDialog):
-    """遷移の動作（ロール関数呼び出し・生コード）を編集するダイアログ"""
+    """遷移の動作を編集するダイアログ"""
 
     def __init__(self, parent=None, action_text="", title="", role_functions=None, global_defs=None):
         super().__init__(parent)
@@ -31,17 +32,9 @@ class ActionEditDialog(QDialog):
 
         main_layout = QVBoxLayout(self)
 
-        # タイトル入力欄（必須・仮タイトル自動設定）
-        title_layout = QHBoxLayout()
-        title_label = QLabel("タイトル *")
-        title_label.setFont(QFont("sans-serif", 10, QFont.Bold))
-        self.title_edit = QLineEdit()
-        self.title_edit.setText(title)
-        self.title_edit.setPlaceholderText("一覧に表示されるラベル（空なら自動設定）")
-        self.title_edit.setToolTip("この動作のタイトルを入力してください。空の場合は自動で仮タイトルが設定されます。")
-        title_layout.addWidget(title_label)
-        title_layout.addWidget(self.title_edit, stretch=1)
-        main_layout.addLayout(title_layout)
+        # タイトル入力ウィジェット
+        self.title_widget = TitleEditWidget(self, title=title)
+        main_layout.addWidget(self.title_widget)
 
         # ロール関数選択・挿入バー
         role_bar = QHBoxLayout()
@@ -62,11 +55,9 @@ class ActionEditDialog(QDialog):
         self.signature_label.setStyleSheet("color: #555;")
         main_layout.addWidget(self.signature_label)
 
-        # 左右分割
         splitter = QSplitter(Qt.Horizontal)
         main_layout.addWidget(splitter)
 
-        # 左側：シンボルピッカー
         self.symbol_picker = SymbolPickerWidget(
             global_defs=self.global_defs,
             role_functions=self.role_functions
@@ -74,7 +65,6 @@ class ActionEditDialog(QDialog):
         self.symbol_picker.insert_requested.connect(self.insert_symbol)
         splitter.addWidget(self.symbol_picker)
 
-        # 右側：動作コード編集
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
         right_layout.addWidget(QLabel("動作コード:"))
@@ -87,7 +77,6 @@ class ActionEditDialog(QDialog):
         right_layout.addWidget(self.action_edit, stretch=1)
         splitter.addWidget(right_widget)
 
-        # OK/Cancel
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
@@ -96,9 +85,6 @@ class ActionEditDialog(QDialog):
         self.update_signature_label()
         StaTableLogger.debug("ActionEditDialog.__init__ completed")
 
-    # ------------------------------------------------------------------
-    # ロール関数
-    # ------------------------------------------------------------------
     def refresh_role_combo(self):
         self.role_combo.clear()
         for name in self.role_functions.keys():
@@ -115,11 +101,7 @@ class ActionEditDialog(QDialog):
         if func_name:
             rf = self.role_functions.get(func_name)
             if rf:
-                sig = (
-                    f"{rf.return_type} {rf.name}("
-                    f"{rf.arg1_type} {rf.arg1_name}, "
-                    f"{rf.arg2_type} {rf.arg2_name})"
-                )
+                sig = f"{rf.return_type} {rf.name}({rf.arg1_type} {rf.arg1_name}, {rf.arg2_type} {rf.arg2_name})"
                 self.signature_label.setText(sig)
                 return
         self.signature_label.setText("")
@@ -134,7 +116,6 @@ class ActionEditDialog(QDialog):
             return
         call = f"{func_name}({rf.arg1_name}, {rf.arg2_name});"
         self.action_edit.insertPlainText(call + "\n")
-        StaTableLogger.debug(f"  inserted: {call}")
 
     def add_new_role_function(self):
         StaTableLogger.debug("add_new_role_function called")
@@ -147,82 +128,59 @@ class ActionEditDialog(QDialog):
             self.role_functions[rf.name] = rf
             self.refresh_role_combo()
             self.update_signature_label()
-            StaTableLogger.debug(f"  new role added: {rf.name}")
 
-    # ------------------------------------------------------------------
-    # シンボル挿入
-    # ------------------------------------------------------------------
     def insert_symbol(self, text: str):
-        StaTableLogger.debug(f"ActionEditDialog.insert_symbol: '{text}'")
         self.action_edit.insertPlainText(text)
 
-    # ------------------------------------------------------------------
-    # コンテキストメニュー（選択文字列から登録）
-    # ------------------------------------------------------------------
     def show_action_context_menu(self, pos):
         selected_text = self.action_edit.textCursor().selectedText().strip()
         if not selected_text:
             return
-
         menu = QMenu(self)
         add_var_action = menu.addAction(f"'{selected_text}' をグローバル変数として登録")
         add_flag_action = menu.addAction(f"'{selected_text}' をイベントフラグとして登録")
         chosen = menu.exec(self.action_edit.viewport().mapToGlobal(pos))
-
         if chosen == add_var_action:
             self.register_selected_as_variable(selected_text)
         elif chosen == add_flag_action:
             self.register_selected_as_flag(selected_text)
 
     def register_selected_as_variable(self, name: str):
-        StaTableLogger.debug(f"register_selected_as_variable: '{name}'")
         dlg = VariableEditDialog(self, groups=self.global_defs.variable_groups())
         dlg.name_edit.setText(name)
         if dlg.exec() == QDialog.Accepted:
             var = dlg.get_variable()
             if not var.name:
-                QMessageBox.warning(self, "警告", "名前を入力してください。")
                 return
             if any(v.name == var.name for v in self.global_defs.variables):
-                QMessageBox.warning(self, "警告", f"変数 '{var.name}' は既に存在します。")
                 return
             self.global_defs.variables.append(var)
             self.symbol_picker.refresh_list()
 
     def register_selected_as_flag(self, name: str):
-        StaTableLogger.debug(f"register_selected_as_flag: '{name}'")
         dlg = FlagEditDialog(self, groups=self.global_defs.flag_groups())
         dlg.name_edit.setText(name)
         if dlg.exec() == QDialog.Accepted:
             flag = dlg.get_flag()
             if not flag.name:
-                QMessageBox.warning(self, "警告", "フラグ名を入力してください。")
                 return
             if any(f.name == flag.name for f in self.global_defs.flags):
-                QMessageBox.warning(self, "警告", f"フラグ '{flag.name}' は既に存在します。")
                 return
             self.global_defs.flags.append(flag)
             self.symbol_picker.refresh_list()
 
     def _on_accept(self):
-        """OKボタン：タイトルが空なら仮タイトルを自動設定"""
-        if not self.title_edit.text().strip():
-            action_text = self.action_edit.toPlainText().strip()
-            if action_text:
-                first_line = action_text.split('\n')[0].strip()
-                auto_title = first_line[:20] + ("..." if len(first_line) > 20 else "")
-            else:
-                auto_title = "(無題動作)"
-            self.title_edit.setText(auto_title)
-            StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
+        action_text = self.action_edit.toPlainText().strip()
+        if action_text:
+            first_line = action_text.split('\n')[0].strip()
+            auto_title = first_line[:20] + ("..." if len(first_line) > 20 else "")
+        else:
+            auto_title = "(無題動作)"
+        self.title_widget.ensure_title(auto_title)
         self.accept()
 
     def get_action_text(self) -> str:
-        text = self.action_edit.toPlainText().strip()
-        StaTableLogger.debug(f"get_action_text: length={len(text)}")
-        return text
+        return self.action_edit.toPlainText().strip()
 
     def get_title(self) -> str:
-        title = self.title_edit.text().strip()
-        StaTableLogger.debug(f"get_title: '{title}'")
-        return title
+        return self.title_widget.get_title()

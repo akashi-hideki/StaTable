@@ -21,7 +21,6 @@ class StateMachine:
         self.events[event.name] = event
 
     def remove_event(self, name: str):
-        """イベントを削除する。関連する遷移も削除される。"""
         if name in self.events:
             del self.events[name]
         self.transitions = [t for t in self.transitions if t.event != name]
@@ -54,9 +53,7 @@ class StateMachine:
             del self.role_functions[name]
 
     def get_transitions_for_cell(self, source: str, event: str) -> List[Transition]:
-        """指定セル（状態×イベント）の遷移候補を返す"""
         return [t for t in self.transitions if t.source == source and t.event == event]
 
     def get_transitions_for_event(self, event: str) -> List[Transition]:
-        """指定イベントに関連する遷移を返す（削除時チェック用）"""
         return [t for t in self.transitions if t.event == event]

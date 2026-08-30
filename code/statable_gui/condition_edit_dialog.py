@@ -1,12 +1,13 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QComboBox, QLineEdit,
+    QDialog, QVBoxLayout, QHBoxLayout, QComboBox,
     QPushButton, QLabel, QDialogButtonBox, QPlainTextEdit, QSplitter,
     QWidget
 )
 
 from statable.global_defs import GlobalDefinitions
+from .common_widgets import TitleEditWidget
 from .symbol_picker import SymbolPickerWidget
 from .logger import StaTableLogger
 
@@ -28,17 +29,9 @@ class ConditionEditDialog(QDialog):
 
         main_layout = QVBoxLayout(self)
 
-        # タイトル入力欄（必須・仮タイトル自動設定）
-        title_layout = QHBoxLayout()
-        title_label = QLabel("タイトル *")
-        title_label.setFont(QFont("sans-serif", 10, QFont.Bold))
-        self.title_edit = QLineEdit()
-        self.title_edit.setText(title)
-        self.title_edit.setPlaceholderText("一覧に表示されるラベル（空なら自動設定）")
-        self.title_edit.setToolTip("この条件のタイトルを入力してください。空の場合は自動で仮タイトルが設定されます。")
-        title_layout.addWidget(title_label)
-        title_layout.addWidget(self.title_edit, stretch=1)
-        main_layout.addLayout(title_layout)
+        # タイトル入力ウィジェット
+        self.title_widget = TitleEditWidget(self, title=title)
+        main_layout.addWidget(self.title_widget)
 
         # ロール関数選択・挿入バー
         role_bar = QHBoxLayout()
@@ -109,16 +102,14 @@ class ConditionEditDialog(QDialog):
 
     def _on_accept(self):
         """OKボタン：タイトルが空なら仮タイトルを自動設定"""
-        if not self.title_edit.text().strip():
-            condition_text = self.condition_edit.toPlainText().strip()
-            if condition_text:
-                # 条件式の先頭20文字を仮タイトルに
-                first_line = condition_text.split('\n')[0].strip()
-                auto_title = first_line[:20] + ("..." if len(first_line) > 20 else "")
-            else:
-                auto_title = "(無題条件)"
-            self.title_edit.setText(auto_title)
-            StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
+        condition_text = self.condition_edit.toPlainText().strip()
+        if condition_text:
+            # 条件式の先頭20文字を仮タイトルに
+            first_line = condition_text.split('\n')[0].strip()
+            auto_title = first_line[:20] + ("..." if len(first_line) > 20 else "")
+        else:
+            auto_title = "(無題条件)"
+        self.title_widget.ensure_title(auto_title)
         self.accept()
 
     def get_condition_text(self) -> str:
@@ -127,6 +118,6 @@ class ConditionEditDialog(QDialog):
         return text
 
     def get_title(self) -> str:
-        title = self.title_edit.text().strip()
+        title = self.title_widget.get_title()
         StaTableLogger.debug(f"get_title: '{title}'")
         return title

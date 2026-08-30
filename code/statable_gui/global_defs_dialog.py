@@ -1,4 +1,4 @@
-"""グローバル変数・イベントフラグ定義管理画面（タイトル編集対応版）"""
+"""グローバル変数・イベントフラグ定義管理画面"""
 
 from typing import Optional, List
 
@@ -9,10 +9,11 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QPushButton, QHeaderView,
     QLabel, QMessageBox, QFormLayout, QComboBox, QSpinBox,
     QDialogButtonBox, QAbstractItemView, QWidget, QMenu,
-    QStyledItemDelegate, QCompleter
+    QStyledItemDelegate
 )
 
 from statable.global_defs import SystemVariable, EventFlag, GlobalDefinitions
+from .common_widgets import TitleEditWidget, TypeComboBox, GroupComboBox
 from .logger import StaTableLogger
 
 
@@ -35,11 +36,6 @@ class ComboBoxDelegate(QStyledItemDelegate):
         combo = QComboBox(parent)
         combo.setEditable(self.editable)
         combo.addItems(self.items)
-        if self.editable:
-            # 前方一致補完
-            completer = combo.completer()
-            if completer:
-                completer.setFilterMode(Qt.MatchStartsWith)
         return combo
 
     def setEditorData(self, editor, index):
@@ -88,61 +84,40 @@ class ReadOnlyDelegate(QStyledItemDelegate):
 # グローバル変数編集ダイアログ（単一編集用）
 # ----------------------------------------------------------------------
 class VariableEditDialog(QDialog):
-    def __init__(self, parent=None, groups=None, variable: Optional[SystemVariable] = None):
+    def __init__(self, parent=None, groups=None, variable: Optional[SystemVariable] = None, global_defs=None):
         super().__init__(parent)
-        self.setWindowTitle("グローバル変数編集")
-        self.setMinimumWidth(450)
+        self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.groups = groups or []
+        self.setWindowTitle("グローバル変数編集")
+        self.setMinimumWidth(500)
 
         layout = QFormLayout(self)
 
-        self.title_edit = QLineEdit()
-        if variable:
-            self.title_edit.setText(variable.title)
-        self.title_edit.setPlaceholderText("一覧に表示されるラベル（空なら自動設定）")
-        form.addRow = layout.addRow
-        layout.addRow("タイトル *", self.title_edit)
+        self.title_widget = TitleEditWidget(self, title=variable.title if variable else "")
+        layout.addRow("", self.title_widget)
 
-        self.name_edit = QLineEdit()
-        if variable:
-            self.name_edit.setText(variable.name)
+        self.name_edit = QLineEdit(variable.name if variable else "")
         layout.addRow("名前", self.name_edit)
 
         # 型（編集可能コンボ）
-        self.type_combo = QComboBox()
-        self.type_combo.setEditable(True)
-        self.type_combo.addItems([
-            "uint8_t", "uint16_t", "uint32_t", "uint64_t",
-            "int8_t", "int16_t", "int32_t", "int64_t",
-            "float", "double", "bool"
-        ])
+        self.type_combo = TypeComboBox(self, global_defs=self.global_defs)
         if variable:
-            self.type_combo.setCurrentText(variable.type)
-        else:
-            self.type_combo.setCurrentText("uint16_t")
+            self.type_combo.set_current_text(variable.type)
         layout.addRow("型", self.type_combo)
 
-        self.unit_edit = QLineEdit()
-        if variable:
-            self.unit_edit.setText(variable.unit)
+        self.unit_edit = QLineEdit(variable.unit if variable else "")
         layout.addRow("単位", self.unit_edit)
 
-        self.default_edit = QLineEdit()
-        if variable:
-            self.default_edit.setText(variable.default_value)
+        self.default_edit = QLineEdit(variable.default_value if variable else "")
         layout.addRow("初期値", self.default_edit)
 
         # グループ（編集可能コンボ）
-        self.group_combo = QComboBox()
-        self.group_combo.setEditable(True)
-        self.group_combo.addItems(self.groups)
+        self.group_combo = GroupComboBox(self, groups=self.groups)
         if variable:
-            self.group_combo.setCurrentText(variable.group)
+            self.group_combo.set_current_text(variable.group)
         layout.addRow("グループ", self.group_combo)
 
-        self.desc_edit = QLineEdit()
-        if variable:
-            self.desc_edit.setText(variable.description)
+        self.desc_edit = QLineEdit(variable.description if variable else "")
         layout.addRow("説明", self.desc_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -151,21 +126,19 @@ class VariableEditDialog(QDialog):
         layout.addRow(buttons)
 
     def _on_accept(self):
-        if not self.title_edit.text().strip():
-            auto_title = f"変数: {self.name_edit.text().strip() or '(無名)'}"
-            self.title_edit.setText(auto_title)
-            StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
+        auto_title = f"変数: {self.name_edit.text().strip() or '(無名)'}"
+        self.title_widget.ensure_title(auto_title)
         self.accept()
 
     def get_variable(self) -> SystemVariable:
         return SystemVariable(
             name=self.name_edit.text().strip(),
-            type=self.type_combo.currentText().strip(),
+            type=self.type_combo.current_text(),
             unit=self.unit_edit.text().strip(),
             default_value=self.default_edit.text().strip(),
-            group=self.group_combo.currentText().strip(),
+            group=self.group_combo.current_text(),
             description=self.desc_edit.text().strip(),
-            title=self.title_edit.text().strip(),
+            title=self.title_widget.get_title(),
         )
 
 
@@ -175,35 +148,26 @@ class VariableEditDialog(QDialog):
 class FlagEditDialog(QDialog):
     def __init__(self, parent=None, groups=None, flag: Optional[EventFlag] = None):
         super().__init__(parent)
-        self.setWindowTitle("イベントフラグ編集")
-        self.setMinimumWidth(450)
         self.groups = groups or []
+        self.setWindowTitle("イベントフラグ編集")
+        self.setMinimumWidth(500)
 
         layout = QFormLayout(self)
 
-        self.title_edit = QLineEdit()
-        if flag:
-            self.title_edit.setText(flag.title)
-        self.title_edit.setPlaceholderText("一覧に表示されるラベル（空なら自動設定）")
-        layout.addRow("タイトル *", self.title_edit)
+        self.title_widget = TitleEditWidget(self, title=flag.title if flag else "")
+        layout.addRow("", self.title_widget)
 
-        self.name_edit = QLineEdit()
-        if flag:
-            self.name_edit.setText(flag.name)
+        self.name_edit = QLineEdit(flag.name if flag else "")
         layout.addRow("フラグ名", self.name_edit)
 
         self.min_spin = QSpinBox()
         self.min_spin.setRange(0, 2**31 - 1)
-        if flag:
-            self.min_spin.setValue(flag.min_value)
+        self.min_spin.setValue(flag.min_value if flag else 0)
         layout.addRow("最小値", self.min_spin)
 
         self.max_spin = QSpinBox()
         self.max_spin.setRange(0, 2**31 - 1)
-        if flag:
-            self.max_spin.setValue(flag.max_value)
-        else:
-            self.max_spin.setValue(3)
+        self.max_spin.setValue(flag.max_value if flag else 3)
         layout.addRow("最大値", self.max_spin)
 
         self.bit_width_label = QLabel()
@@ -213,29 +177,18 @@ class FlagEditDialog(QDialog):
         layout.addRow("ビット幅", self.bit_width_label)
 
         # グループ（編集可能コンボ）
-        self.group_combo = QComboBox()
-        self.group_combo.setEditable(True)
-        self.group_combo.addItems(self.groups)
+        self.group_combo = GroupComboBox(self, groups=self.groups)
         if flag:
-            self.group_combo.setCurrentText(flag.group)
+            self.group_combo.set_current_text(flag.group)
         layout.addRow("グループ", self.group_combo)
 
-        self.desc_edit = QLineEdit()
-        if flag:
-            self.desc_edit.setText(flag.description)
+        self.desc_edit = QLineEdit(flag.description if flag else "")
         layout.addRow("説明", self.desc_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
-
-    def _on_accept(self):
-        if not self.title_edit.text().strip():
-            auto_title = f"フラグ: {self.name_edit.text().strip() or '(無名)'}"
-            self.title_edit.setText(auto_title)
-            StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
-        self.accept()
 
     def update_bit_width_label(self):
         min_val = self.min_spin.value()
@@ -248,14 +201,19 @@ class FlagEditDialog(QDialog):
             self.bit_width_label.setText(f"{width} bit")
             self.bit_width_label.setStyleSheet("")
 
+    def _on_accept(self):
+        auto_title = f"フラグ: {self.name_edit.text().strip() or '(無名)'}"
+        self.title_widget.ensure_title(auto_title)
+        self.accept()
+
     def get_flag(self) -> EventFlag:
         return EventFlag(
             name=self.name_edit.text().strip(),
             min_value=self.min_spin.value(),
             max_value=self.max_spin.value(),
-            group=self.group_combo.currentText().strip(),
+            group=self.group_combo.current_text(),
             description=self.desc_edit.text().strip(),
-            title=self.title_edit.text().strip(),
+            title=self.title_widget.get_title(),
         )
 
 
@@ -263,11 +221,14 @@ class FlagEditDialog(QDialog):
 # 一括登録ダイアログ（グローバル変数）
 # ----------------------------------------------------------------------
 class BulkVariableDialog(QDialog):
-    def __init__(self, parent=None, groups=None):
+    """グローバル変数 一括登録ダイアログ"""
+
+    def __init__(self, parent=None, groups=None, global_defs=None):
         super().__init__(parent)
+        self.global_defs = global_defs if global_defs else GlobalDefinitions()
+        self.groups = groups or []
         self.setWindowTitle("グローバル変数 一括登録")
         self.setMinimumSize(800, 400)
-        self.groups = groups or []
 
         layout = QVBoxLayout(self)
         self.table = InsertableTable(0, 7)
@@ -277,11 +238,7 @@ class BulkVariableDialog(QDialog):
         layout.addWidget(self.table)
 
         # ★ 型列（1列目）にコンボボックスデリゲート
-        self.type_delegate = ComboBoxDelegate(items=[
-            "uint8_t", "uint16_t", "uint32_t", "uint64_t",
-            "int8_t", "int16_t", "int32_t", "int64_t",
-            "float", "double", "bool"
-        ], editable=True)
+        self.type_delegate = ComboBoxDelegate(items=self._type_list(), editable=True)
         self.table.setItemDelegateForColumn(2, self.type_delegate)
 
         # ★ グループ列（4列目）にコンボボックスデリゲート
@@ -302,13 +259,12 @@ class BulkVariableDialog(QDialog):
 
         self.table.insert_requested.connect(self.add_empty_row)
 
-    def _on_accept(self):
-        for row in range(self.table.rowCount()):
-            title_item = self.table.item(row, 0)
-            name_item = self.table.item(row, 1)
-            if title_item and name_item and not title_item.text().strip() and name_item.text().strip():
-                title_item.setText(f"変数: {name_item.text().strip()}")
-        self.accept()
+    def _type_list(self):
+        types = ["uint8_t", "uint16_t", "uint32_t", "uint64_t",
+                 "int8_t", "int16_t", "int32_t", "int64_t",
+                 "float", "double", "bool"]
+        types.extend([t.name for t in self.global_defs.custom_types])
+        return types
 
     def set_variables(self, variables: List[SystemVariable]):
         """既存の変数一覧をテーブルに読み込む"""
@@ -343,6 +299,14 @@ class BulkVariableDialog(QDialog):
         if row >= 0:
             self.table.removeRow(row)
 
+    def _on_accept(self):
+        for row in range(self.table.rowCount()):
+            title_item = self.table.item(row, 0)
+            name_item = self.table.item(row, 1)
+            if title_item and name_item and not title_item.text().strip() and name_item.text().strip():
+                title_item.setText(f"変数: {name_item.text().strip()}")
+        self.accept()
+
     def get_variables(self) -> List[SystemVariable]:
         variables = []
         for row in range(self.table.rowCount()):
@@ -355,6 +319,8 @@ class BulkVariableDialog(QDialog):
             default = self.table.item(row, 4).text().strip() if self.table.item(row, 4) else ""
             group = self.table.item(row, 5).text().strip() if self.table.item(row, 5) else ""
             desc = self.table.item(row, 6).text().strip() if self.table.item(row, 6) else ""
+            if not title:
+                title = f"変数: {name}"
             variables.append(SystemVariable(name, typ, unit, default, group, desc, title))
         return variables
 
@@ -363,11 +329,13 @@ class BulkVariableDialog(QDialog):
 # 一括登録ダイアログ（イベントフラグ）
 # ----------------------------------------------------------------------
 class BulkFlagDialog(QDialog):
+    """イベントフラグ 一括登録ダイアログ"""
+
     def __init__(self, parent=None, groups=None):
         super().__init__(parent)
+        self.groups = groups or []
         self.setWindowTitle("イベントフラグ 一括登録")
         self.setMinimumSize(800, 400)
-        self.groups = groups or []
 
         layout = QVBoxLayout(self)
         self.table = InsertableTable(0, 7)
@@ -395,14 +363,6 @@ class BulkFlagDialog(QDialog):
 
         self.table.itemChanged.connect(self.on_item_changed)
         self.table.insert_requested.connect(self.add_empty_row)
-
-    def _on_accept(self):
-        for row in range(self.table.rowCount()):
-            title_item = self.table.item(row, 0)
-            name_item = self.table.item(row, 1)
-            if title_item and name_item and not title_item.text().strip() and name_item.text().strip():
-                title_item.setText(f"フラグ: {name_item.text().strip()}")
-        self.accept()
 
     def set_flags(self, flags: List[EventFlag]):
         """既存のフラグ一覧をテーブルに読み込む"""
@@ -469,6 +429,14 @@ class BulkFlagDialog(QDialog):
         if width_item:
             width_item.setText(width)
 
+    def _on_accept(self):
+        for row in range(self.table.rowCount()):
+            title_item = self.table.item(row, 0)
+            name_item = self.table.item(row, 1)
+            if title_item and name_item and not title_item.text().strip() and name_item.text().strip():
+                title_item.setText(f"フラグ: {name_item.text().strip()}")
+        self.accept()
+
     def get_flags(self) -> List[EventFlag]:
         flags = []
         for row in range(self.table.rowCount()):
@@ -485,6 +453,8 @@ class BulkFlagDialog(QDialog):
                 min_val, max_val = 0, 0
             group = self.table.item(row, 5).text().strip() if self.table.item(row, 5) else ""
             desc = self.table.item(row, 6).text().strip() if self.table.item(row, 6) else ""
+            if not title:
+                title = f"フラグ: {name}"
             flags.append(EventFlag(name, min_val, max_val, group, desc, title))
         return flags
 
@@ -504,11 +474,10 @@ class GlobalDefinitionsDialog(QDialog):
 
         # 検索ボックス
         search_layout = QHBoxLayout()
-        search_label = QLabel("検索（前方一致）:")
+        search_layout.addWidget(QLabel("検索（前方一致）:"))
         self.search_edit = QLineEdit()
         self.search_edit.setPlaceholderText("タイトル・メンバ名・グループ名")
         self.search_edit.textChanged.connect(self.on_search_changed)
-        search_layout.addWidget(search_label)
         search_layout.addWidget(self.search_edit)
         layout.addLayout(search_layout)
 
@@ -517,13 +486,10 @@ class GlobalDefinitionsDialog(QDialog):
         layout.addWidget(self.tab)
 
         # グローバル変数タブ
-        var_tab = self._create_variable_tab()
-        self.tab.addTab(var_tab, "グローバル変数")
+        self.tab.addTab(self._create_variable_tab(), "グローバル変数")
+        self.tab.addTab(self._create_flag_tab(), "イベントフラグ")
 
         # イベントフラグタブ
-        flag_tab = self._create_flag_tab()
-        self.tab.addTab(flag_tab, "イベントフラグ")
-
         # 閉じるボタン
         close_btn = QPushButton("閉じる")
         close_btn.clicked.connect(self.accept)
@@ -545,11 +511,7 @@ class GlobalDefinitionsDialog(QDialog):
         layout.addWidget(self.var_table)
 
         # ★ 型列（1列目）にコンボボックスデリゲート
-        self.type_delegate = ComboBoxDelegate(items=[
-            "uint8_t", "uint16_t", "uint32_t", "uint64_t",
-            "int8_t", "int16_t", "int32_t", "int64_t",
-            "float", "double", "bool"
-        ], editable=True)
+        self.type_delegate = ComboBoxDelegate(items=self._type_list(), editable=True)
         self.var_table.setItemDelegateForColumn(2, self.type_delegate)
 
         # ★ グループ列（4列目）にコンボボックスデリゲート
@@ -602,6 +564,13 @@ class GlobalDefinitionsDialog(QDialog):
 
         return widget
 
+    def _type_list(self):
+        types = ["uint8_t", "uint16_t", "uint32_t", "uint64_t",
+                 "int8_t", "int16_t", "int32_t", "int64_t",
+                 "float", "double", "bool"]
+        types.extend([t.name for t in self.defs.custom_types])
+        return types
+
     # ------------------------------------------------------------------
     # 検索
     # ------------------------------------------------------------------
@@ -613,11 +582,7 @@ class GlobalDefinitionsDialog(QDialog):
         if not query:
             return True
         q = query.lower()
-        return (
-            title.lower().startswith(q) or
-            name.lower().startswith(q) or
-            group.lower().startswith(q)
-        )
+        return title.lower().startswith(q) or name.lower().startswith(q) or group.lower().startswith(q)
 
     # ------------------------------------------------------------------
     # グローバル変数
@@ -638,8 +603,8 @@ class GlobalDefinitionsDialog(QDialog):
         # 末尾に空行を追加
         self.var_table.insertRow(self.var_table.rowCount())
         for col in range(7):
-            item = QTableWidgetItem("")
-            self.var_table.setItem(self.var_table.rowCount() - 1, col, item)
+            self.var_table.setItem(self.var_table.rowCount() - 1, col, QTableWidgetItem(""))
+        self.type_delegate.set_items(self._type_list())
         # グループ候補を更新
         self.group_delegate.set_items(self.defs.variable_groups())
         self._updating = False
@@ -689,10 +654,9 @@ class GlobalDefinitionsDialog(QDialog):
         self.var_table.insertRow(current_row + 1)
         for col in range(7):
             if col == 2:
-                item = QTableWidgetItem("uint16_t")
+                self.var_table.setItem(current_row + 1, col, QTableWidgetItem("uint16_t"))
             else:
-                item = QTableWidgetItem("")
-            self.var_table.setItem(current_row + 1, col, item)
+                self.var_table.setItem(current_row + 1, col, QTableWidgetItem(""))
 
     def delete_variable(self):
         row = self.var_table.currentRow()
@@ -708,7 +672,7 @@ class GlobalDefinitionsDialog(QDialog):
             self.refresh_variables()
 
     def bulk_variables(self):
-        dlg = BulkVariableDialog(self, groups=self.defs.variable_groups())
+        dlg = BulkVariableDialog(self, groups=self.defs.variable_groups(), global_defs=self.defs)
         dlg.set_variables(self.defs.variables)
         if dlg.exec() == QDialog.Accepted:
             self.defs.variables = dlg.get_variables()

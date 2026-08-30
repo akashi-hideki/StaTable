@@ -10,7 +10,7 @@ from .global_defs import (
     GlobalDefinitions, SystemVariable, EventFlag,
     InterruptHandlerDef, InterruptAction,
     DevicePlaceholderDef, TimerBaseDef, TimerDerivedDef,
-    EventQueueDef,
+    EventQueueDef, CustomTypeDef, StructMemberDef,
 )
 
 
@@ -22,12 +22,9 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
     states_elem = ET.SubElement(root, "States")
     for state in sm.states.values():
         attrs = {
-            "name": state.name,
-            "type": state.type.value,
-            "parent": state.parent or "",
-            "entry": state.entry,
-            "exit": state.exit,
-            "do": state.do,
+            "name": state.name, "type": state.type.value,
+            "parent": state.parent or "", "entry": state.entry,
+            "exit": state.exit, "do": state.do,
             "description": state.description,
         }
         ET.SubElement(states_elem, "State", **attrs)
@@ -52,13 +49,10 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
     roles_elem = ET.SubElement(root, "RoleFunctions")
     for rf in sm.role_functions.values():
         attrs = {
-            "name": rf.name,
-            "description": rf.description,
+            "name": rf.name, "description": rf.description,
             "return_type": rf.return_type,
-            "arg1_type": rf.arg1_type,
-            "arg1_name": rf.arg1_name,
-            "arg2_type": rf.arg2_type,
-            "arg2_name": rf.arg2_name,
+            "arg1_type": rf.arg1_type, "arg1_name": rf.arg1_name,
+            "arg2_type": rf.arg2_type, "arg2_name": rf.arg2_name,
             "title": rf.title,
         }
         ET.SubElement(roles_elem, "RoleFunction", **attrs)
@@ -66,12 +60,9 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
     trans_elem = ET.SubElement(root, "Transitions")
     for t in sm.transitions:
         attrs = {
-            "source": t.source,
-            "event": t.event,
-            "condition": t.condition,
-            "action": t.action,
-            "target": t.target,
-            "transition_type": t.transition_type,
+            "source": t.source, "event": t.event,
+            "condition": t.condition, "action": t.action,
+            "target": t.target, "transition_type": t.transition_type,
             "title": t.title,
         }
         ET.SubElement(trans_elem, "Transition", **attrs)
@@ -84,7 +75,7 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
     initial_state_name = elem.get("initial")
 
     for state_elem in elem.find("States"):
-        state = State(
+        sm.add_state(State(
             name=state_elem.get("name", ""),
             type=StateType(state_elem.get("type", "normal")),
             parent=state_elem.get("parent") or None,
@@ -92,13 +83,12 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             exit=state_elem.get("exit", ""),
             do=state_elem.get("do", ""),
             description=state_elem.get("description", ""),
-        )
-        sm.add_state(state)
+        ))
 
     for event_elem in elem.find("Events"):
         params_str = event_elem.get("params", "")
         params = [p.strip() for p in params_str.split(",") if p.strip()] if params_str else []
-        event = Event(
+        sm.add_event(Event(
             name=event_elem.get("name", ""),
             id=int(event_elem.get("id")) if event_elem.get("id") else None,
             kind=EventKind(event_elem.get("kind", "signal")),
@@ -110,11 +100,10 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             data_type=event_elem.get("data_type", ""),
             data_name=event_elem.get("data_name", ""),
             title=event_elem.get("title", ""),
-        )
-        sm.add_event(event)
+        ))
 
     for rf_elem in elem.find("RoleFunctions"):
-        rf = RoleFunction(
+        sm.add_role_function(RoleFunction(
             name=rf_elem.get("name", ""),
             description=rf_elem.get("description", ""),
             return_type=rf_elem.get("return_type", "int"),
@@ -123,11 +112,10 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             arg2_type=rf_elem.get("arg2_type", "int"),
             arg2_name=rf_elem.get("arg2_name", "arg2"),
             title=rf_elem.get("title", ""),
-        )
-        sm.add_role_function(rf)
+        ))
 
     for trans_elem in elem.find("Transitions"):
-        trans = Transition(
+        sm.add_transition(Transition(
             source=trans_elem.get("source", ""),
             event=trans_elem.get("event", ""),
             condition=trans_elem.get("condition", ""),
@@ -135,8 +123,7 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             target=trans_elem.get("target", ""),
             transition_type=trans_elem.get("transition_type", "external"),
             title=trans_elem.get("title", ""),
-        )
-        sm.add_transition(trans)
+        ))
 
     if initial_state_name:
         sm.set_initial(initial_state_name)
@@ -145,10 +132,10 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
 
 
 # ----------------------------------------------------------------------
-# GlobalDefinitions <-> Element Â§âÊèõ
+# GlobalDefinitions <-> Element ïœä∑
 # ----------------------------------------------------------------------
 def _timer_to_element(parent: ET.Element, timer: TimerBaseDef, tag: str = "Timer"):
-    """„Çø„Ç§„ÉûÂü∫Ê∫ñÂ§âÊï∞„ÇíXMLË¶ÅÁ¥†„Å´Â§âÊèõ"""
+    """É^ÉCÉ}äÓèÄïœêîÇXMLóvëfÇ…ïœä∑"""
     elem = ET.SubElement(parent, tag)
     elem.set("variable_name", timer.variable_name)
     elem.set("unit", timer.unit)
@@ -156,19 +143,18 @@ def _timer_to_element(parent: ET.Element, timer: TimerBaseDef, tag: str = "Timer
     elem.set("title", timer.title)
     elem.set("interrupt_name", timer.interrupt_name)
     for derived in timer.derived:
-        d_attrs = {
+        ET.SubElement(elem, "Derived", **{
             "period_name": derived.period_name,
             "multiplier": str(derived.multiplier),
             "variable_name": derived.variable_name,
             "data_type": derived.data_type,
             "title": derived.title,
-        }
-        ET.SubElement(elem, "Derived", **d_attrs)
+        })
     return elem
 
 
 def _timer_from_element(elem: ET.Element) -> TimerBaseDef:
-    """XMLË¶ÅÁ¥†„Åã„Çâ„Çø„Ç§„ÉûÂü∫Ê∫ñÂ§âÊï∞„ÇíÊßãÁØâ"""
+    """XMLóvëfÇ©ÇÁÉ^ÉCÉ}äÓèÄïœêîÇç\íz"""
     derived_list = []
     for d_elem in elem.findall("Derived"):
         try:
@@ -195,68 +181,68 @@ def _timer_from_element(elem: ET.Element) -> TimerBaseDef:
 def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
     root = ET.Element("GlobalDefinitions")
 
+    # CustomTypes
+    if defs.custom_types:
+        ct_elem = ET.SubElement(root, "CustomTypes")
+        for ct in defs.custom_types:
+            ct_attrs = {
+                "name": ct.name, "description": ct.description, "title": ct.title,
+            }
+            ct_child = ET.SubElement(ct_elem, "CustomType", **ct_attrs)
+            for member in ct.members:
+                m_attrs = {
+                    "name": member.name, "data_type": member.data_type,
+                    "bit_width": str(member.bit_width),
+                    "description": member.description, "title": member.title,
+                }
+                ET.SubElement(ct_child, "Member", **m_attrs)
+
     # SystemVariables
     vars_elem = ET.SubElement(root, "SystemVariables")
     for var in defs.variables:
-        attrs = {
-            "name": var.name,
-            "type": var.type,
-            "unit": var.unit,
-            "default_value": var.default_value,
-            "group": var.group,
-            "description": var.description,
-            "title": var.title,
-        }
-        ET.SubElement(vars_elem, "Variable", **attrs)
+        ET.SubElement(vars_elem, "Variable", **{
+            "name": var.name, "type": var.type, "unit": var.unit,
+            "default_value": var.default_value, "group": var.group,
+            "description": var.description, "title": var.title,
+        })
 
     # EventFlags
     flags_elem = ET.SubElement(root, "EventFlags")
     for flag in defs.flags:
-        attrs = {
-            "name": flag.name,
-            "min_value": str(flag.min_value),
-            "max_value": str(flag.max_value),
-            "group": flag.group,
-            "description": flag.description,
-            "title": flag.title,
-        }
-        ET.SubElement(flags_elem, "Flag", **attrs)
+        ET.SubElement(flags_elem, "Flag", **{
+            "name": flag.name, "min_value": str(flag.min_value),
+            "max_value": str(flag.max_value), "group": flag.group,
+            "description": flag.description, "title": flag.title,
+        })
 
     # Interrupts
     if defs.interrupts:
         intrs_elem = ET.SubElement(root, "Interrupts")
         for intr in defs.interrupts:
-            attrs = {
-                "name": intr.name,
-                "description": intr.description,
+            intr_child = ET.SubElement(intrs_elem, "Interrupt", **{
+                "name": intr.name, "description": intr.description,
                 "event_names": ",".join(intr.event_names),
                 "is_timer": "true" if intr.is_timer else "false",
                 "title": intr.title,
-            }
-            intr_elem = ET.SubElement(intrs_elem, "Interrupt", **attrs)
+            })
             for act in intr.actions:
-                act_attrs = {
-                    "condition": act.condition,
-                    "action": act.action,
-                }
-                ET.SubElement(intr_elem, "Action", **act_attrs)
+                ET.SubElement(intr_child, "Action", **{
+                    "condition": act.condition, "action": act.action,
+                })
 
     # DevicePlaceholders
     if defs.placeholders:
         ph_elem = ET.SubElement(root, "DevicePlaceholders")
         for ph in defs.placeholders:
-            attrs = {
-                "name": ph.name,
-                "description": ph.description,
-                "title": ph.title,
-            }
-            ET.SubElement(ph_elem, "Placeholder", **attrs)
+            ET.SubElement(ph_elem, "Placeholder", **{
+                "name": ph.name, "description": ph.description, "title": ph.title,
+            })
 
-    # TimerBaseÔºà„É°„Ç§„É≥„Çø„Ç§„ÉûÔºâ
+    # TimerBaseÅiÉÅÉCÉìÉ^ÉCÉ}Åj
     timer_elem = ET.SubElement(root, "TimerBase")
     _timer_to_element(timer_elem, defs.timer_base, tag="Timer")
 
-    # ExtraTimersÔºàËøΩÂä†„Çø„Ç§„ÉûÔºâ
+    # ExtraTimersÅií«â¡É^ÉCÉ}Åj
     if defs.extra_timers:
         extras_elem = ET.SubElement(root, "ExtraTimers")
         for timer in defs.extra_timers:
@@ -266,18 +252,15 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
     if defs.event_queues:
         queues_elem = ET.SubElement(root, "EventQueues")
         for q in defs.event_queues:
-            attrs = {
-                "name": q.name,
-                "size": str(q.size),
+            ET.SubElement(queues_elem, "Queue", **{
+                "name": q.name, "size": str(q.size),
                 "element_type": q.element_type,
                 "event_ids": ",".join(q.event_ids),
                 "priority_enabled": "true" if q.priority_enabled else "false",
                 "interrupt_safe": "true" if q.interrupt_safe else "false",
                 "rtos_enabled": "true" if q.rtos_enabled else "false",
-                "description": q.description,
-                "title": q.title,
-            }
-            ET.SubElement(queues_elem, "Queue", **attrs)
+                "description": q.description, "title": q.title,
+            })
 
     return root
 
@@ -285,20 +268,36 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
 def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
     defs = GlobalDefinitions()
 
+    # CustomTypes
+    ct_elem = elem.find("CustomTypes")
+    if ct_elem is not None:
+        for ct in ct_elem:
+            members = []
+            for m in ct.findall("Member"):
+                try:
+                    bw = int(m.get("bit_width", "0"))
+                except ValueError:
+                    bw = 0
+                members.append(StructMemberDef(
+                    name=m.get("name", ""), data_type=m.get("data_type", ""),
+                    bit_width=bw, description=m.get("description", ""),
+                    title=m.get("title", ""),
+                ))
+            defs.custom_types.append(CustomTypeDef(
+                name=ct.get("name", ""), description=ct.get("description", ""),
+                members=members, title=ct.get("title", ""),
+            ))
+
     # SystemVariables
     vars_elem = elem.find("SystemVariables")
     if vars_elem is not None:
         for var_elem in vars_elem:
-            var = SystemVariable(
-                name=var_elem.get("name", ""),
-                type=var_elem.get("type", ""),
-                unit=var_elem.get("unit", ""),
-                default_value=var_elem.get("default_value", ""),
-                group=var_elem.get("group", ""),
-                description=var_elem.get("description", ""),
+            defs.variables.append(SystemVariable(
+                name=var_elem.get("name", ""), type=var_elem.get("type", ""),
+                unit=var_elem.get("unit", ""), default_value=var_elem.get("default_value", ""),
+                group=var_elem.get("group", ""), description=var_elem.get("description", ""),
                 title=var_elem.get("title", ""),
-            )
-            defs.variables.append(var)
+            ))
 
     # EventFlags
     flags_elem = elem.find("EventFlags")
@@ -309,15 +308,11 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 max_val = int(flag_elem.get("max_value", "0"))
             except ValueError:
                 min_val, max_val = 0, 0
-            flag = EventFlag(
-                name=flag_elem.get("name", ""),
-                min_value=min_val,
-                max_value=max_val,
-                group=flag_elem.get("group", ""),
-                description=flag_elem.get("description", ""),
+            defs.flags.append(EventFlag(
+                name=flag_elem.get("name", ""), min_value=min_val, max_value=max_val,
+                group=flag_elem.get("group", ""), description=flag_elem.get("description", ""),
                 title=flag_elem.get("title", ""),
-            )
-            defs.flags.append(flag)
+            ))
 
     # Interrupts
     intrs_elem = elem.find("Interrupts")
@@ -329,71 +324,63 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                     condition=act_elem.get("condition", ""),
                     action=act_elem.get("action", ""),
                 ))
-            event_names_str = intr_elem.get("event_names", "")
-            event_names = [e.strip() for e in event_names_str.split(",") if e.strip()] if event_names_str else []
-            intr = InterruptHandlerDef(
-                name=intr_elem.get("name", ""),
-                description=intr_elem.get("description", ""),
-                event_names=event_names,
+            es = intr_elem.get("event_names", "")
+            defs.interrupts.append(InterruptHandlerDef(
+                name=intr_elem.get("name", ""), description=intr_elem.get("description", ""),
+                event_names=[e.strip() for e in es.split(",") if e.strip()] if es else [],
                 is_timer=intr_elem.get("is_timer", "false").lower() == "true",
-                actions=actions,
-                title=intr_elem.get("title", ""),
-            )
-            defs.interrupts.append(intr)
+                actions=actions, title=intr_elem.get("title", ""),
+            ))
 
     # DevicePlaceholders
     ph_elem = elem.find("DevicePlaceholders")
     if ph_elem is not None:
         for ph in ph_elem:
             defs.placeholders.append(DevicePlaceholderDef(
-                name=ph.get("name", ""),
-                description=ph.get("description", ""),
+                name=ph.get("name", ""), description=ph.get("description", ""),
                 title=ph.get("title", ""),
             ))
 
-    # TimerBaseÔºà„É°„Ç§„É≥„Çø„Ç§„ÉûÔºâ
+    # TimerBaseÅiÉÅÉCÉìÉ^ÉCÉ}Åj
     timer_elem = elem.find("TimerBase")
     if timer_elem is not None:
-        timer_elem_inner = timer_elem.find("Timer")
-        if timer_elem_inner is not None:
-            defs.timer_base = _timer_from_element(timer_elem_inner)
+        inner = timer_elem.find("Timer")
+        if inner is not None:
+            defs.timer_base = _timer_from_element(inner)
 
-    # ExtraTimersÔºàËøΩÂä†„Çø„Ç§„ÉûÔºâ
+    # ExtraTimersÅií«â¡É^ÉCÉ}Åj
     extras_elem = elem.find("ExtraTimers")
     if extras_elem is not None:
-        for timer_elem_inner in extras_elem.findall("Timer"):
-            defs.extra_timers.append(_timer_from_element(timer_elem_inner))
+        for inner in extras_elem.findall("Timer"):
+            defs.extra_timers.append(_timer_from_element(inner))
 
     # EventQueues
     queues_elem = elem.find("EventQueues")
     if queues_elem is not None:
         for q_elem in queues_elem:
-            event_ids_str = q_elem.get("event_ids", "")
-            event_ids = [e.strip() for e in event_ids_str.split(",") if e.strip()] if event_ids_str else []
+            es = q_elem.get("event_ids", "")
             try:
                 size = int(q_elem.get("size", "8"))
             except ValueError:
                 size = 8
             defs.event_queues.append(EventQueueDef(
-                name=q_elem.get("name", ""),
-                size=size,
+                name=q_elem.get("name", ""), size=size,
                 element_type=q_elem.get("element_type", "uint8_t"),
-                event_ids=event_ids,
+                event_ids=[e.strip() for e in es.split(",") if e.strip()] if es else [],
                 priority_enabled=q_elem.get("priority_enabled", "false").lower() == "true",
                 interrupt_safe=q_elem.get("interrupt_safe", "true").lower() == "true",
                 rtos_enabled=q_elem.get("rtos_enabled", "false").lower() == "true",
-                description=q_elem.get("description", ""),
-                title=q_elem.get("title", ""),
+                description=q_elem.get("description", ""), title=q_elem.get("title", ""),
             ))
 
-    # „Çø„Ç§„ÉûÂ§âÊï∞„Çí„Ç∞„É≠„Éº„Éê„É´Â§âÊï∞„Å®„Åó„Å¶Ëá™ÂãïÁôªÈå≤
+    # É^ÉCÉ}ïœêîÇÉOÉçÅ[ÉoÉãïœêîÇ∆ÇµÇƒé©ìÆìoò^
     defs.add_timer_variables()
 
     return defs
 
 
 # ----------------------------------------------------------------------
-# Âçò‰∏Ä StateMachine „ÅÆ„Éï„Ç°„Ç§„É´‰øùÂ≠ò/Ë™≠„ÅøËæº„ÅøÔºà‰∫íÊèõÁî®Ôºâ
+# íPàÍ StateMachine ÇÃÉtÉ@ÉCÉãï€ë∂/ì«Ç›çûÇ›Åiå›ä∑ópÅj
 # ----------------------------------------------------------------------
 def state_machine_to_xml(sm: StateMachine, filepath: str) -> None:
     root = state_machine_to_element(sm)
@@ -409,21 +396,16 @@ def state_machine_from_xml(filepath: str) -> StateMachine:
 
 
 # ----------------------------------------------------------------------
-# „Éó„É≠„Ç∏„Çß„ÇØ„ÉàÂÖ®‰ΩìÔºàË§áÊï∞„Çø„ÉñÔºã„Ç∞„É≠„Éº„Éê„É´ÂÆöÁæ©Ôºâ„ÅÆ‰øùÂ≠ò/Ë™≠„ÅøËæº„Åø
+# ÉvÉçÉWÉFÉNÉgëSëÃÅiï°êîÉ^ÉuÅ{ÉOÉçÅ[ÉoÉãíËã`ÅjÇÃï€ë∂/ì«Ç›çûÇ›
 # ----------------------------------------------------------------------
-def project_to_xml(
-    tabs: List[Tuple[str, StateMachine]],
-    global_defs: GlobalDefinitions,
-    filepath: str
-) -> None:
+def project_to_xml(tabs: List[Tuple[str, StateMachine]], global_defs: GlobalDefinitions, filepath: str) -> None:
     root = ET.Element("Project")
     root.append(global_defs_to_element(global_defs))
 
     for name, sm in tabs:
         tab_elem = ET.SubElement(root, "Tab")
         tab_elem.set("name", name)
-        sm_elem = state_machine_to_element(sm)
-        tab_elem.append(sm_elem)
+        tab_elem.append(state_machine_to_element(sm))
 
     tree = ET.ElementTree(root)
     ET.indent(tree, space="    ")
@@ -435,19 +417,13 @@ def project_from_xml(filepath: str) -> Tuple[List[Tuple[str, StateMachine]], Glo
     root = tree.getroot()
 
     gd_elem = root.find("GlobalDefinitions")
-    if gd_elem is not None:
-        global_defs = global_defs_from_element(gd_elem)
-    else:
-        global_defs = GlobalDefinitions()
+    global_defs = global_defs_from_element(gd_elem) if gd_elem is not None else GlobalDefinitions()
 
     tabs = []
     for tab_elem in root.findall("Tab"):
         name = tab_elem.get("name", "Untitled")
         sm_elem = tab_elem.find("StateMachine")
-        if sm_elem is not None:
-            sm = state_machine_from_element(sm_elem)
-        else:
-            sm = StateMachine()
+        sm = state_machine_from_element(sm_elem) if sm_elem is not None else StateMachine()
         tabs.append((name, sm))
 
     return tabs, global_defs

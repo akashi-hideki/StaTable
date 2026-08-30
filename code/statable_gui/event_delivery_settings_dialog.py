@@ -1,17 +1,15 @@
-"""イベント配送設定ダイアログ（タイトル表示対応版）"""
-
-from typing import Optional
+"""イベント配送設定ダイアログ"""
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QTableWidget, QTableWidgetItem,
     QLabel, QHeaderView, QComboBox, QDialogButtonBox,
-    QCheckBox, QAbstractItemView, QWidget
+    QCheckBox, QAbstractItemView
 )
 from PySide6.QtGui import QFont, QMouseEvent
 
 from statable.state_machine import StateMachine
-from statable.model import Event, EventDeliveryType
+from statable.model import EventDeliveryType
 from statable.global_defs import GlobalDefinitions
 from .logger import StaTableLogger
 
@@ -28,23 +26,12 @@ class DoubleClickTable(QTableWidget):
         pos = event.position().toPoint()
         item = self.itemAt(pos)
         if item:
-            row = item.row()
-            StaTableLogger.debug(f"DoubleClickTable.mouseDoubleClickEvent: row={row}")
-            self.cellDoubleClicked.emit(row, item.column())
-        else:
-            StaTableLogger.debug("DoubleClickTable.mouseDoubleClickEvent: no item")
+            self.cellDoubleClicked.emit(item.row(), item.column())
 
 
 class EventDeliverySettingsDialog(QDialog):
     """イベント配送タイプ（DIRECT/QUEUE）を設定し、ISR使用状況に応じてDOUBLE自動変換を表示するダイアログ"""
-
-    def __init__(
-        self,
-        sm: StateMachine,
-        global_defs: GlobalDefinitions,
-        auto_convert: bool = True,
-        parent=None
-    ):
+    def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions, auto_convert: bool = True, parent=None):
         super().__init__(parent)
         self.sm = sm
         self.global_defs = global_defs
@@ -89,8 +76,7 @@ class EventDeliverySettingsDialog(QDialog):
     def _build_table(self):
         """テーブルを構築する"""
         self.table.setRowCount(0)
-        events = list(self.sm.events.values())
-        for event in events:
+        for event in self.sm.events.values():
             row = self.table.rowCount()
             self.table.insertRow(row)
 
@@ -131,9 +117,7 @@ class EventDeliverySettingsDialog(QDialog):
             converted_item.setFlags(converted_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, 5, converted_item)
 
-            StaTableLogger.debug(
-                f"  Event: '{event.name}' -> ISR used: {isr_used}"
-            )
+            StaTableLogger.debug(f"  Event: '{event.name}' -> ISR used: {isr_used}")
 
         self._update_converted_column()
 
