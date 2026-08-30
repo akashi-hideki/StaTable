@@ -72,8 +72,7 @@ class TransitionGenerator:
         }
         
         self.table_templates = {
-            'transition_cell_comment': '''/* 遷移セル構造体 */
-/* 状態遷移テーブルの1セルを表す */''',
+            'transition_cell_comment': '/* 遷移セル構造体 */\n/* 状態遷移テーブルの1セルを表す */',
             'transition_cell_start': 'typedef struct {',
             'transition_cell_member_next_state': '    STATE_t next_state;',
             'transition_cell_member_condition': '    bool (*condition)(SystemContext_t *ctx);',
@@ -82,11 +81,6 @@ class TransitionGenerator:
             'transition_table_comment': '/* 状態遷移テーブル */',
             'transition_table_start': 'static const TransitionCell_t transition_matrix[STATE_MAX][EVENT_MAX] = {',
             'transition_table_end': '};',
-        }
-        
-        self.cell_templates = {
-            'transition': '        { {target_state}, {condition_name}, {action_name} }, /* {comment} */',
-            'empty': '        { {current_state}, NULL, NULL }, /* No transition */',
         }
         
         self.process_steps = [
@@ -171,154 +165,132 @@ class TransitionGenerator:
             'row_end': self._execute_row_end_step,
         }
     
-    def _log_debug(self, message: str, level: str = 'debug'):
+    def _log_debug(self, message, level='debug'):
         log_func = getattr(logger, level, logger.debug)
         log_func(message)
     
-    def _build_context(self, state_machine: StateMachine) -> Dict[str, Any]:
+    def _build_context(self, state_machine):
         return {
             'func_name': self.templates.FUNCTION_NAMES['state_machine_process'],
             'log_debug': self.strings['log_debug'],
             'log_error': self.strings['log_error'],
             'log_info': self.strings['log_info'],
             'state_machine': state_machine,
-            'states': list(state_machine.states.values()),  # 辞書→リスト
-            'events': list(state_machine.events.values()),  # 辞書→リスト
+            'states': list(state_machine.states.values()),
+            'events': list(state_machine.events.values()),
         }
     
-    def _format_value(self, value: str, context: Dict[str, Any]) -> str:
-        if isinstance(value, str) and value.startswith('{') and value.endswith('}'):
-            key = value[1:-1]
-            return context.get(key, value)
-        return value
+    def _replace_placeholders(self, template, params):
+        result = template
+        for key, value in params.items():
+            result = result.replace('{' + key + '}', str(value))
+        return result
     
-    def _format_params(self, params: Dict[str, str], context: Dict[str, Any]) -> Dict[str, str]:
-        return {key: self._format_value(value, context) for key, value in params.items()}
-    
-    def _execute_template_step(self, step: Dict, context: Dict[str, Any]) -> List[str]:
+    def _execute_template_step(self, step, context):
         template_key = step.get('key', '')
         templates = step.get('templates', self.process_templates)
         template = templates.get(template_key, '')
-        
         if not template:
             return []
         
         format_params = step.get('format', {})
-        resolved_params = self._format_params(format_params, context)
+        resolved_params = {}
+        for key, value in format_params.items():
+            if isinstance(value, str) and value.startswith('{') and value.endswith('}'):
+                context_key = value[1:-1]
+                resolved_params[key] = context.get(context_key, value)
+            else:
+                resolved_params[key] = value
         
-        try:
-            formatted = template.format(**resolved_params)
-        except (KeyError, IndexError):
-            formatted = template
-        
+        formatted = self._replace_placeholders(template, resolved_params)
         return [formatted]
     
-    def _execute_blank_step(self, step: Dict, context: Dict[str, Any]) -> List[str]:
+    def _execute_blank_step(self, step, context):
         return [""]
     
-    def _execute_state_comment_step(self, step: Dict, context: Dict[str, Any]) -> List[str]:
+    def _execute_state_comment_step(self, step, context):
         state = context.get('current_state')
         if state:
-            state_name = self.naming.create_enum_value("STATE", state.name)
+            state_name = self.naming.create_enum_value("STATE", getattr(state, 'name', 'unknown'))
             return [f"    /* {state_name} */"]
         return []
     
-    def _execute_row_start_step(self, step: Dict, context: Dict[str, Any]) -> List[str]:
+    def _execute_row_start_step(self, step, context):
         return ["    {"]
     
-    def _execute_loop_events_step(self, step: Dict, context: Dict[str, Any]) -> List[str]:
+    def _execute_loop_events_step(self, step, context):
         state = context.get('current_state')
         events = context.get('events', [])
         state_machine = context.get('state_machine')
         
         results = []
+        state_name = getattr(state, 'name', '')
+        
         for event in events:
-            # 修正: state.name と event.name を文字列として渡す
-            transitions = state_machine.get_transitions_for_cell(state.name, event.name)
+            event_name = getattr(event, 'name', '')
+            transitions = state_machine.get_transitions_for_cell(state_name, event_name)
             
             if transitions and len(transitions) > 0:
                 transition = transitions[0]
-                target_state = self.naming.create_enum_value("STATE", transition.target)
+                target_state = self.naming.create_enum_value("STATE", getattr(transition, 'target', ''))
                 condition_name = self._get_condition_function_name(transition)
                 action_name = self._get_action_function_name(transition)
-                comment = f"{state.name} -> {transition.target} (event: {event.name})"
-                
-                cell = self.cell_templates['transition'].format(
-                    target_state=target_state,
-                    condition_name=condition_name,
-                    action_name=action_name,
-                    comment=comment,
-                )
+                comment = f"{state_name} -> {getattr(transition, 'target', '')} (event: {event_name})"
+                results.append(f"        {{ {target_state}, {condition_name}, {action_name} }}, /* {comment} */")
             else:
-                current_state = self.naming.create_enum_value("STATE", state.name)
-                cell = self.cell_templates['empty'].format(current_state=current_state)
-            
-            results.append(cell)
+                current_state = self.naming.create_enum_value("STATE", state_name)
+                results.append(f"        {{ {current_state}, NULL, NULL }}, /* No transition */")
         
         return results
     
-    def _execute_row_end_step(self, step: Dict, context: Dict[str, Any]) -> List[str]:
+    def _execute_row_end_step(self, step, context):
         return ["    },"]
     
-    def _generate_array_table(self, state_machine: StateMachine) -> str:
+    def _generate_array_table(self, state_machine):
         self._log_debug("Generating array table (data-driven)")
-        
         lines = []
         context = self._build_context(state_machine)
         
         for step in self.table_steps['struct_header']:
-            results = self._execute_template_step(step, context)
-            lines.extend(results)
-        
+            lines.extend(self._execute_template_step(step, context))
         for step in self.table_steps['table_header']:
-            results = self._execute_template_step(step, context)
-            lines.extend(results)
-        
-        # 修正: states 辞書の values() を使用
+            lines.extend(self._execute_template_step(step, context))
         for state in state_machine.states.values():
             context['current_state'] = state
-            
             for step in self.table_steps['state_row']:
                 executor = self.step_executors.get(step['action'])
                 if executor:
-                    results = executor(step, context)
-                    lines.extend(results)
-        
+                    lines.extend(executor(step, context))
         for step in self.table_steps['table_footer']:
-            results = self._execute_template_step(step, context)
-            lines.extend(results)
+            lines.extend(self._execute_template_step(step, context))
         
         return '\n'.join(lines)
     
-    def _generate_switch_case(self, state_machine: StateMachine) -> str:
+    def _generate_switch_case(self, state_machine):
         return "/* switch-case方式は関数内で直接生成 */"
     
-    def _generate_dictionary_table(self, state_machine: StateMachine) -> str:
+    def _generate_dictionary_table(self, state_machine):
         return "/* 辞書方式はハッシュテーブルを使用（C言語では非推奨） */"
     
-    def _generate_table_driven_process(self, state_machine: StateMachine) -> str:
+    def _generate_table_driven_process(self, state_machine):
         self._log_debug("Generating table-driven process (data-driven)")
-        
         lines = []
         context = self._build_context(state_machine)
         
         for step in self.process_steps:
             executor = self.step_executors.get(step['action'])
             if executor:
-                results = executor(step, context)
-                lines.extend(results)
+                lines.extend(executor(step, context))
         
         return '\n'.join(lines)
     
-    def _generate_switch_case_process(self, state_machine: StateMachine) -> str:
+    def _generate_switch_case_process(self, state_machine):
         self._log_debug("Generating switch-case process")
-        
         lines = []
         context = self._build_context(state_machine)
+        func_name = context['func_name']
         
         lines.append(self.process_templates['func_comment'])
-        
-        func_name = context['func_name']
         lines.append(f"STATE_t {func_name}(")
         lines.append("    STATE_t current_state,")
         lines.append("    EVENT_t event,")
@@ -334,34 +306,34 @@ class TransitionGenerator:
         lines.append("")
         lines.append("    switch (current_state) {")
         
-        # 修正: states 辞書の values() を使用
         for state in state_machine.states.values():
-            state_name = self.naming.create_enum_value("STATE", state.name)
+            state_name = self.naming.create_enum_value("STATE", getattr(state, 'name', ''))
             lines.append(f"        case {state_name}:")
             lines.append("            switch (event) {")
             
             for event in state_machine.events.values():
-                event_name = self.naming.create_enum_value("EVENT", event.name)
-                # 修正: state.name と event.name を文字列として渡す
-                transitions = state_machine.get_transitions_for_cell(state.name, event.name)
+                event_name = self.naming.create_enum_value("EVENT", getattr(event, 'name', ''))
+                transitions = state_machine.get_transitions_for_cell(
+                    getattr(state, 'name', ''), getattr(event, 'name', '')
+                )
                 
                 lines.append(f"                case {event_name}:")
                 
                 if transitions and len(transitions) > 0:
                     transition = transitions[0]
-                    target_state = self.naming.create_enum_value("STATE", transition.target)
+                    target_state = self.naming.create_enum_value("STATE", getattr(transition, 'target', ''))
                     
-                    if transition.condition:
+                    if getattr(transition, 'condition', ''):
                         condition_func = self._get_condition_function_name(transition)
                         lines.append(f"                    if ({condition_func}(ctx)) {{")
-                        if transition.action:
+                        if getattr(transition, 'action', ''):
                             action_func = self._get_action_function_name(transition)
                             lines.append(f"                        {action_func}(ctx);")
                         lines.append(f"                        next_state = {target_state};")
                         lines.append(f"                        {context['log_info']}(\"Transition: %d -> %d\", current_state, next_state);")
                         lines.append("                    }")
                     else:
-                        if transition.action:
+                        if getattr(transition, 'action', ''):
                             action_func = self._get_action_function_name(transition)
                             lines.append(f"                    {action_func}(ctx);")
                         lines.append(f"                    next_state = {target_state};")
@@ -385,33 +357,31 @@ class TransitionGenerator:
         
         return '\n'.join(lines)
     
-    def _get_condition_function_name(self, transition: Transition) -> str:
-        if transition.condition:
+    def _get_condition_function_name(self, transition):
+        if getattr(transition, 'condition', ''):
             prefix = self.templates.FUNCTION_NAMES['condition_prefix']
             return f"{prefix}_{self.naming.to_pascal_case(transition.condition)}"
         return "NULL"
     
-    def _get_action_function_name(self, transition: Transition) -> str:
-        if transition.action:
+    def _get_action_function_name(self, transition):
+        if getattr(transition, 'action', ''):
             prefix = self.templates.FUNCTION_NAMES['action_prefix']
             return f"{prefix}_{self.naming.to_pascal_case(transition.action)}"
         return "NULL"
     
-    def generate_transition_table(self, table_type: str, state_machine: StateMachine) -> str:
+    def generate_transition_table(self, table_type, state_machine):
         generator = self.table_generators.get(table_type)
         if generator:
             return generator(state_machine)
         raise ValueError(f"Unknown table type: {table_type}")
     
-    def generate_process_function(self, process_type: str, state_machine: StateMachine) -> str:
+    def generate_process_function(self, process_type, state_machine):
         generator = self.process_generators.get(process_type)
         if generator:
             return generator(state_machine)
         raise ValueError(f"Unknown process type: {process_type}")
     
-    def generate_all_transitions(self, state_machine: StateMachine, 
-                                table_type: str = 'array',
-                                process_type: str = 'table_driven') -> str:
+    def generate_all_transitions(self, state_machine, table_type='array', process_type='table_driven'):
         lines = []
         lines.append(self.generate_transition_table(table_type, state_machine))
         lines.append("")

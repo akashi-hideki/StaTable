@@ -53,7 +53,6 @@ class CCodeGenerator:
         
         self.generation_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # ===== ファイル生成設定辞書 =====
         self.file_generators: Dict[str, Dict] = {
             'statable_types.h': {
                 'method': self._generate_types_header,
@@ -87,115 +86,71 @@ class CCodeGenerator:
             },
         }
         
-        # ===== インクルードファイル定義辞書 =====
         self.include_headers: Dict[str, List[str]] = {
-            'types': [
-                '#include <stdint.h>',
-                '#include <stdbool.h>',
-                '#include <string.h>',
-            ],
-            'transitions_h': [
-                '#include "statable_types.h"',
-            ],
-            'transitions_c': [
-                '#include "statable_transitions.h"',
-                '#include "statable_role_functions.h"',
-            ],
-            'role_functions_h': [
-                '#include "statable_types.h"',
-            ],
-            'role_functions_c': [
-                '#include "statable_role_functions.h"',
-            ],
-            'init_c': [
-                '#include "statable_types.h"',
-            ],
+            'types': ['#include <stdint.h>', '#include <stdbool.h>', '#include <string.h>'],
+            'transitions_h': ['#include "statable_types.h"'],
+            'transitions_c': ['#include "statable_transitions.h"', '#include "statable_role_functions.h"'],
+            'role_functions_h': ['#include "statable_types.h"'],
+            'role_functions_c': ['#include "statable_role_functions.h"'],
+            'init_c': ['#include "statable_types.h"'],
         }
     
-    def _log_debug(self, message: str, level: str = 'debug'):
-        """デバッグログ出力"""
+    def _log_debug(self, message, level='debug'):
         log_func = getattr(logger, level, logger.debug)
         log_func(message)
     
-    # ===== ヘルパーメソッド =====
-    def _get_states_list(self, state_machine: StateMachine) -> List:
-        """状態リストを取得（辞書→リスト）"""
+    def _get_states_list(self, state_machine):
         return list(state_machine.states.values())
     
-    def _get_events_list(self, state_machine: StateMachine) -> List:
-        """イベントリストを取得（辞書→リスト）"""
+    def _get_events_list(self, state_machine):
         return list(state_machine.events.values())
     
-    def _get_role_functions_list(self, state_machine: StateMachine) -> List:
-        """ロール関数リストを取得（辞書→リスト）"""
+    def _get_role_functions_list(self, state_machine):
         return list(state_machine.role_functions.values())
     
-    # ===== セクションヘッダ生成 =====
-    def _generate_section_header(self, section_key: str) -> str:
-        """セクションヘッダ生成"""
+    def _generate_section_header(self, section_key):
         line = self.strings['section_line']
         title = self.templates.SECTION_HEADERS.get(section_key, '')
-        return self.formats['section_header'].format(line=line, title=title)
+        return f"{line}\n *  {title}\n{line}"
     
-    # ===== ファイルヘッダ生成 =====
-    def _generate_file_header(self, filename: str, description: str = "") -> str:
-        """ファイルヘッダ生成"""
-        return self.formats['file_header'].format(
-            filename=filename,
-            description=description,
-            auto_generated=self.strings['auto_generated'],
-            no_edit=self.strings['no_edit'],
-            edit_in_statable=self.strings['edit_in_statable'],
-            date=self.generation_date,
-        )
+    def _generate_file_header(self, filename, description=""):
+        return (f"/**\n"
+                f" * @file    {filename}\n"
+                f" * @brief   {description}\n"
+                f" *\n"
+                f" * @note    {self.strings['auto_generated']}\n"
+                f" *          - {self.strings['no_edit']}\n"
+                f" *          - {self.strings['edit_in_statable']}\n"
+                f" *\n"
+                f" * @date    {self.generation_date}\n"
+                f" */")
     
-    # ===== インクルードガード生成 =====
-    def _generate_include_guard_start(self, guard_name: str) -> str:
-        """インクルードガード開始生成"""
-        return self.formats['include_guard_start'].format(guard_macro=guard_name)
+    def _generate_include_guard_start(self, guard_name):
+        return f"#ifndef {guard_name}\n#define {guard_name}\n"
     
-    def _generate_include_guard_end(self, guard_name: str) -> str:
-        """インクルードガード終了生成"""
-        return self.formats['include_guard_end'].format(guard_macro=guard_name)
+    def _generate_include_guard_end(self, guard_name):
+        return f"#endif /* {guard_name} */"
     
-    # ===== インクルードセクション生成 =====
-    def _generate_include_section(self, include_key: str) -> str:
-        """インクルードセクション生成"""
+    def _generate_include_section(self, include_key):
         lines = []
         lines.append(self._generate_section_header('include'))
         lines.append("")
-        
-        headers = self.include_headers.get(include_key, [])
-        for header in headers:
+        for header in self.include_headers.get(include_key, []):
             lines.append(header)
-        
         lines.append("")
         return '\n'.join(lines)
     
-    # ===== 型定義ヘッダ生成 =====
-    def _generate_types_header(self, state_machine: StateMachine, 
-                              global_defs: GlobalDefinitions) -> str:
-        """型定義ヘッダ生成"""
+    def _generate_types_header(self, state_machine, global_defs):
         self._log_debug("Generating types header")
-        
         lines = []
         file_config = self.file_generators['statable_types.h']
         
-        # ファイルヘッダ
         lines.append(self._generate_file_header('statable_types.h', file_config['description']))
         lines.append("")
-        
-        # インクルードガード
         lines.append(self._generate_include_guard_start(file_config['guard_name']))
-        
-        # インクルード
         lines.append(self._generate_include_section('types'))
-        
-        # 型定義
         lines.append(self._generate_section_header('type_defs'))
         lines.append("")
-        
-        # 列挙型（辞書→リスト変換）
         lines.append(self.enum_gen.generate_all_enums(
             self._get_states_list(state_machine),
             self._get_events_list(state_machine),
@@ -203,7 +158,6 @@ class CCodeGenerator:
         ))
         lines.append("")
         
-        # ユーザー定義型
         if global_defs.custom_types:
             lines.append(self._generate_section_header('custom_types'))
             lines.append("")
@@ -211,7 +165,6 @@ class CCodeGenerator:
                 lines.append(self.struct_gen.generate_struct('custom_type', custom_type))
                 lines.append("")
         
-        # システム構造体
         lines.append(self._generate_section_header('system_structs'))
         lines.append("")
         lines.append(self.struct_gen.generate_struct('system_data', global_defs))
@@ -220,24 +173,16 @@ class CCodeGenerator:
         lines.append("")
         lines.append(self.struct_gen.generate_struct('system_context', global_defs))
         lines.append("")
-        
-        # 変数アクセスマクロ
         lines.append(self._generate_section_header('var_macros'))
         lines.append("")
         lines.append(self.variable_gen.generate_all_macros(global_defs))
         lines.append("")
-        
-        # インクルードガード終了
         lines.append(self._generate_include_guard_end(file_config['guard_name']))
         
         return '\n'.join(lines)
     
-    # ===== 遷移関数ヘッダ生成 =====
-    def _generate_transitions_header(self, state_machine: StateMachine,
-                                    global_defs: GlobalDefinitions) -> str:
-        """状態遷移関数ヘッダ生成"""
+    def _generate_transitions_header(self, state_machine, global_defs):
         self._log_debug("Generating transitions header")
-        
         lines = []
         file_config = self.file_generators['statable_transitions.h']
         
@@ -264,12 +209,8 @@ class CCodeGenerator:
         
         return '\n'.join(lines)
     
-    # ===== 遷移関数ソース生成 =====
-    def _generate_transitions_source(self, state_machine: StateMachine,
-                                    global_defs: GlobalDefinitions) -> str:
-        """状態遷移関数ソース生成"""
+    def _generate_transitions_source(self, state_machine, global_defs):
         self._log_debug("Generating transitions source")
-        
         lines = []
         file_config = self.file_generators['statable_transitions.c']
         
@@ -286,12 +227,8 @@ class CCodeGenerator:
         
         return '\n'.join(lines)
     
-    # ===== ロール関数ヘッダ生成 =====
-    def _generate_role_functions_header(self, state_machine: StateMachine,
-                                       global_defs: GlobalDefinitions) -> str:
-        """ロール関数ヘッダ生成"""
+    def _generate_role_functions_header(self, state_machine, global_defs):
         self._log_debug("Generating role functions header")
-        
         lines = []
         file_config = self.file_generators['statable_role_functions.h']
         
@@ -301,7 +238,6 @@ class CCodeGenerator:
         lines.append(self._generate_include_section('role_functions_h'))
         lines.append(self._generate_section_header('role_functions'))
         lines.append("")
-        # 修正: 辞書→リスト変換
         lines.append(self.role_func_gen.generate_all_declarations(
             self._get_role_functions_list(state_machine)
         ))
@@ -310,12 +246,8 @@ class CCodeGenerator:
         
         return '\n'.join(lines)
     
-    # ===== ロール関数ソース生成 =====
-    def _generate_role_functions_source(self, state_machine: StateMachine,
-                                       global_defs: GlobalDefinitions) -> str:
-        """ロール関数ソース生成"""
+    def _generate_role_functions_source(self, state_machine, global_defs):
         self._log_debug("Generating role functions source")
-        
         lines = []
         file_config = self.file_generators['statable_role_functions.c']
         
@@ -324,19 +256,14 @@ class CCodeGenerator:
         lines.append(self._generate_include_section('role_functions_c'))
         lines.append(self._generate_section_header('role_impl'))
         lines.append("")
-        # 修正: 辞書→リスト変換
         lines.append(self.role_func_gen.generate_all_implementations(
             self._get_role_functions_list(state_machine)
         ))
         
         return '\n'.join(lines)
     
-    # ===== 初期化ソース生成 =====
-    def _generate_init_source(self, state_machine: StateMachine,
-                             global_defs: GlobalDefinitions) -> str:
-        """初期化ソース生成"""
+    def _generate_init_source(self, state_machine, global_defs):
         self._log_debug("Generating init source")
-        
         lines = []
         file_config = self.file_generators['statable_init.c']
         
@@ -349,44 +276,30 @@ class CCodeGenerator:
         
         return '\n'.join(lines)
     
-    # ===== 公開メソッド =====
-    def generate_all(self, state_machine: StateMachine, 
-                    global_defs: GlobalDefinitions) -> Dict[str, str]:
-        """全コード生成（辞書駆動）"""
+    def generate_all(self, state_machine, global_defs):
         self._log_debug("Generating all code")
-        
         generated_files = {}
-        
         for filename, config in self.file_generators.items():
             self._log_debug(f"Generating: {filename}")
             method = config['method']
             generated_files[filename] = method(state_machine, global_defs)
-        
         return generated_files
     
-    def generate_file(self, filename: str, state_machine: StateMachine,
-                     global_defs: GlobalDefinitions) -> str:
-        """特定ファイルの生成"""
+    def generate_file(self, filename, state_machine, global_defs):
         self._log_debug(f"Generating file: {filename}")
-        
         if filename in self.file_generators:
             method = self.file_generators[filename]['method']
             return method(state_machine, global_defs)
         raise ValueError(f"Unknown file: {filename}")
     
-    def save_generated_code(self, generated_files: Dict[str, str], 
-                           output_dir: str) -> List[str]:
-        """生成コードの保存"""
+    def save_generated_code(self, generated_files, output_dir):
         self._log_debug(f"Saving generated code to: {output_dir}")
-        
         saved_files = []
         os.makedirs(output_dir, exist_ok=True)
-        
         for filename, content in generated_files.items():
             filepath = os.path.join(output_dir, filename)
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
             saved_files.append(filepath)
             self._log_debug(f"Saved: {filepath}")
-        
         return saved_files

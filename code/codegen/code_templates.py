@@ -1,13 +1,12 @@
 # codegen/code_templates.py
 """
 コード生成用テンプレート定義
-すべての固定文字列とデータを一元管理する
+すべての固定文字列を一元管理する
 """
 
 class CodeTemplates:
     """コード生成用テンプレート辞書"""
     
-    # ===== 基本文字列定義 =====
     STRINGS = {
         'section_line': '/*==============================================================*/',
         'indent_1': '    ',
@@ -43,7 +42,6 @@ class CodeTemplates:
         'log_error': 'LOG_ERROR',
     }
     
-    # ===== セクションヘッダ定義 =====
     SECTION_HEADERS = {
         'include': 'インクルードファイル',
         'type_defs': '型定義',
@@ -58,7 +56,6 @@ class CodeTemplates:
         'var_macros': '変数アクセスマクロ',
     }
     
-    # ===== 構造体コメント定義 =====
     STRUCT_COMMENTS = {
         'system_data': {'title': 'グローバル変数構造体', 'description': 'システム全体で共有する変数を管理'},
         'event_flags': {'title': 'イベントフラグ構造体', 'description': 'イベント発生を示すフラグを管理'},
@@ -66,14 +63,12 @@ class CodeTemplates:
         'transition_cell': {'title': '遷移セル構造体', 'description': '状態遷移テーブルの1セルを表す'},
     }
     
-    # ===== 列挙型コメント定義 =====
     ENUM_COMMENTS = {
         'state': {'title': '状態定義', 'description': '状態遷移の状態を表す列挙型'},
         'event': {'title': 'イベント定義', 'description': '状態遷移を発生させるイベントの列挙型'},
         'flag': {'title': 'イベントフラグ定義', 'description': 'イベントフラグの識別子を表す列挙型'},
     }
     
-    # ===== 関数コメント定義 =====
     FUNCTION_COMMENTS = {
         'state_machine_process': {
             'brief': '状態遷移処理',
@@ -91,7 +86,6 @@ class CodeTemplates:
         },
     }
     
-    # ===== 型名定義 =====
     TYPE_NAMES = {
         'state': 'STATE_t',
         'event': 'EVENT_t',
@@ -103,7 +97,6 @@ class CodeTemplates:
         'transition_table': 'transition_matrix',
     }
     
-    # ===== 関数名定義 =====
     FUNCTION_NAMES = {
         'state_machine_process': 'StateMachine_Process',
         'system_context_init': 'SystemContext_Init',
@@ -112,14 +105,12 @@ class CodeTemplates:
         'condition_prefix': 'Condition',
     }
     
-    # ===== マクロ名定義 =====
     MACRO_NAMES = {
         'data_prefix': 'DATA_',
         'flag_prefix': 'FLAG_',
         'max_suffix': '_MAX',
     }
     
-    # ===== フォーマットテンプレート =====
     FORMATS = {
         'section_header': '{line}\n *  {title}\n{line}',
         'file_header': '''/**
@@ -134,18 +125,13 @@ class CodeTemplates:
  */''',
         'include_guard_start': '#ifndef {guard_macro}\n#define {guard_macro}\n',
         'include_guard_end': '#endif /* {guard_macro} */',
-        'struct_start': 'typedef struct {{',
-        'struct_end': '}} {type_name};',
-        'enum_start': 'typedef enum {{',
-        'enum_end': '}} {type_name};',
+        'struct_start': 'typedef struct {',
+        'struct_end': '} {type_name};',
+        'enum_start': 'typedef enum {',
+        'enum_end': '} {type_name};',
         'enum_value': '{name} = {value},',
         'enum_value_with_comment': '{name} = {value},    /* {comment} */',
         'enum_max': '{name}           /* {comment} */',
-        'function_comment': '''/**
- * @brief  {brief}
- * @param  {param_name}  {param_desc}
- * @return {return_desc}
- */''',
         'data_macro': '#define DATA_{var_name}(ctx)    ((ctx)->data.{var_name})',
         'flag_macro': '#define FLAG_{flag_name}(ctx)   ((ctx)->flags.{flag_name})',
         'group_separator': '/* === {group_name} === */',
@@ -156,85 +142,6 @@ class CodeTemplates:
         'title_comment': '{indent}/* Title: {title} */',
     }
     
-    # ===== 生成パターン定義（データ駆動用） =====
-    # 各生成処理のステップを定義
-    GENERATION_PATTERNS = {
-        # 構造体生成パターン
-        'struct_custom_type': {
-            'steps': [
-                {'type': 'comment', 'source': 'struct_def'},
-                {'type': 'line', 'template': 'struct_start'},
-                {'type': 'loop', 'source': 'members', 'item_type': 'member'},
-                {'type': 'line', 'template': 'struct_end', 'params': {'type_name': '{generated}'}},
-            ]
-        },
-        'struct_system_data': {
-            'steps': [
-                {'type': 'comment', 'key': 'system_data'},
-                {'type': 'line', 'template': 'struct_start'},
-                {'type': 'loop', 'source': 'variables', 'item_type': 'variable'},
-                {'type': 'line', 'template': 'struct_end', 'params': {'type_name': 'SystemData_t'}},
-            ]
-        },
-        'struct_event_flags': {
-            'steps': [
-                {'type': 'comment', 'key': 'event_flags'},
-                {'type': 'line', 'template': 'struct_start'},
-                {'type': 'loop', 'source': 'flags', 'item_type': 'flag'},
-                {'type': 'line', 'template': 'struct_end', 'params': {'type_name': 'EventFlags_t'}},
-            ]
-        },
-        'struct_system_context': {
-            'steps': [
-                {'type': 'comment', 'key': 'system_context'},
-                {'type': 'line', 'template': 'struct_start'},
-                {'type': 'line', 'template': 'member_normal', 'params': {'indent': '{indent_1}', 'type': 'SystemData_t', 'name': 'data'}},
-                {'type': 'line', 'template': 'member_normal', 'params': {'indent': '{indent_1}', 'type': 'EventFlags_t', 'name': 'flags'}},
-                {'type': 'line', 'template': 'struct_end', 'params': {'type_name': 'SystemContext_t'}},
-            ]
-        },
-        
-        # 列挙型生成パターン
-        'enum_state': {
-            'steps': [
-                {'type': 'enum_comment', 'key': 'state'},
-                {'type': 'line', 'template': 'enum_start'},
-                {'type': 'loop', 'source': 'states', 'item_type': 'enum_value'},
-                {'type': 'line', 'template': 'enum_max', 'params': {'name': 'STATE_MAX'}},
-                {'type': 'line', 'template': 'enum_end', 'params': {'type_name': 'STATE_t'}},
-            ]
-        },
-        'enum_event': {
-            'steps': [
-                {'type': 'enum_comment', 'key': 'event'},
-                {'type': 'line', 'template': 'enum_start'},
-                {'type': 'loop', 'source': 'events', 'item_type': 'enum_value'},
-                {'type': 'line', 'template': 'enum_max', 'params': {'name': 'EVENT_MAX'}},
-                {'type': 'line', 'template': 'enum_end', 'params': {'type_name': 'EVENT_t'}},
-            ]
-        },
-        'enum_flag': {
-            'steps': [
-                {'type': 'enum_comment', 'key': 'flag'},
-                {'type': 'line', 'template': 'enum_start'},
-                {'type': 'loop', 'source': 'flags', 'item_type': 'enum_value'},
-                {'type': 'line', 'template': 'enum_max', 'params': {'name': 'FLAG_MAX'}},
-                {'type': 'line', 'template': 'enum_end', 'params': {'type_name': 'FLAG_t'}},
-            ]
-        },
-    }
-    
-    # ===== 行生成パターン定義 =====
-    # 各行の生成方法を定義
-    LINE_PATTERNS = {
-        'member_normal': {'template': 'member_normal', 'params': ['indent', 'type', 'name']},
-        'member_array': {'template': 'member_array', 'params': ['indent', 'type', 'name', 'size']},
-        'member_bitfield': {'template': 'member_bitfield', 'params': ['indent', 'type', 'name', 'width']},
-        'comment': {'template': 'inline_comment', 'params': ['indent', 'comment']},
-        'blank': {'template': None, 'params': []},
-    }
-    
-    # ===== デバッグログメッセージ定義 =====
     DEBUG_MESSAGES = {
         'function_entry': 'Enter {func_name}: state={state}, event={event}',
         'function_exit': 'Exit {func_name}: next_state={next_state}',

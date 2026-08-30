@@ -63,12 +63,6 @@ class VariableGenerator:
             'EventFlag': self._generate_flag_macro,
         }
         
-        self.init_code_templates = {
-            'array': '    memset(ctx->data.{var_name}, 0, sizeof(ctx->data.{var_name}));',
-            'normal': '    ctx->data.{var_name} = {init_value};',
-            'flag': '    ctx->flags.{flag_name} = 0;',
-        }
-        
         self.init_templates = {
             'comment': '''/**
  * @brief  システムコンテキスト初期化
@@ -106,23 +100,23 @@ class VariableGenerator:
             {'action': 'template', 'key': 'function_close'},
         ]
         
-        self.step_executors: Dict[str, Callable] = {
+        self.step_executors = {
             'template': self._execute_template_step,
             'blank': self._execute_blank_step,
             'loop': self._execute_loop_step,
         }
     
-    def _log_debug(self, message: str, level: str = 'debug'):
+    def _log_debug(self, message, level='debug'):
         log_func = getattr(logger, level, logger.debug)
         log_func(message)
     
-    def _detect_variable_type(self, var: SystemVariable) -> str:
+    def _detect_variable_type(self, var):
         for var_type, detector in self.variable_type_detectors.items():
             if detector(var):
                 return var_type
         return 'normal'
     
-    def _build_context(self, global_defs: GlobalDefinitions) -> Dict[str, Any]:
+    def _build_context(self, global_defs):
         return {
             'func_name': self.templates.FUNCTION_NAMES['system_context_init'],
             'log_debug': self.strings['log_debug'],
@@ -131,32 +125,36 @@ class VariableGenerator:
             'flags': getattr(global_defs, 'flags', []),
         }
     
-    def _format_value(self, value: str, context: Dict[str, Any]) -> str:
+    def _replace_placeholders(self, template, params):
+        result = template
+        for key, value in params.items():
+            result = result.replace('{' + key + '}', str(value))
+        return result
+    
+    def _resolve_value(self, value, context):
         if isinstance(value, str) and value.startswith('{') and value.endswith('}'):
             key = value[1:-1]
-            return context.get(key, value)
-        return value
+            return str(context.get(key, value))
+        return str(value)
     
-    def _format_params(self, params: Dict[str, str], context: Dict[str, Any]) -> Dict[str, str]:
-        return {key: self._format_value(value, context) for key, value in params.items()}
-    
-    def _execute_template_step(self, step: Dict, context: Dict[str, Any]) -> List[str]:
+    def _execute_template_step(self, step, context):
         template_key = step.get('key', '')
         template = self.init_templates.get(template_key, '')
         if not template:
             return []
+        
         format_params = step.get('format', {})
-        resolved_params = self._format_params(format_params, context)
-        try:
-            formatted = template.format(**resolved_params)
-        except (KeyError, IndexError):
-            formatted = template
+        resolved_params = {}
+        for key, value in format_params.items():
+            resolved_params[key] = self._resolve_value(value, context)
+        
+        formatted = self._replace_placeholders(template, resolved_params)
         return [formatted]
     
-    def _execute_blank_step(self, step: Dict, context: Dict[str, Any]) -> List[str]:
+    def _execute_blank_step(self, step, context):
         return [""]
     
-    def _execute_loop_step(self, step: Dict, context: Dict[str, Any]) -> List[str]:
+    def _execute_loop_step(self, step, context):
         source_key = step.get('source', '')
         generator_key = step.get('generator', '')
         items = context.get(source_key, [])
@@ -168,62 +166,49 @@ class VariableGenerator:
                 results.append(self._generate_access_macro(item))
         return results
     
-    # ===== 変数生成 =====
-    def _generate_global_variable(self, var: SystemVariable) -> str:
-        self._log_debug(f"Generating global variable: {var.name}")
-        var_name = self.naming.sanitize_identifier(var.name)
+    def _generate_global_variable(self, var):
+        var_name = self.naming.sanitize_identifier(getattr(var, 'name', 'unnamed'))
         c_type = self.mapper.map_type(getattr(var, 'type', 'void'))
         var_type = self._detect_variable_type(var)
-        format_map = {
-            'array': self.formats['member_array'],
-            'normal': self.formats['member_normal'],
-        }
-        template = format_map[var_type]
-        params = {
-            'indent': self.strings['indent_1'],
-            'type': c_type,
-            'name': var_name,
-        }
+        indent = self.strings['indent_1']
+        
         if var_type == 'array':
-            params['size'] = getattr(var, 'array_size', 0)
-        return template.format(**params)
+            size = getattr(var, 'array_size', 0)
+            return f"{indent}{c_type} {var_name}[{size}];"
+        return f"{indent}{c_type} {var_name};"
     
-    def _generate_event_flag(self, flag: EventFlag) -> str:
-        self._log_debug(f"Generating event flag: {flag.name}")
-        flag_name = self.naming.sanitize_identifier(flag.name)
-        return self.formats['member_normal'].format(
-            indent=self.strings['indent_1'], type='uint8_t', name=flag_name
-        )
+    def _generate_event_flag(self, flag):
+        flag_name = self.naming.sanitize_identifier(getattr(flag, 'name', 'unnamed'))
+        indent = self.strings['indent_1']
+        return f"{indent}uint8_t {flag_name};"
     
-    # ===== マクロ生成 =====
-    def _generate_data_macro(self, var: SystemVariable) -> str:
-        var_name = self.naming.to_upper_snake(var.name)
-        return self.formats['data_macro'].format(var_name=var_name)
+    def _generate_data_macro(self, var):
+        var_name = self.naming.to_upper_snake(getattr(var, 'name', 'unnamed'))
+        return f"#define DATA_{var_name}(ctx)    ((ctx)->data.{var_name})"
     
-    def _generate_flag_macro(self, flag: EventFlag) -> str:
-        flag_name = self.naming.to_upper_snake(flag.name)
-        return self.formats['flag_macro'].format(flag_name=flag_name)
+    def _generate_flag_macro(self, flag):
+        flag_name = self.naming.to_upper_snake(getattr(flag, 'name', 'unnamed'))
+        return f"#define FLAG_{flag_name}(ctx)   ((ctx)->flags.{flag_name})"
     
-    def _generate_access_macro(self, item) -> str:
+    def _generate_access_macro(self, item):
         item_class = item.__class__.__name__
         generator = self.macro_generators.get(item_class)
         return generator(item) if generator else ""
     
-    # ===== 初期化コード生成 =====
-    def _generate_array_init(self, var: SystemVariable) -> str:
-        var_name = self.naming.sanitize_identifier(var.name)
-        return self.init_code_templates['array'].format(var_name=var_name)
+    def _generate_array_init(self, var):
+        var_name = self.naming.sanitize_identifier(getattr(var, 'name', 'unnamed'))
+        return f"    memset(ctx->data.{var_name}, 0, sizeof(ctx->data.{var_name}));"
     
-    def _generate_normal_init(self, var: SystemVariable) -> str:
-        var_name = self.naming.sanitize_identifier(var.name)
+    def _generate_normal_init(self, var):
+        var_name = self.naming.sanitize_identifier(getattr(var, 'name', 'unnamed'))
         init_value = getattr(var, 'default_value', '') or self.default_init_values.get(getattr(var, 'type', 'void'), '0')
-        return self.init_code_templates['normal'].format(var_name=var_name, init_value=init_value)
+        return f"    ctx->data.{var_name} = {init_value};"
     
-    def _generate_flag_init(self, flag: EventFlag) -> str:
-        flag_name = self.naming.sanitize_identifier(flag.name)
-        return self.init_code_templates['flag'].format(flag_name=flag_name)
+    def _generate_flag_init(self, flag):
+        flag_name = self.naming.sanitize_identifier(getattr(flag, 'name', 'unnamed'))
+        return f"    ctx->flags.{flag_name} = 0;"
     
-    def _generate_init_code(self, item) -> str:
+    def _generate_init_code(self, item):
         item_class = item.__class__.__name__
         if item_class == 'SystemVariable':
             var_type = self._detect_variable_type(item)
@@ -234,8 +219,7 @@ class VariableGenerator:
             return generator(item) if generator else ""
         return ""
     
-    # ===== 初期化関数生成 =====
-    def generate_init_function(self, global_defs: GlobalDefinitions) -> str:
+    def generate_init_function(self, global_defs):
         self._log_debug("Generating init function (data-driven)")
         lines = []
         context = self._build_context(global_defs)
@@ -245,14 +229,13 @@ class VariableGenerator:
                 lines.extend(executor(step, context))
         return '\n'.join(lines)
     
-    # ===== 公開メソッド =====
-    def generate_variable(self, var_type: str, item) -> str:
+    def generate_variable(self, var_type, item):
         generator = self.variable_generators.get(var_type)
         if generator:
             return generator(item)
         raise ValueError(f"Unknown variable type: {var_type}")
     
-    def generate_all_macros(self, global_defs: GlobalDefinitions) -> str:
+    def generate_all_macros(self, global_defs):
         lines = []
         for var in getattr(global_defs, 'variables', []):
             lines.append(self.generate_variable('macro', var))

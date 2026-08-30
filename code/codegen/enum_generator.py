@@ -78,40 +78,35 @@ class CEnumGenerator:
         log_func = getattr(logger, level, logger.debug)
         log_func(message)
     
-    # ===== コメント生成（getattrで安全にアクセス） =====
-    def _generate_state_comment(self, state: State) -> str:
-        """状態コメント生成"""
+    def _generate_state_comment(self, state):
         comments = []
         if getattr(state, 'description', ''):
             comments.append(state.description)
         if getattr(state, 'type', None) and state.type != StateType.NORMAL:
             comments.append(f"Type: {state.type.name}")
-        if getattr(state, 'title', '') and state.title != state.name:
+        if getattr(state, 'title', ''):
             comments.append(f"Title: {state.title}")
         return ' '.join(comments)
     
-    def _generate_event_comment(self, event: Event) -> str:
-        """イベントコメント生成"""
+    def _generate_event_comment(self, event):
         comments = []
         if getattr(event, 'description', ''):
             comments.append(event.description)
         if getattr(event, 'kind', None) and event.kind != EventKind.SIGNAL:
             comments.append(f"Kind: {event.kind.name}")
-        if getattr(event, 'title', '') and event.title != event.name:
+        if getattr(event, 'title', ''):
             comments.append(f"Title: {event.title}")
         return ' '.join(comments)
     
-    def _generate_flag_comment(self, flag: EventFlag) -> str:
-        """フラグコメント生成"""
+    def _generate_flag_comment(self, flag):
         comments = []
         if getattr(flag, 'description', ''):
             comments.append(flag.description)
-        if getattr(flag, 'title', '') and flag.title != flag.name:
+        if getattr(flag, 'title', ''):
             comments.append(f"Title: {flag.title}")
         return ' '.join(comments)
     
-    # ===== ステップ実行関数 =====
-    def _execute_comment_step(self, step: Dict, context: Dict) -> List[str]:
+    def _execute_comment_step(self, step, context):
         config = context['config']
         enum_comment = self.templates.ENUM_COMMENTS[config['comment_key']]
         return [
@@ -119,103 +114,72 @@ class CEnumGenerator:
             f"/* {enum_comment['description']} */",
         ]
     
-    def _execute_enum_start_step(self, step: Dict, context: Dict) -> List[str]:
-        return [self.formats['enum_start']]
+    def _execute_enum_start_step(self, step, context):
+        return ["typedef enum {"]
     
-    def _execute_loop_values_step(self, step: Dict, context: Dict) -> List[str]:
+    def _execute_loop_values_step(self, step, context):
         items = context['items']
         config = context['config']
-        
         lines = []
         for i, item in enumerate(items):
-            item_name = self.naming.create_enum_value(config['prefix'], item.name)
+            item_name = self.naming.create_enum_value(config['prefix'], getattr(item, 'name', 'unnamed'))
             comment = config['comment_generator'](item)
-            
             if comment:
-                lines.append(self.formats['enum_value_with_comment'].format(
-                    name=item_name, value=i, comment=comment
-                ))
+                lines.append(f"    {item_name} = {i},    /* {comment} */")
             else:
-                lines.append(self.formats['enum_value'].format(
-                    name=item_name, value=i
-                ))
-        
+                lines.append(f"    {item_name} = {i},")
         return lines
     
-    def _execute_blank_step(self, step: Dict, context: Dict) -> List[str]:
+    def _execute_blank_step(self, step, context):
         return [""]
     
-    def _execute_max_value_step(self, step: Dict, context: Dict) -> List[str]:
+    def _execute_max_value_step(self, step, context):
         config = context['config']
-        return [self.formats['enum_max'].format(
-            name=config['max_name'], comment='要素数（システム用）'
-        )]
+        return [f"    {config['max_name']}           /* 要素数（システム用） */"]
     
-    def _execute_enum_end_step(self, step: Dict, context: Dict) -> List[str]:
+    def _execute_enum_end_step(self, step, context):
         config = context['config']
-        return [self.formats['enum_end'].format(type_name=config['type_name'])]
+        return [f"}} {config['type_name']};"]
     
-    # ===== 列挙型生成 =====
-    def _generate_enum(self, enum_type: str, items: List[Any]) -> str:
+    def _generate_enum(self, enum_type, items):
         self._log_debug(f"Generating enum: {enum_type}")
-        
         config = self.enum_configs.get(enum_type)
-        if not config:
+        if not config or not items:
             return ""
-        
-        if not items:
-            return ""
-        
-        context = {
-            'config': config,
-            'items': items,
-        }
-        
+        context = {'config': config, 'items': items}
         lines = []
         for step in self.enum_steps:
             executor = self.step_executors.get(step['action'])
             if executor:
                 lines.extend(executor(step, context))
-        
         return '\n'.join(lines)
     
-    def generate_enum(self, enum_type: str, items: List[Any]) -> str:
+    def generate_enum(self, enum_type, items):
         return self._generate_enum(enum_type, items)
     
-    def generate_all_enums(self, states, events, flags) -> str:
+    def generate_all_enums(self, states, events, flags):
         lines = []
         lines.append(self.generate_enum('state', states))
         lines.append("")
         lines.append(self.generate_enum('event', events))
-        
         if flags:
             lines.append("")
             lines.append(self.generate_enum('flag', flags))
-        
         return '\n'.join(lines)
     
-    def generate_bit_mask_enum(self, flags: List[EventFlag]) -> str:
+    def generate_bit_mask_enum(self, flags):
         if not flags:
             return ""
-        
         lines = []
         lines.append("/* イベントフラグビットマスク定義 */")
         lines.append("/* ビット単位でフラグを管理する場合に使用 */")
-        lines.append(self.formats['enum_start'])
-        
+        lines.append("typedef enum {")
         for i, flag in enumerate(flags):
-            flag_name = self.naming.create_enum_value("FLAG_MASK", flag.name)
+            flag_name = self.naming.create_enum_value("FLAG_MASK", getattr(flag, 'name', 'unnamed'))
             bit_value = 1 << i
-            
             if getattr(flag, 'description', ''):
-                lines.append(self.formats['enum_value_with_comment'].format(
-                    name=flag_name, value=f"0x{bit_value:02X}", comment=flag.description
-                ))
+                lines.append(f"    {flag_name} = 0x{bit_value:02X},    /* {flag.description} */")
             else:
-                lines.append(self.formats['enum_value'].format(
-                    name=flag_name, value=f"0x{bit_value:02X}"
-                ))
-        
-        lines.append(self.formats['enum_end'].format(type_name='FLAG_MASK_t'))
-        
+                lines.append(f"    {flag_name} = 0x{bit_value:02X},")
+        lines.append("} FLAG_MASK_t;")
         return '\n'.join(lines)
