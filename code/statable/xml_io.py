@@ -15,6 +15,7 @@ from .global_defs import (
 
 
 def state_machine_to_element(sm: StateMachine) -> ET.Element:
+    """StateMachine ã‚’ XML Element ã«å¤‰æ›ã™ã‚‹"""
     root = ET.Element("StateMachine")
     if sm.initial_state:
         root.set("initial", sm.initial_state)
@@ -22,9 +23,12 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
     states_elem = ET.SubElement(root, "States")
     for state in sm.states.values():
         attrs = {
-            "name": state.name, "type": state.type.value,
-            "parent": state.parent or "", "entry": state.entry,
-            "exit": state.exit, "do": state.do,
+            "name": state.name,
+            "type": state.type.value,
+            "parent": state.parent or "",
+            "entry": state.entry,
+            "exit": state.exit,
+            "do": state.do,
             "description": state.description,
         }
         ET.SubElement(states_elem, "State", **attrs)
@@ -49,10 +53,13 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
     roles_elem = ET.SubElement(root, "RoleFunctions")
     for rf in sm.role_functions.values():
         attrs = {
-            "name": rf.name, "description": rf.description,
+            "name": rf.name,
+            "description": rf.description,
             "return_type": rf.return_type,
-            "arg1_type": rf.arg1_type, "arg1_name": rf.arg1_name,
-            "arg2_type": rf.arg2_type, "arg2_name": rf.arg2_name,
+            "arg1_type": rf.arg1_type,
+            "arg1_name": rf.arg1_name,
+            "arg2_type": rf.arg2_type,
+            "arg2_name": rf.arg2_name,
             "title": rf.title,
         }
         ET.SubElement(roles_elem, "RoleFunction", **attrs)
@@ -60,9 +67,12 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
     trans_elem = ET.SubElement(root, "Transitions")
     for t in sm.transitions:
         attrs = {
-            "source": t.source, "event": t.event,
-            "condition": t.condition, "action": t.action,
-            "target": t.target, "transition_type": t.transition_type,
+            "source": t.source,
+            "event": t.event,
+            "condition": t.condition,
+            "action": t.action,
+            "target": t.target,
+            "transition_type": t.transition_type,
             "title": t.title,
         }
         ET.SubElement(trans_elem, "Transition", **attrs)
@@ -71,6 +81,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
 
 
 def state_machine_from_element(elem: ET.Element) -> StateMachine:
+    """XML Element ã‹ã‚‰ StateMachine ã‚’æ§‹ç¯‰ã™ã‚‹"""
     sm = StateMachine()
     initial_state_name = elem.get("initial")
 
@@ -132,10 +143,10 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
 
 
 # ----------------------------------------------------------------------
-# GlobalDefinitions <-> Element •ÏŠ·
+# GlobalDefinitions <-> Element å¤‰æ›
 # ----------------------------------------------------------------------
 def _timer_to_element(parent: ET.Element, timer: TimerBaseDef, tag: str = "Timer"):
-    """ƒ^ƒCƒ}Šî€•Ï”‚ğXML—v‘f‚É•ÏŠ·"""
+    """ã‚¿ã‚¤ãƒåŸºæº–å¤‰æ•°ã‚’XMLè¦ç´ ã«å¤‰æ›"""
     elem = ET.SubElement(parent, tag)
     elem.set("variable_name", timer.variable_name)
     elem.set("unit", timer.unit)
@@ -154,7 +165,7 @@ def _timer_to_element(parent: ET.Element, timer: TimerBaseDef, tag: str = "Timer
 
 
 def _timer_from_element(elem: ET.Element) -> TimerBaseDef:
-    """XML—v‘f‚©‚çƒ^ƒCƒ}Šî€•Ï”‚ğ\’z"""
+    """XMLè¦ç´ ã‹ã‚‰ã‚¿ã‚¤ãƒåŸºæº–å¤‰æ•°ã‚’æ§‹ç¯‰"""
     derived_list = []
     for d_elem in elem.findall("Derived"):
         try:
@@ -179,23 +190,22 @@ def _timer_from_element(elem: ET.Element) -> TimerBaseDef:
 
 
 def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
+    """GlobalDefinitions ã‚’ XML Element ã«å¤‰æ›ã™ã‚‹"""
     root = ET.Element("GlobalDefinitions")
 
     # CustomTypes
     if defs.custom_types:
         ct_elem = ET.SubElement(root, "CustomTypes")
         for ct in defs.custom_types:
-            ct_attrs = {
+            ct_child = ET.SubElement(ct_elem, "CustomType", **{
                 "name": ct.name, "description": ct.description, "title": ct.title,
-            }
-            ct_child = ET.SubElement(ct_elem, "CustomType", **ct_attrs)
+            })
             for member in ct.members:
-                m_attrs = {
+                ET.SubElement(ct_child, "Member", **{
                     "name": member.name, "data_type": member.data_type,
                     "bit_width": str(member.bit_width),
                     "description": member.description, "title": member.title,
-                }
-                ET.SubElement(ct_child, "Member", **m_attrs)
+                })
 
     # SystemVariables
     vars_elem = ET.SubElement(root, "SystemVariables")
@@ -238,11 +248,11 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
                 "name": ph.name, "description": ph.description, "title": ph.title,
             })
 
-    # TimerBaseiƒƒCƒ“ƒ^ƒCƒ}j
+    # TimerBaseï¼ˆãƒ¡ã‚¤ãƒ³ã‚¿ã‚¤ãƒï¼‰
     timer_elem = ET.SubElement(root, "TimerBase")
     _timer_to_element(timer_elem, defs.timer_base, tag="Timer")
 
-    # ExtraTimersi’Ç‰Áƒ^ƒCƒ}j
+    # ExtraTimersï¼ˆè¿½åŠ ã‚¿ã‚¤ãƒï¼‰
     if defs.extra_timers:
         extras_elem = ET.SubElement(root, "ExtraTimers")
         for timer in defs.extra_timers:
@@ -266,6 +276,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
 
 
 def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
+    """XML Element ã‹ã‚‰ GlobalDefinitions ã‚’æ§‹ç¯‰ã™ã‚‹"""
     defs = GlobalDefinitions()
 
     # CustomTypes
@@ -341,14 +352,14 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 title=ph.get("title", ""),
             ))
 
-    # TimerBaseiƒƒCƒ“ƒ^ƒCƒ}j
+    # TimerBaseï¼ˆãƒ¡ã‚¤ãƒ³ã‚¿ã‚¤ãƒï¼‰
     timer_elem = elem.find("TimerBase")
     if timer_elem is not None:
         inner = timer_elem.find("Timer")
         if inner is not None:
             defs.timer_base = _timer_from_element(inner)
 
-    # ExtraTimersi’Ç‰Áƒ^ƒCƒ}j
+    # ExtraTimersï¼ˆè¿½åŠ ã‚¿ã‚¤ãƒï¼‰
     extras_elem = elem.find("ExtraTimers")
     if extras_elem is not None:
         for inner in extras_elem.findall("Timer"):
@@ -373,16 +384,17 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 description=q_elem.get("description", ""), title=q_elem.get("title", ""),
             ))
 
-    # ƒ^ƒCƒ}•Ï”‚ğƒOƒ[ƒoƒ‹•Ï”‚Æ‚µ‚Ä©“®“o˜^
+    # ã‚¿ã‚¤ãƒå¤‰æ•°ã‚’ã‚°ãƒ­ãƒ¼ãƒãƒ«å¤‰æ•°ã¨ã—ã¦è‡ªå‹•ç™»éŒ²
     defs.add_timer_variables()
 
     return defs
 
 
 # ----------------------------------------------------------------------
-# ’Pˆê StateMachine ‚Ìƒtƒ@ƒCƒ‹•Û‘¶/“Ç‚İ‚İiŒİŠ·—pj
+# å˜ä¸€ StateMachine ã®ãƒ•ã‚¡ã‚¤ãƒ«ä¿å­˜/èª­ã¿è¾¼ã¿ï¼ˆäº’æ›ç”¨ï¼‰
 # ----------------------------------------------------------------------
 def state_machine_to_xml(sm: StateMachine, filepath: str) -> None:
+    """StateMachine ã‚’ XML ãƒ•ã‚¡ã‚¤ãƒ«ã«ä¿å­˜ã™ã‚‹"""
     root = state_machine_to_element(sm)
     tree = ET.ElementTree(root)
     ET.indent(tree, space="    ")
@@ -390,15 +402,17 @@ def state_machine_to_xml(sm: StateMachine, filepath: str) -> None:
 
 
 def state_machine_from_xml(filepath: str) -> StateMachine:
+    """XML ãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰ StateMachine ã‚’èª­ã¿è¾¼ã‚€"""
     tree = ET.parse(filepath)
     root = tree.getroot()
     return state_machine_from_element(root)
 
 
 # ----------------------------------------------------------------------
-# ƒvƒƒWƒFƒNƒg‘S‘Ìi•¡”ƒ^ƒu{ƒOƒ[ƒoƒ‹’è‹`j‚Ì•Û‘¶/“Ç‚İ‚İ
+# ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆå…¨ä½“ï¼ˆè¤‡æ•°ã‚¿ãƒ–ï¼‹ã‚°ãƒ­ãƒ¼ãƒãƒ«å®šç¾©ï¼‰ã®ä¿å­˜/èª­ã¿è¾¼ã¿
 # ----------------------------------------------------------------------
 def project_to_xml(tabs: List[Tuple[str, StateMachine]], global_defs: GlobalDefinitions, filepath: str) -> None:
+    """ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆå…¨ä½“ã‚’XMLãƒ•ã‚¡ã‚¤ãƒ«ã«ä¿å­˜ã™ã‚‹"""
     root = ET.Element("Project")
     root.append(global_defs_to_element(global_defs))
 
@@ -413,6 +427,7 @@ def project_to_xml(tabs: List[Tuple[str, StateMachine]], global_defs: GlobalDefi
 
 
 def project_from_xml(filepath: str) -> Tuple[List[Tuple[str, StateMachine]], GlobalDefinitions]:
+    """XMLãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆå…¨ä½“ã‚’èª­ã¿è¾¼ã‚€"""
     tree = ET.parse(filepath)
     root = tree.getroot()
 

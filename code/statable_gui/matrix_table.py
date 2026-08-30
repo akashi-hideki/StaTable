@@ -96,8 +96,8 @@ class MatrixTableWidget(QTableWidget):
             for col, state in enumerate(states):
                 trans_list = self._find_transitions(state, event)
                 if trans_list:
-                    # タイトルを優先表示
-                    titles = [t.title if t.title and t.title != "(無題遷移)" else self._generate_title(t) for t in trans_list]
+                    # タイトル＋イベント名の形式で表示
+                    titles = [self._generate_cell_label(t, event) for t in trans_list]
                     display = "\n".join(titles)
                     item = QTableWidgetItem(display)
                     item.setData(Qt.UserRole, trans_list)
@@ -131,7 +131,33 @@ class MatrixTableWidget(QTableWidget):
     def _find_transitions(self, state: str, event: str) -> List[Transition]:
         return self.sm.get_transitions_for_cell(state, event)
 
+    def _generate_cell_label(self, trans: Transition, event: str) -> str:
+        """セル表示用ラベル（タイトル＋イベント名）"""
+        parts = []
+
+        # タイトル（無題遷移以外）
+        if trans.title and trans.title != "(無題遷移)":
+            parts.append(trans.title)
+        else:
+            # 遷移先を表示
+            if trans.target:
+                parts.append(trans.target)
+            else:
+                parts.append("(内部)")
+
+        # イベント名
+        if event:
+            parts.append(f"({event})")
+
+        # 状態遷移条件（短縮）
+        if trans.condition:
+            condition_display = _truncate_text(trans.condition, 30)
+            parts.append(f"[{condition_display}]")
+
+        return " ".join(parts)
+
     def _generate_title(self, trans: Transition) -> str:
+        """旧タイトル生成（互換用）"""
         parts = []
         if trans.target:
             parts.append(trans.target)

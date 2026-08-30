@@ -17,19 +17,13 @@ from .common_widgets import TitleEditWidget, TypeComboBox, GroupComboBox
 from .logger import StaTableLogger
 
 
-# ----------------------------------------------------------------------
-# 編集可能コンボボックス用デリゲート
-# ----------------------------------------------------------------------
 class ComboBoxDelegate(QStyledItemDelegate):
-    """テーブルセルに編集可能コンボボックスを提供するデリゲート"""
-
     def __init__(self, items=None, editable=True, parent=None):
         super().__init__(parent)
         self.items = items or []
         self.editable = editable
 
     def set_items(self, items):
-        """候補リストを更新する"""
         self.items = items
 
     def createEditor(self, parent, option, index):
@@ -47,11 +41,7 @@ class ComboBoxDelegate(QStyledItemDelegate):
         model.setData(index, editor.currentText())
 
 
-# ----------------------------------------------------------------------
-# Insertキーで行追加できるテーブル
-# ----------------------------------------------------------------------
 class InsertableTable(QTableWidget):
-    """Insertキーで現在行の下に空行を追加するテーブル"""
     insert_requested = Signal()
 
     def __init__(self, *args, **kwargs):
@@ -72,17 +62,11 @@ class InsertableTable(QTableWidget):
         menu.exec(self.viewport().mapToGlobal(pos))
 
 
-# ----------------------------------------------------------------------
-# 読み取り専用デリゲート（ビット幅列用）
-# ----------------------------------------------------------------------
 class ReadOnlyDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         return None
 
 
-# ----------------------------------------------------------------------
-# グローバル変数編集ダイアログ（単一編集用）
-# ----------------------------------------------------------------------
 class VariableEditDialog(QDialog):
     def __init__(self, parent=None, groups=None, variable: Optional[SystemVariable] = None, global_defs=None):
         super().__init__(parent)
@@ -99,7 +83,6 @@ class VariableEditDialog(QDialog):
         self.name_edit = QLineEdit(variable.name if variable else "")
         layout.addRow("名前", self.name_edit)
 
-        # 型（編集可能コンボ）
         self.type_combo = TypeComboBox(self, global_defs=self.global_defs)
         if variable:
             self.type_combo.set_current_text(variable.type)
@@ -111,7 +94,6 @@ class VariableEditDialog(QDialog):
         self.default_edit = QLineEdit(variable.default_value if variable else "")
         layout.addRow("初期値", self.default_edit)
 
-        # グループ（編集可能コンボ）
         self.group_combo = GroupComboBox(self, groups=self.groups)
         if variable:
             self.group_combo.set_current_text(variable.group)
@@ -142,9 +124,6 @@ class VariableEditDialog(QDialog):
         )
 
 
-# ----------------------------------------------------------------------
-# イベントフラグ編集ダイアログ（最小値・最大値方式）
-# ----------------------------------------------------------------------
 class FlagEditDialog(QDialog):
     def __init__(self, parent=None, groups=None, flag: Optional[EventFlag] = None):
         super().__init__(parent)
@@ -176,7 +155,6 @@ class FlagEditDialog(QDialog):
         self.max_spin.valueChanged.connect(self.update_bit_width_label)
         layout.addRow("ビット幅", self.bit_width_label)
 
-        # グループ（編集可能コンボ）
         self.group_combo = GroupComboBox(self, groups=self.groups)
         if flag:
             self.group_combo.set_current_text(flag.group)
@@ -217,9 +195,6 @@ class FlagEditDialog(QDialog):
         )
 
 
-# ----------------------------------------------------------------------
-# 一括登録ダイアログ（グローバル変数）
-# ----------------------------------------------------------------------
 class BulkVariableDialog(QDialog):
     """グローバル変数 一括登録ダイアログ"""
 
@@ -237,17 +212,18 @@ class BulkVariableDialog(QDialog):
         self.table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
         layout.addWidget(self.table)
 
-        # ★ 型列（1列目）にコンボボックスデリゲート
         self.type_delegate = ComboBoxDelegate(items=self._type_list(), editable=True)
         self.table.setItemDelegateForColumn(2, self.type_delegate)
 
-        # ★ グループ列（4列目）にコンボボックスデリゲート
         self.group_delegate = ComboBoxDelegate(items=self.groups, editable=True)
         self.table.setItemDelegateForColumn(5, self.group_delegate)
 
         btn_layout = QHBoxLayout()
+        add_btn = QPushButton("行追加")
+        add_btn.clicked.connect(self.add_empty_row)
         del_btn = QPushButton("行削除")
         del_btn.clicked.connect(self.delete_row)
+        btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
@@ -267,7 +243,6 @@ class BulkVariableDialog(QDialog):
         return types
 
     def set_variables(self, variables: List[SystemVariable]):
-        """既存の変数一覧をテーブルに読み込む"""
         self.table.setRowCount(0)
         for var in variables:
             self.add_row(var)
@@ -325,9 +300,6 @@ class BulkVariableDialog(QDialog):
         return variables
 
 
-# ----------------------------------------------------------------------
-# 一括登録ダイアログ（イベントフラグ）
-# ----------------------------------------------------------------------
 class BulkFlagDialog(QDialog):
     """イベントフラグ 一括登録ダイアログ"""
 
@@ -344,14 +316,16 @@ class BulkFlagDialog(QDialog):
         self.table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
         layout.addWidget(self.table)
 
-        # ★ グループ列（4列目）にコンボボックスデリゲート
         self.group_delegate = ComboBoxDelegate(items=self.groups, editable=True)
         self.table.setItemDelegateForColumn(5, self.group_delegate)
         self.table.setItemDelegateForColumn(4, ReadOnlyDelegate(self.table))
 
         btn_layout = QHBoxLayout()
+        add_btn = QPushButton("行追加")
+        add_btn.clicked.connect(self.add_empty_row)
         del_btn = QPushButton("行削除")
         del_btn.clicked.connect(self.delete_row)
+        btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
@@ -365,7 +339,6 @@ class BulkFlagDialog(QDialog):
         self.table.insert_requested.connect(self.add_empty_row)
 
     def set_flags(self, flags: List[EventFlag]):
-        """既存のフラグ一覧をテーブルに読み込む"""
         self.table.setRowCount(0)
         for flag in flags:
             self.add_row(flag)
@@ -459,9 +432,6 @@ class BulkFlagDialog(QDialog):
         return flags
 
 
-# ----------------------------------------------------------------------
-# 定義管理画面（メインダイアログ）
-# ----------------------------------------------------------------------
 class GlobalDefinitionsDialog(QDialog):
     def __init__(self, defs: GlobalDefinitions, parent=None):
         super().__init__(parent)
@@ -472,7 +442,6 @@ class GlobalDefinitionsDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        # 検索ボックス
         search_layout = QHBoxLayout()
         search_layout.addWidget(QLabel("検索（前方一致）:"))
         self.search_edit = QLineEdit()
@@ -481,16 +450,12 @@ class GlobalDefinitionsDialog(QDialog):
         search_layout.addWidget(self.search_edit)
         layout.addLayout(search_layout)
 
-        # タブ
         self.tab = QTabWidget()
         layout.addWidget(self.tab)
 
-        # グローバル変数タブ
         self.tab.addTab(self._create_variable_tab(), "グローバル変数")
         self.tab.addTab(self._create_flag_tab(), "イベントフラグ")
 
-        # イベントフラグタブ
-        # 閉じるボタン
         close_btn = QPushButton("閉じる")
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn, alignment=Qt.AlignRight)
@@ -510,11 +475,9 @@ class GlobalDefinitionsDialog(QDialog):
         self.var_table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
         layout.addWidget(self.var_table)
 
-        # ★ 型列（1列目）にコンボボックスデリゲート
         self.type_delegate = ComboBoxDelegate(items=self._type_list(), editable=True)
         self.var_table.setItemDelegateForColumn(2, self.type_delegate)
 
-        # ★ グループ列（4列目）にコンボボックスデリゲート
         self.group_delegate = ComboBoxDelegate(items=self.defs.variable_groups(), editable=True)
         self.var_table.setItemDelegateForColumn(5, self.group_delegate)
 
@@ -545,7 +508,6 @@ class GlobalDefinitionsDialog(QDialog):
         self.flag_table.setItemDelegateForColumn(4, ReadOnlyDelegate(self.flag_table))
         layout.addWidget(self.flag_table)
 
-        # ★ グループ列（4列目）にコンボボックスデリゲート
         self.flag_group_delegate = ComboBoxDelegate(items=self.defs.flag_groups(), editable=True)
         self.flag_table.setItemDelegateForColumn(5, self.flag_group_delegate)
 
@@ -571,9 +533,6 @@ class GlobalDefinitionsDialog(QDialog):
         types.extend([t.name for t in self.defs.custom_types])
         return types
 
-    # ------------------------------------------------------------------
-    # 検索
-    # ------------------------------------------------------------------
     def on_search_changed(self, text):
         self.refresh_variables()
         self.refresh_flags()
@@ -584,9 +543,6 @@ class GlobalDefinitionsDialog(QDialog):
         q = query.lower()
         return title.lower().startswith(q) or name.lower().startswith(q) or group.lower().startswith(q)
 
-    # ------------------------------------------------------------------
-    # グローバル変数
-    # ------------------------------------------------------------------
     def refresh_variables(self):
         self._updating = True
         query = self.search_edit.text().strip().lower()
@@ -600,12 +556,10 @@ class GlobalDefinitionsDialog(QDialog):
                     item = QTableWidgetItem(text)
                     item.setData(Qt.UserRole, var)
                     self.var_table.setItem(row, col, item)
-        # 末尾に空行を追加
         self.var_table.insertRow(self.var_table.rowCount())
         for col in range(7):
             self.var_table.setItem(self.var_table.rowCount() - 1, col, QTableWidgetItem(""))
         self.type_delegate.set_items(self._type_list())
-        # グループ候補を更新
         self.group_delegate.set_items(self.defs.variable_groups())
         self._updating = False
 
@@ -678,9 +632,6 @@ class GlobalDefinitionsDialog(QDialog):
             self.defs.variables = dlg.get_variables()
             self.refresh_variables()
 
-    # ------------------------------------------------------------------
-    # イベントフラグ
-    # ------------------------------------------------------------------
     def refresh_flags(self):
         self._updating = True
         query = self.search_edit.text().strip().lower()
@@ -697,14 +648,12 @@ class GlobalDefinitionsDialog(QDialog):
                         item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                     item.setData(Qt.UserRole, flag)
                     self.flag_table.setItem(row, col, item)
-        # 末尾に空行を追加
         self.flag_table.insertRow(self.flag_table.rowCount())
         for col in range(7):
             item = QTableWidgetItem("")
             if col == 4:
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
             self.flag_table.setItem(self.flag_table.rowCount() - 1, col, item)
-        # グループ候補を更新
         self.flag_group_delegate.set_items(self.defs.flag_groups())
         self._updating = False
 
