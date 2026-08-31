@@ -1,6 +1,6 @@
 # codegen/c_code_generator.py
 """
-Cコード生成メインクラス（完全データ駆動版）
+Cコード生成メインクラス（完全データ駆動版・9ファイル対応）
 """
 
 import sys
@@ -22,6 +22,9 @@ try:
     from .transition_generator import TransitionGenerator
     from .role_function_generator import RoleFunctionGenerator
     from .variable_generator import VariableGenerator
+    from .event_queue_generator import EventQueueGenerator
+    from .interrupt_generator import InterruptGenerator
+    from .timer_generator import TimerGenerator
     from .code_templates import CodeTemplates
 except ImportError:
     from type_mapper import CTypeMapper
@@ -31,13 +34,16 @@ except ImportError:
     from transition_generator import TransitionGenerator
     from role_function_generator import RoleFunctionGenerator
     from variable_generator import VariableGenerator
+    from event_queue_generator import EventQueueGenerator
+    from interrupt_generator import InterruptGenerator
+    from timer_generator import TimerGenerator
     from code_templates import CodeTemplates
 
 logger = logging.getLogger(__name__)
 
 
 class CCodeGenerator:
-    """Cコード生成メインクラス（完全データ駆動）"""
+    """Cコード生成メインクラス（完全データ駆動・9ファイル対応）"""
     
     def __init__(self):
         self.mapper = CTypeMapper()
@@ -47,12 +53,16 @@ class CCodeGenerator:
         self.transition_gen = TransitionGenerator()
         self.role_func_gen = RoleFunctionGenerator()
         self.variable_gen = VariableGenerator()
+        self.event_queue_gen = EventQueueGenerator()
+        self.interrupt_gen = InterruptGenerator()
+        self.timer_gen = TimerGenerator()
         self.templates = CodeTemplates()
         self.strings = self.templates.STRINGS
         self.formats = self.templates.FORMATS
         
         self.generation_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
+        # ===== ファイル生成設定辞書（9ファイル） =====
         self.file_generators: Dict[str, Dict] = {
             'statable_types.h': {
                 'method': self._generate_types_header,
@@ -84,8 +94,25 @@ class CCodeGenerator:
                 'description': '初期化処理',
                 'guard_name': None,
             },
+            # 追加: イベントキュー・割り込み・タイマ
+            'statable_event_queue.c': {
+                'method': self._generate_event_queue_source,
+                'description': 'イベントキュー実装',
+                'guard_name': None,
+            },
+            'statable_interrupt.c': {
+                'method': self._generate_interrupt_source,
+                'description': '割り込み処理ISR',
+                'guard_name': None,
+            },
+            'statable_timer.c': {
+                'method': self._generate_timer_source,
+                'description': 'タイマ処理',
+                'guard_name': None,
+            },
         }
         
+        # ===== インクルードファイル定義辞書 =====
         self.include_headers: Dict[str, List[str]] = {
             'types': ['#include <stdint.h>', '#include <stdbool.h>', '#include <string.h>'],
             'transitions_h': ['#include "statable_types.h"'],
@@ -93,12 +120,16 @@ class CCodeGenerator:
             'role_functions_h': ['#include "statable_types.h"'],
             'role_functions_c': ['#include "statable_role_functions.h"'],
             'init_c': ['#include "statable_types.h"'],
+            'event_queue_c': ['#include "statable_types.h"'],
+            'interrupt_c': ['#include "statable_types.h"'],
+            'timer_c': ['#include "statable_types.h"'],
         }
     
     def _log_debug(self, message, level='debug'):
         log_func = getattr(logger, level, logger.debug)
         log_func(message)
     
+    # ===== ヘルパーメソッド =====
     def _get_states_list(self, state_machine):
         return list(state_machine.states.values())
     
@@ -140,6 +171,7 @@ class CCodeGenerator:
         lines.append("")
         return '\n'.join(lines)
     
+    # ===== 既存の生成メソッド =====
     def _generate_types_header(self, state_machine, global_defs):
         self._log_debug("Generating types header")
         lines = []
@@ -276,6 +308,76 @@ class CCodeGenerator:
         
         return '\n'.join(lines)
     
+    # ===== 追加: イベントキュー生成 =====
+    def _generate_event_queue_source(self, state_machine, global_defs):
+        self._log_debug("Generating event queue source")
+        lines = []
+        file_config = self.file_generators['statable_event_queue.c']
+        
+        lines.append(self._generate_file_header('statable_event_queue.c', file_config['description']))
+        lines.append("")
+        lines.append(self._generate_include_section('event_queue_c'))
+        
+        # イベントキュー構造体
+        queues = getattr(global_defs, 'event_queues', [])
+        if queues:
+            lines.append(self._generate_section_header('type_defs'))
+            lines.append("")
+            for queue in queues:
+                lines.append(self.event_queue_gen.generate_struct(queue))
+                lines.append("")
+        else:
+            lines.append("/* イベントキュー定義なし */")
+        
+        return '\n'.join(lines)
+    
+    # ===== 追加: 割り込み処理生成 =====
+    def _generate_interrupt_source(self, state_machine, global_defs):
+        self._log_debug("Generating interrupt source")
+        lines = []
+        file_config = self.file_generators['statable_interrupt.c']
+        
+        lines.append(self._generate_file_header('statable_interrupt.c', file_config['description']))
+        lines.append("")
+        lines.append(self._generate_include_section('interrupt_c'))
+        
+        # ISR骨格
+        interrupts = getattr(global_defs, 'interrupts', [])
+        if interrupts:
+            lines.append(self._generate_section_header('transition_func'))
+            lines.append("")
+            for handler in interrupts:
+                lines.append(self.interrupt_gen.generate_isr(handler))
+                lines.append("")
+        else:
+            lines.append("/* 割り込み処理定義なし */")
+        
+        return '\n'.join(lines)
+    
+    # ===== 追加: タイマ生成 =====
+    def _generate_timer_source(self, state_machine, global_defs):
+        self._log_debug("Generating timer source")
+        lines = []
+        file_config = self.file_generators['statable_timer.c']
+        
+        lines.append(self._generate_file_header('statable_timer.c', file_config['description']))
+        lines.append("")
+        lines.append(self._generate_include_section('timer_c'))
+        
+        # タイマ変数構造体
+        lines.append(self._generate_section_header('type_defs'))
+        lines.append("")
+        lines.append(self.timer_gen.generate_struct(global_defs))
+        lines.append("")
+        
+        # タイマ初期化関数
+        lines.append(self._generate_section_header('init_func'))
+        lines.append("")
+        lines.append(self.timer_gen.generate_init_function(global_defs))
+        
+        return '\n'.join(lines)
+    
+    # ===== 公開メソッド =====
     def generate_all(self, state_machine, global_defs):
         self._log_debug("Generating all code")
         generated_files = {}

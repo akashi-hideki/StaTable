@@ -13,7 +13,9 @@ from statable.model import State, Event, Transition, StateType, EventKind, RoleF
 from statable.state_machine import StateMachine
 from statable.global_defs import (
     GlobalDefinitions, SystemVariable, EventFlag,
-    CustomTypeDef, StructMemberDef
+    CustomTypeDef, StructMemberDef,
+    EventQueueDef, InterruptHandlerDef, InterruptAction,
+    DevicePlaceholderDef, TimerBaseDef, TimerDerivedDef
 )
 
 
@@ -59,6 +61,7 @@ class SampleDataGenerator:
     def create_sample_global_defs(self):
         gd = GlobalDefinitions()
         
+        # グローバル変数
         gd.variables = [
             SystemVariable(name="battery_voltage", type="uint16", unit="mV", group="Power", description="バッテリー電圧"),
             SystemVariable(name="system_tick", type="uint32", unit="ms", group="Timer", description="システムタイマ"),
@@ -66,6 +69,7 @@ class SampleDataGenerator:
             SystemVariable(name="data_buffer", type="uint8", group="Data", description="データバッファ", array_size=64),
         ]
         
+        # イベントフラグ
         gd.flags = [
             EventFlag(name="EVT_POWER_ON_REQ", min_value=0, max_value=1, group="System", description="電源ON要求"),
             EventFlag(name="EVT_START_REQ", min_value=0, max_value=1, group="System", description="開始要求"),
@@ -73,6 +77,7 @@ class SampleDataGenerator:
             EventFlag(name="EVT_ERROR_FLAG", min_value=0, max_value=1, group="Error", description="エラーフラグ"),
         ]
         
+        # ユーザー定義型
         gd.custom_types = [
             CustomTypeDef(name="SystemStatus", description="システム状態管理構造体", members=[
                 StructMemberDef(name="power_on", data_type="bool", bit_width=1, description="電源ON状態"),
@@ -85,6 +90,83 @@ class SampleDataGenerator:
                 StructMemberDef(name="humidity", data_type="uint8", description="湿度値"),
                 StructMemberDef(name="pressure", data_type="uint16", description="気圧値"),
             ]),
+        ]
+        
+        # ===== 追加: イベントキュー =====
+        gd.event_queues = [
+            EventQueueDef(
+                name="MainEventQueue",
+                size=16,
+                element_type="EVENT_t",
+                event_ids=["POWER_ON", "START", "STOP", "ERROR_DETECTED"],
+                priority_enabled=False,
+                interrupt_safe=True,
+                rtos_enabled=False,
+                description="メインイベントキュー"
+            ),
+            EventQueueDef(
+                name="HighPriorityQueue",
+                size=8,
+                element_type="EVENT_t",
+                event_ids=["ERROR_DETECTED"],
+                priority_enabled=True,
+                interrupt_safe=True,
+                rtos_enabled=False,
+                description="高優先度イベントキュー"
+            ),
+        ]
+        
+        # ===== 追加: 割り込み処理 =====
+        gd.interrupts = [
+            InterruptHandlerDef(
+                name="UART_RX",
+                description="UART受信割り込み",
+                event_names=["START", "STOP"],
+                is_timer=False,
+                actions=[
+                    InterruptAction(condition="", action="EVT_START_REQ = 1"),
+                    InterruptAction(condition="ctx->data.battery_voltage > 3000", action="EVT_STOP_REQ = 1"),
+                ]
+            ),
+            InterruptHandlerDef(
+                name="TimerTick",
+                description="タイマ割り込み",
+                event_names=[],
+                is_timer=True,
+                actions=[
+                    InterruptAction(condition="", action="ctx->data.system_tick++"),
+                ]
+            ),
+        ]
+        
+        # ===== 追加: デバイスリソース =====
+        gd.placeholders = [
+            DevicePlaceholderDef(name="UART0", description="UART通信ポート"),
+            DevicePlaceholderDef(name="ADC0", description="ADコンバータ"),
+        ]
+        
+        # ===== 追加: タイマ設定 =====
+        gd.timer_base = TimerBaseDef(
+            variable_name="g_system_tick",
+            unit="1ms",
+            data_type="volatile uint32_t",
+            interrupt_name="TimerTick",
+            derived=[
+                TimerDerivedDef(period_name="10ms", multiplier=10, variable_name="g_tick_10ms", data_type="uint8_t"),
+                TimerDerivedDef(period_name="100ms", multiplier=100, variable_name="g_tick_100ms", data_type="uint8_t"),
+            ]
+        )
+        
+        gd.extra_timers = [
+            TimerBaseDef(
+                variable_name="g_high_speed_tick",
+                unit="100us",
+                data_type="volatile uint32_t",
+                interrupt_name="HighSpeedTimerTick",
+                derived=[
+                    TimerDerivedDef(period_name="1ms", multiplier=10, variable_name="g_hs_tick_1ms", data_type="uint16_t"),
+                ]
+            ),
         ]
         
         self.global_defs = gd
