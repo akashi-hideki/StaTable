@@ -7,6 +7,7 @@
 class CodeTemplates:
     """コード生成用テンプレート辞書"""
     
+    # ===== 基本文字列定義 =====
     STRINGS = {
         'section_line': '/*==============================================================*/',
         'indent_1': '    ',
@@ -42,6 +43,7 @@ class CodeTemplates:
         'log_error': 'LOG_ERROR',
     }
     
+    # ===== セクションヘッダ定義 =====
     SECTION_HEADERS = {
         'include': 'インクルードファイル',
         'type_defs': '型定義',
@@ -54,8 +56,13 @@ class CodeTemplates:
         'transition_func': '状態遷移関数',
         'init_func': '初期化関数',
         'var_macros': '変数アクセスマクロ',
+        'mutex_impl': 'ミューテックス実装',
+        'semaphore_impl': 'セマフォ実装',
+        'queue_impl': 'キュー実装',
+        'critical_section_impl': 'クリティカルセクション実装',
     }
     
+    # ===== 構造体コメント定義 =====
     STRUCT_COMMENTS = {
         'system_data': {'title': 'グローバル変数構造体', 'description': 'システム全体で共有する変数を管理'},
         'event_flags': {'title': 'イベントフラグ構造体', 'description': 'イベント発生を示すフラグを管理'},
@@ -63,12 +70,14 @@ class CodeTemplates:
         'transition_cell': {'title': '遷移セル構造体', 'description': '状態遷移テーブルの1セルを表す'},
     }
     
+    # ===== 列挙型コメント定義 =====
     ENUM_COMMENTS = {
         'state': {'title': '状態定義', 'description': '状態遷移の状態を表す列挙型'},
         'event': {'title': 'イベント定義', 'description': '状態遷移を発生させるイベントの列挙型'},
         'flag': {'title': 'イベントフラグ定義', 'description': 'イベントフラグの識別子を表す列挙型'},
     }
     
+    # ===== 関数コメント定義 =====
     FUNCTION_COMMENTS = {
         'state_machine_process': {
             'brief': '状態遷移処理',
@@ -86,6 +95,7 @@ class CodeTemplates:
         },
     }
     
+    # ===== 型名定義 =====
     TYPE_NAMES = {
         'state': 'STATE_t',
         'event': 'EVENT_t',
@@ -97,6 +107,7 @@ class CodeTemplates:
         'transition_table': 'transition_matrix',
     }
     
+    # ===== 関数名定義 =====
     FUNCTION_NAMES = {
         'state_machine_process': 'StateMachine_Process',
         'system_context_init': 'SystemContext_Init',
@@ -105,12 +116,14 @@ class CodeTemplates:
         'condition_prefix': 'Condition',
     }
     
+    # ===== マクロ名定義 =====
     MACRO_NAMES = {
         'data_prefix': 'DATA_',
         'flag_prefix': 'FLAG_',
         'max_suffix': '_MAX',
     }
     
+    # ===== フォーマットテンプレート =====
     FORMATS = {
         'section_header': '{line}\n *  {title}\n{line}',
         'file_header': '''/**
@@ -142,6 +155,7 @@ class CodeTemplates:
         'title_comment': '{indent}/* Title: {title} */',
     }
     
+    # ===== デバッグログメッセージ定義 =====
     DEBUG_MESSAGES = {
         'function_entry': 'Enter {func_name}: state={state}, event={event}',
         'function_exit': 'Exit {func_name}: next_state={next_state}',
@@ -152,4 +166,232 @@ class CodeTemplates:
         'no_transition': 'No transition: state={state}, event={event}',
         'null_pointer': 'NULL pointer: {var_name}',
         'out_of_range': 'Out of range: {var_name}={value}, max={max}',
+    }
+    
+    # ===== OSAL関連テンプレート =====
+    OSAL = {
+        # OS種別定義
+        'os_types': {
+            'non_rtos': {
+                'name': 'NonRTOS',
+                'description': 'RTOSなし（ベアメタル）',
+                'header': 'osal.h',
+                'source': 'osal.c',
+            },
+            'freertos': {
+                'name': 'FreeRTOS',
+                'description': 'FreeRTOS',
+                'header': 'osal_freertos.h',
+                'source': 'osal_freertos.c',
+            },
+            'threadx': {
+                'name': 'ThreadX',
+                'description': 'Azure RTOS ThreadX',
+                'header': 'osal_threadx.h',
+                'source': 'osal_threadx.c',
+            },
+        },
+        
+        # ヘッダファイルテンプレート
+        'header': {
+            'file_comment': '''/**
+ * @file    {filename}
+ * @brief   OSAL（OS抽象化レイヤ）- {os_name}
+ *
+ * @note    StaTableにより自動生成されたコード
+ *          - 手動での編集は推奨しない
+ *          - 変更する場合はStaTableで行うこと
+ */''',
+            'include_guard_start': '#ifndef {guard_name}\n#define {guard_name}\n',
+            'include_guard_end': '#endif /* {guard_name} */',
+            'type_defs_comment': '/* OSAL型定義 */',
+            'status_enum': '''typedef enum {
+    OSAL_OK = 0,
+    OSAL_ERROR,
+    OSAL_TIMEOUT,
+    OSAL_BUSY,
+} OSAL_Status_t;''',
+            'mutex_type_nonrtos': '''/* ミューテックス型 */
+typedef struct {
+    volatile bool locked;
+} OSAL_Mutex_t;''',
+            'semaphore_type_nonrtos': '''/* セマフォ型 */
+typedef struct {
+    volatile uint32_t count;
+    volatile uint32_t max_count;
+} OSAL_Semaphore_t;''',
+            'queue_type_nonrtos': '''/* キュー型 */
+typedef struct {
+    void *buffer;
+    uint32_t size;
+    uint32_t item_size;
+    volatile uint32_t head;
+    volatile uint32_t tail;
+    volatile uint32_t count;
+} OSAL_Queue_t;''',
+            'mutex_decls': '''/* ミューテックス関数 */
+OSAL_Status_t OSAL_Mutex_Create(OSAL_Mutex_t *mutex);
+OSAL_Status_t OSAL_Mutex_Lock(OSAL_Mutex_t *mutex, uint32_t timeout_ms);
+OSAL_Status_t OSAL_Mutex_Unlock(OSAL_Mutex_t *mutex);''',
+            'semaphore_decls': '''/* セマフォ関数 */
+OSAL_Status_t OSAL_Semaphore_Create(OSAL_Semaphore_t *sem, uint32_t max_count, uint32_t initial_count);
+OSAL_Status_t OSAL_Semaphore_Take(OSAL_Semaphore_t *sem, uint32_t timeout_ms);
+OSAL_Status_t OSAL_Semaphore_Give(OSAL_Semaphore_t *sem);''',
+            'queue_decls': '''/* キュー関数 */
+OSAL_Status_t OSAL_Queue_Create(OSAL_Queue_t *queue, void *buffer, uint32_t size, uint32_t item_size);
+OSAL_Status_t OSAL_Queue_Send(OSAL_Queue_t *queue, const void *item, uint32_t timeout_ms);
+OSAL_Status_t OSAL_Queue_Receive(OSAL_Queue_t *queue, void *item, uint32_t timeout_ms);''',
+            'critical_decls': '''/* クリティカルセクション関数 */
+void OSAL_Critical_Enter(void);
+void OSAL_Critical_Exit(void);''',
+            'freertos_includes': '''/* FreeRTOSヘッダ */
+#include "FreeRTOS.h"
+#include "semphr.h"
+#include "queue.h"''',
+            'threadx_includes': '''/* ThreadXヘッダ */
+#include "tx_api.h"''',
+        },
+        
+        # ソースファイルテンプレート
+        'source': {
+            'file_comment': '''/**
+ * @file    {filename}
+ * @brief   OSAL（OS抽象化レイヤ）- {os_name} 実装
+ *
+ * @note    StaTableにより自動生成されたコード
+ *          - 手動での編集は推奨しない
+ *          - 変更する場合はStaTableで行うこと
+ */''',
+            'mutex_section_comment': '/* ミューテックス実装 */',
+            'semaphore_section_comment': '/* セマフォ実装 */',
+            'queue_section_comment': '/* キュー実装 */',
+            'critical_section_comment': '/* クリティカルセクション実装 */',
+            
+            # NonRTOS ミューテックス実装
+            'mutex_create_nonrtos': '''OSAL_Status_t OSAL_Mutex_Create(OSAL_Mutex_t *mutex)
+{
+    if (mutex == NULL) {
+        return OSAL_ERROR;
+    }
+    mutex->locked = false;
+    return OSAL_OK;
+}''',
+            'mutex_lock_nonrtos': '''OSAL_Status_t OSAL_Mutex_Lock(OSAL_Mutex_t *mutex, uint32_t timeout_ms)
+{
+    (void)timeout_ms;  /* NonRTOSでは使用しない */
+    if (mutex == NULL) {
+        return OSAL_ERROR;
+    }
+    if (mutex->locked) {
+        return OSAL_BUSY;
+    }
+    mutex->locked = true;
+    return OSAL_OK;
+}''',
+            'mutex_unlock_nonrtos': '''OSAL_Status_t OSAL_Mutex_Unlock(OSAL_Mutex_t *mutex)
+{
+    if (mutex == NULL) {
+        return OSAL_ERROR;
+    }
+    mutex->locked = false;
+    return OSAL_OK;
+}''',
+            
+            # NonRTOS セマフォ実装
+            'semaphore_create_nonrtos': '''OSAL_Status_t OSAL_Semaphore_Create(OSAL_Semaphore_t *sem, uint32_t max_count, uint32_t initial_count)
+{
+    if (sem == NULL) {
+        return OSAL_ERROR;
+    }
+    sem->max_count = max_count;
+    sem->count = initial_count;
+    return OSAL_OK;
+}''',
+            'semaphore_take_nonrtos': '''OSAL_Status_t OSAL_Semaphore_Take(OSAL_Semaphore_t *sem, uint32_t timeout_ms)
+{
+    (void)timeout_ms;
+    if (sem == NULL) {
+        return OSAL_ERROR;
+    }
+    if (sem->count == 0) {
+        return OSAL_BUSY;
+    }
+    sem->count--;
+    return OSAL_OK;
+}''',
+            'semaphore_give_nonrtos': '''OSAL_Status_t OSAL_Semaphore_Give(OSAL_Semaphore_t *sem)
+{
+    if (sem == NULL) {
+        return OSAL_ERROR;
+    }
+    if (sem->count >= sem->max_count) {
+        return OSAL_BUSY;
+    }
+    sem->count++;
+    return OSAL_OK;
+}''',
+            
+            # NonRTOS キュー実装
+            'queue_create_nonrtos': '''OSAL_Status_t OSAL_Queue_Create(OSAL_Queue_t *queue, void *buffer, uint32_t size, uint32_t item_size)
+{
+    if (queue == NULL || buffer == NULL) {
+        return OSAL_ERROR;
+    }
+    queue->buffer = buffer;
+    queue->size = size;
+    queue->item_size = item_size;
+    queue->head = 0;
+    queue->tail = 0;
+    queue->count = 0;
+    return OSAL_OK;
+}''',
+            'queue_send_nonrtos': '''OSAL_Status_t OSAL_Queue_Send(OSAL_Queue_t *queue, const void *item, uint32_t timeout_ms)
+{
+    (void)timeout_ms;
+    if (queue == NULL || item == NULL) {
+        return OSAL_ERROR;
+    }
+    if (queue->count >= queue->size) {
+        return OSAL_BUSY;
+    }
+    uint8_t *dest = (uint8_t *)queue->buffer + (queue->tail * queue->item_size);
+    const uint8_t *src = (const uint8_t *)item;
+    for (uint32_t i = 0; i < queue->item_size; i++) {
+        dest[i] = src[i];
+    }
+    queue->tail = (queue->tail + 1) % queue->size;
+    queue->count++;
+    return OSAL_OK;
+}''',
+            'queue_receive_nonrtos': '''OSAL_Status_t OSAL_Queue_Receive(OSAL_Queue_t *queue, void *item, uint32_t timeout_ms)
+{
+    (void)timeout_ms;
+    if (queue == NULL || item == NULL) {
+        return OSAL_ERROR;
+    }
+    if (queue->count == 0) {
+        return OSAL_BUSY;
+    }
+    uint8_t *src = (uint8_t *)queue->buffer + (queue->head * queue->item_size);
+    uint8_t *dest = (uint8_t *)item;
+    for (uint32_t i = 0; i < queue->item_size; i++) {
+        dest[i] = src[i];
+    }
+    queue->head = (queue->head + 1) % queue->size;
+    queue->count--;
+    return OSAL_OK;
+}''',
+            
+            # NonRTOS クリティカルセクション
+            'critical_enter_nonrtos': '''void OSAL_Critical_Enter(void)
+{
+    /* NonRTOSでは割り込み禁止 */
+    __disable_irq();
+}''',
+            'critical_exit_nonrtos': '''void OSAL_Critical_Exit(void)
+{
+    /* 割り込み許可 */
+    __enable_irq();
+}''',
+        },
     }

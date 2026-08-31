@@ -1,6 +1,6 @@
 # codegen/c_code_generator.py
 """
-Cコード生成メインクラス（完全データ駆動版・9ファイル対応）
+Cコード生成メインクラス（完全データ駆動版・11ファイル対応）
 """
 
 import sys
@@ -25,7 +25,9 @@ try:
     from .event_queue_generator import EventQueueGenerator
     from .interrupt_generator import InterruptGenerator
     from .timer_generator import TimerGenerator
+    from .osal_generator import OSALGenerator
     from .code_templates import CodeTemplates
+    from .code_merger import CodeMerger
 except ImportError:
     from type_mapper import CTypeMapper
     from naming_convention import CNamingConvention
@@ -37,13 +39,15 @@ except ImportError:
     from event_queue_generator import EventQueueGenerator
     from interrupt_generator import InterruptGenerator
     from timer_generator import TimerGenerator
+    from osal_generator import OSALGenerator
     from code_templates import CodeTemplates
+    from code_merger import CodeMerger
 
 logger = logging.getLogger(__name__)
 
 
 class CCodeGenerator:
-    """Cコード生成メインクラス（完全データ駆動・9ファイル対応）"""
+    """Cコード生成メインクラス（完全データ駆動・11ファイル対応）"""
     
     def __init__(self):
         self.mapper = CTypeMapper()
@@ -56,13 +60,15 @@ class CCodeGenerator:
         self.event_queue_gen = EventQueueGenerator()
         self.interrupt_gen = InterruptGenerator()
         self.timer_gen = TimerGenerator()
+        self.osal_gen = OSALGenerator()
         self.templates = CodeTemplates()
         self.strings = self.templates.STRINGS
         self.formats = self.templates.FORMATS
+        self.merger = CodeMerger()
         
         self.generation_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # ===== ファイル生成設定辞書（9ファイル） =====
+        # ===== ファイル生成設定辞書（11ファイル） =====
         self.file_generators: Dict[str, Dict] = {
             'statable_types.h': {
                 'method': self._generate_types_header,
@@ -94,7 +100,6 @@ class CCodeGenerator:
                 'description': '初期化処理',
                 'guard_name': None,
             },
-            # 追加: イベントキュー・割り込み・タイマ
             'statable_event_queue.c': {
                 'method': self._generate_event_queue_source,
                 'description': 'イベントキュー実装',
@@ -108,6 +113,16 @@ class CCodeGenerator:
             'statable_timer.c': {
                 'method': self._generate_timer_source,
                 'description': 'タイマ処理',
+                'guard_name': None,
+            },
+            'osal.h': {
+                'method': self._generate_osal_header,
+                'description': 'OSALヘッダ',
+                'guard_name': 'OSAL_H',
+            },
+            'osal.c': {
+                'method': self._generate_osal_source,
+                'description': 'OSALソース',
                 'guard_name': None,
             },
         }
@@ -171,7 +186,7 @@ class CCodeGenerator:
         lines.append("")
         return '\n'.join(lines)
     
-    # ===== 既存の生成メソッド =====
+    # ===== 型定義ヘッダ生成 =====
     def _generate_types_header(self, state_machine, global_defs):
         self._log_debug("Generating types header")
         lines = []
@@ -213,6 +228,7 @@ class CCodeGenerator:
         
         return '\n'.join(lines)
     
+    # ===== 遷移関数ヘッダ生成 =====
     def _generate_transitions_header(self, state_machine, global_defs):
         self._log_debug("Generating transitions header")
         lines = []
@@ -241,6 +257,7 @@ class CCodeGenerator:
         
         return '\n'.join(lines)
     
+    # ===== 遷移関数ソース生成 =====
     def _generate_transitions_source(self, state_machine, global_defs):
         self._log_debug("Generating transitions source")
         lines = []
@@ -259,6 +276,7 @@ class CCodeGenerator:
         
         return '\n'.join(lines)
     
+    # ===== ロール関数ヘッダ生成 =====
     def _generate_role_functions_header(self, state_machine, global_defs):
         self._log_debug("Generating role functions header")
         lines = []
@@ -278,6 +296,7 @@ class CCodeGenerator:
         
         return '\n'.join(lines)
     
+    # ===== ロール関数ソース生成 =====
     def _generate_role_functions_source(self, state_machine, global_defs):
         self._log_debug("Generating role functions source")
         lines = []
@@ -294,6 +313,7 @@ class CCodeGenerator:
         
         return '\n'.join(lines)
     
+    # ===== 初期化ソース生成 =====
     def _generate_init_source(self, state_machine, global_defs):
         self._log_debug("Generating init source")
         lines = []
@@ -308,7 +328,7 @@ class CCodeGenerator:
         
         return '\n'.join(lines)
     
-    # ===== 追加: イベントキュー生成 =====
+    # ===== イベントキューソース生成 =====
     def _generate_event_queue_source(self, state_machine, global_defs):
         self._log_debug("Generating event queue source")
         lines = []
@@ -324,14 +344,14 @@ class CCodeGenerator:
             lines.append(self._generate_section_header('type_defs'))
             lines.append("")
             for queue in queues:
-                lines.append(self.event_queue_gen.generate_struct(queue))
+                lines.append(self.event_queue_gen.generate_all_code(queue))
                 lines.append("")
         else:
             lines.append("/* イベントキュー定義なし */")
         
         return '\n'.join(lines)
     
-    # ===== 追加: 割り込み処理生成 =====
+    # ===== 割り込みソース生成 =====
     def _generate_interrupt_source(self, state_machine, global_defs):
         self._log_debug("Generating interrupt source")
         lines = []
@@ -354,7 +374,7 @@ class CCodeGenerator:
         
         return '\n'.join(lines)
     
-    # ===== 追加: タイマ生成 =====
+    # ===== タイマソース生成 =====
     def _generate_timer_source(self, state_machine, global_defs):
         self._log_debug("Generating timer source")
         lines = []
@@ -374,11 +394,29 @@ class CCodeGenerator:
         lines.append(self._generate_section_header('init_func'))
         lines.append("")
         lines.append(self.timer_gen.generate_init_function(global_defs))
+        lines.append("")
+        
+        lines.append(self._generate_section_header('transition_func'))
+        lines.append("")
+        lines.append(self.timer_gen.generate_update_function(global_defs))
         
         return '\n'.join(lines)
     
+    # ===== OSALヘッダ生成 =====
+    def _generate_osal_header(self, state_machine, global_defs):
+        """OSALヘッダ生成"""
+        self._log_debug("Generating OSAL header")
+        return self.osal_gen.generate_header('non_rtos')
+    
+    # ===== OSALソース生成 =====
+    def _generate_osal_source(self, state_machine, global_defs):
+        """OSALソース生成"""
+        self._log_debug("Generating OSAL source")
+        return self.osal_gen.generate_source('non_rtos')
+    
     # ===== 公開メソッド =====
     def generate_all(self, state_machine, global_defs):
+        """全コード生成（辞書駆動）"""
         self._log_debug("Generating all code")
         generated_files = {}
         for filename, config in self.file_generators.items():
@@ -388,6 +426,7 @@ class CCodeGenerator:
         return generated_files
     
     def generate_file(self, filename, state_machine, global_defs):
+        """特定ファイルの生成"""
         self._log_debug(f"Generating file: {filename}")
         if filename in self.file_generators:
             method = self.file_generators[filename]['method']
@@ -395,6 +434,7 @@ class CCodeGenerator:
         raise ValueError(f"Unknown file: {filename}")
     
     def save_generated_code(self, generated_files, output_dir):
+        """生成コードの保存（マージなし）"""
         self._log_debug(f"Saving generated code to: {output_dir}")
         saved_files = []
         os.makedirs(output_dir, exist_ok=True)
@@ -405,3 +445,27 @@ class CCodeGenerator:
             saved_files.append(filepath)
             self._log_debug(f"Saved: {filepath}")
         return saved_files
+    
+    def save_generated_code_with_merge(self, generated_files, output_dir):
+        """ユーザーコードを保持しながら保存（マージあり）"""
+        self._log_debug(f"Merging and saving to: {output_dir}")
+        merged_files = self.merger.merge_all_files(generated_files, output_dir)
+        return self.save_generated_code(merged_files, output_dir)
+    
+    def get_merge_summary(self, generated_files, output_dir):
+        """マージ結果のサマリーを取得"""
+        self._log_debug(f"Getting merge summary for: {output_dir}")
+        summary = {}
+        for filename, content in generated_files.items():
+            existing_path = os.path.join(output_dir, filename)
+            if os.path.exists(existing_path):
+                with open(existing_path, 'r', encoding='utf-8') as f:
+                    existing_content = f.read()
+                summary[filename] = self.merger.get_user_code_summary(existing_content)
+            else:
+                summary[filename] = {'file_user_code': 0, 'func_user_codes': 0}
+        return summary
+    
+    def get_generated_file_list(self):
+        """生成ファイル一覧を取得"""
+        return list(self.file_generators.keys())

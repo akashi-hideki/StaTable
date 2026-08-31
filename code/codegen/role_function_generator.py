@@ -1,6 +1,6 @@
 # codegen/role_function_generator.py
 """
-ロール関数生成モジュール（完全データ駆動版・修正済み）
+ロール関数生成モジュール（完全データ駆動版・マーカー対応）
 """
 
 import sys
@@ -16,16 +16,18 @@ try:
     from .type_mapper import CTypeMapper
     from .naming_convention import CNamingConvention
     from .code_templates import CodeTemplates
+    from .code_merger import CodeMerger
 except ImportError:
     from type_mapper import CTypeMapper
     from naming_convention import CNamingConvention
     from code_templates import CodeTemplates
+    from code_merger import CodeMerger
 
 logger = logging.getLogger(__name__)
 
 
 class RoleFunctionGenerator:
-    """ロール関数生成クラス（完全データ駆動・修正済み）"""
+    """ロール関数生成クラス（完全データ駆動・マーカー対応）"""
     
     def __init__(self):
         self.mapper = CTypeMapper()
@@ -33,6 +35,7 @@ class RoleFunctionGenerator:
         self.templates = CodeTemplates()
         self.strings = self.templates.STRINGS
         self.formats = self.templates.FORMATS
+        self.merger = CodeMerger()
         
         self.default_return_values = {
             'void': '', 'bool': 'false', 'int': '0', 'int8': '0',
@@ -52,7 +55,6 @@ class RoleFunctionGenerator:
             'default': '実行結果（0: 成功, 0以外: エラー）',
         }
         
-        # 修正: ポインタ表記を統一（*の後にスペースなし）
         self.standard_args = [
             ('current_state', 'STATE_t *', '現在の状態ポインタ'),
             ('ctx', 'SystemContext_t *', 'システムコンテキストポインタ'),
@@ -69,6 +71,7 @@ class RoleFunctionGenerator:
             {'action': 'signature'},
             {'action': 'open_brace'},
             {'action': 'todo'},
+            {'action': 'user_markers'},
             {'action': 'unused_args'},
             {'action': 'blank'},
             {'action': 'entry_log'},
@@ -83,6 +86,7 @@ class RoleFunctionGenerator:
             'semicolon': self._execute_semicolon_step,
             'open_brace': self._execute_open_brace_step,
             'todo': self._execute_todo_step,
+            'user_markers': self._execute_user_markers_step,
             'unused_args': self._execute_unused_args_step,
             'blank': self._execute_blank_step,
             'entry_log': self._execute_entry_log_step,
@@ -153,6 +157,9 @@ class RoleFunctionGenerator:
         pascal_name = self.naming.to_pascal_case(name)
         return f"{prefix}_{pascal_name}"
     
+    def _get_pascal_func_name(self, func):
+        return self.naming.to_pascal_case(getattr(func, 'name', 'unnamed'))
+    
     def _execute_comment_step(self, step, context):
         """コメントステップ実行"""
         func = context['func']
@@ -200,6 +207,19 @@ class RoleFunctionGenerator:
     
     def _execute_todo_step(self, step, context):
         return [f"    /* {self.strings['todo']} */"]
+    
+    def _execute_user_markers_step(self, step, context):
+        """ユーザーコードマーカーを生成"""
+        func = context['func']
+        pascal_name = self._get_pascal_func_name(func)
+        start = self.merger.markers['func_user_start'].format(func_name=pascal_name)
+        end = self.merger.markers['func_user_end'].format(func_name=pascal_name)
+        
+        return [
+            f"    {start}",
+            f"    // ユーザー実装コードをここに記述",
+            f"    {end}",
+        ]
     
     def _execute_unused_args_step(self, step, context):
         func = context['func']
