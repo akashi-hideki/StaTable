@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QComboBox, QGroupBox, QFormLayout,
     QProgressBar, QLineEdit
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSettings
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont
 
 # パス設定
@@ -43,8 +43,8 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# 設定保存ファイル
-SETTINGS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "codegen_settings.json")
+# デフォルト設定ファイルパス
+DEFAULT_SETTINGS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "codegen_settings.json")
 
 
 class CodeGenerationWorker(QThread):
@@ -81,13 +81,16 @@ class CodeGenerationWorker(QThread):
 class CodeGenerationDialog(QDialog):
     """Cコード生成ダイアログ"""
     
-    def __init__(self, state_machine=None, global_defs=None, parent=None):
+    def __init__(self, state_machine=None, global_defs=None, parent=None, settings_file=None):
         super().__init__(parent)
         self.state_machine = state_machine
         self.global_defs = global_defs
         self.generated_files: Dict[str, str] = {}
         self.config_manager = ConfigManager()
-        self.worker: Optional[CodeGenerationWorker] = None  # 互換性のため維持
+        self.worker: Optional[CodeGenerationWorker] = None
+        
+        # 設定ファイルパス（テスト用に上書き可能）
+        self.settings_file = settings_file or DEFAULT_SETTINGS_FILE
         
         # 前回の設定を読み込む
         self._load_saved_settings()
@@ -102,8 +105,8 @@ class CodeGenerationDialog(QDialog):
     def _load_saved_settings(self):
         """前回の設定を読み込む"""
         try:
-            if os.path.exists(SETTINGS_FILE):
-                with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+            if os.path.exists(self.settings_file):
+                with open(self.settings_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 
                 # ConfigManagerに反映
@@ -130,9 +133,15 @@ class CodeGenerationDialog(QDialog):
                 'os_type': config.os_type,
                 'save_with_merge': config.save_with_merge,
             }
-            with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
+            
+            # ディレクトリが存在しない場合は作成
+            settings_dir = os.path.dirname(self.settings_file)
+            if settings_dir and not os.path.exists(settings_dir):
+                os.makedirs(settings_dir, exist_ok=True)
+            
+            with open(self.settings_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-            logger.info(f"設定を保存しました: {data}")
+            logger.info(f"設定を保存しました: {self.settings_file} -> {data}")
         except Exception as e:
             logger.warning(f"設定保存に失敗: {e}")
     
@@ -161,7 +170,7 @@ class CodeGenerationDialog(QDialog):
         self.output_dir_label = QLabel("未設定")
         self.output_dir_label.setVisible(False)
         
-        # 生成スタイル（style_combo として提供）
+        # 生成スタイル
         self.style_combo = QComboBox()
         self.style_combo.addItem("テーブル駆動方式", "table_driven")
         self.style_combo.addItem("switch-case方式", "switch_case")
@@ -307,8 +316,6 @@ class CodeGenerationDialog(QDialog):
         if output_dir:
             self.config_manager.update(output_directory=output_dir)
         
-        config = self.config_manager.get_config()
-        
         if not output_dir:
             QMessageBox.warning(self, "警告", "出力先ディレクトリを設定してください。")
             self._select_output_dir()
@@ -316,6 +323,7 @@ class CodeGenerationDialog(QDialog):
             if not output_dir:
                 return
         
+        config = self.config_manager.get_config()
         # ボタンを無効化
         self.generate_btn.setEnabled(False)
         self.progress_bar.setVisible(True)

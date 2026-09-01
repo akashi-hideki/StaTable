@@ -1,3 +1,9 @@
+# statable_gui/main_window.py
+"""
+StaTable メインウィンドウ
+コード生成機能を統合
+"""
+
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -23,6 +29,25 @@ from .event_definition_dialog import EventDefinitionDialog
 from .event_delivery_settings_dialog import EventDeliverySettingsDialog
 from .common_widgets import TypeManagerDialog
 
+# コード生成モジュール
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'codegen'))
+
+try:
+    from codegen.c_code_generator import CCodeGenerator
+    from codegen.sample_data import SampleDataGenerator
+    from codegen.config import ConfigManager
+    from .code_generation_dialog import CodeGenerationDialog
+    from .code_generation_settings_dialog import CodeGenerationSettingsDialog
+except ImportError:
+    from c_code_generator import CCodeGenerator
+    from sample_data import SampleDataGenerator
+    from config import ConfigManager
+    from .code_generation_dialog import CodeGenerationDialog
+    from .code_generation_settings_dialog import CodeGenerationSettingsDialog
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -35,6 +60,9 @@ class MainWindow(QMainWindow):
 
         # 環境設定
         self.prefs = Preferences()
+
+        # コード生成設定マネージャ
+        self.config_manager = ConfigManager()
 
         # グローバル変数・イベントフラグ・割り込み・デバイス・タイマ設定
         self.global_defs = create_sample_global_defs()
@@ -105,6 +133,24 @@ class MainWindow(QMainWindow):
         interrupt_btn.setToolTip("割り込み処理・デバイスリソース・タイマ設定を開く")
         interrupt_btn.triggered.connect(self.open_interrupt_settings)
         toolbar.addAction(interrupt_btn)
+
+        toolbar.addSeparator()
+
+        # コード生成ボタン
+        generate_btn = QAction("コード生成", self)
+        generate_btn.setToolTip("Cコードを生成")
+        generate_btn.triggered.connect(self.open_code_generation_dialog)
+        toolbar.addAction(generate_btn)
+
+        gen_settings_btn = QAction("生成設定", self)
+        gen_settings_btn.setToolTip("コード生成設定を変更")
+        gen_settings_btn.triggered.connect(self.open_code_generation_settings)
+        toolbar.addAction(gen_settings_btn)
+
+        gen_save_btn = QAction("生成コード保存", self)
+        gen_save_btn.setToolTip("生成コードを直接保存")
+        gen_save_btn.triggered.connect(self.save_generated_code_direct)
+        toolbar.addAction(gen_save_btn)
 
         toolbar.addSeparator()
 
@@ -186,6 +232,26 @@ class MainWindow(QMainWindow):
         interrupt_action.triggered.connect(self.open_interrupt_settings)
         edit_menu.addAction(interrupt_action)
 
+        # Code Generation menu
+        code_gen_menu = menubar.addMenu("コード生成(&G)")
+
+        generate_action = QAction("コード生成...", self)
+        generate_action.setShortcut("Ctrl+G")
+        generate_action.triggered.connect(self.open_code_generation_dialog)
+        code_gen_menu.addAction(generate_action)
+
+        gen_settings_action = QAction("生成設定...", self)
+        gen_settings_action.setShortcut("Ctrl+Shift+G")
+        gen_settings_action.triggered.connect(self.open_code_generation_settings)
+        code_gen_menu.addAction(gen_settings_action)
+
+        code_gen_menu.addSeparator()
+
+        gen_save_action = QAction("生成コードを保存...", self)
+        gen_save_action.setShortcut("Ctrl+Shift+S")
+        gen_save_action.triggered.connect(self.save_generated_code_direct)
+        code_gen_menu.addAction(gen_save_action)
+
         # View menu
         view_menu = menubar.addMenu("View")
         toggle_traceball = QAction("TraceBall", self)
@@ -193,6 +259,8 @@ class MainWindow(QMainWindow):
         toggle_traceball.setChecked(False)
         toggle_traceball.toggled.connect(self.toggle_traceball)
         view_menu.addAction(toggle_traceball)
+
+    # ===== 既存のメソッド =====
 
     def open_type_manager(self):
         """ユーザー定義型管理ダイアログを開く"""
@@ -361,3 +429,90 @@ class MainWindow(QMainWindow):
         else:
             self.traceball.hide()
             self.logger.debug("TraceBall hidden")
+
+    # ===== コード生成関連メソッド =====
+
+    def _get_current_state_machine(self):
+        """現在のタブからStateMachineを取得"""
+        current_tab = self.tab_widget.currentWidget()
+        if current_tab is not None and hasattr(current_tab, 'sm'):
+            return current_tab.sm
+        return None
+
+    def _get_current_data(self):
+        """現在のタブからデータを取得（フォールバックあり）"""
+        sm = self._get_current_state_machine()
+        if sm is not None and self.global_defs is not None:
+            return sm, self.global_defs
+        
+        # サンプルデータを使用
+        sample_gen = SampleDataGenerator()
+        return sample_gen.get_sample_data()
+
+    def open_code_generation_dialog(self):
+        """コード生成ダイアログを開く"""
+        StaTableLogger.debug("MainWindow.open_code_generation_dialog called")
+        
+        state_machine, global_defs = self._get_current_data()
+        
+        dialog = CodeGenerationDialog(
+            state_machine=state_machine,
+            global_defs=global_defs,
+            parent=self
+        )
+        
+        # 設定マネージャを共有
+        dialog.config_manager = self.config_manager
+        dialog._load_config_to_ui()
+        
+        dialog.exec()
+        StaTableLogger.debug("CodeGenerationDialog closed")
+
+    def open_code_generation_settings(self):
+        """コード生成設定ダイアログを開く"""
+        StaTableLogger.debug("MainWindow.open_code_generation_settings called")
+        
+        dialog = CodeGenerationSettingsDialog(
+            config_manager=self.config_manager,
+            parent=self
+        )
+        dialog.exec()
+        StaTableLogger.debug("CodeGenerationSettingsDialog closed")
+
+    def save_generated_code_direct(self):
+        """生成コードを直接保存（ダイアログなし）"""
+        StaTableLogger.debug("MainWindow.save_generated_code_direct called")
+        
+        state_machine, global_defs = self._get_current_data()
+        
+        config = self.config_manager.get_config()
+        output_dir = config.output_directory
+        
+        if not output_dir:
+            QMessageBox.warning(self, "警告", 
+                "出力先ディレクトリが設定されていません。\n先に設定ダイアログで出力先を指定してください。")
+            self.open_code_generation_settings()
+            config = self.config_manager.get_config()
+            output_dir = config.output_directory
+            if not output_dir:
+                return
+        
+        try:
+            generator = CCodeGenerator(config=config)
+            generated_files = generator.generate_all(state_machine, global_defs)
+            
+            os.makedirs(output_dir, exist_ok=True)
+            
+            if config.save_with_merge:
+                saved_files = generator.save_generated_code_with_merge(generated_files, output_dir)
+            else:
+                saved_files = generator.save_generated_code(generated_files, output_dir)
+            
+            StaTableLogger.info(f"{len(saved_files)} files saved to {output_dir}")
+            
+            QMessageBox.information(self, "保存完了", 
+                f"{len(saved_files)}ファイルを保存しました。\n\n出力先: {output_dir}")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "エラー", f"コード生成に失敗しました:\n{e}")
+            StaTableLogger.error(f"Code generation failed: {e}")
