@@ -1,31 +1,37 @@
 # statable_gui/code_generation_settings_dialog.py
 """
-コード生成設定ダイアログ
+コード生成設定ダイアログ（PySide6対応）
 """
 
 import os
 import sys
 import logging
+from typing import Dict, Optional
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
     QLabel, QComboBox, QGroupBox, QFormLayout,
     QCheckBox, QLineEdit, QFileDialog, QTabWidget,
-    QWidget, QMessageBox
+    QWidget, QMessageBox, QDialogButtonBox
 )
-from PyQt6.QtCore import Qt
+from PySide6.QtCore import Qt
 
+# パス設定
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from codegen.config import CodeGenerationConfig, ConfigManager
+try:
+    from codegen.config import CodeGenerationConfig, ConfigManager
+except ImportError:
+    sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'codegen'))
+    from config import CodeGenerationConfig, ConfigManager
 
 logger = logging.getLogger(__name__)
 
 
 class CodeGenerationSettingsDialog(QDialog):
-    """コード生成設定ダイアログ"""
+    """コード生成設定ダイアログ（PySide6対応）"""
     
-    def __init__(self, config_manager: ConfigManager = None, parent=None):
+    def __init__(self, config_manager: Optional[ConfigManager] = None, parent=None):
         super().__init__(parent)
         self.config_manager = config_manager or ConfigManager()
         self.config = self.config_manager.get_config()
@@ -85,18 +91,20 @@ class CodeGenerationSettingsDialog(QDialog):
         style_layout = QFormLayout(style_group)
         
         self.style_combo = QComboBox()
-        for key, value in self.config_manager.get_available_styles().items():
-            self.style_combo.addItem(value, key)
+        self.style_combo.addItem("テーブル駆動方式", "table_driven")
+        self.style_combo.addItem("switch-case方式", "switch_case")
         style_layout.addRow("生成方式:", self.style_combo)
         
         self.table_type_combo = QComboBox()
-        for key, value in self.config_manager.get_available_table_types().items():
-            self.table_type_combo.addItem(value, key)
+        self.table_type_combo.addItem("配列方式", "array")
+        self.table_type_combo.addItem("switch-case方式", "switch")
+        self.table_type_combo.addItem("辞書方式（非推奨）", "dictionary")
         style_layout.addRow("テーブル方式:", self.table_type_combo)
         
         self.os_type_combo = QComboBox()
-        for key, value in self.config_manager.get_available_os_types().items():
-            self.os_type_combo.addItem(value, key)
+        self.os_type_combo.addItem("NonRTOS（ベアメタル）", "non_rtos")
+        self.os_type_combo.addItem("FreeRTOS", "freertos")
+        self.os_type_combo.addItem("ThreadX", "threadx")
         style_layout.addRow("OS種別:", self.os_type_combo)
         
         layout.addWidget(style_group)
@@ -186,23 +194,36 @@ class CodeGenerationSettingsDialog(QDialog):
     
     def _load_config(self):
         """設定を読み込む"""
-        self.style_combo.setCurrentIndex(self.style_combo.findData(self.config.generation_style))
-        self.table_type_combo.setCurrentIndex(self.table_type_combo.findData(self.config.table_type))
-        self.os_type_combo.setCurrentIndex(self.os_type_combo.findData(self.config.os_type))
+        # スタイル
+        idx = self.style_combo.findData(self.config.generation_style)
+        if idx >= 0:
+            self.style_combo.setCurrentIndex(idx)
         
+        idx = self.table_type_combo.findData(self.config.table_type)
+        if idx >= 0:
+            self.table_type_combo.setCurrentIndex(idx)
+        
+        idx = self.os_type_combo.findData(self.config.os_type)
+        if idx >= 0:
+            self.os_type_combo.setCurrentIndex(idx)
+        
+        # 命名規則
         self.naming_prefix_edit.setText(self.config.naming_prefix)
         self.state_prefix_edit.setText(self.config.state_prefix)
         self.event_prefix_edit.setText(self.config.event_prefix)
         self.flag_prefix_edit.setText(self.config.flag_prefix)
         
+        # コメント設定
         self.enable_comments_check.setChecked(self.config.enable_comments)
         self.enable_doxygen_check.setChecked(self.config.enable_doxygen)
         self.enable_markers_check.setChecked(self.config.enable_user_markers)
         
+        # ログ設定
         self.enable_debug_logs_check.setChecked(self.config.enable_debug_logs)
         self.enable_info_logs_check.setChecked(self.config.enable_info_logs)
         self.enable_error_logs_check.setChecked(self.config.enable_error_logs)
         
+        # 出力設定
         self.output_dir_edit.setText(self.config.output_directory)
         self.save_with_merge_check.setChecked(self.config.save_with_merge)
     
@@ -243,8 +264,9 @@ class CodeGenerationSettingsDialog(QDialog):
     
     def _select_output_dir(self):
         """出力先ディレクトリを選択"""
+        current = self.output_dir_edit.text() or os.getcwd()
         dir_path = QFileDialog.getExistingDirectory(
-            self, "出力先ディレクトリを選択", self.output_dir_edit.text() or os.getcwd()
+            self, "出力先ディレクトリを選択", current
         )
         if dir_path:
             self.output_dir_edit.setText(dir_path)
