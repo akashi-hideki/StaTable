@@ -1,12 +1,12 @@
 # codegen/c_code_generator.py
 """
-Cコード生成メインクラス（完全データ駆動版・11ファイル対応）
+Cコード生成メインクラス（完全データ駆動版・11ファイル対応・設定対応）
 """
 
 import sys
 import os
 import logging
-from typing import Dict, Callable, List, Any
+from typing import Dict, Callable, List, Any, Optional
 from datetime import datetime
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -28,6 +28,7 @@ try:
     from .osal_generator import OSALGenerator
     from .code_templates import CodeTemplates
     from .code_merger import CodeMerger
+    from .config import CodeGenerationConfig, ConfigManager
 except ImportError:
     from type_mapper import CTypeMapper
     from naming_convention import CNamingConvention
@@ -42,14 +43,15 @@ except ImportError:
     from osal_generator import OSALGenerator
     from code_templates import CodeTemplates
     from code_merger import CodeMerger
+    from config import CodeGenerationConfig, ConfigManager
 
 logger = logging.getLogger(__name__)
 
 
 class CCodeGenerator:
-    """Cコード生成メインクラス（完全データ駆動・11ファイル対応）"""
+    """Cコード生成メインクラス（完全データ駆動・11ファイル対応・設定対応）"""
     
-    def __init__(self):
+    def __init__(self, config: Optional[CodeGenerationConfig] = None):
         self.mapper = CTypeMapper()
         self.naming = CNamingConvention()
         self.struct_gen = CStructGenerator()
@@ -65,6 +67,12 @@ class CCodeGenerator:
         self.strings = self.templates.STRINGS
         self.formats = self.templates.FORMATS
         self.merger = CodeMerger()
+        
+        # 設定
+        self.config_manager = ConfigManager()
+        if config:
+            self.config_manager.set_config(config)
+        self.config = self.config_manager.get_config()
         
         self.generation_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
@@ -143,6 +151,29 @@ class CCodeGenerator:
     def _log_debug(self, message, level='debug'):
         log_func = getattr(logger, level, logger.debug)
         log_func(message)
+    
+    # ===== 設定関連メソッド =====
+    def get_config(self) -> CodeGenerationConfig:
+        """現在の設定を取得"""
+        return self.config
+    
+    def set_config(self, config: CodeGenerationConfig):
+        """設定を更新"""
+        self.config_manager.set_config(config)
+        self.config = self.config_manager.get_config()
+        self._log_debug("Config updated")
+    
+    def update_config(self, **kwargs):
+        """設定を部分的に更新"""
+        self.config_manager.update(**kwargs)
+        self.config = self.config_manager.get_config()
+        self._log_debug(f"Config updated: {kwargs}")
+    
+    def reset_config(self):
+        """設定をリセット"""
+        self.config_manager.reset()
+        self.config = self.config_manager.get_config()
+        self._log_debug("Config reset")
     
     # ===== ヘルパーメソッド =====
     def _get_states_list(self, state_machine):
@@ -268,11 +299,17 @@ class CCodeGenerator:
         lines.append(self._generate_include_section('transitions_c'))
         lines.append(self._generate_section_header('transition_table'))
         lines.append("")
-        lines.append(self.transition_gen.generate_transition_table('array', state_machine))
+        
+        # 設定に応じてテーブル方式を選択
+        table_type = self.config.table_type
+        lines.append(self.transition_gen.generate_transition_table(table_type, state_machine))
         lines.append("")
         lines.append(self._generate_section_header('transition_func'))
         lines.append("")
-        lines.append(self.transition_gen.generate_process_function('table_driven', state_machine))
+        
+        # 設定に応じて生成方式を選択
+        generation_style = self.config.generation_style
+        lines.append(self.transition_gen.generate_process_function(generation_style, state_machine))
         
         return '\n'.join(lines)
     
@@ -405,14 +442,14 @@ class CCodeGenerator:
     # ===== OSALヘッダ生成 =====
     def _generate_osal_header(self, state_machine, global_defs):
         """OSALヘッダ生成"""
-        self._log_debug("Generating OSAL header")
-        return self.osal_gen.generate_header('non_rtos')
+        self._log_debug(f"Generating OSAL header for: {self.config.os_type}")
+        return self.osal_gen.generate_header(self.config.os_type)
     
     # ===== OSALソース生成 =====
     def _generate_osal_source(self, state_machine, global_defs):
         """OSALソース生成"""
-        self._log_debug("Generating OSAL source")
-        return self.osal_gen.generate_source('non_rtos')
+        self._log_debug(f"Generating OSAL source for: {self.config.os_type}")
+        return self.osal_gen.generate_source(self.config.os_type)
     
     # ===== 公開メソッド =====
     def generate_all(self, state_machine, global_defs):
