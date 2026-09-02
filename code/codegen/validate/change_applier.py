@@ -1,6 +1,6 @@
 # codegen/validate/change_applier.py
 """
-変更適用エンジン
+変更適用エンジン（修正版）
 """
 
 import sys
@@ -9,12 +9,8 @@ from typing import List, Dict, Tuple
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-try:
-    from .logger import logger
-    from .change_actions import ChangeRequest, ChangeActionType
-except ImportError:
-    from logger import logger
-    from change_actions import ChangeRequest, ChangeActionType
+from validate.logger import logger
+from validate.change_actions import ChangeRequest, ChangeActionType
 
 
 class ChangeApplier:
@@ -26,20 +22,38 @@ class ChangeApplier:
         self.gd = gd
         self.applied_changes = []
         self.failed_changes = []
+        # ハンドラ辞書を文字列キーで定義
+        self._handlers = {
+            'set_initial': self._set_initial,
+            'add_transition': self._add_transition,
+            'add_state': self._add_state,
+            'add_event': self._add_event,
+            'remove_transition': self._remove_transition,
+            'update_transition': self._update_transition,
+            'add_role_function': self._add_role_function,
+            'add_variable': self._add_variable,
+            'add_flag': self._add_flag,
+        }
         logger.debug("ChangeApplier.__init__ completed")
     
     def apply(self, change: ChangeRequest) -> Tuple[bool, str]:
-        logger.debug(f"apply: {change}")
+        """変更を適用"""
+        logger.debug(f"apply: action={change.action}")
         
-        handler = self._get_handler(change.action)
+        # ChangeActionTypeの値（文字列）でハンドラを取得
+        action_value = change.action.value if hasattr(change.action, 'value') else str(change.action)
+        logger.debug(f"action_value: {action_value}")
+        
+        handler = self._handlers.get(action_value)
         if handler is None:
-            return False, f"未対応のアクション: {change.action.value}"
+            logger.warning(f"Unsupported action: {action_value}")
+            return False, f"未対応のアクション: {action_value}"
         
         try:
             result = handler(change.params)
             if result[0]:
                 self.applied_changes.append(change)
-                logger.debug(f"Change applied: {change.action.value}")
+                logger.debug(f"Change applied: {action_value}")
             else:
                 self.failed_changes.append((change, result[1]))
                 logger.warning(f"Change failed: {result[1]}")
@@ -50,6 +64,7 @@ class ChangeApplier:
             return False, str(e)
     
     def apply_all(self, changes: List[ChangeRequest]) -> Dict:
+        """全変更を適用"""
         logger.debug(f"apply_all: {len(changes)} changes")
         
         results = []
@@ -67,22 +82,9 @@ class ChangeApplier:
         logger.debug(f"apply_all completed: applied={summary['applied']}, failed={summary['failed']}")
         return summary
     
-    def _get_handler(self, action: ChangeActionType):
-        handlers = {
-            ChangeActionType.SET_INITIAL: self._set_initial,
-            ChangeActionType.ADD_TRANSITION: self._add_transition,
-            ChangeActionType.ADD_STATE: self._add_state,
-            ChangeActionType.ADD_EVENT: self._add_event,
-            ChangeActionType.REMOVE_TRANSITION: self._remove_transition,
-            ChangeActionType.UPDATE_TRANSITION: self._update_transition,
-            ChangeActionType.ADD_ROLE_FUNCTION: self._add_role_function,
-            ChangeActionType.ADD_VARIABLE: self._add_variable,
-            ChangeActionType.ADD_FLAG: self._add_flag,
-        }
-        return handlers.get(action)
-    
     def _set_initial(self, params: Dict) -> Tuple[bool, str]:
         state = params.get('state', '')
+        logger.debug(f"_set_initial: state={state}, available={list(self.sm.states.keys())}")
         if state not in self.sm.states:
             return False, f"状態「{state}」が存在しません"
         self.sm.set_initial(state)
@@ -94,6 +96,7 @@ class ChangeApplier:
         source = params.get('source', '')
         event = params.get('event', '')
         target = params.get('target', '')
+        logger.debug(f"_add_transition: {source} --[{event}]--> {target}")
         
         if not all([source, event, target]):
             return False, "遷移の情報が不足しています"
@@ -181,15 +184,17 @@ class ChangeApplier:
     def _add_variable(self, params: Dict) -> Tuple[bool, str]:
         from statable.global_defs import SystemVariable
         
-        var = SystemVariable(name=params.get('name', ''), type=params.get('type', 'uint8'),
+        name = params.get('name', '')
+        var = SystemVariable(name=name, type=params.get('type', 'uint8'),
                             group=params.get('group', ''), description=params.get('description', ''))
         self.gd.variables.append(var)
-        return True, f"変数「{params.get('name', '')}」を追加しました"
+        return True, f"変数「{name}」を追加しました"
     
     def _add_flag(self, params: Dict) -> Tuple[bool, str]:
         from statable.global_defs import EventFlag
         
-        flag = EventFlag(name=params.get('name', ''), min_value=params.get('min_value', 0),
+        name = params.get('name', '')
+        flag = EventFlag(name=name, min_value=params.get('min_value', 0),
                         max_value=params.get('max_value', 1), group=params.get('group', ''))
         self.gd.flags.append(flag)
-        return True, f"フラグ「{params.get('name', '')}」を追加しました"
+        return True, f"フラグ「{name}」を追加しました"

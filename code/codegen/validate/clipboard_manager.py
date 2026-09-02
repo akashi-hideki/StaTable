@@ -8,10 +8,7 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-try:
-    from .logger import logger
-except ImportError:
-    from logger import logger
+from validate.logger import logger
 
 
 class ClipboardManager:

@@ -11,14 +11,9 @@ from typing import List, Dict, Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-try:
-    from .logger import logger
-    from .change_actions import ChangeRequest, ChangeActionType
-    from .data.keywords import MARKERS
-except ImportError:
-    from logger import logger
-    from change_actions import ChangeRequest, ChangeActionType
-    from data.keywords import MARKERS
+from validate.logger import logger
+from validate.change_actions import ChangeRequest, ChangeActionType
+from validate.data.keywords import MARKERS
 
 
 class AIResponseParser:
@@ -38,33 +33,21 @@ class AIResponseParser:
     }
     
     def __init__(self):
-        logger.debug("AIResponseParser.__init__ started")
         self.markers = MARKERS
-        logger.debug("AIResponseParser.__init__ completed")
     
     def parse(self, text: str) -> List[ChangeRequest]:
-        logger.debug(f"parse started: text_length={len(text)}")
-        
         changes = self.parse_json_response(text)
         if changes:
-            logger.debug(f"JSON parse succeeded: {len(changes)} changes")
             return changes
-        
-        logger.debug("JSON parse failed, trying text parse")
         return self.parse_text_response(text)
     
     def parse_json_response(self, text: str) -> List[ChangeRequest]:
-        logger.debug("parse_json_response started")
-        
         json_text = self._extract_json(text)
         if not json_text:
-            logger.debug("No JSON found")
             return []
-        
         try:
             data = json.loads(json_text)
-        except json.JSONDecodeError as e:
-            logger.warning(f"JSON decode failed: {e}")
+        except json.JSONDecodeError:
             return []
         
         changes = []
@@ -73,26 +56,17 @@ class AIResponseParser:
                 change = self._parse_change(change_data)
                 if change:
                     changes.append(change)
-        
-        logger.debug(f"parse_json_response completed: {len(changes)} changes")
         return changes
     
     def parse_text_response(self, text: str) -> List[ChangeRequest]:
-        logger.debug("parse_text_response started")
         changes = []
-        
         for line in text.split('\n'):
-            line = line.strip()
-            change = self._parse_line(line)
+            change = self._parse_line(line.strip())
             if change:
                 changes.append(change)
-        
-        logger.debug(f"parse_text_response completed: {len(changes)} changes")
         return changes
     
     def _extract_json(self, text: str) -> Optional[str]:
-        logger.debug("_extract_json started")
-        
         primary = self.markers.get('primary', {})
         json_text = self._extract_with_markers(text, primary.get('start', ''), primary.get('end', ''))
         if json_text:
@@ -112,7 +86,6 @@ class AIResponseParser:
                 return candidate
             except json.JSONDecodeError:
                 pass
-        
         return None
     
     def _extract_with_markers(self, text: str, start: str, end: str) -> Optional[str]:
@@ -131,7 +104,6 @@ class AIResponseParser:
         action_str = data.get('action', '')
         if action_str not in self.ACTION_MAPPING:
             return None
-        
         return ChangeRequest(
             action=self.ACTION_MAPPING[action_str],
             params=data.get('params', {}),
@@ -150,12 +122,10 @@ class AIResponseParser:
                     'target': transition_match.group(3),
                 }
             )
-        
         initial_match = re.match(r'初期状態[::]\s*(\w+)', line)
         if initial_match:
             return ChangeRequest(
                 action=ChangeActionType.SET_INITIAL,
                 params={'state': initial_match.group(1)}
             )
-        
         return None

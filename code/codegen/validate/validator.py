@@ -7,35 +7,25 @@ import sys
 import os
 from typing import List, Dict, Type
 
-# パス設定
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-try:
-    from .logger import logger
-    from .models import ValidationResult, ValidationIssue, ValidationContext
-    from .items.state_validator import StateValidator
-    from .items.event_validator import EventValidator
-    from .items.transition_validator import TransitionValidator
-    from .items.role_function_validator import RoleFunctionValidator
-    from .items.variable_validator import VariableValidator
-    from .items.flag_validator import FlagValidator
-    from .items.queue_validator import QueueValidator
-    from .items.interrupt_validator import InterruptValidator
-    from .items.timer_validator import TimerValidator
-    from .items.custom_type_validator import CustomTypeValidator
-except ImportError:
-    from logger import logger
-    from models import ValidationResult, ValidationIssue, ValidationContext
-    from items.state_validator import StateValidator
-    from items.event_validator import EventValidator
-    from items.transition_validator import TransitionValidator
-    from items.role_function_validator import RoleFunctionValidator
-    from items.variable_validator import VariableValidator
-    from items.flag_validator import FlagValidator
-    from items.queue_validator import QueueValidator
-    from items.interrupt_validator import InterruptValidator
-    from items.timer_validator import TimerValidator
-    from items.custom_type_validator import CustomTypeValidator
+# ロガーは直接参照
+from validate.logger import logger
+
+# モデル
+from validate.models import ValidationResult, ValidationIssue, ValidationContext
+
+# バリデータ
+from validate.items.state_validator import StateValidator
+from validate.items.event_validator import EventValidator
+from validate.items.transition_validator import TransitionValidator
+from validate.items.role_function_validator import RoleFunctionValidator
+from validate.items.variable_validator import VariableValidator
+from validate.items.flag_validator import FlagValidator
+from validate.items.queue_validator import QueueValidator
+from validate.items.interrupt_validator import InterruptValidator
+from validate.items.timer_validator import TimerValidator
+from validate.items.custom_type_validator import CustomTypeValidator
 
 
 class CodeGenerationValidator:
@@ -63,15 +53,12 @@ class CodeGenerationValidator:
         logger.debug(f"CodeGenerationValidator.__init__ completed: {len(self._validators)} validators")
     
     def validate(self, state_machine, global_defs) -> ValidationResult:
-        """全検証を実行"""
         logger.debug(f"validate started: sm_id={id(state_machine)}, gd_id={id(global_defs)}")
         
         context = ValidationContext(
             state_machine=state_machine,
             global_defs=global_defs
         )
-        logger.debug(f"Context: states={len(context.states)}, events={len(context.events)}, "
-                    f"transitions={len(context.transitions)}")
         
         result = ValidationResult()
         
@@ -79,7 +66,6 @@ class CodeGenerationValidator:
             logger.debug(f"Running validator: {category}")
             try:
                 issues = validator.validate(context)
-                logger.debug(f"Validator '{category}' returned {len(issues)} issues")
                 result.issues.extend(issues)
             except Exception as e:
                 logger.error(f"Validator '{category}' failed: {e}", exc_info=True)
@@ -89,7 +75,6 @@ class CodeGenerationValidator:
         return result
     
     def validate_category(self, category: str, state_machine, global_defs) -> List[ValidationIssue]:
-        """特定カテゴリのみ検証"""
         logger.debug(f"validate_category: {category}")
         validator = self._validators.get(category)
         if validator is None:
@@ -101,12 +86,7 @@ class CodeGenerationValidator:
             global_defs=global_defs
         )
         
-        issues = validator.validate(context)
-        logger.debug(f"Category '{category}' returned {len(issues)} issues")
-        return issues
+        return validator.validate(context)
     
     def get_categories(self) -> List[str]:
-        """検証カテゴリ一覧を取得"""
-        categories = list(self._validators.keys())
-        logger.debug(f"get_categories: {categories}")
-        return categories
+        return list(self._validators.keys())

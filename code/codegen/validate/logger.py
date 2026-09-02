@@ -49,5 +49,6 @@ def setup_logger(name: str = "validate", log_dir: str = None) -> logging.Logger:
     return logger
 
 
-# デフォルトロガー
-logger = setup_logger()
+# デフォルトロガー（validate_logger として公開）
+validate_logger = setup_logger()
+logger = validate_logger

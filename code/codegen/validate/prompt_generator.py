@@ -9,18 +9,11 @@ from typing import Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-try:
-    from .logger import logger
-    from .data.prompt_templates import (
-        PROMPT_TEMPLATES, FEW_SHOT_EXAMPLE, VALIDATION_POINTS
-    )
-    from .data.action_definitions import format_action_definitions
-except ImportError:
-    from logger import logger
-    from data.prompt_templates import (
-        PROMPT_TEMPLATES, FEW_SHOT_EXAMPLE, VALIDATION_POINTS
-    )
-    from data.action_definitions import format_action_definitions
+from validate.logger import logger
+from validate.data.prompt_templates import (
+    PROMPT_TEMPLATES, FEW_SHOT_EXAMPLE, VALIDATION_POINTS
+)
+from validate.data.action_definitions import format_action_definitions
 
 
 class AIPromptGenerator:
@@ -34,17 +27,13 @@ class AIPromptGenerator:
         logger.debug("AIPromptGenerator.__init__ completed")
     
     def _format_data(self, sm, gd) -> str:
-        logger.debug("_format_data started")
         lines = []
-        
         lines.append("### 状態")
         for name, state in sm.states.items():
             lines.append(f"- {name}: type={state.type.name}, description={state.description or '-'}")
-        
         lines.append("\n### イベント")
         for name, event in sm.events.items():
             lines.append(f"- {name}: kind={event.kind.name}, description={event.description or '-'}")
-        
         lines.append("\n### 遷移")
         if sm.transitions:
             for t in sm.transitions:
@@ -56,47 +45,29 @@ class AIPromptGenerator:
                 lines.append(line)
         else:
             lines.append("- 遷移なし")
-        
         lines.append(f"\n### 初期状態\n{sm.initial_state or '未設定'}")
-        
         return '\n'.join(lines)
     
     def _format_validation(self, validation_result) -> str:
-        logger.debug("_format_validation started")
         if not validation_result or not validation_result.issues:
             return "### 内部検証結果\n問題なし"
-        
         lines = ["### 内部検証で検出された問題"]
         for issue in validation_result.issues:
             lines.append(f"- [{issue.severity.value.upper()}] {issue.message}")
-        
         return '\n'.join(lines)
     
     def generate_diagnosis_prompt(self, sm, gd, validation_result=None) -> str:
-        logger.debug("generate_diagnosis_prompt started")
         data = self._format_data(sm, gd)
         validation = self._format_validation(validation_result)
-        
         template = self.templates['diagnosis']['template']
-        prompt = template.format(
+        return template.format(
             example=self.few_shot_example,
             data=f"{data}\n\n{validation}",
             action_definitions=format_action_definitions(),
             validation_points=self.validation_points,
         )
-        
-        logger.debug(f"generate_diagnosis_prompt completed: {len(prompt)} chars")
-        return prompt
     
     def generate_review_prompt(self, sm, gd) -> str:
-        logger.debug("generate_review_prompt started")
         data = self._format_data(sm, gd)
-        
         template = self.templates['review']['template']
-        prompt = template.format(
-            data=data,
-            validation_points=self.validation_points,
-        )
-        
-        logger.debug(f"generate_review_prompt completed: {len(prompt)} chars")
-        return prompt
+        return template.format(data=data, validation_points=self.validation_points)
