@@ -3,9 +3,18 @@
 変更適用エンジン
 """
 
+import sys
+import os
 from typing import List, Dict, Tuple
-from .logger import logger
-from .change_actions import ChangeRequest, ChangeActionType
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+try:
+    from .logger import logger
+    from .change_actions import ChangeRequest, ChangeActionType
+except ImportError:
+    from logger import logger
+    from change_actions import ChangeRequest, ChangeActionType
 
 
 class ChangeApplier:
@@ -20,12 +29,10 @@ class ChangeApplier:
         logger.debug("ChangeApplier.__init__ completed")
     
     def apply(self, change: ChangeRequest) -> Tuple[bool, str]:
-        """変更を適用"""
         logger.debug(f"apply: {change}")
         
         handler = self._get_handler(change.action)
         if handler is None:
-            logger.warning(f"Unsupported action: {change.action.value}")
             return False, f"未対応のアクション: {change.action.value}"
         
         try:
@@ -43,17 +50,12 @@ class ChangeApplier:
             return False, str(e)
     
     def apply_all(self, changes: List[ChangeRequest]) -> Dict:
-        """全変更を適用"""
         logger.debug(f"apply_all: {len(changes)} changes")
         
         results = []
         for change in changes:
             success, message = self.apply(change)
-            results.append({
-                'change': change,
-                'success': success,
-                'message': message,
-            })
+            results.append({'change': change, 'success': success, 'message': message})
         
         summary = {
             'total': len(changes),
@@ -66,7 +68,6 @@ class ChangeApplier:
         return summary
     
     def _get_handler(self, action: ChangeActionType):
-        """アクションに対応するハンドラを取得"""
         handlers = {
             ChangeActionType.SET_INITIAL: self._set_initial,
             ChangeActionType.ADD_TRANSITION: self._add_transition,
@@ -82,7 +83,6 @@ class ChangeApplier:
     
     def _set_initial(self, params: Dict) -> Tuple[bool, str]:
         state = params.get('state', '')
-        logger.debug(f"_set_initial: state={state}")
         if state not in self.sm.states:
             return False, f"状態「{state}」が存在しません"
         self.sm.set_initial(state)
@@ -94,17 +94,14 @@ class ChangeApplier:
         source = params.get('source', '')
         event = params.get('event', '')
         target = params.get('target', '')
-        logger.debug(f"_add_transition: {source} --[{event}]--> {target}")
         
         if not all([source, event, target]):
             return False, "遷移の情報が不足しています"
         
-        condition = params.get('condition', '')
-        action = params.get('action_name', '')
-        
         transition = Transition(
             source=source, event=event, target=target,
-            condition=condition, action=action
+            condition=params.get('condition', ''),
+            action=params.get('action_name', '')
         )
         
         try:
@@ -117,43 +114,32 @@ class ChangeApplier:
         from statable.model import State, StateType
         
         name = params.get('name', '')
-        logger.debug(f"_add_state: name={name}")
-        
         if not name:
             return False, "状態名が指定されていません"
         if name in self.sm.states:
             return False, f"状態「{name}」は既に存在します"
         
-        state_type_str = params.get('type', 'NORMAL')
-        state_type = getattr(StateType, state_type_str, StateType.NORMAL)
-        description = params.get('description', '')
-        
-        self.sm.add_state(State(name=name, type=state_type, description=description))
+        state_type = getattr(StateType, params.get('type', 'NORMAL'), StateType.NORMAL)
+        self.sm.add_state(State(name=name, type=state_type, description=params.get('description', '')))
         return True, f"状態「{name}」を追加しました"
     
     def _add_event(self, params: Dict) -> Tuple[bool, str]:
         from statable.model import Event, EventKind
         
         name = params.get('name', '')
-        logger.debug(f"_add_event: name={name}")
-        
         if not name:
             return False, "イベント名が指定されていません"
         if name in self.sm.events:
             return False, f"イベント「{name}」は既に存在します"
         
-        kind_str = params.get('kind', 'SIGNAL')
-        kind = getattr(EventKind, kind_str, EventKind.SIGNAL)
-        description = params.get('description', '')
-        
-        self.sm.add_event(Event(name=name, kind=kind, description=description))
+        kind = getattr(EventKind, params.get('kind', 'SIGNAL'), EventKind.SIGNAL)
+        self.sm.add_event(Event(name=name, kind=kind, description=params.get('description', '')))
         return True, f"イベント「{name}」を追加しました"
     
     def _remove_transition(self, params: Dict) -> Tuple[bool, str]:
         source = params.get('source', '')
         event = params.get('event', '')
         target = params.get('target', '')
-        logger.debug(f"_remove_transition: {source} --[{event}]--> {target}")
         
         for t in self.sm.transitions:
             if t.source == source and t.event == event and t.target == target:
@@ -165,7 +151,6 @@ class ChangeApplier:
     def _update_transition(self, params: Dict) -> Tuple[bool, str]:
         source = params.get('source', '')
         event = params.get('event', '')
-        logger.debug(f"_update_transition: {source} --[{event}]-->")
         
         for t in self.sm.transitions:
             if t.source == source and t.event == event:
@@ -183,42 +168,28 @@ class ChangeApplier:
         from statable.model import RoleFunction
         
         name = params.get('name', '')
-        logger.debug(f"_add_role_function: name={name}")
-        
         if not name:
             return False, "関数名が指定されていません"
         if name in self.sm.role_functions:
             return False, f"関数「{name}」は既に存在します"
         
-        return_type = params.get('return_type', 'void')
-        description = params.get('description', '')
-        
-        rf = RoleFunction(name=name, return_type=return_type, description=description)
+        rf = RoleFunction(name=name, return_type=params.get('return_type', 'void'),
+                         description=params.get('description', ''))
         self.sm.add_role_function(rf)
         return True, f"ロール関数「{name}」を追加しました"
     
     def _add_variable(self, params: Dict) -> Tuple[bool, str]:
         from statable.global_defs import SystemVariable
         
-        name = params.get('name', '')
-        var_type = params.get('type', 'uint8')
-        group = params.get('group', '')
-        description = params.get('description', '')
-        logger.debug(f"_add_variable: name={name}, type={var_type}")
-        
-        var = SystemVariable(name=name, type=var_type, group=group, description=description)
+        var = SystemVariable(name=params.get('name', ''), type=params.get('type', 'uint8'),
+                            group=params.get('group', ''), description=params.get('description', ''))
         self.gd.variables.append(var)
-        return True, f"変数「{name}」を追加しました"
+        return True, f"変数「{params.get('name', '')}」を追加しました"
     
     def _add_flag(self, params: Dict) -> Tuple[bool, str]:
         from statable.global_defs import EventFlag
         
-        name = params.get('name', '')
-        min_value = params.get('min_value', 0)
-        max_value = params.get('max_value', 1)
-        group = params.get('group', '')
-        logger.debug(f"_add_flag: name={name}")
-        
-        flag = EventFlag(name=name, min_value=min_value, max_value=max_value, group=group)
+        flag = EventFlag(name=params.get('name', ''), min_value=params.get('min_value', 0),
+                        max_value=params.get('max_value', 1), group=params.get('group', ''))
         self.gd.flags.append(flag)
-        return True, f"フラグ「{name}」を追加しました"
+        return True, f"フラグ「{params.get('name', '')}」を追加しました"

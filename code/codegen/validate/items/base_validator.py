@@ -3,18 +3,22 @@
 バリデータ基底クラス
 """
 
+import sys
+import os
 from typing import List
-from ..models import ValidationIssue, ValidationContext
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+try:
+    from ..models import ValidationIssue, ValidationContext
+except ImportError:
+    from models import ValidationIssue, ValidationContext
 
 
 class BaseValidator:
     """バリデータ基底クラス"""
     
-    # カテゴリ名（サブクラスでオーバーライド）
     category: str = ""
-    
-    # 検証ルール辞書（サブクラスで定義）
-    # {ルールコード: 検証関数}
     rules = {}
     
     def validate(self, context: ValidationContext) -> List[ValidationIssue]:

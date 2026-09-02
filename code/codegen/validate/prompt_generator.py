@@ -3,15 +3,24 @@
 AIプロンプト生成クラス
 """
 
-import json
+import sys
+import os
 from typing import Optional
-from .logger import logger
-from .data.prompt_templates import (
-    PROMPT_TEMPLATES,
-    FEW_SHOT_EXAMPLE,
-    VALIDATION_POINTS,
-)
-from .data.action_definitions import format_action_definitions
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+try:
+    from .logger import logger
+    from .data.prompt_templates import (
+        PROMPT_TEMPLATES, FEW_SHOT_EXAMPLE, VALIDATION_POINTS
+    )
+    from .data.action_definitions import format_action_definitions
+except ImportError:
+    from logger import logger
+    from data.prompt_templates import (
+        PROMPT_TEMPLATES, FEW_SHOT_EXAMPLE, VALIDATION_POINTS
+    )
+    from data.action_definitions import format_action_definitions
 
 
 class AIPromptGenerator:
@@ -25,23 +34,17 @@ class AIPromptGenerator:
         logger.debug("AIPromptGenerator.__init__ completed")
     
     def _format_data(self, sm, gd) -> str:
-        """状態遷移データをフォーマット"""
         logger.debug("_format_data started")
         lines = []
         
-        # 状態
         lines.append("### 状態")
         for name, state in sm.states.items():
             lines.append(f"- {name}: type={state.type.name}, description={state.description or '-'}")
-        logger.debug(f"Formatted {len(sm.states)} states")
         
-        # イベント
         lines.append("\n### イベント")
         for name, event in sm.events.items():
             lines.append(f"- {name}: kind={event.kind.name}, description={event.description or '-'}")
-        logger.debug(f"Formatted {len(sm.events)} events")
         
-        # 遷移
         lines.append("\n### 遷移")
         if sm.transitions:
             for t in sm.transitions:
@@ -51,18 +54,14 @@ class AIPromptGenerator:
                 if t.action:
                     line += f" [アクション: {t.action}]"
                 lines.append(line)
-            logger.debug(f"Formatted {len(sm.transitions)} transitions")
         else:
             lines.append("- 遷移なし")
         
-        # 初期状態
         lines.append(f"\n### 初期状態\n{sm.initial_state or '未設定'}")
-        logger.debug(f"Initial state: {sm.initial_state}")
         
         return '\n'.join(lines)
     
     def _format_validation(self, validation_result) -> str:
-        """検証結果をフォーマット"""
         logger.debug("_format_validation started")
         if not validation_result or not validation_result.issues:
             return "### 内部検証結果\n問題なし"
@@ -71,13 +70,10 @@ class AIPromptGenerator:
         for issue in validation_result.issues:
             lines.append(f"- [{issue.severity.value.upper()}] {issue.message}")
         
-        logger.debug(f"Formatted {len(validation_result.issues)} validation issues")
         return '\n'.join(lines)
     
     def generate_diagnosis_prompt(self, sm, gd, validation_result=None) -> str:
-        """診断プロンプトを生成"""
         logger.debug("generate_diagnosis_prompt started")
-        
         data = self._format_data(sm, gd)
         validation = self._format_validation(validation_result)
         
@@ -93,9 +89,7 @@ class AIPromptGenerator:
         return prompt
     
     def generate_review_prompt(self, sm, gd) -> str:
-        """レビュープロンプトを生成"""
         logger.debug("generate_review_prompt started")
-        
         data = self._format_data(sm, gd)
         
         template = self.templates['review']['template']

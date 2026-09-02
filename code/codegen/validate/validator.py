@@ -3,19 +3,39 @@
 検証メインクラス
 """
 
+import sys
+import os
 from typing import List, Dict, Type
-from .logger import logger
-from .models import ValidationResult, ValidationIssue, ValidationContext
-from .items.state_validator import StateValidator
-from .items.event_validator import EventValidator
-from .items.transition_validator import TransitionValidator
-from .items.role_function_validator import RoleFunctionValidator
-from .items.variable_validator import VariableValidator
-from .items.flag_validator import FlagValidator
-from .items.queue_validator import QueueValidator
-from .items.interrupt_validator import InterruptValidator
-from .items.timer_validator import TimerValidator
-from .items.custom_type_validator import CustomTypeValidator
+
+# パス設定
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+try:
+    from .logger import logger
+    from .models import ValidationResult, ValidationIssue, ValidationContext
+    from .items.state_validator import StateValidator
+    from .items.event_validator import EventValidator
+    from .items.transition_validator import TransitionValidator
+    from .items.role_function_validator import RoleFunctionValidator
+    from .items.variable_validator import VariableValidator
+    from .items.flag_validator import FlagValidator
+    from .items.queue_validator import QueueValidator
+    from .items.interrupt_validator import InterruptValidator
+    from .items.timer_validator import TimerValidator
+    from .items.custom_type_validator import CustomTypeValidator
+except ImportError:
+    from logger import logger
+    from models import ValidationResult, ValidationIssue, ValidationContext
+    from items.state_validator import StateValidator
+    from items.event_validator import EventValidator
+    from items.transition_validator import TransitionValidator
+    from items.role_function_validator import RoleFunctionValidator
+    from items.variable_validator import VariableValidator
+    from items.flag_validator import FlagValidator
+    from items.queue_validator import QueueValidator
+    from items.interrupt_validator import InterruptValidator
+    from items.timer_validator import TimerValidator
+    from items.custom_type_validator import CustomTypeValidator
 
 
 class CodeGenerationValidator:
