@@ -1,7 +1,7 @@
 # statable_gui/main_window.py
 """
 StaTable メインウィンドウ
-コード生成機能を統合
+コード生成機能・検証AI連携機能を統合
 """
 
 from pathlib import Path
@@ -47,6 +47,9 @@ except ImportError:
     from config import ConfigManager
     from .code_generation_dialog import CodeGenerationDialog
     from .code_generation_settings_dialog import CodeGenerationSettingsDialog
+
+# 検証・AI連携モジュール
+from .validation_dialog import ValidationDialog
 
 
 class MainWindow(QMainWindow):
@@ -133,6 +136,14 @@ class MainWindow(QMainWindow):
         interrupt_btn.setToolTip("割り込み処理・デバイスリソース・タイマ設定を開く")
         interrupt_btn.triggered.connect(self.open_interrupt_settings)
         toolbar.addAction(interrupt_btn)
+
+        toolbar.addSeparator()
+
+        # 検証・AI診断ボタン
+        validate_btn = QAction("検証・AI診断", self)
+        validate_btn.setToolTip("コード生成前検証・AI連携診断を開く")
+        validate_btn.triggered.connect(self.open_validation_dialog)
+        toolbar.addAction(validate_btn)
 
         toolbar.addSeparator()
 
@@ -231,6 +242,14 @@ class MainWindow(QMainWindow):
         interrupt_action = QAction("Interrupt Settings...", self)
         interrupt_action.triggered.connect(self.open_interrupt_settings)
         edit_menu.addAction(interrupt_action)
+
+        # 検証メニュー
+        validation_menu = menubar.addMenu("検証(&V)")
+
+        validate_action = QAction("検証・AI診断...", self)
+        validate_action.setShortcut("Ctrl+Shift+V")
+        validate_action.triggered.connect(self.open_validation_dialog)
+        validation_menu.addAction(validate_action)
 
         # Code Generation menu
         code_gen_menu = menubar.addMenu("コード生成(&G)")
@@ -430,7 +449,7 @@ class MainWindow(QMainWindow):
             self.traceball.hide()
             self.logger.debug("TraceBall hidden")
 
-    # ===== コード生成関連メソッド =====
+    # ===== 検証・AI連携メソッド =====
 
     def _get_current_state_machine(self):
         """現在のタブからStateMachineを取得"""
@@ -448,6 +467,19 @@ class MainWindow(QMainWindow):
         # サンプルデータを使用
         sample_gen = SampleDataGenerator()
         return sample_gen.get_sample_data()
+
+    def open_validation_dialog(self):
+        """検証・AI連携ダイアログを開く"""
+        StaTableLogger.debug("MainWindow.open_validation_dialog called")
+        
+        sm, gd = self._get_current_data()
+        
+        dialog = ValidationDialog(sm, gd, self)
+        dialog.exec()
+        
+        StaTableLogger.debug("ValidationDialog closed")
+
+    # ===== コード生成関連メソッド =====
 
     def open_code_generation_dialog(self):
         """コード生成ダイアログを開く"""

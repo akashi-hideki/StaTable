@@ -1069,3 +1069,885 @@
 2026-09-03 05:49:17,100 - validate - DEBUG - [validate:66] - Running validator: custom_type
 2026-09-03 05:49:17,100 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
 2026-09-03 05:49:17,101 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=2, infos=0
+2026-09-03 20:07:05,365 - validate - DEBUG - [setup_logger:48] - Logger setup completed: validate -> c:\Users\user\OneDrive\ドキュメント\GitHub\StaTable\code\logs\validate_20260903.log
+2026-09-03 20:07:05,845 - validate - DEBUG - [__init__:48] - CodeGenerationValidator.__init__ started
+2026-09-03 20:07:05,846 - validate - DEBUG - [__init__:51] - Creating validator: state -> StateValidator
+2026-09-03 20:07:05,847 - validate - DEBUG - [__init__:24] - StateValidator.__init__ started
+2026-09-03 20:07:05,848 - validate - DEBUG - [__init__:32] - StateValidator.__init__ completed: 4 rules
+2026-09-03 20:07:05,849 - validate - DEBUG - [__init__:51] - Creating validator: event -> EventValidator
+2026-09-03 20:07:05,849 - validate - DEBUG - [__init__:51] - Creating validator: transition -> TransitionValidator
+2026-09-03 20:07:05,850 - validate - DEBUG - [__init__:51] - Creating validator: role_function -> RoleFunctionValidator
+2026-09-03 20:07:05,851 - validate - DEBUG - [__init__:24] - RoleFunctionValidator.__init__ started
+2026-09-03 20:07:05,852 - validate - DEBUG - [__init__:31] - RoleFunctionValidator.__init__ completed: 3 rules
+2026-09-03 20:07:05,853 - validate - DEBUG - [__init__:51] - Creating validator: variable -> VariableValidator
+2026-09-03 20:07:05,854 - validate - DEBUG - [__init__:24] - VariableValidator.__init__ started
+2026-09-03 20:07:05,855 - validate - DEBUG - [__init__:31] - VariableValidator.__init__ completed: 3 rules
+2026-09-03 20:07:05,855 - validate - DEBUG - [__init__:51] - Creating validator: flag -> FlagValidator
+2026-09-03 20:07:05,856 - validate - DEBUG - [__init__:24] - FlagValidator.__init__ started
+2026-09-03 20:07:05,856 - validate - DEBUG - [__init__:30] - FlagValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,857 - validate - DEBUG - [__init__:51] - Creating validator: queue -> QueueValidator
+2026-09-03 20:07:05,857 - validate - DEBUG - [__init__:24] - QueueValidator.__init__ started
+2026-09-03 20:07:05,858 - validate - DEBUG - [__init__:30] - QueueValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,859 - validate - DEBUG - [__init__:51] - Creating validator: interrupt -> InterruptValidator
+2026-09-03 20:07:05,859 - validate - DEBUG - [__init__:24] - InterruptValidator.__init__ started
+2026-09-03 20:07:05,860 - validate - DEBUG - [__init__:30] - InterruptValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,861 - validate - DEBUG - [__init__:51] - Creating validator: timer -> TimerValidator
+2026-09-03 20:07:05,861 - validate - DEBUG - [__init__:24] - TimerValidator.__init__ started
+2026-09-03 20:07:05,861 - validate - DEBUG - [__init__:30] - TimerValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,862 - validate - DEBUG - [__init__:51] - Creating validator: custom_type -> CustomTypeValidator
+2026-09-03 20:07:05,862 - validate - DEBUG - [__init__:24] - CustomTypeValidator.__init__ started
+2026-09-03 20:07:05,862 - validate - DEBUG - [__init__:30] - CustomTypeValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,863 - validate - DEBUG - [__init__:53] - CodeGenerationValidator.__init__ completed: 10 validators
+2026-09-03 20:07:05,863 - validate - DEBUG - [validate:56] - validate started: sm_id=2514194305040, gd_id=2514194307392
+2026-09-03 20:07:05,863 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:07:05,864 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:07:05,864 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:07:05,864 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:07:05,865 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:07:05,865 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:07:05,865 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:07:05,866 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:07:05,866 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:07:05,866 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:07:05,867 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:07:05,867 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:07:05,867 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:07:05,868 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:07:05,868 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:07:05,869 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:07:05,869 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:07:05,870 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:07:05,870 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=2, infos=0
+2026-09-03 20:07:05,871 - validate - DEBUG - [validate_category:78] - validate_category: state
+2026-09-03 20:07:05,872 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:07:05,875 - validate - DEBUG - [__init__:23] - AIPromptGenerator.__init__ started
+2026-09-03 20:07:05,876 - validate - DEBUG - [__init__:27] - AIPromptGenerator.__init__ completed
+2026-09-03 20:07:05,884 - validate - DEBUG - [__init__:20] - ChangeApplier.__init__ started
+2026-09-03 20:07:05,885 - validate - DEBUG - [__init__:37] - ChangeApplier.__init__ completed
+2026-09-03 20:07:05,885 - validate - DEBUG - [apply:41] - apply: action=ChangeActionType.SET_INITIAL
+2026-09-03 20:07:05,886 - validate - DEBUG - [apply:45] - action_value: set_initial
+2026-09-03 20:07:05,886 - validate - DEBUG - [_set_initial:87] - _set_initial: state=INIT, available=['INIT', 'IDLE', 'RUNNING', 'ERROR']
+2026-09-03 20:07:05,886 - validate - DEBUG - [apply:56] - Change applied: set_initial
+2026-09-03 20:07:05,887 - validate - DEBUG - [apply:41] - apply: action=ChangeActionType.ADD_TRANSITION
+2026-09-03 20:07:05,887 - validate - DEBUG - [apply:45] - action_value: add_transition
+2026-09-03 20:07:05,888 - validate - DEBUG - [_add_transition:99] - _add_transition: ERROR --[STOP]--> IDLE
+2026-09-03 20:07:05,888 - validate - DEBUG - [apply:56] - Change applied: add_transition
+2026-09-03 20:07:05,889 - validate - DEBUG - [apply_all:68] - apply_all: 2 changes
+2026-09-03 20:07:05,889 - validate - DEBUG - [apply:41] - apply: action=ChangeActionType.SET_INITIAL
+2026-09-03 20:07:05,889 - validate - DEBUG - [apply:45] - action_value: set_initial
+2026-09-03 20:07:05,891 - validate - DEBUG - [_set_initial:87] - _set_initial: state=INIT, available=['INIT', 'IDLE', 'RUNNING', 'ERROR']
+2026-09-03 20:07:05,891 - validate - DEBUG - [apply:56] - Change applied: set_initial
+2026-09-03 20:07:05,891 - validate - DEBUG - [apply:41] - apply: action=ChangeActionType.ADD_TRANSITION
+2026-09-03 20:07:05,892 - validate - DEBUG - [apply:45] - action_value: add_transition
+2026-09-03 20:07:05,892 - validate - DEBUG - [_add_transition:99] - _add_transition: ERROR --[STOP]--> IDLE
+2026-09-03 20:07:05,893 - validate - DEBUG - [apply:56] - Change applied: add_transition
+2026-09-03 20:07:05,893 - validate - DEBUG - [apply_all:82] - apply_all completed: applied=4, failed=0
+2026-09-03 20:07:05,900 - validate - DEBUG - [__init__:48] - CodeGenerationValidator.__init__ started
+2026-09-03 20:07:05,901 - validate - DEBUG - [__init__:51] - Creating validator: state -> StateValidator
+2026-09-03 20:07:05,901 - validate - DEBUG - [__init__:24] - StateValidator.__init__ started
+2026-09-03 20:07:05,902 - validate - DEBUG - [__init__:32] - StateValidator.__init__ completed: 4 rules
+2026-09-03 20:07:05,902 - validate - DEBUG - [__init__:51] - Creating validator: event -> EventValidator
+2026-09-03 20:07:05,903 - validate - DEBUG - [__init__:51] - Creating validator: transition -> TransitionValidator
+2026-09-03 20:07:05,903 - validate - DEBUG - [__init__:51] - Creating validator: role_function -> RoleFunctionValidator
+2026-09-03 20:07:05,904 - validate - DEBUG - [__init__:24] - RoleFunctionValidator.__init__ started
+2026-09-03 20:07:05,904 - validate - DEBUG - [__init__:31] - RoleFunctionValidator.__init__ completed: 3 rules
+2026-09-03 20:07:05,904 - validate - DEBUG - [__init__:51] - Creating validator: variable -> VariableValidator
+2026-09-03 20:07:05,905 - validate - DEBUG - [__init__:24] - VariableValidator.__init__ started
+2026-09-03 20:07:05,906 - validate - DEBUG - [__init__:31] - VariableValidator.__init__ completed: 3 rules
+2026-09-03 20:07:05,907 - validate - DEBUG - [__init__:51] - Creating validator: flag -> FlagValidator
+2026-09-03 20:07:05,907 - validate - DEBUG - [__init__:24] - FlagValidator.__init__ started
+2026-09-03 20:07:05,907 - validate - DEBUG - [__init__:30] - FlagValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,908 - validate - DEBUG - [__init__:51] - Creating validator: queue -> QueueValidator
+2026-09-03 20:07:05,908 - validate - DEBUG - [__init__:24] - QueueValidator.__init__ started
+2026-09-03 20:07:05,909 - validate - DEBUG - [__init__:30] - QueueValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,909 - validate - DEBUG - [__init__:51] - Creating validator: interrupt -> InterruptValidator
+2026-09-03 20:07:05,910 - validate - DEBUG - [__init__:24] - InterruptValidator.__init__ started
+2026-09-03 20:07:05,910 - validate - DEBUG - [__init__:30] - InterruptValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,911 - validate - DEBUG - [__init__:51] - Creating validator: timer -> TimerValidator
+2026-09-03 20:07:05,911 - validate - DEBUG - [__init__:24] - TimerValidator.__init__ started
+2026-09-03 20:07:05,911 - validate - DEBUG - [__init__:30] - TimerValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,912 - validate - DEBUG - [__init__:51] - Creating validator: custom_type -> CustomTypeValidator
+2026-09-03 20:07:05,912 - validate - DEBUG - [__init__:24] - CustomTypeValidator.__init__ started
+2026-09-03 20:07:05,913 - validate - DEBUG - [__init__:30] - CustomTypeValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,913 - validate - DEBUG - [__init__:53] - CodeGenerationValidator.__init__ completed: 10 validators
+2026-09-03 20:07:05,913 - validate - DEBUG - [validate:56] - validate started: sm_id=2514202776096, gd_id=2514202781264
+2026-09-03 20:07:05,914 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:07:05,914 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:07:05,915 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:07:05,916 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:07:05,916 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:07:05,917 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:07:05,918 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:07:05,918 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:07:05,919 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:07:05,919 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:07:05,920 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:07:05,920 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:07:05,920 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:07:05,920 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:07:05,921 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:07:05,921 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:07:05,922 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:07:05,923 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:07:05,923 - validate - DEBUG - [validate:73] - validate completed: errors=1, warnings=3, infos=0
+2026-09-03 20:07:05,924 - validate - DEBUG - [__init__:23] - AIPromptGenerator.__init__ started
+2026-09-03 20:07:05,925 - validate - DEBUG - [__init__:27] - AIPromptGenerator.__init__ completed
+2026-09-03 20:07:05,926 - validate - DEBUG - [__init__:20] - ChangeApplier.__init__ started
+2026-09-03 20:07:05,926 - validate - DEBUG - [__init__:37] - ChangeApplier.__init__ completed
+2026-09-03 20:07:05,927 - validate - DEBUG - [apply_all:68] - apply_all: 1 changes
+2026-09-03 20:07:05,927 - validate - DEBUG - [apply:41] - apply: action=ChangeActionType.SET_INITIAL
+2026-09-03 20:07:05,928 - validate - DEBUG - [apply:45] - action_value: set_initial
+2026-09-03 20:07:05,928 - validate - DEBUG - [_set_initial:87] - _set_initial: state=INIT, available=['INIT', 'IDLE', 'RUNNING', 'ERROR']
+2026-09-03 20:07:05,928 - validate - DEBUG - [apply:56] - Change applied: set_initial
+2026-09-03 20:07:05,929 - validate - DEBUG - [apply_all:82] - apply_all completed: applied=1, failed=0
+2026-09-03 20:07:05,931 - validate - DEBUG - [__init__:48] - CodeGenerationValidator.__init__ started
+2026-09-03 20:07:05,932 - validate - DEBUG - [__init__:51] - Creating validator: state -> StateValidator
+2026-09-03 20:07:05,933 - validate - DEBUG - [__init__:24] - StateValidator.__init__ started
+2026-09-03 20:07:05,934 - validate - DEBUG - [__init__:32] - StateValidator.__init__ completed: 4 rules
+2026-09-03 20:07:05,934 - validate - DEBUG - [__init__:51] - Creating validator: event -> EventValidator
+2026-09-03 20:07:05,935 - validate - DEBUG - [__init__:51] - Creating validator: transition -> TransitionValidator
+2026-09-03 20:07:05,935 - validate - DEBUG - [__init__:51] - Creating validator: role_function -> RoleFunctionValidator
+2026-09-03 20:07:05,936 - validate - DEBUG - [__init__:24] - RoleFunctionValidator.__init__ started
+2026-09-03 20:07:05,937 - validate - DEBUG - [__init__:31] - RoleFunctionValidator.__init__ completed: 3 rules
+2026-09-03 20:07:05,937 - validate - DEBUG - [__init__:51] - Creating validator: variable -> VariableValidator
+2026-09-03 20:07:05,937 - validate - DEBUG - [__init__:24] - VariableValidator.__init__ started
+2026-09-03 20:07:05,938 - validate - DEBUG - [__init__:31] - VariableValidator.__init__ completed: 3 rules
+2026-09-03 20:07:05,938 - validate - DEBUG - [__init__:51] - Creating validator: flag -> FlagValidator
+2026-09-03 20:07:05,939 - validate - DEBUG - [__init__:24] - FlagValidator.__init__ started
+2026-09-03 20:07:05,939 - validate - DEBUG - [__init__:30] - FlagValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,940 - validate - DEBUG - [__init__:51] - Creating validator: queue -> QueueValidator
+2026-09-03 20:07:05,940 - validate - DEBUG - [__init__:24] - QueueValidator.__init__ started
+2026-09-03 20:07:05,941 - validate - DEBUG - [__init__:30] - QueueValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,942 - validate - DEBUG - [__init__:51] - Creating validator: interrupt -> InterruptValidator
+2026-09-03 20:07:05,942 - validate - DEBUG - [__init__:24] - InterruptValidator.__init__ started
+2026-09-03 20:07:05,942 - validate - DEBUG - [__init__:30] - InterruptValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,943 - validate - DEBUG - [__init__:51] - Creating validator: timer -> TimerValidator
+2026-09-03 20:07:05,943 - validate - DEBUG - [__init__:24] - TimerValidator.__init__ started
+2026-09-03 20:07:05,944 - validate - DEBUG - [__init__:30] - TimerValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,944 - validate - DEBUG - [__init__:51] - Creating validator: custom_type -> CustomTypeValidator
+2026-09-03 20:07:05,944 - validate - DEBUG - [__init__:24] - CustomTypeValidator.__init__ started
+2026-09-03 20:07:05,945 - validate - DEBUG - [__init__:30] - CustomTypeValidator.__init__ completed: 2 rules
+2026-09-03 20:07:05,945 - validate - DEBUG - [__init__:53] - CodeGenerationValidator.__init__ completed: 10 validators
+2026-09-03 20:07:05,946 - validate - DEBUG - [validate:56] - validate started: sm_id=2514202782176, gd_id=2514202777008
+2026-09-03 20:07:05,947 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:07:05,947 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:07:05,947 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:07:05,948 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:07:05,948 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:07:05,949 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:07:05,949 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:07:05,950 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:07:05,950 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:07:05,951 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:07:05,951 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:07:05,951 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:07:05,951 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:07:05,952 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:07:05,952 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:07:05,952 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:07:05,953 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:07:05,953 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:07:05,953 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=0, infos=0
+2026-09-03 20:07:05,954 - validate - DEBUG - [validate:56] - validate started: sm_id=2514203026224, gd_id=2514202777008
+2026-09-03 20:07:05,954 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:07:05,955 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:07:05,955 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:07:05,956 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:07:05,956 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:07:05,957 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:07:05,957 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:07:05,957 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:07:05,958 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:07:05,958 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:07:05,958 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:07:05,959 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:07:05,959 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:07:05,959 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:07:05,960 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:07:05,960 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:07:05,960 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:07:05,961 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:07:05,961 - validate - DEBUG - [validate:73] - validate completed: errors=1, warnings=1, infos=0
+2026-09-03 20:07:05,961 - validate - DEBUG - [validate:56] - validate started: sm_id=2514203575168, gd_id=2514202777008
+2026-09-03 20:07:05,962 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:07:05,962 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:07:05,962 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:07:05,963 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:07:05,963 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:07:05,963 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:07:05,964 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:07:05,964 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:07:05,964 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:07:05,965 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:07:05,965 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:07:05,965 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:07:05,966 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:07:05,966 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:07:05,966 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:07:05,967 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:07:05,967 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:07:05,967 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:07:05,967 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=2, infos=0
+2026-09-03 20:07:41,380 - validate - DEBUG - [setup_logger:48] - Logger setup completed: validate -> c:\Users\user\OneDrive\ドキュメント\GitHub\StaTable\code\logs\validate_20260903.log
+2026-09-03 20:07:41,463 - validate - DEBUG - [__init__:48] - CodeGenerationValidator.__init__ started
+2026-09-03 20:07:41,464 - validate - DEBUG - [__init__:51] - Creating validator: state -> StateValidator
+2026-09-03 20:07:41,464 - validate - DEBUG - [__init__:24] - StateValidator.__init__ started
+2026-09-03 20:07:41,465 - validate - DEBUG - [__init__:32] - StateValidator.__init__ completed: 4 rules
+2026-09-03 20:07:41,466 - validate - DEBUG - [__init__:51] - Creating validator: event -> EventValidator
+2026-09-03 20:07:41,466 - validate - DEBUG - [__init__:51] - Creating validator: transition -> TransitionValidator
+2026-09-03 20:07:41,467 - validate - DEBUG - [__init__:51] - Creating validator: role_function -> RoleFunctionValidator
+2026-09-03 20:07:41,468 - validate - DEBUG - [__init__:24] - RoleFunctionValidator.__init__ started
+2026-09-03 20:07:41,468 - validate - DEBUG - [__init__:31] - RoleFunctionValidator.__init__ completed: 3 rules
+2026-09-03 20:07:41,469 - validate - DEBUG - [__init__:51] - Creating validator: variable -> VariableValidator
+2026-09-03 20:07:41,469 - validate - DEBUG - [__init__:24] - VariableValidator.__init__ started
+2026-09-03 20:07:41,469 - validate - DEBUG - [__init__:31] - VariableValidator.__init__ completed: 3 rules
+2026-09-03 20:07:41,470 - validate - DEBUG - [__init__:51] - Creating validator: flag -> FlagValidator
+2026-09-03 20:07:41,470 - validate - DEBUG - [__init__:24] - FlagValidator.__init__ started
+2026-09-03 20:07:41,471 - validate - DEBUG - [__init__:30] - FlagValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,471 - validate - DEBUG - [__init__:51] - Creating validator: queue -> QueueValidator
+2026-09-03 20:07:41,472 - validate - DEBUG - [__init__:24] - QueueValidator.__init__ started
+2026-09-03 20:07:41,472 - validate - DEBUG - [__init__:30] - QueueValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,473 - validate - DEBUG - [__init__:51] - Creating validator: interrupt -> InterruptValidator
+2026-09-03 20:07:41,473 - validate - DEBUG - [__init__:24] - InterruptValidator.__init__ started
+2026-09-03 20:07:41,473 - validate - DEBUG - [__init__:30] - InterruptValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,474 - validate - DEBUG - [__init__:51] - Creating validator: timer -> TimerValidator
+2026-09-03 20:07:41,474 - validate - DEBUG - [__init__:24] - TimerValidator.__init__ started
+2026-09-03 20:07:41,474 - validate - DEBUG - [__init__:30] - TimerValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,475 - validate - DEBUG - [__init__:51] - Creating validator: custom_type -> CustomTypeValidator
+2026-09-03 20:07:41,475 - validate - DEBUG - [__init__:24] - CustomTypeValidator.__init__ started
+2026-09-03 20:07:41,475 - validate - DEBUG - [__init__:30] - CustomTypeValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,476 - validate - DEBUG - [__init__:53] - CodeGenerationValidator.__init__ completed: 10 validators
+2026-09-03 20:07:41,476 - validate - DEBUG - [validate:56] - validate started: sm_id=2664791314448, gd_id=2664791316800
+2026-09-03 20:07:41,477 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:07:41,477 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:07:41,478 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:07:41,478 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:07:41,478 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:07:41,479 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:07:41,479 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:07:41,479 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:07:41,480 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:07:41,480 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:07:41,480 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:07:41,481 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:07:41,481 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:07:41,482 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:07:41,482 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:07:41,482 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:07:41,483 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:07:41,483 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:07:41,483 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=2, infos=0
+2026-09-03 20:07:41,484 - validate - DEBUG - [validate_category:78] - validate_category: state
+2026-09-03 20:07:41,485 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:07:41,489 - validate - DEBUG - [__init__:23] - AIPromptGenerator.__init__ started
+2026-09-03 20:07:41,489 - validate - DEBUG - [__init__:27] - AIPromptGenerator.__init__ completed
+2026-09-03 20:07:41,497 - validate - DEBUG - [__init__:20] - ChangeApplier.__init__ started
+2026-09-03 20:07:41,498 - validate - DEBUG - [__init__:37] - ChangeApplier.__init__ completed
+2026-09-03 20:07:41,498 - validate - DEBUG - [apply:41] - apply: action=ChangeActionType.SET_INITIAL
+2026-09-03 20:07:41,499 - validate - DEBUG - [apply:45] - action_value: set_initial
+2026-09-03 20:07:41,499 - validate - DEBUG - [_set_initial:87] - _set_initial: state=INIT, available=['INIT', 'IDLE', 'RUNNING', 'ERROR']
+2026-09-03 20:07:41,499 - validate - DEBUG - [apply:56] - Change applied: set_initial
+2026-09-03 20:07:41,500 - validate - DEBUG - [apply:41] - apply: action=ChangeActionType.ADD_TRANSITION
+2026-09-03 20:07:41,500 - validate - DEBUG - [apply:45] - action_value: add_transition
+2026-09-03 20:07:41,500 - validate - DEBUG - [_add_transition:99] - _add_transition: ERROR --[STOP]--> IDLE
+2026-09-03 20:07:41,501 - validate - DEBUG - [apply:56] - Change applied: add_transition
+2026-09-03 20:07:41,501 - validate - DEBUG - [apply_all:68] - apply_all: 2 changes
+2026-09-03 20:07:41,502 - validate - DEBUG - [apply:41] - apply: action=ChangeActionType.SET_INITIAL
+2026-09-03 20:07:41,502 - validate - DEBUG - [apply:45] - action_value: set_initial
+2026-09-03 20:07:41,503 - validate - DEBUG - [_set_initial:87] - _set_initial: state=INIT, available=['INIT', 'IDLE', 'RUNNING', 'ERROR']
+2026-09-03 20:07:41,504 - validate - DEBUG - [apply:56] - Change applied: set_initial
+2026-09-03 20:07:41,505 - validate - DEBUG - [apply:41] - apply: action=ChangeActionType.ADD_TRANSITION
+2026-09-03 20:07:41,505 - validate - DEBUG - [apply:45] - action_value: add_transition
+2026-09-03 20:07:41,506 - validate - DEBUG - [_add_transition:99] - _add_transition: ERROR --[STOP]--> IDLE
+2026-09-03 20:07:41,506 - validate - DEBUG - [apply:56] - Change applied: add_transition
+2026-09-03 20:07:41,506 - validate - DEBUG - [apply_all:82] - apply_all completed: applied=4, failed=0
+2026-09-03 20:07:41,513 - validate - DEBUG - [__init__:48] - CodeGenerationValidator.__init__ started
+2026-09-03 20:07:41,514 - validate - DEBUG - [__init__:51] - Creating validator: state -> StateValidator
+2026-09-03 20:07:41,514 - validate - DEBUG - [__init__:24] - StateValidator.__init__ started
+2026-09-03 20:07:41,514 - validate - DEBUG - [__init__:32] - StateValidator.__init__ completed: 4 rules
+2026-09-03 20:07:41,515 - validate - DEBUG - [__init__:51] - Creating validator: event -> EventValidator
+2026-09-03 20:07:41,515 - validate - DEBUG - [__init__:51] - Creating validator: transition -> TransitionValidator
+2026-09-03 20:07:41,515 - validate - DEBUG - [__init__:51] - Creating validator: role_function -> RoleFunctionValidator
+2026-09-03 20:07:41,516 - validate - DEBUG - [__init__:24] - RoleFunctionValidator.__init__ started
+2026-09-03 20:07:41,516 - validate - DEBUG - [__init__:31] - RoleFunctionValidator.__init__ completed: 3 rules
+2026-09-03 20:07:41,516 - validate - DEBUG - [__init__:51] - Creating validator: variable -> VariableValidator
+2026-09-03 20:07:41,517 - validate - DEBUG - [__init__:24] - VariableValidator.__init__ started
+2026-09-03 20:07:41,517 - validate - DEBUG - [__init__:31] - VariableValidator.__init__ completed: 3 rules
+2026-09-03 20:07:41,517 - validate - DEBUG - [__init__:51] - Creating validator: flag -> FlagValidator
+2026-09-03 20:07:41,518 - validate - DEBUG - [__init__:24] - FlagValidator.__init__ started
+2026-09-03 20:07:41,518 - validate - DEBUG - [__init__:30] - FlagValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,519 - validate - DEBUG - [__init__:51] - Creating validator: queue -> QueueValidator
+2026-09-03 20:07:41,519 - validate - DEBUG - [__init__:24] - QueueValidator.__init__ started
+2026-09-03 20:07:41,520 - validate - DEBUG - [__init__:30] - QueueValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,520 - validate - DEBUG - [__init__:51] - Creating validator: interrupt -> InterruptValidator
+2026-09-03 20:07:41,520 - validate - DEBUG - [__init__:24] - InterruptValidator.__init__ started
+2026-09-03 20:07:41,521 - validate - DEBUG - [__init__:30] - InterruptValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,521 - validate - DEBUG - [__init__:51] - Creating validator: timer -> TimerValidator
+2026-09-03 20:07:41,521 - validate - DEBUG - [__init__:24] - TimerValidator.__init__ started
+2026-09-03 20:07:41,522 - validate - DEBUG - [__init__:30] - TimerValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,522 - validate - DEBUG - [__init__:51] - Creating validator: custom_type -> CustomTypeValidator
+2026-09-03 20:07:41,522 - validate - DEBUG - [__init__:24] - CustomTypeValidator.__init__ started
+2026-09-03 20:07:41,523 - validate - DEBUG - [__init__:30] - CustomTypeValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,523 - validate - DEBUG - [__init__:53] - CodeGenerationValidator.__init__ completed: 10 validators
+2026-09-03 20:07:41,524 - validate - DEBUG - [validate:56] - validate started: sm_id=2664791396896, gd_id=2664791402064
+2026-09-03 20:07:41,524 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:07:41,524 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:07:41,525 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:07:41,525 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:07:41,526 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:07:41,526 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:07:41,527 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:07:41,527 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:07:41,528 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:07:41,528 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:07:41,530 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:07:41,531 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:07:41,531 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:07:41,532 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:07:41,532 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:07:41,532 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:07:41,532 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:07:41,532 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:07:41,533 - validate - DEBUG - [validate:73] - validate completed: errors=1, warnings=3, infos=0
+2026-09-03 20:07:41,533 - validate - DEBUG - [__init__:23] - AIPromptGenerator.__init__ started
+2026-09-03 20:07:41,533 - validate - DEBUG - [__init__:27] - AIPromptGenerator.__init__ completed
+2026-09-03 20:07:41,534 - validate - DEBUG - [__init__:20] - ChangeApplier.__init__ started
+2026-09-03 20:07:41,534 - validate - DEBUG - [__init__:37] - ChangeApplier.__init__ completed
+2026-09-03 20:07:41,534 - validate - DEBUG - [apply_all:68] - apply_all: 1 changes
+2026-09-03 20:07:41,535 - validate - DEBUG - [apply:41] - apply: action=ChangeActionType.SET_INITIAL
+2026-09-03 20:07:41,535 - validate - DEBUG - [apply:45] - action_value: set_initial
+2026-09-03 20:07:41,535 - validate - DEBUG - [_set_initial:87] - _set_initial: state=INIT, available=['INIT', 'IDLE', 'RUNNING', 'ERROR']
+2026-09-03 20:07:41,536 - validate - DEBUG - [apply:56] - Change applied: set_initial
+2026-09-03 20:07:41,536 - validate - DEBUG - [apply_all:82] - apply_all completed: applied=1, failed=0
+2026-09-03 20:07:41,539 - validate - DEBUG - [__init__:48] - CodeGenerationValidator.__init__ started
+2026-09-03 20:07:41,539 - validate - DEBUG - [__init__:51] - Creating validator: state -> StateValidator
+2026-09-03 20:07:41,539 - validate - DEBUG - [__init__:24] - StateValidator.__init__ started
+2026-09-03 20:07:41,540 - validate - DEBUG - [__init__:32] - StateValidator.__init__ completed: 4 rules
+2026-09-03 20:07:41,540 - validate - DEBUG - [__init__:51] - Creating validator: event -> EventValidator
+2026-09-03 20:07:41,540 - validate - DEBUG - [__init__:51] - Creating validator: transition -> TransitionValidator
+2026-09-03 20:07:41,541 - validate - DEBUG - [__init__:51] - Creating validator: role_function -> RoleFunctionValidator
+2026-09-03 20:07:41,541 - validate - DEBUG - [__init__:24] - RoleFunctionValidator.__init__ started
+2026-09-03 20:07:41,542 - validate - DEBUG - [__init__:31] - RoleFunctionValidator.__init__ completed: 3 rules
+2026-09-03 20:07:41,542 - validate - DEBUG - [__init__:51] - Creating validator: variable -> VariableValidator
+2026-09-03 20:07:41,542 - validate - DEBUG - [__init__:24] - VariableValidator.__init__ started
+2026-09-03 20:07:41,543 - validate - DEBUG - [__init__:31] - VariableValidator.__init__ completed: 3 rules
+2026-09-03 20:07:41,543 - validate - DEBUG - [__init__:51] - Creating validator: flag -> FlagValidator
+2026-09-03 20:07:41,544 - validate - DEBUG - [__init__:24] - FlagValidator.__init__ started
+2026-09-03 20:07:41,544 - validate - DEBUG - [__init__:30] - FlagValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,545 - validate - DEBUG - [__init__:51] - Creating validator: queue -> QueueValidator
+2026-09-03 20:07:41,545 - validate - DEBUG - [__init__:24] - QueueValidator.__init__ started
+2026-09-03 20:07:41,545 - validate - DEBUG - [__init__:30] - QueueValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,545 - validate - DEBUG - [__init__:51] - Creating validator: interrupt -> InterruptValidator
+2026-09-03 20:07:41,546 - validate - DEBUG - [__init__:24] - InterruptValidator.__init__ started
+2026-09-03 20:07:41,546 - validate - DEBUG - [__init__:30] - InterruptValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,546 - validate - DEBUG - [__init__:51] - Creating validator: timer -> TimerValidator
+2026-09-03 20:07:41,547 - validate - DEBUG - [__init__:24] - TimerValidator.__init__ started
+2026-09-03 20:07:41,547 - validate - DEBUG - [__init__:30] - TimerValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,547 - validate - DEBUG - [__init__:51] - Creating validator: custom_type -> CustomTypeValidator
+2026-09-03 20:07:41,548 - validate - DEBUG - [__init__:24] - CustomTypeValidator.__init__ started
+2026-09-03 20:07:41,548 - validate - DEBUG - [__init__:30] - CustomTypeValidator.__init__ completed: 2 rules
+2026-09-03 20:07:41,548 - validate - DEBUG - [__init__:53] - CodeGenerationValidator.__init__ completed: 10 validators
+2026-09-03 20:07:41,548 - validate - DEBUG - [validate:56] - validate started: sm_id=2664791402976, gd_id=2664791397808
+2026-09-03 20:07:41,549 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:07:41,549 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:07:41,549 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:07:41,550 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:07:41,550 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:07:41,550 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:07:41,551 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:07:41,551 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:07:41,551 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:07:41,552 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:07:41,553 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:07:41,553 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:07:41,554 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:07:41,554 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:07:41,554 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:07:41,555 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:07:41,555 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:07:41,556 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:07:41,556 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=0, infos=0
+2026-09-03 20:07:41,556 - validate - DEBUG - [validate:56] - validate started: sm_id=2664791647024, gd_id=2664791397808
+2026-09-03 20:07:41,557 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:07:41,557 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:07:41,558 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:07:41,558 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:07:41,558 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:07:41,559 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:07:41,559 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:07:41,560 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:07:41,560 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:07:41,561 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:07:41,561 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:07:41,561 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:07:41,562 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:07:41,562 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:07:41,562 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:07:41,563 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:07:41,563 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:07:41,564 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:07:41,564 - validate - DEBUG - [validate:73] - validate completed: errors=1, warnings=1, infos=0
+2026-09-03 20:07:41,565 - validate - DEBUG - [validate:56] - validate started: sm_id=2664792195968, gd_id=2664791397808
+2026-09-03 20:07:41,565 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:07:41,566 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:07:41,566 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:07:41,566 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:07:41,566 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:07:41,567 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:07:41,567 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:07:41,567 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:07:41,568 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:07:41,568 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:07:41,569 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:07:41,569 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:07:41,569 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:07:41,570 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:07:41,570 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:07:41,570 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:07:41,571 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:07:41,571 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:07:41,571 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=2, infos=0
+2026-09-03 20:09:59,260 - validate - DEBUG - [setup_logger:48] - Logger setup completed: validate -> c:\Users\user\OneDrive\ドキュメント\GitHub\StaTable\code\logs\validate_20260903.log
+2026-09-03 20:09:59,342 - validate - DEBUG - [__init__:48] - CodeGenerationValidator.__init__ started
+2026-09-03 20:09:59,343 - validate - DEBUG - [__init__:51] - Creating validator: state -> StateValidator
+2026-09-03 20:09:59,344 - validate - DEBUG - [__init__:24] - StateValidator.__init__ started
+2026-09-03 20:09:59,346 - validate - DEBUG - [__init__:32] - StateValidator.__init__ completed: 4 rules
+2026-09-03 20:09:59,346 - validate - DEBUG - [__init__:51] - Creating validator: event -> EventValidator
+2026-09-03 20:09:59,347 - validate - DEBUG - [__init__:51] - Creating validator: transition -> TransitionValidator
+2026-09-03 20:09:59,348 - validate - DEBUG - [__init__:51] - Creating validator: role_function -> RoleFunctionValidator
+2026-09-03 20:09:59,348 - validate - DEBUG - [__init__:24] - RoleFunctionValidator.__init__ started
+2026-09-03 20:09:59,349 - validate - DEBUG - [__init__:31] - RoleFunctionValidator.__init__ completed: 3 rules
+2026-09-03 20:09:59,349 - validate - DEBUG - [__init__:51] - Creating validator: variable -> VariableValidator
+2026-09-03 20:09:59,350 - validate - DEBUG - [__init__:24] - VariableValidator.__init__ started
+2026-09-03 20:09:59,351 - validate - DEBUG - [__init__:31] - VariableValidator.__init__ completed: 3 rules
+2026-09-03 20:09:59,351 - validate - DEBUG - [__init__:51] - Creating validator: flag -> FlagValidator
+2026-09-03 20:09:59,352 - validate - DEBUG - [__init__:24] - FlagValidator.__init__ started
+2026-09-03 20:09:59,353 - validate - DEBUG - [__init__:30] - FlagValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,353 - validate - DEBUG - [__init__:51] - Creating validator: queue -> QueueValidator
+2026-09-03 20:09:59,354 - validate - DEBUG - [__init__:24] - QueueValidator.__init__ started
+2026-09-03 20:09:59,355 - validate - DEBUG - [__init__:30] - QueueValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,356 - validate - DEBUG - [__init__:51] - Creating validator: interrupt -> InterruptValidator
+2026-09-03 20:09:59,356 - validate - DEBUG - [__init__:24] - InterruptValidator.__init__ started
+2026-09-03 20:09:59,357 - validate - DEBUG - [__init__:30] - InterruptValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,357 - validate - DEBUG - [__init__:51] - Creating validator: timer -> TimerValidator
+2026-09-03 20:09:59,358 - validate - DEBUG - [__init__:24] - TimerValidator.__init__ started
+2026-09-03 20:09:59,359 - validate - DEBUG - [__init__:30] - TimerValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,360 - validate - DEBUG - [__init__:51] - Creating validator: custom_type -> CustomTypeValidator
+2026-09-03 20:09:59,360 - validate - DEBUG - [__init__:24] - CustomTypeValidator.__init__ started
+2026-09-03 20:09:59,361 - validate - DEBUG - [__init__:30] - CustomTypeValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,362 - validate - DEBUG - [__init__:53] - CodeGenerationValidator.__init__ completed: 10 validators
+2026-09-03 20:09:59,365 - validate - DEBUG - [validate:56] - validate started: sm_id=2258149953552, gd_id=2258149955904
+2026-09-03 20:09:59,401 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:09:59,403 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:09:59,404 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:09:59,407 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:09:59,407 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:09:59,408 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:09:59,409 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:09:59,409 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:09:59,420 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:09:59,421 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:09:59,422 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:09:59,422 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:09:59,422 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:09:59,423 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:09:59,423 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:09:59,423 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:09:59,424 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:09:59,425 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:09:59,426 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=2, infos=0
+2026-09-03 20:09:59,430 - validate - DEBUG - [__init__:23] - AIPromptGenerator.__init__ started
+2026-09-03 20:09:59,430 - validate - DEBUG - [__init__:27] - AIPromptGenerator.__init__ completed
+2026-09-03 20:09:59,444 - validate - DEBUG - [__init__:20] - ChangeApplier.__init__ started
+2026-09-03 20:09:59,445 - validate - DEBUG - [__init__:37] - ChangeApplier.__init__ completed
+2026-09-03 20:09:59,446 - validate - DEBUG - [apply:41] - apply: action=ChangeActionType.SET_INITIAL
+2026-09-03 20:09:59,446 - validate - DEBUG - [apply:45] - action_value: set_initial
+2026-09-03 20:09:59,446 - validate - DEBUG - [_set_initial:87] - _set_initial: state=INIT, available=['INIT', 'IDLE', 'RUNNING', 'ERROR']
+2026-09-03 20:09:59,447 - validate - DEBUG - [apply:56] - Change applied: set_initial
+2026-09-03 20:09:59,452 - validate - DEBUG - [__init__:48] - CodeGenerationValidator.__init__ started
+2026-09-03 20:09:59,452 - validate - DEBUG - [__init__:51] - Creating validator: state -> StateValidator
+2026-09-03 20:09:59,453 - validate - DEBUG - [__init__:24] - StateValidator.__init__ started
+2026-09-03 20:09:59,453 - validate - DEBUG - [__init__:32] - StateValidator.__init__ completed: 4 rules
+2026-09-03 20:09:59,454 - validate - DEBUG - [__init__:51] - Creating validator: event -> EventValidator
+2026-09-03 20:09:59,454 - validate - DEBUG - [__init__:51] - Creating validator: transition -> TransitionValidator
+2026-09-03 20:09:59,454 - validate - DEBUG - [__init__:51] - Creating validator: role_function -> RoleFunctionValidator
+2026-09-03 20:09:59,455 - validate - DEBUG - [__init__:24] - RoleFunctionValidator.__init__ started
+2026-09-03 20:09:59,455 - validate - DEBUG - [__init__:31] - RoleFunctionValidator.__init__ completed: 3 rules
+2026-09-03 20:09:59,455 - validate - DEBUG - [__init__:51] - Creating validator: variable -> VariableValidator
+2026-09-03 20:09:59,455 - validate - DEBUG - [__init__:24] - VariableValidator.__init__ started
+2026-09-03 20:09:59,456 - validate - DEBUG - [__init__:31] - VariableValidator.__init__ completed: 3 rules
+2026-09-03 20:09:59,456 - validate - DEBUG - [__init__:51] - Creating validator: flag -> FlagValidator
+2026-09-03 20:09:59,456 - validate - DEBUG - [__init__:24] - FlagValidator.__init__ started
+2026-09-03 20:09:59,457 - validate - DEBUG - [__init__:30] - FlagValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,457 - validate - DEBUG - [__init__:51] - Creating validator: queue -> QueueValidator
+2026-09-03 20:09:59,457 - validate - DEBUG - [__init__:24] - QueueValidator.__init__ started
+2026-09-03 20:09:59,457 - validate - DEBUG - [__init__:30] - QueueValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,458 - validate - DEBUG - [__init__:51] - Creating validator: interrupt -> InterruptValidator
+2026-09-03 20:09:59,458 - validate - DEBUG - [__init__:24] - InterruptValidator.__init__ started
+2026-09-03 20:09:59,458 - validate - DEBUG - [__init__:30] - InterruptValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,459 - validate - DEBUG - [__init__:51] - Creating validator: timer -> TimerValidator
+2026-09-03 20:09:59,459 - validate - DEBUG - [__init__:24] - TimerValidator.__init__ started
+2026-09-03 20:09:59,459 - validate - DEBUG - [__init__:30] - TimerValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,460 - validate - DEBUG - [__init__:51] - Creating validator: custom_type -> CustomTypeValidator
+2026-09-03 20:09:59,460 - validate - DEBUG - [__init__:24] - CustomTypeValidator.__init__ started
+2026-09-03 20:09:59,460 - validate - DEBUG - [__init__:30] - CustomTypeValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,461 - validate - DEBUG - [__init__:53] - CodeGenerationValidator.__init__ completed: 10 validators
+2026-09-03 20:09:59,461 - validate - DEBUG - [validate:56] - validate started: sm_id=2258150052384, gd_id=2258150057552
+2026-09-03 20:09:59,462 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:09:59,462 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:09:59,463 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:09:59,463 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:09:59,463 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:09:59,464 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:09:59,464 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:09:59,464 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:09:59,465 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:09:59,465 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:09:59,465 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:09:59,465 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:09:59,466 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:09:59,466 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:09:59,466 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:09:59,466 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:09:59,467 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:09:59,467 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:09:59,467 - validate - DEBUG - [validate:73] - validate completed: errors=1, warnings=3, infos=0
+2026-09-03 20:09:59,468 - validate - DEBUG - [__init__:23] - AIPromptGenerator.__init__ started
+2026-09-03 20:09:59,468 - validate - DEBUG - [__init__:27] - AIPromptGenerator.__init__ completed
+2026-09-03 20:09:59,469 - validate - DEBUG - [__init__:20] - ChangeApplier.__init__ started
+2026-09-03 20:09:59,469 - validate - DEBUG - [__init__:37] - ChangeApplier.__init__ completed
+2026-09-03 20:09:59,470 - validate - DEBUG - [apply_all:68] - apply_all: 1 changes
+2026-09-03 20:09:59,470 - validate - DEBUG - [apply:41] - apply: action=ChangeActionType.SET_INITIAL
+2026-09-03 20:09:59,470 - validate - DEBUG - [apply:45] - action_value: set_initial
+2026-09-03 20:09:59,470 - validate - DEBUG - [_set_initial:87] - _set_initial: state=INIT, available=['INIT', 'IDLE', 'RUNNING', 'ERROR']
+2026-09-03 20:09:59,471 - validate - DEBUG - [apply:56] - Change applied: set_initial
+2026-09-03 20:09:59,471 - validate - DEBUG - [apply_all:82] - apply_all completed: applied=1, failed=0
+2026-09-03 20:09:59,473 - validate - DEBUG - [__init__:48] - CodeGenerationValidator.__init__ started
+2026-09-03 20:09:59,473 - validate - DEBUG - [__init__:51] - Creating validator: state -> StateValidator
+2026-09-03 20:09:59,473 - validate - DEBUG - [__init__:24] - StateValidator.__init__ started
+2026-09-03 20:09:59,474 - validate - DEBUG - [__init__:32] - StateValidator.__init__ completed: 4 rules
+2026-09-03 20:09:59,474 - validate - DEBUG - [__init__:51] - Creating validator: event -> EventValidator
+2026-09-03 20:09:59,474 - validate - DEBUG - [__init__:51] - Creating validator: transition -> TransitionValidator
+2026-09-03 20:09:59,475 - validate - DEBUG - [__init__:51] - Creating validator: role_function -> RoleFunctionValidator
+2026-09-03 20:09:59,475 - validate - DEBUG - [__init__:24] - RoleFunctionValidator.__init__ started
+2026-09-03 20:09:59,475 - validate - DEBUG - [__init__:31] - RoleFunctionValidator.__init__ completed: 3 rules
+2026-09-03 20:09:59,475 - validate - DEBUG - [__init__:51] - Creating validator: variable -> VariableValidator
+2026-09-03 20:09:59,476 - validate - DEBUG - [__init__:24] - VariableValidator.__init__ started
+2026-09-03 20:09:59,476 - validate - DEBUG - [__init__:31] - VariableValidator.__init__ completed: 3 rules
+2026-09-03 20:09:59,477 - validate - DEBUG - [__init__:51] - Creating validator: flag -> FlagValidator
+2026-09-03 20:09:59,477 - validate - DEBUG - [__init__:24] - FlagValidator.__init__ started
+2026-09-03 20:09:59,478 - validate - DEBUG - [__init__:30] - FlagValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,478 - validate - DEBUG - [__init__:51] - Creating validator: queue -> QueueValidator
+2026-09-03 20:09:59,479 - validate - DEBUG - [__init__:24] - QueueValidator.__init__ started
+2026-09-03 20:09:59,479 - validate - DEBUG - [__init__:30] - QueueValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,480 - validate - DEBUG - [__init__:51] - Creating validator: interrupt -> InterruptValidator
+2026-09-03 20:09:59,480 - validate - DEBUG - [__init__:24] - InterruptValidator.__init__ started
+2026-09-03 20:09:59,480 - validate - DEBUG - [__init__:30] - InterruptValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,481 - validate - DEBUG - [__init__:51] - Creating validator: timer -> TimerValidator
+2026-09-03 20:09:59,481 - validate - DEBUG - [__init__:24] - TimerValidator.__init__ started
+2026-09-03 20:09:59,481 - validate - DEBUG - [__init__:30] - TimerValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,481 - validate - DEBUG - [__init__:51] - Creating validator: custom_type -> CustomTypeValidator
+2026-09-03 20:09:59,482 - validate - DEBUG - [__init__:24] - CustomTypeValidator.__init__ started
+2026-09-03 20:09:59,482 - validate - DEBUG - [__init__:30] - CustomTypeValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,482 - validate - DEBUG - [__init__:53] - CodeGenerationValidator.__init__ completed: 10 validators
+2026-09-03 20:09:59,483 - validate - DEBUG - [validate:56] - validate started: sm_id=2258150058464, gd_id=2258150053296
+2026-09-03 20:09:59,483 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:09:59,483 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:09:59,484 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:09:59,484 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:09:59,484 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:09:59,485 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:09:59,485 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:09:59,485 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:09:59,485 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:09:59,486 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:09:59,486 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:09:59,486 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:09:59,487 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:09:59,487 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:09:59,487 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:09:59,487 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:09:59,488 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:09:59,488 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:09:59,488 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=0, infos=0
+2026-09-03 20:09:59,489 - validate - DEBUG - [validate:56] - validate started: sm_id=2258150318896, gd_id=2258150053296
+2026-09-03 20:09:59,489 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:09:59,489 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:09:59,490 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:09:59,490 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:09:59,490 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:09:59,491 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:09:59,491 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:09:59,491 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:09:59,492 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:09:59,492 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:09:59,492 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:09:59,493 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:09:59,493 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:09:59,493 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:09:59,494 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:09:59,494 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:09:59,495 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:09:59,495 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:09:59,496 - validate - DEBUG - [validate:73] - validate completed: errors=1, warnings=1, infos=0
+2026-09-03 20:09:59,497 - validate - DEBUG - [validate:56] - validate started: sm_id=2258150900336, gd_id=2258150053296
+2026-09-03 20:09:59,497 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:09:59,497 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:09:59,498 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:09:59,498 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:09:59,498 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:09:59,499 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:09:59,499 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:09:59,499 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:09:59,499 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:09:59,500 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:09:59,500 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:09:59,500 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:09:59,501 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:09:59,501 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:09:59,501 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:09:59,501 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:09:59,502 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:09:59,502 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:09:59,502 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=2, infos=0
+2026-09-03 20:09:59,503 - validate - DEBUG - [validate:56] - validate started: sm_id=2258150899792, gd_id=2258150053296
+2026-09-03 20:09:59,503 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:09:59,503 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:09:59,504 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:09:59,504 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:09:59,504 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:09:59,505 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:09:59,505 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:09:59,505 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:09:59,506 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:09:59,506 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:09:59,506 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:09:59,507 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:09:59,507 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:09:59,507 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:09:59,507 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:09:59,508 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:09:59,508 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:09:59,508 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:09:59,509 - validate - DEBUG - [validate:73] - validate completed: errors=1, warnings=0, infos=0
+2026-09-03 20:09:59,509 - validate - DEBUG - [validate:56] - validate started: sm_id=2258150516816, gd_id=2258150053296
+2026-09-03 20:09:59,510 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:09:59,510 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:09:59,510 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:09:59,511 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:09:59,511 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:09:59,512 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:09:59,512 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:09:59,513 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:09:59,513 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:09:59,513 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:09:59,514 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:09:59,514 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:09:59,514 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:09:59,515 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:09:59,515 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:09:59,515 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:09:59,516 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:09:59,516 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:09:59,516 - validate - DEBUG - [validate:73] - validate completed: errors=1, warnings=0, infos=0
+2026-09-03 20:09:59,517 - validate - DEBUG - [validate:56] - validate started: sm_id=2258150517072, gd_id=2258150053296
+2026-09-03 20:09:59,517 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:09:59,517 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:09:59,517 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:09:59,518 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:09:59,518 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:09:59,518 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:09:59,519 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:09:59,519 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:09:59,519 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:09:59,520 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:09:59,520 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:09:59,520 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:09:59,521 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:09:59,521 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:09:59,521 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:09:59,522 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:09:59,522 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:09:59,522 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:09:59,522 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=1, infos=0
+2026-09-03 20:09:59,523 - validate - DEBUG - [validate:56] - validate started: sm_id=2258149930432, gd_id=2258150053296
+2026-09-03 20:09:59,523 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:09:59,523 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:09:59,524 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:09:59,524 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:09:59,524 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:09:59,525 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:09:59,525 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:09:59,525 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:09:59,526 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:09:59,526 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:09:59,526 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:09:59,527 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:09:59,527 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:09:59,528 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:09:59,528 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:09:59,529 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:09:59,529 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:09:59,529 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:09:59,530 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=0, infos=1
+2026-09-03 20:09:59,530 - validate - DEBUG - [validate:56] - validate started: sm_id=2258149930672, gd_id=2258150053296
+2026-09-03 20:09:59,531 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:09:59,531 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:09:59,531 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:09:59,532 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:09:59,532 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:09:59,532 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:09:59,533 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:09:59,533 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:09:59,533 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:09:59,534 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:09:59,534 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:09:59,534 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:09:59,535 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:09:59,535 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:09:59,535 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:09:59,536 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:09:59,536 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:09:59,536 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:09:59,537 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=2, infos=0
+2026-09-03 20:09:59,537 - validate - DEBUG - [validate:56] - validate started: sm_id=2258150058464, gd_id=2258150319472
+2026-09-03 20:09:59,537 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:09:59,538 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:09:59,538 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:09:59,538 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:09:59,539 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:09:59,539 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:09:59,539 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:09:59,540 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:09:59,540 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:09:59,540 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:09:59,540 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:09:59,541 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:09:59,541 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:09:59,541 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:09:59,542 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:09:59,542 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:09:59,542 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:09:59,542 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:09:59,543 - validate - DEBUG - [validate:73] - validate completed: errors=1, warnings=0, infos=0
+2026-09-03 20:09:59,544 - validate - DEBUG - [validate:56] - validate started: sm_id=2258150058464, gd_id=2258150900608
+2026-09-03 20:09:59,544 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:09:59,544 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:09:59,545 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:09:59,546 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:09:59,546 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:09:59,546 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:09:59,547 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:09:59,547 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:09:59,548 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:09:59,548 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:09:59,548 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:09:59,549 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:09:59,549 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:09:59,549 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:09:59,550 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:09:59,550 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:09:59,550 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:09:59,551 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:09:59,551 - validate - DEBUG - [validate:73] - validate completed: errors=1, warnings=0, infos=0
+2026-09-03 20:09:59,647 - validate - DEBUG - [__init__:48] - CodeGenerationValidator.__init__ started
+2026-09-03 20:09:59,647 - validate - DEBUG - [__init__:51] - Creating validator: state -> StateValidator
+2026-09-03 20:09:59,648 - validate - DEBUG - [__init__:24] - StateValidator.__init__ started
+2026-09-03 20:09:59,648 - validate - DEBUG - [__init__:32] - StateValidator.__init__ completed: 4 rules
+2026-09-03 20:09:59,648 - validate - DEBUG - [__init__:51] - Creating validator: event -> EventValidator
+2026-09-03 20:09:59,648 - validate - DEBUG - [__init__:51] - Creating validator: transition -> TransitionValidator
+2026-09-03 20:09:59,649 - validate - DEBUG - [__init__:51] - Creating validator: role_function -> RoleFunctionValidator
+2026-09-03 20:09:59,649 - validate - DEBUG - [__init__:24] - RoleFunctionValidator.__init__ started
+2026-09-03 20:09:59,649 - validate - DEBUG - [__init__:31] - RoleFunctionValidator.__init__ completed: 3 rules
+2026-09-03 20:09:59,650 - validate - DEBUG - [__init__:51] - Creating validator: variable -> VariableValidator
+2026-09-03 20:09:59,650 - validate - DEBUG - [__init__:24] - VariableValidator.__init__ started
+2026-09-03 20:09:59,650 - validate - DEBUG - [__init__:31] - VariableValidator.__init__ completed: 3 rules
+2026-09-03 20:09:59,650 - validate - DEBUG - [__init__:51] - Creating validator: flag -> FlagValidator
+2026-09-03 20:09:59,651 - validate - DEBUG - [__init__:24] - FlagValidator.__init__ started
+2026-09-03 20:09:59,651 - validate - DEBUG - [__init__:30] - FlagValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,651 - validate - DEBUG - [__init__:51] - Creating validator: queue -> QueueValidator
+2026-09-03 20:09:59,651 - validate - DEBUG - [__init__:24] - QueueValidator.__init__ started
+2026-09-03 20:09:59,652 - validate - DEBUG - [__init__:30] - QueueValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,652 - validate - DEBUG - [__init__:51] - Creating validator: interrupt -> InterruptValidator
+2026-09-03 20:09:59,652 - validate - DEBUG - [__init__:24] - InterruptValidator.__init__ started
+2026-09-03 20:09:59,652 - validate - DEBUG - [__init__:30] - InterruptValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,653 - validate - DEBUG - [__init__:51] - Creating validator: timer -> TimerValidator
+2026-09-03 20:09:59,653 - validate - DEBUG - [__init__:24] - TimerValidator.__init__ started
+2026-09-03 20:09:59,653 - validate - DEBUG - [__init__:30] - TimerValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,654 - validate - DEBUG - [__init__:51] - Creating validator: custom_type -> CustomTypeValidator
+2026-09-03 20:09:59,654 - validate - DEBUG - [__init__:24] - CustomTypeValidator.__init__ started
+2026-09-03 20:09:59,654 - validate - DEBUG - [__init__:30] - CustomTypeValidator.__init__ completed: 2 rules
+2026-09-03 20:09:59,655 - validate - DEBUG - [__init__:53] - CodeGenerationValidator.__init__ completed: 10 validators
+2026-09-03 20:09:59,655 - validate - DEBUG - [__init__:23] - AIPromptGenerator.__init__ started
+2026-09-03 20:09:59,655 - validate - DEBUG - [__init__:27] - AIPromptGenerator.__init__ completed
+2026-09-03 20:09:59,762 - validate - DEBUG - [validate:56] - validate started: sm_id=2258150725840, gd_id=2258150907408
+2026-09-03 20:09:59,762 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:09:59,763 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:09:59,763 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:09:59,763 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:09:59,764 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:09:59,764 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:09:59,765 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:09:59,765 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:09:59,765 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:09:59,766 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:09:59,766 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:09:59,766 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:09:59,767 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:09:59,767 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:09:59,768 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:09:59,768 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:09:59,768 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:09:59,769 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:09:59,769 - validate - DEBUG - [validate:73] - validate completed: errors=0, warnings=2, infos=0
+2026-09-03 20:18:11,228 - validate - DEBUG - [setup_logger:48] - Logger setup completed: validate -> c:\Users\user\OneDrive\ドキュメント\GitHub\StaTable\code\logs\validate_20260903.log
+2026-09-03 20:18:26,335 - validate - DEBUG - [__init__:48] - CodeGenerationValidator.__init__ started
+2026-09-03 20:18:26,337 - validate - DEBUG - [__init__:51] - Creating validator: state -> StateValidator
+2026-09-03 20:18:26,337 - validate - DEBUG - [__init__:24] - StateValidator.__init__ started
+2026-09-03 20:18:26,338 - validate - DEBUG - [__init__:32] - StateValidator.__init__ completed: 4 rules
+2026-09-03 20:18:26,339 - validate - DEBUG - [__init__:51] - Creating validator: event -> EventValidator
+2026-09-03 20:18:26,340 - validate - DEBUG - [__init__:51] - Creating validator: transition -> TransitionValidator
+2026-09-03 20:18:26,341 - validate - DEBUG - [__init__:51] - Creating validator: role_function -> RoleFunctionValidator
+2026-09-03 20:18:26,342 - validate - DEBUG - [__init__:24] - RoleFunctionValidator.__init__ started
+2026-09-03 20:18:26,343 - validate - DEBUG - [__init__:31] - RoleFunctionValidator.__init__ completed: 3 rules
+2026-09-03 20:18:26,344 - validate - DEBUG - [__init__:51] - Creating validator: variable -> VariableValidator
+2026-09-03 20:18:26,345 - validate - DEBUG - [__init__:24] - VariableValidator.__init__ started
+2026-09-03 20:18:26,346 - validate - DEBUG - [__init__:31] - VariableValidator.__init__ completed: 3 rules
+2026-09-03 20:18:26,347 - validate - DEBUG - [__init__:51] - Creating validator: flag -> FlagValidator
+2026-09-03 20:18:26,348 - validate - DEBUG - [__init__:24] - FlagValidator.__init__ started
+2026-09-03 20:18:26,349 - validate - DEBUG - [__init__:30] - FlagValidator.__init__ completed: 2 rules
+2026-09-03 20:18:26,349 - validate - DEBUG - [__init__:51] - Creating validator: queue -> QueueValidator
+2026-09-03 20:18:26,350 - validate - DEBUG - [__init__:24] - QueueValidator.__init__ started
+2026-09-03 20:18:26,350 - validate - DEBUG - [__init__:30] - QueueValidator.__init__ completed: 2 rules
+2026-09-03 20:18:26,350 - validate - DEBUG - [__init__:51] - Creating validator: interrupt -> InterruptValidator
+2026-09-03 20:18:26,351 - validate - DEBUG - [__init__:24] - InterruptValidator.__init__ started
+2026-09-03 20:18:26,351 - validate - DEBUG - [__init__:30] - InterruptValidator.__init__ completed: 2 rules
+2026-09-03 20:18:26,351 - validate - DEBUG - [__init__:51] - Creating validator: timer -> TimerValidator
+2026-09-03 20:18:26,352 - validate - DEBUG - [__init__:24] - TimerValidator.__init__ started
+2026-09-03 20:18:26,352 - validate - DEBUG - [__init__:30] - TimerValidator.__init__ completed: 2 rules
+2026-09-03 20:18:26,352 - validate - DEBUG - [__init__:51] - Creating validator: custom_type -> CustomTypeValidator
+2026-09-03 20:18:26,352 - validate - DEBUG - [__init__:24] - CustomTypeValidator.__init__ started
+2026-09-03 20:18:26,353 - validate - DEBUG - [__init__:30] - CustomTypeValidator.__init__ completed: 2 rules
+2026-09-03 20:18:26,353 - validate - DEBUG - [__init__:53] - CodeGenerationValidator.__init__ completed: 10 validators
+2026-09-03 20:18:26,353 - validate - DEBUG - [__init__:23] - AIPromptGenerator.__init__ started
+2026-09-03 20:18:26,354 - validate - DEBUG - [__init__:27] - AIPromptGenerator.__init__ completed
+2026-09-03 20:18:26,359 - validate - DEBUG - [validate:56] - validate started: sm_id=2464718312784, gd_id=2464716438704
+2026-09-03 20:18:26,360 - validate - DEBUG - [validate:66] - Running validator: state
+2026-09-03 20:18:26,360 - validate - DEBUG - [validate:35] - StateValidator.validate started
+2026-09-03 20:18:26,360 - validate - DEBUG - [validate:66] - Running validator: event
+2026-09-03 20:18:26,361 - validate - DEBUG - [validate:66] - Running validator: transition
+2026-09-03 20:18:26,361 - validate - DEBUG - [validate:66] - Running validator: role_function
+2026-09-03 20:18:26,362 - validate - DEBUG - [validate:34] - RoleFunctionValidator.validate started
+2026-09-03 20:18:26,362 - validate - DEBUG - [validate:66] - Running validator: variable
+2026-09-03 20:18:26,362 - validate - DEBUG - [validate:34] - VariableValidator.validate started
+2026-09-03 20:18:26,363 - validate - DEBUG - [validate:66] - Running validator: flag
+2026-09-03 20:18:26,363 - validate - DEBUG - [validate:33] - FlagValidator.validate started
+2026-09-03 20:18:26,363 - validate - DEBUG - [validate:66] - Running validator: queue
+2026-09-03 20:18:26,364 - validate - DEBUG - [validate:33] - QueueValidator.validate started
+2026-09-03 20:18:26,364 - validate - DEBUG - [validate:66] - Running validator: interrupt
+2026-09-03 20:18:26,365 - validate - DEBUG - [validate:33] - InterruptValidator.validate started
+2026-09-03 20:18:26,365 - validate - DEBUG - [validate:66] - Running validator: timer
+2026-09-03 20:18:26,365 - validate - DEBUG - [validate:33] - TimerValidator.validate started
+2026-09-03 20:18:26,366 - validate - DEBUG - [validate:66] - Running validator: custom_type
+2026-09-03 20:18:26,366 - validate - DEBUG - [validate:33] - CustomTypeValidator.validate started
+2026-09-03 20:18:26,367 - validate - DEBUG - [validate:73] - validate completed: errors=6, warnings=13, infos=1
