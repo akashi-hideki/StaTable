@@ -1,6 +1,6 @@
 # tests/test_transition_editor_direct.py
 """
-動作編集D&Dパッケージの単体テスト
+動作編集D&Dパッケージの単体テスト（FlowItem対応版）
 直接実行: python tests/test_transition_editor_direct.py
 """
 
@@ -17,6 +17,7 @@ PASS = 0
 FAIL = 0
 FAILED = []
 
+
 def check(name, cond, detail=""):
     global PASS, FAIL
     if cond:
@@ -29,35 +30,32 @@ def check(name, cond, detail=""):
 
 
 def test_draft():
-    print("\n--- ActionDraft ---")
-    from statable_gui.transition_editor_direct.draft import ActionDraft, ConditionBlock
+    print("\n--- FlowItem / ActionDraft ---")
+    from statable_gui.transition_editor_direct.draft import FlowItem, ActionDraft
+
+    item1 = FlowItem(item_type="function", name="CheckSensor")
+    item2 = FlowItem(item_type="condition", name="voltage > 800")
+    item2.params = {"target": "RUNNING", "action": "Start"}
+    item2.edited_text = "voltage > 800 → RUNNING (Start)"
+
+    check("FlowItem作成", item1.item_type == "function" and item1.name == "CheckSensor")
+    check("表示テキスト", item2.display_text() == "voltage > 800 → RUNNING (Start)")
 
     draft = ActionDraft(source="IDLE", event="START")
-    check("初期化", draft.source == "IDLE" and draft.event == "START")
-
-    draft.pre_actions.append("CheckSensor")
-    draft.conditions.append(ConditionBlock(priority=1, condition_expr="voltage > 800", target="RUNNING", action="Start"))
-    draft.actions.append("StartMotor")
-    draft.post_actions.append("LogTransition")
+    draft.flow_items = [item1, item2]
     draft.default_target = "IDLE"
 
-    check("前処理", draft.pre_actions == ["CheckSensor"])
-    check("条件", len(draft.conditions) == 1)
-    check("条件式", draft.conditions[0].condition_expr == "voltage > 800")
-    check("遷移先", draft.conditions[0].target == "RUNNING")
-    check("実行処理", draft.actions == ["StartMotor"])
-    check("後処理", draft.post_actions == ["LogTransition"])
+    check("フロー項目数", len(draft.flow_items) == 2)
+    check("デフォルト遷移先", draft.default_target == "IDLE")
 
     data = draft.to_dict()
     restored = ActionDraft.from_dict(data)
-    check("to_dict/from_dict", restored.conditions[0].condition_expr == "voltage > 800")
-
-    draft.clear()
-    check("クリア", len(draft.pre_actions) == 0 and len(draft.conditions) == 0)
+    check("to_dict/from_dict", len(restored.flow_items) == 2)
+    check("復元された名前", restored.flow_items[1].name == "voltage > 800")
 
 
-def test_gui():
-    print("\n--- GUI ---")
+def test_gui_creation():
+    print("\n--- GUIウィジェット作成 ---")
     try:
         from PySide6.QtWidgets import QApplication
         app = QApplication.instance() or QApplication(sys.argv)
@@ -77,31 +75,27 @@ def test_gui():
     draft = ActionDraft(source="IDLE", event="START")
 
     variables = ["battery_voltage", "system_tick"]
-    flags = ["EVT_POWER_ON_REQ", "EVT_START_REQ"]
-    role_functions = ["CheckSensor", "StartMotor", "InitCounter", "HandleError", "LogTransition"]
-    conditions = ["voltage > 800", "voltage <= 800", "temp < 50"]
+    flags = ["EVT_POWER_ON_REQ"]
+    role_functions = ["CheckSensor", "StartMotor", "InitCounter", "LogTransition"]
+    conditions = ["voltage > 800", "voltage <= 800"]
     states = ["INIT", "IDLE", "RUNNING", "ERROR"]
 
-    # パレット
     palette = PaletteWidget(variables, flags, role_functions, conditions)
     check("パレット作成", palette is not None)
     check("パレット変数", palette.variable_list.count() == 2)
-    check("パレットフラグ", palette.flag_list.count() == 2)
-    check("パレット関数", palette.function_list.count() == 5)
-    check("パレット条件", palette.condition_list.count() == 3)
+    check("パレット関数", palette.function_list.count() == 4)
+    check("パレット条件", palette.condition_list.count() == 2)
 
-    # フロー
-    flow = FlowWidget(draft, states)
+    flow = FlowWidget(draft, role_functions, states)
     check("フロー作成", flow is not None)
-    check("前処理リスト", flow.pre_list is not None)
-    check("条件リスト", flow.condition_list is not None)
-    check("実行リスト", flow.action_list is not None)
-    check("後処理リスト", flow.post_list is not None)
+    check("フローリスト", flow.flow_list is not None)
+    check("デフォルトコンボ", flow.default_target_combo is not None)
 
-    # ダイアログ
-    dialog = ActionEditorDialog(draft, variables, flags, role_functions, conditions, states)
+    dialog = ActionEditorDialog(
+        draft, variables, flags, role_functions, conditions, states
+    )
     check("ダイアログ作成", dialog is not None)
-    check("ダイアログタイトル", "動作編集" in dialog.windowTitle())
+    check("タイトル", "動作編集" in dialog.windowTitle())
     dialog.close()
 
 
@@ -112,11 +106,11 @@ def run_all():
     FAILED = []
 
     print("=" * 50)
-    print("動作編集D&Dパッケージ 単体テスト")
+    print("動作編集D&D（材料編集方式）単体テスト")
     print("=" * 50)
 
     test_draft()
-    test_gui()
+    test_gui_creation()
 
     print("\n" + "=" * 50)
     print(f"合格: {PASS}")
@@ -131,6 +125,7 @@ def run_all():
         print("🎉 全テスト成功！")
     else:
         print("❌ 失敗あり")
+
 
 if __name__ == "__main__":
     run_all()

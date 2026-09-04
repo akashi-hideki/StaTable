@@ -1,35 +1,42 @@
 # statable_gui/transition_editor_direct/draft.py
 """
-動作編集用ドラフトモデル
+動作編集用ドラフトモデル（材料編集方式）
 """
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict, Any
 
 
 @dataclass
-class ConditionBlock:
-    """条件ブロック"""
-    priority: int = 0
-    condition_expr: str = ""    # 状態遷移条件式（例: "voltage > 800"）
-    target: str = ""            # 遷移先
-    action: str = ""            # アクション
+class FlowItem:
+    """動作フローの1項目（材料）"""
+
+    item_type: str = ""         # "function" / "condition" / "variable" / "flag"
+    name: str = ""              # 元の名前（パレットからドラッグしたもの）
+    edited_text: str = ""       # 編集後のテキスト
+    params: Dict[str, Any] = field(default_factory=dict)  # 編集された内容
+
+    def display_text(self) -> str:
+        """リストに表示するテキスト"""
+        if self.edited_text:
+            return self.edited_text
+        return self.name
 
     def to_dict(self) -> dict:
         return {
-            'priority': self.priority,
-            'condition_expr': self.condition_expr,
-            'target': self.target,
-            'action': self.action,
+            'item_type': self.item_type,
+            'name': self.name,
+            'edited_text': self.edited_text,
+            'params': self.params,
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'ConditionBlock':
+    def from_dict(cls, data: dict) -> 'FlowItem':
         return cls(
-            priority=data.get('priority', 0),
-            condition_expr=data.get('condition_expr', ''),
-            target=data.get('target', ''),
-            action=data.get('action', ''),
+            item_type=data.get('item_type', ''),
+            name=data.get('name', ''),
+            edited_text=data.get('edited_text', ''),
+            params=data.get('params', {}),
         )
 
 
@@ -40,35 +47,32 @@ class ActionDraft:
     source: str = ""
     event: str = ""
 
-    # 前処理（ロール関数名）
-    pre_actions: List[str] = field(default_factory=list)
+    # 動作フロー（すべての項目を1つのリストで管理）
+    flow_items: List[FlowItem] = field(default_factory=list)
 
-    # 条件ブロック
-    conditions: List[ConditionBlock] = field(default_factory=list)
+    # デフォルト遷移先
     default_target: str = ""
 
-    # 実行処理（ロール関数名）
-    actions: List[str] = field(default_factory=list)
-
-    # 後処理（ロール関数名）
-    post_actions: List[str] = field(default_factory=list)
-
     def clear(self):
-        self.pre_actions = []
-        self.conditions = []
+        """全クリア"""
+        self.flow_items = []
         self.default_target = ""
-        self.actions = []
-        self.post_actions = []
+
+    def get_display_lines(self) -> List[str]:
+        """表示用テキストを取得"""
+        lines = []
+        for i, item in enumerate(self.flow_items, 1):
+            lines.append(f"{i}. {item.display_text()}")
+        if not self.flow_items:
+            lines.append("(空)")
+        return lines
 
     def to_dict(self) -> dict:
         return {
             'source': self.source,
             'event': self.event,
-            'pre_actions': self.pre_actions,
-            'conditions': [c.to_dict() for c in self.conditions],
+            'flow_items': [i.to_dict() for i in self.flow_items],
             'default_target': self.default_target,
-            'actions': self.actions,
-            'post_actions': self.post_actions,
         }
 
     @classmethod
@@ -76,9 +80,6 @@ class ActionDraft:
         return cls(
             source=data.get('source', ''),
             event=data.get('event', ''),
-            pre_actions=data.get('pre_actions', []),
-            conditions=[ConditionBlock.from_dict(c) for c in data.get('conditions', [])],
+            flow_items=[FlowItem.from_dict(i) for i in data.get('flow_items', [])],
             default_target=data.get('default_target', ''),
-            actions=data.get('actions', []),
-            post_actions=data.get('post_actions', []),
         )

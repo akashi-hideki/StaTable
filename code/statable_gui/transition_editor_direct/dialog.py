@@ -1,11 +1,10 @@
 # statable_gui/transition_editor_direct/dialog.py
 """
-動作編集ダイアログ
+動作編集メインダイアログ
 """
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-    QSplitter
+    QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QSplitter
 )
 from PySide6.QtCore import Qt
 
@@ -39,15 +38,13 @@ class ActionEditorDialog(QDialog):
         # スプリッター（左:パレット / 右:フロー）
         splitter = QSplitter(Qt.Horizontal)
 
-        # 左: パレット
         self.palette = PaletteWidget(
             self.variables, self.flags, self.role_functions, self.conditions
         )
         self.palette.setMinimumWidth(200)
         splitter.addWidget(self.palette)
 
-        # 右: フロー
-        self.flow = FlowWidget(self.draft, self.states)
+        self.flow = FlowWidget(self.draft, self.role_functions, self.states)
         self.flow.setMinimumWidth(500)
         splitter.addWidget(self.flow)
 
