@@ -1,23 +1,21 @@
 # statable_gui/transition_editor_direct/edit_dialogs.py
 """
-材料タイプ別の編集ダイアログ
+パーツ編集ダイアログ
 """
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-    QLabel, QComboBox, QLineEdit
+    QLabel, QComboBox, QLineEdit, QListWidget, QAbstractItemView
 )
+from PySide6.QtCore import Qt
 
 
-class FlowItemEditDialog(QDialog):
+class BaseEditDialog(QDialog):
     """材料編集の基底ダイアログ"""
 
-    def __init__(self, item, role_functions=None, states=None, parent=None):
+    def __init__(self, item, parent=None):
         super().__init__(parent)
         self.item = item
-        self.role_functions = role_functions or []
-        self.states = states or []
-        self.setWindowTitle("材料の編集")
         self.setMinimumWidth(350)
 
     def _add_buttons(self, layout):
@@ -32,12 +30,13 @@ class FlowItemEditDialog(QDialog):
         layout.addLayout(btn_layout)
 
 
-class FunctionEditDialog(FlowItemEditDialog):
-    """ロール関数の編集"""
+class FunctionEditDialog(BaseEditDialog):
+    """ロール関数編集"""
 
     def __init__(self, item, role_functions=None, parent=None):
-        super().__init__(item, role_functions=role_functions, parent=parent)
-        self.setWindowTitle("ロール関数の編集")
+        super().__init__(item, parent)
+        self.setWindowTitle("ロール関数編集")
+        self.role_functions = role_functions or []
 
         layout = QVBoxLayout(self)
 
@@ -52,15 +51,13 @@ class FunctionEditDialog(FlowItemEditDialog):
 
         h2 = QHBoxLayout()
         h2.addWidget(QLabel("引数1:"))
-        self.arg1_edit = QLineEdit()
-        self.arg1_edit.setText(item.params.get('arg1', ''))
+        self.arg1_edit = QLineEdit(item.params.get('arg1', ''))
         h2.addWidget(self.arg1_edit)
         layout.addLayout(h2)
 
         h3 = QHBoxLayout()
         h3.addWidget(QLabel("引数2:"))
-        self.arg2_edit = QLineEdit()
-        self.arg2_edit.setText(item.params.get('arg2', ''))
+        self.arg2_edit = QLineEdit(item.params.get('arg2', ''))
         h3.addWidget(self.arg2_edit)
         layout.addLayout(h3)
 
@@ -68,129 +65,103 @@ class FunctionEditDialog(FlowItemEditDialog):
 
     def get_result(self):
         """編集結果を取得"""
-        func_name = self.func_combo.currentText()
-        arg1 = self.arg1_edit.text()
-        arg2 = self.arg2_edit.text()
-
+        func = self.func_combo.currentText()
+        args = [a for a in [self.arg1_edit.text(), self.arg2_edit.text()] if a]
+        edited = f"{func}({', '.join(args)})" if args else f"{func}()"
         params = {}
-        if arg1:
-            params['arg1'] = arg1
-        if arg2:
-            params['arg2'] = arg2
-
-        edited = func_name
-        if arg1 or arg2:
-            args = [a for a in [arg1, arg2] if a]
-            edited = f"{func_name}({', '.join(args)})"
-
+        if self.arg1_edit.text():
+            params['arg1'] = self.arg1_edit.text()
+        if self.arg2_edit.text():
+            params['arg2'] = self.arg2_edit.text()
         return edited, params
 
 
-class ConditionEditDialog(FlowItemEditDialog):
-    """状態遷移条件の編集"""
+class TransitionEditDialog(BaseEditDialog):
+    """状態遷移イベント編集"""
 
     def __init__(self, item, states=None, role_functions=None, parent=None):
-        super().__init__(item, role_functions=role_functions, parent=parent)
-        self.setWindowTitle("状態遷移条件の編集")
+        super().__init__(item, parent)
+        self.setWindowTitle("状態遷移イベント編集")
+        self.states = states or []
+        self.role_functions = role_functions or []
+
+        # 既存paramsを読み込み
+        self.event = item.params.get('event', item.name)
+        self.condition = item.params.get('condition', '')
+        self.pre_actions = item.params.get('pre_actions', [])
+        self.target = item.params.get('target', '')
 
         layout = QVBoxLayout(self)
 
+        # イベント名
+        h0 = QHBoxLayout()
+        h0.addWidget(QLabel("イベント:"))
+        self.event_label = QLabel(self.event)
+        h0.addWidget(self.event_label)
+        layout.addLayout(h0)
+
+        # 条件式
         h1 = QHBoxLayout()
         h1.addWidget(QLabel("条件式:"))
-        self.cond_edit = QLineEdit()
-        self.cond_edit.setText(item.name)
+        self.cond_edit = QLineEdit(self.condition)
         h1.addWidget(self.cond_edit)
         layout.addLayout(h1)
 
+        # 遷移直前処理リスト
+        layout.addWidget(QLabel("遷移直前処理:"))
+        self.pre_list = QListWidget()
+        self.pre_list.setDragDropMode(QAbstractItemView.InternalMove)
+        self.pre_list.setDefaultDropAction(Qt.MoveAction)
+        self.pre_list.setMaximumHeight(100)
+        for a in self.pre_actions:
+            self.pre_list.addItem(a)
+        layout.addWidget(self.pre_list)
+
+        pre_btn_layout = QHBoxLayout()
+        add_pre_btn = QPushButton("追加")
+        add_pre_btn.clicked.connect(self._add_pre_action)
+        pre_btn_layout.addWidget(add_pre_btn)
+        del_pre_btn = QPushButton("削除")
+        del_pre_btn.clicked.connect(self._delete_pre_action)
+        pre_btn_layout.addWidget(del_pre_btn)
+        layout.addLayout(pre_btn_layout)
+
+        # 遷移先
         h2 = QHBoxLayout()
         h2.addWidget(QLabel("遷移先:"))
         self.target_combo = QComboBox()
         self.target_combo.setEditable(True)
         self.target_combo.addItems(self.states)
-        if 'target' in item.params:
-            self.target_combo.setCurrentText(item.params['target'])
+        self.target_combo.setCurrentText(self.target)
         h2.addWidget(self.target_combo)
         layout.addLayout(h2)
 
-        h3 = QHBoxLayout()
-        h3.addWidget(QLabel("アクション:"))
-        self.action_combo = QComboBox()
-        self.action_combo.setEditable(True)
-        self.action_combo.addItems(self.role_functions)
-        if 'action' in item.params:
-            self.action_combo.setCurrentText(item.params['action'])
-        h3.addWidget(self.action_combo)
-        layout.addLayout(h3)
-
         self._add_buttons(layout)
 
+    def _add_pre_action(self):
+        if self.role_functions:
+            self.pre_list.addItem(self.role_functions[0])
+
+    def _delete_pre_action(self):
+        row = self.pre_list.currentRow()
+        if row >= 0:
+            self.pre_list.takeItem(row)
+
     def get_result(self):
-        """編集結果を取得"""
-        cond = self.cond_edit.text()
+        condition = self.cond_edit.text()
+        pre_actions = []
+        for i in range(self.pre_list.count()):
+            pre_actions.append(self.pre_list.item(i).text())
         target = self.target_combo.currentText()
-        action = self.action_combo.currentText()
 
-        params = {'target': target}
-        if action:
-            params['action'] = action
+        edited = f"{self.event}: {condition} → {target}"
+        if pre_actions:
+            edited += f" (直前:{', '.join(pre_actions)})"
 
-        edited = cond
-        if target:
-            edited = f"{cond} → {target}"
-        if action:
-            edited = f"{edited} ({action})"
-
-        return edited, params
-
-
-class VariableEditDialog(FlowItemEditDialog):
-    """グローバル変数の編集"""
-
-    def __init__(self, item, parent=None):
-        super().__init__(item, parent=parent)
-        self.setWindowTitle("変数の編集")
-
-        layout = QVBoxLayout(self)
-
-        h1 = QHBoxLayout()
-        h1.addWidget(QLabel("変数名:"))
-        self.var_edit = QLineEdit()
-        self.var_edit.setText(item.name)
-        h1.addWidget(self.var_edit)
-        layout.addLayout(h1)
-
-        h2 = QHBoxLayout()
-        h2.addWidget(QLabel("比較演算子:"))
-        self.op_combo = QComboBox()
-        self.op_combo.addItems([">", "<", "==", "!=", ">=", "<="])
-        if 'op' in item.params:
-            self.op_combo.setCurrentText(item.params['op'])
-        h2.addWidget(self.op_combo)
-        layout.addLayout(h2)
-
-        h3 = QHBoxLayout()
-        h3.addWidget(QLabel("比較値:"))
-        self.value_edit = QLineEdit()
-        self.value_edit.setText(item.params.get('value', ''))
-        h3.addWidget(self.value_edit)
-        layout.addLayout(h3)
-
-        self._add_buttons(layout)
-
-    def get_result(self):
-        """編集結果を取得"""
-        var = self.var_edit.text()
-        op = self.op_combo.currentText()
-        value = self.value_edit.text()
-
-        params = {}
-        if op:
-            params['op'] = op
-        if value:
-            params['value'] = value
-
-        edited = var
-        if op and value:
-            edited = f"{var} {op} {value}"
-
+        params = {
+            'event': self.event,
+            'condition': condition,
+            'pre_actions': pre_actions,
+            'target': target,
+        }
         return edited, params

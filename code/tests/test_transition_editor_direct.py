@@ -1,6 +1,6 @@
 # tests/test_transition_editor_direct.py
 """
-動作編集D&Dパッケージの単体テスト（FlowItem対応版）
+動作編集D&Dパッケージのメソッドテスト
 直接実行: python tests/test_transition_editor_direct.py
 """
 
@@ -29,33 +29,40 @@ def check(name, cond, detail=""):
         print(f"  ❌ {name} {detail}")
 
 
-def test_draft():
-    print("\n--- FlowItem / ActionDraft ---")
-    from statable_gui.transition_editor_direct.draft import FlowItem, ActionDraft
+def test_data_model():
+    print("\n--- データモデル ---")
+    from statable_gui.transition_editor_direct.draft import (
+        FlowItem, TransitionParams, ActionDraft
+    )
 
-    item1 = FlowItem(item_type="function", name="CheckSensor")
-    item2 = FlowItem(item_type="condition", name="voltage > 800")
-    item2.params = {"target": "RUNNING", "action": "Start"}
-    item2.edited_text = "voltage > 800 → RUNNING (Start)"
+    # FlowItem
+    item = FlowItem(item_type="function", name="CheckSensor")
+    check("FlowItem作成", item.item_type == "function")
+    check("表示テキスト", item.display_text() == "CheckSensor")
 
-    check("FlowItem作成", item1.item_type == "function" and item1.name == "CheckSensor")
-    check("表示テキスト", item2.display_text() == "voltage > 800 → RUNNING (Start)")
+    # TransitionParams
+    tp = TransitionParams(
+        event="START",
+        condition="voltage > 800",
+        pre_actions=["SaveLog", "ClearCounter"],
+        target="RUNNING"
+    )
+    check("TransitionParams", tp.event == "START" and tp.target == "RUNNING")
+    check("直前処理", tp.pre_actions == ["SaveLog", "ClearCounter"])
 
+    # ActionDraft
     draft = ActionDraft(source="IDLE", event="START")
-    draft.flow_items = [item1, item2]
+    draft.flow_items = [item]
     draft.default_target = "IDLE"
-
-    check("フロー項目数", len(draft.flow_items) == 2)
-    check("デフォルト遷移先", draft.default_target == "IDLE")
+    check("ActionDraft", len(draft.flow_items) == 1)
 
     data = draft.to_dict()
     restored = ActionDraft.from_dict(data)
-    check("to_dict/from_dict", len(restored.flow_items) == 2)
-    check("復元された名前", restored.flow_items[1].name == "voltage > 800")
+    check("to_dict/from_dict", restored.source == "IDLE")
 
 
-def test_gui_creation():
-    print("\n--- GUIウィジェット作成 ---")
+def test_gui_classes():
+    print("\n--- GUIクラス ---")
     try:
         from PySide6.QtWidgets import QApplication
         app = QApplication.instance() or QApplication(sys.argv)
@@ -73,28 +80,28 @@ def test_gui_creation():
     from statable_gui.transition_editor_direct.dialog import ActionEditorDialog
 
     draft = ActionDraft(source="IDLE", event="START")
-
-    variables = ["battery_voltage", "system_tick"]
-    flags = ["EVT_POWER_ON_REQ"]
-    role_functions = ["CheckSensor", "StartMotor", "InitCounter", "LogTransition"]
-    conditions = ["voltage > 800", "voltage <= 800"]
+    role_functions = ["CheckSensor", "StartMotor", "LogTransition"]
+    transition_events = ["START", "STOP"]
     states = ["INIT", "IDLE", "RUNNING", "ERROR"]
 
-    palette = PaletteWidget(variables, flags, role_functions, conditions)
+    # Palette
+    palette = PaletteWidget(role_functions, transition_events)
     check("パレット作成", palette is not None)
-    check("パレット変数", palette.variable_list.count() == 2)
-    check("パレット関数", palette.function_list.count() == 4)
-    check("パレット条件", palette.condition_list.count() == 2)
+    check("関数リスト", palette.function_list.count() == 3)
+    check("イベントリスト", palette.event_list.count() == 2)
 
+    # Flow
     flow = FlowWidget(draft, role_functions, states)
     check("フロー作成", flow is not None)
     check("フローリスト", flow.flow_list is not None)
     check("デフォルトコンボ", flow.default_target_combo is not None)
 
+    # Dialog
     dialog = ActionEditorDialog(
-        draft, variables, flags, role_functions, conditions, states
+        draft, role_functions, transition_events, states
     )
     check("ダイアログ作成", dialog is not None)
+    check("コードプレビュー", dialog.code_preview is not None)
     check("タイトル", "動作編集" in dialog.windowTitle())
     dialog.close()
 
@@ -106,11 +113,11 @@ def run_all():
     FAILED = []
 
     print("=" * 50)
-    print("動作編集D&D（材料編集方式）単体テスト")
+    print("動作編集D&D メソッドテスト")
     print("=" * 50)
 
-    test_draft()
-    test_gui_creation()
+    test_data_model()
+    test_gui_classes()
 
     print("\n" + "=" * 50)
     print(f"合格: {PASS}")

@@ -1,26 +1,21 @@
 # statable_gui/transition_editor_direct/flow_widget.py
 """
-動作フローリストウィジェット（修正版）
-パレットからのD&Dと行挿入、ダブルクリック編集をサポート
+ビジュアル編集フローリスト（D&D + ダブルクリック編集）
 """
 
 import json
-from PySide6.QtCore import Qt, Signal, QMimeData
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QListWidget, QListWidgetItem, QComboBox,
-    QAbstractItemView
+    QListWidget, QListWidgetItem, QComboBox, QAbstractItemView
 )
 
 from .draft import ActionDraft, FlowItem
-from .edit_dialogs import (
-    FunctionEditDialog, ConditionEditDialog, VariableEditDialog
-)
+from .edit_dialogs import FunctionEditDialog, TransitionEditDialog
 
 
 class FlowListWidget(QListWidget):
     """D&Dと行挿入をサポートするフローリスト"""
-
     MIME_TYPE = "application/x-flow-item"
 
     def __init__(self, parent=None):
@@ -46,7 +41,7 @@ class FlowListWidget(QListWidget):
         if event.mimeData().hasFormat(self.MIME_TYPE):
             # パレットからのドロップ
             data = json.loads(event.mimeData().data(self.MIME_TYPE).data().decode("utf-8"))
-            item_type = data.get("item_type", "unknown")
+            item_type = data.get("item_type", "function")
             name = data.get("name", "")
 
             # 挿入位置を決定
@@ -81,7 +76,7 @@ class FlowListWidget(QListWidget):
 
 
 class FlowWidget(QWidget):
-    """動作フローリストウィジェット"""
+    """ビジュアル編集ウィジェット"""
 
     draft_updated = Signal()
 
@@ -96,8 +91,7 @@ class FlowWidget(QWidget):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-
-        layout.addWidget(QLabel("動作フロー（D&Dで並べ替え・ダブルクリックで編集）"))
+        layout.addWidget(QLabel("動作フロー（D&Dで配置・ダブルクリックで編集）"))
 
         # カスタムリスト
         self.flow_list = FlowListWidget()
@@ -135,7 +129,7 @@ class FlowWidget(QWidget):
             item = self.flow_list.item(i)
             flow_item = item.data(Qt.UserRole)
             if not flow_item:
-                flow_item = FlowItem(item_type="unknown", name=item.text())
+                flow_item = FlowItem(item_type="function", name=item.text())
                 item.setData(Qt.UserRole, flow_item)
             self.draft.flow_items.append(flow_item)
 
@@ -148,19 +142,13 @@ class FlowWidget(QWidget):
     def _on_item_double_clicked(self, item):
         flow_item = item.data(Qt.UserRole)
         if not flow_item:
-            flow_item = FlowItem(item_type="unknown", name=item.text())
+            flow_item = FlowItem(item_type="function", name=item.text())
             item.setData(Qt.UserRole, flow_item)
 
-        if flow_item.item_type == "function":
-            dialog = FunctionEditDialog(flow_item, self.role_functions, self)
-        elif flow_item.item_type == "condition":
-            dialog = ConditionEditDialog(
-                flow_item, self.states, self.role_functions, self
-            )
-        elif flow_item.item_type == "variable":
-            dialog = VariableEditDialog(flow_item, self)
+        if flow_item.item_type == "transition":
+            dialog = TransitionEditDialog(flow_item, self.states, self.role_functions, self)
         else:
-            dialog = VariableEditDialog(flow_item, self)
+            dialog = FunctionEditDialog(flow_item, self.role_functions, self)
 
         if dialog.exec():
             edited_text, params = dialog.get_result()

@@ -1,14 +1,7 @@
 # tests/test_transition_editor_direct_runner.py
 """
-動作編集D&DダイアログのGUI動作確認（FlowItem対応版）
+動作編集D&DダイアログのGUI操作テスト
 直接実行: python tests/test_transition_editor_direct_runner.py
-
-操作手順:
-1. 「新規動作編集」→ 空のダイアログが開く
-2. 左パレットから右フローリストへD&Dで配置
-3. ドロップ位置に応じて行が挿入される
-4. 項目をダブルクリックで編集
-5. OKで結果を確認
 """
 
 import sys
@@ -41,17 +34,10 @@ class ActionEditorRunner(QMainWindow):
         self.setWindowTitle("動作編集D&D 動作確認")
         self.setMinimumSize(650, 500)
 
-        self.variables = ["battery_voltage", "system_tick", "temperature"]
-        self.flags = ["EVT_POWER_ON_REQ", "EVT_START_REQ"]
         self.role_functions = [
-            "CheckSensor", "StartMotor", "InitCounter",
-            "HandleError", "LogTransition", "ApplyBrake",
+            "CheckSensor", "StartMotor", "LogTransition", "SaveLog", "ClearCounter"
         ]
-        self.conditions = [
-            "voltage > 800",
-            "voltage <= 800",
-            "temp < 50",
-        ]
+        self.transition_events = ["START", "STOP"]
         self.states = ["INIT", "IDLE", "RUNNING", "ERROR"]
 
         self._setup_ui()
@@ -64,14 +50,13 @@ class ActionEditorRunner(QMainWindow):
         info = QLabel(
             "動作編集D&Dダイアログの動作確認\n\n"
             "1. 左のパレットから右のフローリストへD&D\n"
-            "2. ドロップ位置に応じて行が挿入される\n"
-            "3. 項目をダブルクリックで編集\n"
-            "4. OKで結果を確認\n"
+            "2. 既存行に重ねると行挿入\n"
+            "3. ダブルクリックで編集\n"
+            "4. 下部に生成コードが表示される\n"
         )
         layout.addWidget(info)
 
         btn_layout = QHBoxLayout()
-
         new_btn = QPushButton("新規動作編集")
         new_btn.setMinimumHeight(40)
         new_btn.clicked.connect(self._open_new)
@@ -92,29 +77,31 @@ class ActionEditorRunner(QMainWindow):
     def _open_new(self):
         draft = ActionDraft(source="IDLE", event="START")
         dialog = ActionEditorDialog(
-            draft, self.variables, self.flags,
-            self.role_functions, self.conditions, self.states, self
+            draft, self.role_functions, self.transition_events, self.states, self
         )
         if dialog.exec() == ActionEditorDialog.Accepted:
             self._display_result(draft)
 
     def _open_existing(self):
-        draft = ActionDraft(source="RUNNING", event="STOP")
+        draft = ActionDraft(source="IDLE", event="START")
         draft.flow_items = [
-            FlowItem(item_type="function", name="ApplyBrake", edited_text="ApplyBrake()"),
+            FlowItem(item_type="function", name="CheckSensor", edited_text="CheckSensor()"),
             FlowItem(
-                item_type="condition",
-                name="voltage > 800",
-                edited_text="voltage > 800 → IDLE (StopMotor)",
-                params={"target": "IDLE", "action": "StopMotor"}
+                item_type="transition",
+                name="START",
+                edited_text="START: voltage > 800 → RUNNING (直前:SaveLog, ClearCounter)",
+                params={
+                    "event": "START",
+                    "condition": "voltage > 800",
+                    "pre_actions": ["SaveLog", "ClearCounter"],
+                    "target": "RUNNING"
+                }
             ),
-            FlowItem(item_type="function", name="LogTransition", edited_text="LogTransition()"),
         ]
         draft.default_target = "IDLE"
 
         dialog = ActionEditorDialog(
-            draft, self.variables, self.flags,
-            self.role_functions, self.conditions, self.states, self
+            draft, self.role_functions, self.transition_events, self.states, self
         )
         if dialog.exec() == ActionEditorDialog.Accepted:
             self._display_result(draft)
@@ -123,13 +110,11 @@ class ActionEditorRunner(QMainWindow):
         lines = ["=== 動作編集結果 ==="]
         lines.append(f"遷移: {draft.source} --[{draft.event}]--> ?")
         lines.append("")
-        lines.append("動作フロー:")
-        for i, item in enumerate(draft.flow_items, 1):
-            lines.append(f"  {i}. [{item.item_type}] {item.display_text()}")
-        if not draft.flow_items:
-            lines.append("  (空)")
+        for item in draft.flow_items:
+            lines.append(f"  [{item.item_type}] {item.display_text()}")
         lines.append("")
-        lines.append(f"デフォルト遷移先: {draft.default_target}")
+        lines.append("--- 生成コード ---")
+        lines.append(draft.generated_code)
         self.result_display.setPlainText("\n".join(lines))
 
 
@@ -138,7 +123,6 @@ def main():
     window = ActionEditorRunner()
     window.show()
     print("動作編集D&Dダイアログ 動作確認ウィンドウを表示しました。")
-    print("ボタンをクリックしてD&D操作・ダブルクリック編集をテストしてください。")
     return app.exec()
 
 
