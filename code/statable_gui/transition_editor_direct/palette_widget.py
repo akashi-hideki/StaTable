@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/palette_widget.py
 """
-カテゴリ別折りたたみパレット（elseパーツ削除版）
+カテゴリ別折りたたみパレット（ロール関数＋遷移条件）
 """
 
 import json
@@ -38,12 +38,11 @@ class PaletteListWidget(QListWidget):
 
 
 class PaletteWidget(QWidget):
-    """カテゴリ別折りたたみパレット"""
+    """カテゴリ別折りたたみパレット（ロール関数＋遷移条件）"""
 
-    def __init__(self, role_functions=None, transition_events=None, parent=None):
+    def __init__(self, role_functions=None, parent=None):
         super().__init__(parent)
         self.role_functions = role_functions or []
-        self.transition_events = transition_events or []
         self._setup_ui()
         logger.debug("PaletteWidget initialized")
 
@@ -65,35 +64,27 @@ class PaletteWidget(QWidget):
         v1.addWidget(self.function_list)
         v1.addWidget(add_func_btn)
 
-        # 🟦 状態遷移イベント
+        # 🟦 遷移条件
         event_container = QWidget()
         v2 = QVBoxLayout(event_container)
         v2.setContentsMargins(0, 0, 0, 0)
 
-        self.event_list = PaletteListWidget("transition")
-        for event in self.transition_events:
-            self.event_list.addItem(event)
+        self.transition_list = PaletteListWidget("transition")
+        # 固定で「＋ 新しい条件」を追加
+        self.transition_list.addItem("＋ 新しい条件")
 
-        add_event_btn = QPushButton("+ イベント追加")
-        add_event_btn.clicked.connect(self._add_event)
-        v2.addWidget(self.event_list)
-        v2.addWidget(add_event_btn)
+        v2.addWidget(self.transition_list)
+        # 追加ボタンは不要（固定1項目のみ）
 
         layout.addWidget(func_container)
         layout.addWidget(event_container)
         layout.addStretch()
 
         logger.debug(f"Palette items: functions={self.function_list.count()}, "
-                     f"events={self.event_list.count()}")
+                     f"transitions={self.transition_list.count()}")
 
     def _add_function(self):
         name = "NewFunction"
         self.function_list.addItem(name)
         self.role_functions.append(name)
         logger.debug(f"Added function: {name}")
-
-    def _add_event(self):
-        name = "NewEvent"
-        self.event_list.addItem(name)
-        self.transition_events.append(name)
-        logger.debug(f"Added event: {name}")

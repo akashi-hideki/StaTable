@@ -11,8 +11,11 @@ from statable.state_machine import StateMachine
 
 from .logger import StaTableLogger
 from .config import MAX_COLUMN_WIDTH, MIN_ROW_HEIGHT, MAX_ROW_HEIGHT
-from .dialogs import TransitionListDialog
 from .global_defs import GlobalDefinitions
+
+# D&Dエディタ直接起動
+from .transition_editor_direct.dialog import ActionEditorDialog
+from .transition_editor_direct.draft import ActionDraft, transition_to_flow_item, flow_item_to_transition
 
 
 def _truncate_text(text: str, max_chars: int = 40) -> str:
@@ -37,7 +40,6 @@ def _build_transition_tooltip(trans: Transition) -> str:
         parts.append("イベント: 完了遷移")
     if trans.condition:
         parts.append(f"状態遷移条件:\n{trans.condition}")
-    # 旧actionは表示しない（D&Dで編集）
     return "\n".join(parts)
 
 
@@ -162,36 +164,50 @@ class MatrixTableWidget(QTableWidget):
         if event_name == "完了":
             event_name = ""
 
-        StaTableLogger.debug(f"MatrixTableWidget.open_transition_dialog: row={row}, col={col}, state='{state}', event='{event_name}'")
+        StaTableLogger.debug(f"=== MatrixTableWidget.open_transition_dialog ===")
+        StaTableLogger.debug(f"state={state}, event={event_name}")
 
-        item = self.item(row, col)
-        existing_list = item.data(Qt.UserRole) if item else []
-        StaTableLogger.debug(f"  -> existing transitions: {len(existing_list)}")
+        existing_list = self._find_transitions(state, event_name)
+        StaTableLogger.debug(f"existing transitions count = {len(existing_list)}")
+        for i, t in enumerate(existing_list):
+            StaTableLogger.debug(f"  existing[{i}]: condition='{t.condition}', pre_actions={t.pre_actions}, target={t.target}, title={t.title}")
 
-        dlg = TransitionListDialog(
-            self,
-            state_names=list(self.sm.states.keys()),
-            event_name=event_name,
-            existing_transitions=existing_list,
-            role_functions=self.sm.role_functions,
+        # ActionDraft 構築
+        draft = ActionDraft(source=state, event=event_name)
+        for trans in existing_list:
+            fi = transition_to_flow_item(trans)
+            StaTableLogger.debug(f"  converted flow_item: {fi}")
+            draft.flow_items.append(fi)
+
+        role_func_names = list(self.sm.role_functions.keys())
+        states = list(self.sm.states.keys())
+
+        dialog = ActionEditorDialog(
+            draft,
+            role_functions=role_func_names,
+            transition_events=[event_name] if event_name else [],
+            states=states,
             global_defs=self.global_defs,
-            state_machine=self.sm   # ★ state_machine を追加
+            state_machine=self.sm,
+            parent=self
         )
 
-        if dlg.exec() == QDialog.Accepted:
-            new_transitions = dlg.get_transitions()
-            StaTableLogger.debug(f"  -> TransitionListDialog accepted, {len(new_transitions)} transitions")
+        if dialog.exec() == QDialog.Accepted:
+            new_transitions = []
+            for item in draft.flow_items:
+                if item.item_type == "transition":
+                    new_transitions.append(flow_item_to_transition(item, state, event_name))
+
+            StaTableLogger.debug(f"  -> D&D editor accepted, {len(new_transitions)} transitions")
             self.sm.transitions = [t for t in self.sm.transitions
                                    if not (t.source == state and t.event == event_name)]
             for trans in new_transitions:
-                trans.source = state
-                trans.event = event_name
                 self.sm.add_transition(trans)
             self.populate()
             self.transition_changed.emit()
             StaTableLogger.info(f"Transition updated: {state} -{event_name or '完了'}-> {len(new_transitions)} transition(s)")
         else:
-            StaTableLogger.debug("  -> TransitionListDialog cancelled")
+            StaTableLogger.debug("  -> D&D editor cancelled")
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_F2):

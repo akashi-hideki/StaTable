@@ -68,9 +68,13 @@ class Event:
 class Transition:
     source: str
     event: str
-    condition: str = ""
-    action: str = ""
+    condition: str = ""                # 条件式（シンボル名で保持）
+    pre_actions: List[str] = field(default_factory=list)  # 遷移直前処理（ロール関数名リスト）
     target: str = ""
+    has_else: bool = True
+    else_target: str = ""
+    else_actions: List[str] = field(default_factory=list)  # elseアクション
+    action: str = ""                   # 旧フィールド（互換用・未使用）
     transition_type: str = "external"
     title: str = ""
 
@@ -84,11 +88,11 @@ class RoleFunction:
     """ロール関数（状態遷移条件・動作をまとめて実装する関数）"""
     name: str
     description: str = ""
-    return_type: str = "int"
-    arg1_type: str = "int"
-    arg1_name: str = "arg1"
-    arg2_type: str = "int"
-    arg2_name: str = "arg2"
+    return_type: str = "void"          # 新方式では固定
+    arg1_type: str = ""
+    arg1_name: str = ""
+    arg2_type: str = ""
+    arg2_name: str = ""
     title: str = ""
 
     def __post_init__(self):

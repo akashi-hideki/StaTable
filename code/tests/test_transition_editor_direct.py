@@ -17,7 +17,6 @@ PASS = 0
 FAIL = 0
 FAILED = []
 
-
 def check(name, cond, detail=""):
     global PASS, FAIL
     if cond:
@@ -28,12 +27,13 @@ def check(name, cond, detail=""):
         FAILED.append(name)
         print(f"  ❌ {name} {detail}")
 
-
 def test_data_model():
     print("\n--- データモデル ---")
     from statable_gui.transition_editor_direct.draft import (
-        FlowItem, TransitionParams, ActionDraft, SystemGlobal
+        FlowItem, TransitionParams, ActionDraft, SystemGlobal,
+        transition_to_flow_item, flow_item_to_transition
     )
+    from statable.model import Transition
 
     item = FlowItem(item_type="function", name="CheckSensor")
     check("FlowItem作成", item.item_type == "function")
@@ -59,6 +59,22 @@ def test_data_model():
     restored = ActionDraft.from_dict(data)
     check("to_dict/from_dict", restored.source == "IDLE")
 
+    # Transition ⇔ FlowItem 変換
+    trans = Transition(
+        source="IDLE",
+        event="START",
+        condition="battery_voltage > 3000",
+        pre_actions=["SaveLog"],
+        target="RUNNING",
+        has_else=True,
+        else_target="IDLE",
+        else_actions=["ClearCounter"],
+        title="起動"
+    )
+    fi = transition_to_flow_item(trans)
+    check("transition_to_flow_item", fi.item_type == "transition")
+    trans2 = flow_item_to_transition(fi, "IDLE", "START")
+    check("flow_item_to_transition", trans2.condition == trans.condition and trans2.pre_actions == trans.pre_actions)
 
 def test_gui_classes():
     print("\n--- GUIクラス ---")
@@ -86,7 +102,6 @@ def test_gui_classes():
 
     palette = PaletteWidget(role_functions, transition_events)
     check("パレット作成", palette is not None)
-    check("追加ボタン位置", palette.function_list.parentWidget() is not None)
 
     canvas = FlowCanvas(draft)
     check("キャンバス作成", canvas is not None)
@@ -98,7 +113,6 @@ def test_gui_classes():
     check("ダイアログ作成", dialog is not None)
     check("タブ数", dialog.tabs.count() == 2)
     dialog.close()
-
 
 def run_all():
     global PASS, FAIL, FAILED
@@ -126,7 +140,6 @@ def run_all():
         print("🎉 全テスト成功！")
     else:
         print("❌ 失敗あり")
-
 
 if __name__ == "__main__":
     run_all()

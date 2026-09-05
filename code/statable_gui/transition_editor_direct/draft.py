@@ -1,15 +1,30 @@
 # statable_gui/transition_editor_direct/draft.py
 """
-動作編集用ドラフトモデル（else条件自動表示対応、ロール関数個別生成対応）
+動作編集用ドラフトモデル（デバッグログ強化版・型安全化）
 """
 
+import logging
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
+
+logger = logging.getLogger("transition_editor_direct.draft")
+
+
+def ensure_list(value) -> List[str]:
+    """値がリストでなければ空リストを返す（デバッグログ付き）"""
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        logger.error(f"Expected list but got string: '{value}'. Returning empty list.")
+        return []
+    if value is None:
+        return []
+    logger.warning(f"Unexpected type for list: {type(value)}. Returning empty list.")
+    return []
 
 
 @dataclass
 class SystemGlobal:
-    """システムグローバル変数"""
     name: str
     type: str = "uint16_t"
     initial_value: str = "0"
@@ -35,7 +50,6 @@ class SystemGlobal:
 
 @dataclass
 class TransitionParams:
-    """状態遷移イベントのパラメータ（else条件対応）"""
     event: str = ""
     condition: str = ""
     pre_actions: List[str] = field(default_factory=list)
@@ -47,8 +61,7 @@ class TransitionParams:
 
 @dataclass
 class FlowItem:
-    """動作フローの1項目"""
-    item_type: str = ""          # "function" / "transition"
+    item_type: str = ""
     name: str = ""
     edited_text: str = ""
     params: Dict[str, Any] = field(default_factory=dict)
@@ -76,7 +89,6 @@ class FlowItem:
 
 @dataclass
 class ActionDraft:
-    """動作編集用ドラフト"""
     source: str = ""
     event: str = ""
 
@@ -86,9 +98,8 @@ class ActionDraft:
     system_globals: List[SystemGlobal] = field(default_factory=list)
     generated_code: str = ""
 
-    # ロール関数個別生成用
-    role_func_map: Dict[str, str] = field(default_factory=dict)  # key: "source|event|phase|base_name"
-    user_code: Dict[str, str] = field(default_factory=dict)       # key: func_name, value: user code body
+    role_func_map: Dict[str, str] = field(default_factory=dict)
+    user_code: Dict[str, str] = field(default_factory=dict)
 
     def clear(self):
         self.flow_items = []
@@ -99,7 +110,6 @@ class ActionDraft:
         self.user_code = {}
 
     def get_role_func_name(self, base_name: str, phase: str) -> str:
-        """呼び出し元ごとに個別のロール関数名を生成・取得する"""
         key = f"{self.source}|{self.event}|{phase}|{base_name}"
         if key not in self.role_func_map:
             func_name = f"RoleFunc_{base_name}_{self.source}_{self.event}_{phase}"
@@ -130,3 +140,58 @@ class ActionDraft:
             role_func_map=data.get('role_func_map', {}),
             user_code=data.get('user_code', {}),
         )
+
+
+def transition_to_flow_item(trans) -> FlowItem:
+    """Transition → FlowItem (type=transition) 変換"""
+    pre_actions = ensure_list(getattr(trans, 'pre_actions', []))
+    else_actions = ensure_list(getattr(trans, 'else_actions', []))
+    condition = getattr(trans, 'condition', '')
+    if not isinstance(condition, str):
+        logger.error(f"Condition is not str: {type(condition)}. Using empty string.")
+        condition = ""
+
+    logger.debug(f"transition_to_flow_item: condition='{condition}', pre_actions={pre_actions}, else_actions={else_actions}")
+
+    return FlowItem(
+        item_type="transition",
+        name=trans.event or "完了",
+        edited_text=trans.title if trans.title != "(無題遷移)" else trans.event or "完了",
+        params={
+            "event": trans.event,
+            "condition": condition,
+            "pre_actions": pre_actions,
+            "target": trans.target,
+            "has_else": getattr(trans, 'has_else', True),
+            "else_target": getattr(trans, 'else_target', ''),
+            "else_actions": else_actions,
+        }
+    )
+
+
+def flow_item_to_transition(item: FlowItem, source: str, event: str):
+    """FlowItem → Transition 変換"""
+    from statable.model import Transition
+    params = item.params
+    pre_actions = ensure_list(params.get('pre_actions', []))
+    else_actions = ensure_list(params.get('else_actions', []))
+    condition = params.get('condition', '')
+    if not isinstance(condition, str):
+        logger.error(f"Condition is not str: {type(condition)}. Using empty string.")
+        condition = ""
+
+    logger.debug(f"flow_item_to_transition: condition='{condition}', pre_actions={pre_actions}, else_actions={else_actions}")
+
+    return Transition(
+        source=source,
+        event=event,
+        condition=condition,
+        pre_actions=pre_actions,
+        target=params.get('target', ''),
+        has_else=params.get('has_else', True),
+        else_target=params.get('else_target', ''),
+        else_actions=else_actions,
+        action="",
+        transition_type="external",
+        title=item.edited_text if item.edited_text and item.edited_text != item.name else "(無題遷移)",
+    )

@@ -71,11 +71,9 @@ class TransitionEditDialog(BaseEditDialog):
         self.cond_edit = QLineEdit(item.params.get('condition', ''))
         h1.addWidget(self.cond_edit)
 
-        # 条件ビルダーボタン追加
         cond_builder_btn = QPushButton("条件を編集...")
         cond_builder_btn.clicked.connect(self._open_condition_builder)
         h1.addWidget(cond_builder_btn)
-
         layout.addLayout(h1)
 
         layout.addWidget(QLabel("遷移直前処理:"))

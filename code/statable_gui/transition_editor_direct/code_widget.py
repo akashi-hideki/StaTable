@@ -1,12 +1,12 @@
 # statable_gui/transition_editor_direct/code_widget.py
 """
-コード表示ウィジェット（読み取り専用、has_else対応、ロール関数個別生成対応、elseアクション対応）
+コード表示ウィジェット（デバッグログ強化版・型安全化）
 """
 
 import logging
 
 from PySide6.QtWidgets import QPlainTextEdit
-from .draft import ActionDraft
+from .draft import ActionDraft, ensure_list
 
 logger = logging.getLogger("transition_editor_direct.code")
 
@@ -26,92 +26,62 @@ class CodeWidget(QPlainTextEdit):
 
     def _generate_code(self) -> str:
         lines = []
-        # システムグローバル定義
+        # システムグローバル
         for g in self.draft.system_globals:
             lines.append(f"{g.type} {g.name} = {g.initial_value};")
         if self.draft.system_globals:
             lines.append("")
 
-        # 個別ロール関数のプロトタイプ宣言を収集
+        # プロトタイプ収集
         proto_lines = []
-        for item in self.draft.flow_items:
-            if item.item_type == "function":
-                func_name = self.draft.get_role_func_name(item.name, "FLOW")
-                proto_lines.append(f"void {func_name}(SystemContext_t *ctx, const TransitionContext_t *transition);")
-            elif item.item_type == "transition":
-                for pre_action in item.params.get('pre_actions', []):
-                    func_name = self.draft.get_role_func_name(pre_action, "PRE")
-                    proto_lines.append(f"void {func_name}(SystemContext_t *ctx, const TransitionContext_t *transition);")
-                # elseアクションのプロトタイプ
-                for else_action in item.params.get('else_actions', []):
-                    func_name = self.draft.get_role_func_name(else_action, "ELSE")
-                    proto_lines.append(f"void {func_name}(SystemContext_t *ctx, const TransitionContext_t *transition);")
+        for idx, item in enumerate(self.draft.flow_items):
+            if item.item_type == "transition":
+                pre_actions = ensure_list(item.params.get('pre_actions', []))
+                else_actions = ensure_list(item.params.get('else_actions', []))
+                logger.debug(f"CodeGen flow_item[{idx}]: condition='{item.params.get('condition','')}', pre_actions={pre_actions}, else_actions={else_actions}")
+                for p in pre_actions:
+                    proto_lines.append(f"void RoleFunc_{p}(SystemContext_t *ctx, const TransitionContext_t *transition);")
+                for ea in else_actions:
+                    proto_lines.append(f"void RoleFunc_{ea}(SystemContext_t *ctx, const TransitionContext_t *transition);")
+            elif item.item_type == "function":
+                func_name = item.name
+                proto_lines.append(f"void RoleFunc_{func_name}(SystemContext_t *ctx, const TransitionContext_t *transition);")
         if proto_lines:
             lines.extend(proto_lines)
             lines.append("")
 
-        # メイン処理（状態遷移イベント処理）
-        for item in self.draft.flow_items:
-            if item.item_type == "function":
-                func_name = self.draft.get_role_func_name(item.name, "FLOW")
-                lines.append(f"{func_name}(ctx, transition);")
-            elif item.item_type == "transition":
+        # 本体
+        for idx, item in enumerate(self.draft.flow_items):
+            if item.item_type == "transition":
                 cond = item.params.get('condition', '')
                 target = item.params.get('target', '')
-                pre = item.params.get('pre_actions', [])
+                pre_actions = ensure_list(item.params.get('pre_actions', []))
+                else_actions = ensure_list(item.params.get('else_actions', []))
                 has_else = item.params.get('has_else', True)
                 else_target = item.params.get('else_target', '')
-                else_actions = item.params.get('else_actions', [])
 
                 if cond:
                     lines.append(f"if ({cond}) {{")
-                    for p in pre:
-                        func_name = self.draft.get_role_func_name(p, "PRE")
-                        lines.append(f"    {func_name}(ctx, transition);")
+                    for p in pre_actions:
+                        lines.append(f"    RoleFunc_{p}(ctx, transition);")
                     lines.append(f"    next_state = {target};")
                     lines.append("}")
                     if has_else:
                         lines.append("else {")
-                        # elseアクションの呼び出し
                         for ea in else_actions:
-                            func_name = self.draft.get_role_func_name(ea, "ELSE")
-                            lines.append(f"    {func_name}(ctx, transition);")
+                            lines.append(f"    RoleFunc_{ea}(ctx, transition);")
                         if else_target:
                             lines.append(f"    next_state = {else_target};")
                         else:
                             lines.append("    // else遷移先（未設定）")
                         lines.append("}")
                 else:
-                    # 条件なしの場合
                     lines.append(f"next_state = {target};")
-                    if has_else:
-                        lines.append(f"// else: {else_target}" if else_target else "// else: 未設定")
-                        if else_actions:
-                            lines.append("// elseアクション:")
-                            for ea in else_actions:
-                                func_name = self.draft.get_role_func_name(ea, "ELSE")
-                                lines.append(f"//   {func_name}(ctx, transition);")
+            elif item.item_type == "function":
+                lines.append(f"RoleFunc_{item.name}(ctx, transition);")
 
         if self.draft.default_target:
             lines.append(f"// default: {self.draft.default_target}")
 
-        # 個別ロール関数の定義
-        if self.draft.role_func_map:
-            lines.append("")
-            lines.append("/* === ロール関数定義（ユーザー編集領域） === */")
-            for key, func_name in sorted(self.draft.role_func_map.items()):
-                # key は "source|event|phase|base_name"
-                source, event, phase, base_name = key.split('|')
-                lines.append(f"void {func_name}(SystemContext_t *ctx, const TransitionContext_t *transition) {{")
-                user_code = self.draft.user_code.get(func_name, "")
-                if user_code:
-                    lines.append(f"    // === USER CODE BEGIN: {func_name} ===")
-                    for code_line in user_code.strip().splitlines():
-                        lines.append(f"    {code_line}")
-                    lines.append(f"    // === USER CODE END: {func_name} ===")
-                else:
-                    lines.append("    // TODO: 実装してください")
-                lines.append("}")
-                lines.append("")
-
+        # 関数定義（将来対応用に role_func_map を出力しない）
         return "\n".join(lines)

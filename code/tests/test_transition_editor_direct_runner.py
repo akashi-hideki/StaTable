@@ -23,7 +23,6 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayou
 from statable_gui.transition_editor_direct.draft import ActionDraft, FlowItem
 from statable_gui.transition_editor_direct.dialog import ActionEditorDialog
 
-
 class Runner(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -31,7 +30,7 @@ class Runner(QMainWindow):
         self.setMinimumSize(650, 500)
 
         self.role_functions = ["CheckSensor", "StartMotor", "LogTransition", "SaveLog", "ClearCounter"]
-        self.transition_events = ["START", "STOP"]
+        self.transition_events = ["START"]
         self.states = ["INIT", "IDLE", "RUNNING", "ERROR"]
 
         central = QWidget()
@@ -91,13 +90,11 @@ class Runner(QMainWindow):
         lines.append(draft.generated_code)
         self.result_display.setPlainText("\n".join(lines))
 
-
 def main():
     app = QApplication(sys.argv)
     window = Runner()
     window.show()
     return app.exec()
-
 
 if __name__ == "__main__":
     sys.exit(main())
