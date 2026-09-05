@@ -49,8 +49,8 @@ class FlowNodeItem(QGraphicsRectItem):
         self.setAcceptHoverEvents(True)
 
     def hoverEnterEvent(self, event):
-        # 修正: screenPos() → globalPosition().toPoint()
-        QToolTip.showText(event.globalPosition().toPoint(), self.get_guidance_text())
+        # 修正: screenPos() は QPoint を返すため、toPoint() 不要
+        QToolTip.showText(event.screenPos(), self.get_guidance_text())
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event):
@@ -170,11 +170,11 @@ class FlowCanvas(QGraphicsView):
     def dragMoveEvent(self, event):
         if event.mimeData().hasFormat(self.MIME_TYPE) or event.mimeData().hasText():
             event.acceptProposedAction()
-            scene_pos = self.mapToScene(event.position().toPoint())
+            scene_pos = self.mapToScene(event.pos())  # event.pos() は QPoint
             item = self.scene.itemAt(scene_pos, self.transform())
             if isinstance(item, FlowNodeItem):
-                # 修正: event.screenPos() → event.globalPosition().toPoint()
-                QToolTip.showText(event.globalPosition().toPoint(), item.get_guidance_text())
+                # 修正: globalPosition() ではなく mapToGlobal(event.pos()) を使用
+                QToolTip.showText(self.mapToGlobal(event.pos()), item.get_guidance_text())
             else:
                 QToolTip.hideText()
 
@@ -188,7 +188,7 @@ class FlowCanvas(QGraphicsView):
             item_type = data.get("item_type", "function")
             name = data.get("name", "")
 
-            scene_pos = self.mapToScene(event.position().toPoint())
+            scene_pos = self.mapToScene(event.pos())  # event.pos() は QPoint
             target_item = self.scene.itemAt(scene_pos, self.transform())
             logger.debug(f"Drop: type={item_type}, name={name}")
 
