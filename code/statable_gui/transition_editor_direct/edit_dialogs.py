@@ -1,11 +1,11 @@
 # statable_gui/transition_editor_direct/edit_dialogs.py
 """
-ノード編集ダイアログ
+ノード編集ダイアログ（else有無チェックボックス対応）
 """
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-    QLabel, QComboBox, QLineEdit, QListWidget, QAbstractItemView
+    QLabel, QComboBox, QLineEdit, QListWidget, QAbstractItemView, QCheckBox
 )
 from PySide6.QtCore import Qt
 
@@ -14,7 +14,7 @@ class BaseEditDialog(QDialog):
     def __init__(self, item, parent=None):
         super().__init__(parent)
         self.item = item
-        self.setMinimumWidth(350)
+        self.setMinimumWidth(400)
 
     def _add_buttons(self, layout):
         btn_layout = QHBoxLayout()
@@ -58,21 +58,18 @@ class TransitionEditDialog(BaseEditDialog):
 
         layout = QVBoxLayout(self)
 
-        # イベント名
         h0 = QHBoxLayout()
         h0.addWidget(QLabel("イベント:"))
         self.event_label = QLabel(item.params.get('event', item.name))
         h0.addWidget(self.event_label)
         layout.addLayout(h0)
 
-        # 条件式
         h1 = QHBoxLayout()
         h1.addWidget(QLabel("条件式:"))
         self.cond_edit = QLineEdit(item.params.get('condition', ''))
         h1.addWidget(self.cond_edit)
         layout.addLayout(h1)
 
-        # 遷移直前処理
         layout.addWidget(QLabel("遷移直前処理:"))
         self.pre_list = QListWidget()
         self.pre_list.setDragDropMode(QAbstractItemView.InternalMove)
@@ -82,13 +79,28 @@ class TransitionEditDialog(BaseEditDialog):
         layout.addWidget(self.pre_list)
 
         pre_btn = QHBoxLayout()
-        add_btn = QPushButton("追加")
-        add_btn.clicked.connect(lambda: self.pre_list.addItem(self.role_functions[0] if self.role_functions else ""))
-        pre_btn.addWidget(add_btn)
-        del_btn = QPushButton("削除")
-        del_btn.clicked.connect(lambda: self.pre_list.takeItem(self.pre_list.currentRow()) if self.pre_list.currentRow() >= 0 else None)
-        pre_btn.addWidget(del_btn)
+        add_pre_btn = QPushButton("追加")
+        add_pre_btn.clicked.connect(self._add_pre)
+        pre_btn.addWidget(add_pre_btn)
+        del_pre_btn = QPushButton("削除")
+        del_pre_btn.clicked.connect(self._del_pre)
+        pre_btn.addWidget(del_pre_btn)
         layout.addLayout(pre_btn)
+
+        # else条件の有無
+        self.has_else_check = QCheckBox("else条件を使用する")
+        self.has_else_check.setChecked(item.params.get('has_else', True))
+        layout.addWidget(self.has_else_check)
+
+        # else遷移先
+        h3 = QHBoxLayout()
+        h3.addWidget(QLabel("else遷移先:"))
+        self.else_target_combo = QComboBox()
+        self.else_target_combo.setEditable(True)
+        self.else_target_combo.addItems(self.states)
+        self.else_target_combo.setCurrentText(item.params.get('else_target', ''))
+        h3.addWidget(self.else_target_combo)
+        layout.addLayout(h3)
 
         # 遷移先
         h2 = QHBoxLayout()
@@ -102,17 +114,35 @@ class TransitionEditDialog(BaseEditDialog):
 
         self._add_buttons(layout)
 
+    def _add_pre(self):
+        if self.role_functions:
+            self.pre_list.addItem(self.role_functions[0])
+
+    def _del_pre(self):
+        row = self.pre_list.currentRow()
+        if row >= 0:
+            self.pre_list.takeItem(row)
+
     def get_result(self):
         condition = self.cond_edit.text()
         pre_actions = [self.pre_list.item(i).text() for i in range(self.pre_list.count())]
         target = self.target_combo.currentText()
+        has_else = self.has_else_check.isChecked()
+        else_target = self.else_target_combo.currentText() if has_else else ""
+
         edited = f"{self.event_label.text()}: {condition} → {target}"
         if pre_actions:
             edited += f" (直前:{', '.join(pre_actions)})"
+        if has_else:
+            edited += f" [else→{else_target}]" if else_target else " [else]"
+
         params = {
             'event': self.event_label.text(),
             'condition': condition,
             'pre_actions': pre_actions,
             'target': target,
+            'has_else': has_else,
+            'else_target': else_target,
+            'else_actions': [],
         }
         return edited, params

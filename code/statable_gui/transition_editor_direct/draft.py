@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/draft.py
 """
-動作編集用ドラフトモデル
+動作編集用ドラフトモデル（else条件自動表示対応）
 """
 
 from dataclasses import dataclass, field
@@ -9,6 +9,7 @@ from typing import List, Dict, Any
 
 @dataclass
 class SystemGlobal:
+    """システムグローバル変数"""
     name: str
     type: str = "uint16_t"
     initial_value: str = "0"
@@ -34,14 +35,19 @@ class SystemGlobal:
 
 @dataclass
 class TransitionParams:
+    """状態遷移イベントのパラメータ（else条件対応）"""
     event: str = ""
     condition: str = ""
     pre_actions: List[str] = field(default_factory=list)
     target: str = ""
+    has_else: bool = True          # else条件を表示するか
+    else_target: str = ""          # else条件の遷移先
+    else_actions: List[str] = field(default_factory=list)
 
 
 @dataclass
 class FlowItem:
+    """動作フローの1項目"""
     item_type: str = ""          # "function" / "transition"
     name: str = ""
     edited_text: str = ""
@@ -70,6 +76,7 @@ class FlowItem:
 
 @dataclass
 class ActionDraft:
+    """動作編集用ドラフト"""
     source: str = ""
     event: str = ""
 
