@@ -1,6 +1,6 @@
 # tests/test_transition_editor_direct.py
 """
-動作編集D&Dパッケージのメソッドテスト
+動作編集D&Dパッケージ メソッドテスト
 直接実行: python tests/test_transition_editor_direct.py
 """
 
@@ -32,7 +32,7 @@ def check(name, cond, detail=""):
 def test_data_model():
     print("\n--- データモデル ---")
     from statable_gui.transition_editor_direct.draft import (
-        FlowItem, TransitionParams, ActionDraft
+        FlowItem, TransitionParams, ActionDraft, SystemGlobal
     )
 
     # FlowItem
@@ -50,15 +50,22 @@ def test_data_model():
     check("TransitionParams", tp.event == "START" and tp.target == "RUNNING")
     check("直前処理", tp.pre_actions == ["SaveLog", "ClearCounter"])
 
+    # SystemGlobal
+    sg = SystemGlobal(name="shared_temp", type="uint16_t", initial_value="0")
+    check("SystemGlobal", sg.name == "shared_temp")
+
     # ActionDraft
     draft = ActionDraft(source="IDLE", event="START")
-    draft.flow_items = [item]
+    draft.flow_items.append(item)
+    draft.system_globals.append(sg)
     draft.default_target = "IDLE"
     check("ActionDraft", len(draft.flow_items) == 1)
+    check("グローバル数", len(draft.system_globals) == 1)
 
     data = draft.to_dict()
     restored = ActionDraft.from_dict(data)
     check("to_dict/from_dict", restored.source == "IDLE")
+    check("グローバル復元", restored.system_globals[0].name == "shared_temp")
 
 
 def test_gui_classes():
@@ -76,7 +83,8 @@ def test_gui_classes():
 
     from statable_gui.transition_editor_direct.draft import ActionDraft
     from statable_gui.transition_editor_direct.palette_widget import PaletteWidget
-    from statable_gui.transition_editor_direct.flow_widget import FlowWidget
+    from statable_gui.transition_editor_direct.canvas_widget import FlowCanvas
+    from statable_gui.transition_editor_direct.code_widget import CodeWidget
     from statable_gui.transition_editor_direct.dialog import ActionEditorDialog
 
     draft = ActionDraft(source="IDLE", event="START")
@@ -84,24 +92,22 @@ def test_gui_classes():
     transition_events = ["START", "STOP"]
     states = ["INIT", "IDLE", "RUNNING", "ERROR"]
 
-    # Palette
     palette = PaletteWidget(role_functions, transition_events)
     check("パレット作成", palette is not None)
-    check("関数リスト", palette.function_list.count() == 3)
-    check("イベントリスト", palette.event_list.count() == 2)
+    check("パレット関数数", palette.function_list.count() == 3)
+    check("パレットイベント数", palette.event_list.count() == 2)
 
-    # Flow
-    flow = FlowWidget(draft, role_functions, states)
-    check("フロー作成", flow is not None)
-    check("フローリスト", flow.flow_list is not None)
-    check("デフォルトコンボ", flow.default_target_combo is not None)
+    canvas = FlowCanvas(draft)
+    check("キャンバス作成", canvas is not None)
 
-    # Dialog
+    code_widget = CodeWidget(draft)
+    check("コード作成", code_widget is not None)
+
     dialog = ActionEditorDialog(
         draft, role_functions, transition_events, states
     )
     check("ダイアログ作成", dialog is not None)
-    check("コードプレビュー", dialog.code_preview is not None)
+    check("タブ数", dialog.tabs.count() == 2)
     check("タイトル", "動作編集" in dialog.windowTitle())
     dialog.close()
 

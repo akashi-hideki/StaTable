@@ -1,12 +1,11 @@
 # tests/test_transition_editor_direct_runner.py
 """
-動作編集D&DダイアログのGUI操作テスト
+動作編集D&Dダイアログ GUI操作テスト
 直接実行: python tests/test_transition_editor_direct_runner.py
 """
 
 import sys
 import os
-import logging
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
@@ -14,64 +13,39 @@ gui_dir = os.path.join(project_root, 'statable_gui')
 sys.path.insert(0, project_root)
 sys.path.insert(0, gui_dir)
 
-logging.basicConfig(level=logging.WARNING)
-
-from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget,
-    QLabel, QTextEdit, QHBoxLayout
-)
+from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QTextEdit
 from PySide6.QtCore import Qt
 
-from statable_gui.transition_editor_direct.draft import ActionDraft, FlowItem
+from statable_gui.transition_editor_direct.draft import ActionDraft
 from statable_gui.transition_editor_direct.dialog import ActionEditorDialog
 
 
-class ActionEditorRunner(QMainWindow):
-    """動作編集ダイアログのテスト用メインウィンドウ"""
-
+class Runner(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("動作編集D&D 動作確認")
         self.setMinimumSize(650, 500)
 
-        self.role_functions = [
-            "CheckSensor", "StartMotor", "LogTransition", "SaveLog", "ClearCounter"
-        ]
+        self.role_functions = ["CheckSensor", "StartMotor", "LogTransition", "SaveLog", "ClearCounter"]
         self.transition_events = ["START", "STOP"]
         self.states = ["INIT", "IDLE", "RUNNING", "ERROR"]
 
-        self._setup_ui()
-
-    def _setup_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
 
-        info = QLabel(
-            "動作編集D&Dダイアログの動作確認\n\n"
-            "1. 左のパレットから右のフローリストへD&D\n"
-            "2. 既存行に重ねると行挿入\n"
-            "3. ダブルクリックで編集\n"
-            "4. 下部に生成コードが表示される\n"
-        )
-        layout.addWidget(info)
-
-        btn_layout = QHBoxLayout()
         new_btn = QPushButton("新規動作編集")
         new_btn.setMinimumHeight(40)
         new_btn.clicked.connect(self._open_new)
-        btn_layout.addWidget(new_btn)
+        layout.addWidget(new_btn)
 
         existing_btn = QPushButton("既存動作の編集")
         existing_btn.setMinimumHeight(40)
         existing_btn.clicked.connect(self._open_existing)
-        btn_layout.addWidget(existing_btn)
-
-        layout.addLayout(btn_layout)
+        layout.addWidget(existing_btn)
 
         self.result_display = QTextEdit()
         self.result_display.setReadOnly(True)
-        self.result_display.setPlaceholderText("編集結果がここに表示されます")
         layout.addWidget(self.result_display)
 
     def _open_new(self):
@@ -80,36 +54,34 @@ class ActionEditorRunner(QMainWindow):
             draft, self.role_functions, self.transition_events, self.states, self
         )
         if dialog.exec() == ActionEditorDialog.Accepted:
-            self._display_result(draft)
+            self._show_result(draft)
 
     def _open_existing(self):
         draft = ActionDraft(source="IDLE", event="START")
-        draft.flow_items = [
-            FlowItem(item_type="function", name="CheckSensor", edited_text="CheckSensor()"),
-            FlowItem(
-                item_type="transition",
-                name="START",
-                edited_text="START: voltage > 800 → RUNNING (直前:SaveLog, ClearCounter)",
-                params={
-                    "event": "START",
-                    "condition": "voltage > 800",
-                    "pre_actions": ["SaveLog", "ClearCounter"],
-                    "target": "RUNNING"
-                }
-            ),
-        ]
+        # 既存項目を設定
+        from statable_gui.transition_editor_direct.draft import FlowItem
+        draft.flow_items.append(FlowItem(item_type="function", name="CheckSensor", edited_text="CheckSensor()"))
+        draft.flow_items.append(FlowItem(
+            item_type="transition",
+            name="START",
+            edited_text="START: voltage > 800 → RUNNING (直前:SaveLog, ClearCounter)",
+            params={
+                "event": "START",
+                "condition": "voltage > 800",
+                "pre_actions": ["SaveLog", "ClearCounter"],
+                "target": "RUNNING"
+            }
+        ))
         draft.default_target = "IDLE"
 
         dialog = ActionEditorDialog(
             draft, self.role_functions, self.transition_events, self.states, self
         )
         if dialog.exec() == ActionEditorDialog.Accepted:
-            self._display_result(draft)
+            self._show_result(draft)
 
-    def _display_result(self, draft: ActionDraft):
+    def _show_result(self, draft):
         lines = ["=== 動作編集結果 ==="]
-        lines.append(f"遷移: {draft.source} --[{draft.event}]--> ?")
-        lines.append("")
         for item in draft.flow_items:
             lines.append(f"  [{item.item_type}] {item.display_text()}")
         lines.append("")
@@ -120,9 +92,8 @@ class ActionEditorRunner(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    window = ActionEditorRunner()
+    window = Runner()
     window.show()
-    print("動作編集D&Dダイアログ 動作確認ウィンドウを表示しました。")
     return app.exec()
 
 
