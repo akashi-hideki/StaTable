@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/draft.py
 """
-動作編集用ドラフトモデル（else条件自動表示対応）
+動作編集用ドラフトモデル（else条件自動表示対応、ロール関数個別生成対応）
 """
 
 from dataclasses import dataclass, field
@@ -40,8 +40,8 @@ class TransitionParams:
     condition: str = ""
     pre_actions: List[str] = field(default_factory=list)
     target: str = ""
-    has_else: bool = True          # else条件を表示するか
-    else_target: str = ""          # else条件の遷移先
+    has_else: bool = True
+    else_target: str = ""
     else_actions: List[str] = field(default_factory=list)
 
 
@@ -86,11 +86,25 @@ class ActionDraft:
     system_globals: List[SystemGlobal] = field(default_factory=list)
     generated_code: str = ""
 
+    # ロール関数個別生成用
+    role_func_map: Dict[str, str] = field(default_factory=dict)  # key: "source|event|phase|base_name"
+    user_code: Dict[str, str] = field(default_factory=dict)       # key: func_name, value: user code body
+
     def clear(self):
         self.flow_items = []
         self.default_target = ""
         self.system_globals = []
         self.generated_code = ""
+        self.role_func_map = {}
+        self.user_code = {}
+
+    def get_role_func_name(self, base_name: str, phase: str) -> str:
+        """呼び出し元ごとに個別のロール関数名を生成・取得する"""
+        key = f"{self.source}|{self.event}|{phase}|{base_name}"
+        if key not in self.role_func_map:
+            func_name = f"RoleFunc_{base_name}_{self.source}_{self.event}_{phase}"
+            self.role_func_map[key] = func_name
+        return self.role_func_map[key]
 
     def to_dict(self) -> dict:
         return {
@@ -100,6 +114,8 @@ class ActionDraft:
             'default_target': self.default_target,
             'system_globals': [g.to_dict() for g in self.system_globals],
             'generated_code': self.generated_code,
+            'role_func_map': self.role_func_map,
+            'user_code': self.user_code,
         }
 
     @classmethod
@@ -111,4 +127,6 @@ class ActionDraft:
             default_target=data.get('default_target', ''),
             system_globals=[SystemGlobal.from_dict(g) for g in data.get('system_globals', [])],
             generated_code=data.get('generated_code', ''),
+            role_func_map=data.get('role_func_map', {}),
+            user_code=data.get('user_code', {}),
         )
