@@ -1,7 +1,9 @@
 # statable_gui/transition_editor_direct/dialog.py
 """
-動作編集メインダイアログ
+動作編集メインダイアログ（コード自動更新対応）
 """
+
+import logging
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QTabWidget,
@@ -14,6 +16,8 @@ from .palette_widget import PaletteWidget
 from .canvas_widget import FlowCanvas
 from .code_widget import CodeWidget
 from .system_global_dialog import SystemGlobalDialog
+
+logger = logging.getLogger("transition_editor_direct.dialog")
 
 
 class ActionEditorDialog(QDialog):
@@ -30,11 +34,11 @@ class ActionEditorDialog(QDialog):
         self.setMinimumSize(900, 650)
 
         self._setup_ui()
+        logger.debug("ActionEditorDialog initialized")
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
 
-        # タブ
         self.tabs = QTabWidget()
         main_layout.addWidget(self.tabs)
 
@@ -58,6 +62,10 @@ class ActionEditorDialog(QDialog):
         self.code_widget = CodeWidget(self.draft)
         self.tabs.addTab(self.code_widget, "コード")
 
+        # キャンバス変更 → コード更新
+        self.canvas.draft_updated.connect(self.code_widget.update_code)
+        logger.debug("Connected canvas.draft_updated -> code_widget.update_code")
+
         # システムグローバルボタン
         global_btn = QPushButton("システムグローバル...")
         global_btn.clicked.connect(self._open_system_global)
@@ -75,6 +83,8 @@ class ActionEditorDialog(QDialog):
         main_layout.addLayout(btn_layout)
 
     def _open_system_global(self):
+        logger.debug("Opening system global dialog")
         dialog = SystemGlobalDialog(self.draft, self)
         dialog.exec()
         self.code_widget.update_code()
+        logger.debug("System global dialog closed, code updated")
