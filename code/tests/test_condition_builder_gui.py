@@ -1,6 +1,6 @@
 # tests/test_condition_builder_gui.py
 """
-条件ビルダーダイアログ GUI確認用
+条件ビルダーダイアログ GUI確認用（改訂版UI対応）
 直接実行: python tests/test_condition_builder_gui.py
 """
 
@@ -30,15 +30,17 @@ def main():
 
     # 条件ビルダーダイアログを表示
     dialog = ConditionBuilderDialog(
-        condition="ctx->data.battery_voltage > 3000 && ctx->flags.EVT_POWER_ON_REQ == 1",
+        condition="battery_voltage > 3000 && EVT_POWER_ON_REQ == 1",
         global_defs=gd,
         state_machine=sm
     )
-    dialog.setWindowTitle("遷移条件ビルダー（GUI確認）")
+    dialog.setWindowTitle("遷移条件ビルダー（GUI確認・改訂版）")
     dialog.show()
 
     print("条件ビルダーダイアログを表示しました。")
-    print("操作が終わったらウィンドウを閉じてください。")
+    print("左ペインのツリーからシンボルをダブルクリックで挿入できます。")
+    print("右ペインでシンボル名を編集すると、下部にCコードが表示されます。")
+    print("ウィンドウを閉じると終了します。")
 
     return app.exec()
 
