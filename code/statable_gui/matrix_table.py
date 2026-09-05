@@ -16,7 +16,6 @@ from .global_defs import GlobalDefinitions
 
 
 def _truncate_text(text: str, max_chars: int = 40) -> str:
-    """長いテキストを省略表示する"""
     if not text:
         return ""
     lines = text.split('\n')
@@ -29,7 +28,6 @@ def _truncate_text(text: str, max_chars: int = 40) -> str:
 
 
 def _build_transition_tooltip(trans: Transition) -> str:
-    """遷移の完全な情報をツールチップ用に整形"""
     parts = []
     parts.append(f"タイトル: {trans.title}")
     parts.append(f"遷移先: {trans.target if trans.target else '(内部)'}")
@@ -39,13 +37,11 @@ def _build_transition_tooltip(trans: Transition) -> str:
         parts.append("イベント: 完了遷移")
     if trans.condition:
         parts.append(f"状態遷移条件:\n{trans.condition}")
-    if trans.action:
-        parts.append(f"動作:\n{trans.action}")
+    # 旧actionは表示しない（D&Dで編集）
     return "\n".join(parts)
 
 
 def _event_header_label(event_name: str, delivery_type) -> str:
-    """イベント名に配送タイプのプレフィックスを付ける"""
     if delivery_type == EventDeliveryType.QUEUE:
         return f"[Q] {event_name}"
     elif delivery_type == EventDeliveryType.DOUBLE:
@@ -54,7 +50,6 @@ def _event_header_label(event_name: str, delivery_type) -> str:
 
 
 class MatrixTableWidget(QTableWidget):
-    """状態遷移マトリックス表示・編集テーブル（行=イベント、列=状態）"""
     transition_changed = Signal()
 
     def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None, parent=None):
@@ -84,7 +79,6 @@ class MatrixTableWidget(QTableWidget):
         self.setColumnCount(len(states))
         self.setHorizontalHeaderLabels(states)
 
-        # イベントヘッダに配送タイプを含める
         event_labels = []
         for event_name in events:
             event_obj = self.sm.events.get(event_name)
@@ -96,7 +90,6 @@ class MatrixTableWidget(QTableWidget):
             for col, state in enumerate(states):
                 trans_list = self._find_transitions(state, event)
                 if trans_list:
-                    # タイトル＋イベント名の形式で表示
                     titles = [self._generate_cell_label(t, event) for t in trans_list]
                     display = "\n".join(titles)
                     item = QTableWidgetItem(display)
@@ -132,32 +125,22 @@ class MatrixTableWidget(QTableWidget):
         return self.sm.get_transitions_for_cell(state, event)
 
     def _generate_cell_label(self, trans: Transition, event: str) -> str:
-        """セル表示用ラベル（タイトル＋イベント名）"""
         parts = []
-
-        # タイトル（無題遷移以外）
         if trans.title and trans.title != "(無題遷移)":
             parts.append(trans.title)
         else:
-            # 遷移先を表示
             if trans.target:
                 parts.append(trans.target)
             else:
                 parts.append("(内部)")
-
-        # イベント名
         if event:
             parts.append(f"({event})")
-
-        # 状態遷移条件（短縮）
         if trans.condition:
             condition_display = _truncate_text(trans.condition, 30)
             parts.append(f"[{condition_display}]")
-
         return " ".join(parts)
 
     def _generate_title(self, trans: Transition) -> str:
-        """旧タイトル生成（互換用）"""
         parts = []
         if trans.target:
             parts.append(trans.target)
@@ -166,9 +149,6 @@ class MatrixTableWidget(QTableWidget):
         if trans.condition:
             condition_display = _truncate_text(trans.condition, 30)
             parts.append(f"[{condition_display}]")
-        if trans.action:
-            action_display = _truncate_text(trans.action, 30)
-            parts.append(f"/ {action_display}")
         return " ".join(parts)
 
     def open_transition_dialog(self, row: int, col: int):
@@ -194,7 +174,8 @@ class MatrixTableWidget(QTableWidget):
             event_name=event_name,
             existing_transitions=existing_list,
             role_functions=self.sm.role_functions,
-            global_defs=self.global_defs
+            global_defs=self.global_defs,
+            state_machine=self.sm   # ★ state_machine を追加
         )
 
         if dlg.exec() == QDialog.Accepted:

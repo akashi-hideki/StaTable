@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/dialog.py
 """
-動作編集メインダイアログ（コード自動更新対応）
+動作編集メインダイアログ（コード自動更新対応、global_defs/state_machine対応）
 """
 
 import logging
@@ -23,12 +23,15 @@ logger = logging.getLogger("transition_editor_direct.dialog")
 class ActionEditorDialog(QDialog):
     def __init__(self, draft: ActionDraft,
                  role_functions=None, transition_events=None,
-                 states=None, parent=None):
+                 states=None, global_defs=None, state_machine=None,   # ★ 追加
+                 parent=None):
         super().__init__(parent)
         self.draft = draft
         self.role_functions = role_functions or []
         self.transition_events = transition_events or []
         self.states = states or []
+        self.global_defs = global_defs          # ★ 追加
+        self.state_machine = state_machine      # ★ 追加
 
         self.setWindowTitle(f"動作編集: {draft.source} --[{draft.event}]--> ?")
         self.setMinimumSize(900, 650)
@@ -42,7 +45,6 @@ class ActionEditorDialog(QDialog):
         self.tabs = QTabWidget()
         main_layout.addWidget(self.tabs)
 
-        # フロー編集タブ
         flow_tab = QWidget()
         flow_layout = QVBoxLayout(flow_tab)
 
@@ -58,20 +60,16 @@ class ActionEditorDialog(QDialog):
         flow_layout.addWidget(splitter)
         self.tabs.addTab(flow_tab, "フロー編集")
 
-        # コードタブ
         self.code_widget = CodeWidget(self.draft)
         self.tabs.addTab(self.code_widget, "コード")
 
-        # キャンバス変更 → コード更新
         self.canvas.draft_updated.connect(self.code_widget.update_code)
         logger.debug("Connected canvas.draft_updated -> code_widget.update_code")
 
-        # システムグローバルボタン
         global_btn = QPushButton("システムグローバル...")
         global_btn.clicked.connect(self._open_system_global)
         main_layout.addWidget(global_btn)
 
-        # OK/キャンセル
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
         cancel_btn = QPushButton("キャンセル")

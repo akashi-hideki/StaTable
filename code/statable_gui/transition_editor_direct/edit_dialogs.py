@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/edit_dialogs.py
 """
-ノード編集ダイアログ（else有無チェックボックス対応）
+ノード編集ダイアログ（else有無チェックボックス対応、条件ビルダー対応）
 """
 
 from PySide6.QtWidgets import (
@@ -50,11 +50,13 @@ class FunctionEditDialog(BaseEditDialog):
 
 
 class TransitionEditDialog(BaseEditDialog):
-    def __init__(self, item, states=None, role_functions=None, parent=None):
+    def __init__(self, item, states=None, role_functions=None, global_defs=None, state_machine=None, parent=None):
         super().__init__(item, parent)
         self.setWindowTitle("状態遷移イベント編集")
         self.states = states or []
         self.role_functions = role_functions or []
+        self.global_defs = global_defs
+        self.state_machine = state_machine
 
         layout = QVBoxLayout(self)
 
@@ -68,6 +70,12 @@ class TransitionEditDialog(BaseEditDialog):
         h1.addWidget(QLabel("条件式:"))
         self.cond_edit = QLineEdit(item.params.get('condition', ''))
         h1.addWidget(self.cond_edit)
+
+        # 条件ビルダーボタン追加
+        cond_builder_btn = QPushButton("条件を編集...")
+        cond_builder_btn.clicked.connect(self._open_condition_builder)
+        h1.addWidget(cond_builder_btn)
+
         layout.addLayout(h1)
 
         layout.addWidget(QLabel("遷移直前処理:"))
@@ -87,12 +95,10 @@ class TransitionEditDialog(BaseEditDialog):
         pre_btn.addWidget(del_pre_btn)
         layout.addLayout(pre_btn)
 
-        # else条件の有無
         self.has_else_check = QCheckBox("else条件を使用する")
         self.has_else_check.setChecked(item.params.get('has_else', True))
         layout.addWidget(self.has_else_check)
 
-        # else遷移先
         h3 = QHBoxLayout()
         h3.addWidget(QLabel("else遷移先:"))
         self.else_target_combo = QComboBox()
@@ -102,7 +108,6 @@ class TransitionEditDialog(BaseEditDialog):
         h3.addWidget(self.else_target_combo)
         layout.addLayout(h3)
 
-        # 遷移先
         h2 = QHBoxLayout()
         h2.addWidget(QLabel("遷移先:"))
         self.target_combo = QComboBox()
@@ -122,6 +127,17 @@ class TransitionEditDialog(BaseEditDialog):
         row = self.pre_list.currentRow()
         if row >= 0:
             self.pre_list.takeItem(row)
+
+    def _open_condition_builder(self):
+        from statable_gui.condition_builder_dialog import ConditionBuilderDialog
+        dlg = ConditionBuilderDialog(
+            condition=self.cond_edit.text(),
+            global_defs=self.global_defs,
+            state_machine=self.state_machine,
+            parent=self
+        )
+        if dlg.exec() == QDialog.Accepted:
+            self.cond_edit.setText(dlg.get_condition_text())
 
     def get_result(self):
         condition = self.cond_edit.text()
@@ -143,6 +159,6 @@ class TransitionEditDialog(BaseEditDialog):
             'target': target,
             'has_else': has_else,
             'else_target': else_target,
-            'else_actions': [],
+            'else_actions': [],   # 今後対応
         }
         return edited, params
