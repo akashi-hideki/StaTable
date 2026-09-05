@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（ガイダンス修正版）
+キャンバスウィジェット（ガイダンス修正版、elseアクションツリー対応）
 """
 
 import json
@@ -24,12 +24,14 @@ class FlowNodeItem(QGraphicsRectItem):
         "transition": QColor(70, 130, 180),
         "pre_action": QColor(255, 200, 100),
         "else": QColor(220, 80, 80),
+        "else_action": QColor(255, 150, 150),
     }
     ICONS = {
         "function": "🟧",
         "transition": "🟦",
         "pre_action": "🟨",
         "else": "🟥",
+        "else_action": "🟪",
     }
 
     def __init__(self, item_type, text, parent=None):
@@ -65,7 +67,9 @@ class FlowNodeItem(QGraphicsRectItem):
         elif self.item_type == "pre_action":
             return "遷移直前処理\n・ドラッグで並べ替え"
         elif self.item_type == "else":
-            return "else条件\n・ダブルクリックで遷移先を設定"
+            return "else条件\n・上に関数をドロップでelseアクション追加\n・ダブルクリックで遷移先を設定"
+        elif self.item_type == "else_action":
+            return "elseアクション\n・ドラッグで並べ替え"
         return ""
 
 
@@ -131,15 +135,28 @@ class FlowCanvas(QGraphicsView):
                     child_y += child.rect().height() + 10
 
                 # else条件
-                if item.params.get('has_else', True):
-                    else_target = item.params.get('else_target', '')
+                has_else = item.params.get('has_else', True)
+                else_actions = item.params.get('else_actions', [])
+                else_target = item.params.get('else_target', '')
+
+                if has_else:
                     else_text = f"else → {else_target}" if else_target else "else（未設定）"
                     else_node = FlowNodeItem("else", else_text)
                     self.scene.addItem(else_node)
                     else_node.setPos(left_x + child_indent, child_y)
                     self.scene.addItem(QGraphicsLineItem(left_x + 120, parent_bottom,
                                                          left_x + child_indent + 120, child_y))
-                    child_y += else_node.rect().height() + 10
+                    else_y = child_y + else_node.rect().height() + 10
+                    child_y = else_y
+
+                    # elseアクション（子ノード）
+                    for ea in else_actions:
+                        ea_node = FlowNodeItem("else_action", ea)
+                        self.scene.addItem(ea_node)
+                        ea_node.setPos(left_x + child_indent * 2, child_y)
+                        self.scene.addItem(QGraphicsLineItem(left_x + child_indent + 120, else_y - 10,
+                                                             left_x + child_indent * 2 + 120, child_y))
+                        child_y += ea_node.rect().height() + 10
 
                 # 遷移先表示
                 target = item.params.get('target', '')
@@ -151,7 +168,7 @@ class FlowCanvas(QGraphicsView):
                     self.scene.addItem(target_label)
                     child_y += 30
 
-                y = child_y + 15 if (pre_actions or item.params.get('has_else', True) or target) else parent_bottom + 25
+                y = child_y + 15 if (pre_actions or has_else or else_actions or target) else parent_bottom + 25
 
         if self.draft.default_target:
             label = QGraphicsTextItem(f"デフォルト遷移先: {self.draft.default_target}")
@@ -170,7 +187,7 @@ class FlowCanvas(QGraphicsView):
     def dragMoveEvent(self, event):
         if event.mimeData().hasFormat(self.MIME_TYPE) or event.mimeData().hasText():
             event.acceptProposedAction()
-            scene_pos = self.mapToScene(event.pos())  # event.pos() は QPoint
+            scene_pos = self.mapToScene(event.pos())
             item = self.scene.itemAt(scene_pos, self.transform())
             if isinstance(item, FlowNodeItem):
                 # 修正: globalPosition() ではなく mapToGlobal(event.pos()) を使用
@@ -188,18 +205,33 @@ class FlowCanvas(QGraphicsView):
             item_type = data.get("item_type", "function")
             name = data.get("name", "")
 
-            scene_pos = self.mapToScene(event.pos())  # event.pos() は QPoint
+            scene_pos = self.mapToScene(event.pos())
             target_item = self.scene.itemAt(scene_pos, self.transform())
-            logger.debug(f"Drop: type={item_type}, name={name}")
+            logger.debug(f"Drop: type={item_type}, name={name}, target={target_item.item_type if isinstance(target_item, FlowNodeItem) else 'none'}")
 
+            # 関数のドロップ処理
             if item_type == "function":
-                if isinstance(target_item, FlowNodeItem) and target_item.item_type == "transition":
-                    for flow_item in self.draft.flow_items:
-                        if flow_item.item_type == "transition":
-                            flow_item.params.setdefault('pre_actions', []).append(name)
-                            logger.debug(f"Added pre_action '{name}' to {flow_item.name}")
-                            break
+                if isinstance(target_item, FlowNodeItem):
+                    # 遷移ノードの上にドロップ → 直前処理に追加
+                    if target_item.item_type == "transition":
+                        for flow_item in self.draft.flow_items:
+                            if flow_item.item_type == "transition":
+                                flow_item.params.setdefault('pre_actions', []).append(name)
+                                logger.debug(f"Added pre_action '{name}' to transition")
+                                break
+                    # elseノードの上にドロップ → elseアクションに追加
+                    elif target_item.item_type == "else":
+                        for flow_item in self.draft.flow_items:
+                            if flow_item.item_type == "transition":
+                                flow_item.params.setdefault('else_actions', []).append(name)
+                                logger.debug(f"Added else_action '{name}' to transition")
+                                break
+                    # それ以外（function/pre_action/else_action）はフロー末尾に追加
+                    else:
+                        self.draft.flow_items.append(FlowItem(item_type="function", name=name))
+                        logger.debug(f"Added function to flow: {name}")
                 else:
+                    # 空白エリアにドロップ → フロー末尾に追加
                     self.draft.flow_items.append(FlowItem(item_type="function", name=name))
                     logger.debug(f"Added function to flow: {name}")
 

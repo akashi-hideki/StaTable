@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/code_widget.py
 """
-コード表示ウィジェット（読み取り専用、has_else対応、ロール関数個別生成対応）
+コード表示ウィジェット（読み取り専用、has_else対応、ロール関数個別生成対応、elseアクション対応）
 """
 
 import logging
@@ -42,6 +42,10 @@ class CodeWidget(QPlainTextEdit):
                 for pre_action in item.params.get('pre_actions', []):
                     func_name = self.draft.get_role_func_name(pre_action, "PRE")
                     proto_lines.append(f"void {func_name}(SystemContext_t *ctx, const TransitionContext_t *transition);")
+                # elseアクションのプロトタイプ
+                for else_action in item.params.get('else_actions', []):
+                    func_name = self.draft.get_role_func_name(else_action, "ELSE")
+                    proto_lines.append(f"void {func_name}(SystemContext_t *ctx, const TransitionContext_t *transition);")
         if proto_lines:
             lines.extend(proto_lines)
             lines.append("")
@@ -57,6 +61,7 @@ class CodeWidget(QPlainTextEdit):
                 pre = item.params.get('pre_actions', [])
                 has_else = item.params.get('has_else', True)
                 else_target = item.params.get('else_target', '')
+                else_actions = item.params.get('else_actions', [])
 
                 if cond:
                     lines.append(f"if ({cond}) {{")
@@ -67,18 +72,25 @@ class CodeWidget(QPlainTextEdit):
                     lines.append("}")
                     if has_else:
                         lines.append("else {")
+                        # elseアクションの呼び出し
+                        for ea in else_actions:
+                            func_name = self.draft.get_role_func_name(ea, "ELSE")
+                            lines.append(f"    {func_name}(ctx, transition);")
                         if else_target:
                             lines.append(f"    next_state = {else_target};")
                         else:
-                            lines.append("    // else処理（未設定）")
+                            lines.append("    // else遷移先（未設定）")
                         lines.append("}")
                 else:
-                    # 条件なしの場合、既存コードでは直前処理を無視していたが、
-                    # ロール関数共通化では必要に応じて実行すべきかもしれない。
-                    # ここでは既存の挙動を維持（何もしない）
+                    # 条件なしの場合
                     lines.append(f"next_state = {target};")
                     if has_else:
                         lines.append(f"// else: {else_target}" if else_target else "// else: 未設定")
+                        if else_actions:
+                            lines.append("// elseアクション:")
+                            for ea in else_actions:
+                                func_name = self.draft.get_role_func_name(ea, "ELSE")
+                                lines.append(f"//   {func_name}(ctx, transition);")
 
         if self.draft.default_target:
             lines.append(f"// default: {self.draft.default_target}")
