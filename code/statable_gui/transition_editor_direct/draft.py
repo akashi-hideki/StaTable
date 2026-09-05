@@ -9,7 +9,6 @@ from typing import List, Dict, Any
 
 @dataclass
 class SystemGlobal:
-    """システムグローバル変数"""
     name: str
     type: str = "uint16_t"
     initial_value: str = "0"
@@ -35,7 +34,6 @@ class SystemGlobal:
 
 @dataclass
 class TransitionParams:
-    """状態遷移イベントのパラメータ"""
     event: str = ""
     condition: str = ""
     pre_actions: List[str] = field(default_factory=list)
@@ -44,10 +42,9 @@ class TransitionParams:
 
 @dataclass
 class FlowItem:
-    """動作フローの1項目"""
     item_type: str = ""          # "function" / "transition"
-    name: str = ""               # 表示名
-    edited_text: str = ""        # 編集後の表示テキスト
+    name: str = ""
+    edited_text: str = ""
     params: Dict[str, Any] = field(default_factory=dict)
 
     def display_text(self) -> str:
@@ -73,7 +70,6 @@ class FlowItem:
 
 @dataclass
 class ActionDraft:
-    """動作編集用ドラフト"""
     source: str = ""
     event: str = ""
 

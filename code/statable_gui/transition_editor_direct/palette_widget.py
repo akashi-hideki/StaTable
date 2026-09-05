@@ -1,18 +1,17 @@
 # statable_gui/transition_editor_direct/palette_widget.py
 """
-カテゴリ別折りたたみパレット
+カテゴリ別折りたたみパレット（追加ボタンはリスト下）
 """
 
 import json
 from PySide6.QtCore import Qt, QMimeData
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QToolBox, QListWidget, QListWidgetItem,
+    QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
     QAbstractItemView, QPushButton
 )
 
 
 class PaletteListWidget(QListWidget):
-    """ドラッグ時にアイテムタイプをMIMEデータに含めるリスト"""
     MIME_TYPE = "application/x-flow-item"
 
     def __init__(self, item_type: str, parent=None):
@@ -41,48 +40,52 @@ class PaletteWidget(QWidget):
         super().__init__(parent)
         self.role_functions = role_functions or []
         self.transition_events = transition_events or []
-
         self._setup_ui()
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        self.toolbox = QToolBox()
-        layout.addWidget(self.toolbox)
+        layout.setContentsMargins(4, 4, 4, 4)
 
         # 🟧 ロール関数
+        function_container = QWidget()
+        v1 = QVBoxLayout(function_container)
+        v1.setContentsMargins(0, 0, 0, 0)
+
         self.function_list = PaletteListWidget("function")
         for func in self.role_functions:
             self.function_list.addItem(func)
-        self._wrap_with_add_button(self.function_list, "🟧 ロール関数", self._add_function)
-        self.toolbox.addItem(self.function_list, "🟧 ロール関数")
+
+        add_func_btn = QPushButton("+ ロール関数追加")
+        add_func_btn.clicked.connect(self._add_function)
+
+        v1.addWidget(self.function_list)
+        v1.addWidget(add_func_btn)   # ← リストの下
 
         # 🟦 状態遷移イベント
+        event_container = QWidget()
+        v2 = QVBoxLayout(event_container)
+        v2.setContentsMargins(0, 0, 0, 0)
+
         self.event_list = PaletteListWidget("transition")
         for event in self.transition_events:
             self.event_list.addItem(event)
-        self._wrap_with_add_button(self.event_list, "🟦 状態遷移イベント", self._add_event)
-        self.toolbox.addItem(self.event_list, "🟦 状態遷移イベント")
 
-    def _wrap_with_add_button(self, list_widget, title, add_handler):
-        """リストの上に追加ボタンを付ける"""
-        container = QWidget()
-        v = QVBoxLayout(container)
-        btn = QPushButton("+ 追加")
-        btn.clicked.connect(add_handler)
-        v.addWidget(btn)
-        v.addWidget(list_widget)
-        self.toolbox.addItem(container, title)
+        add_event_btn = QPushButton("+ イベント追加")
+        add_event_btn.clicked.connect(self._add_event)
+
+        v2.addWidget(self.event_list)
+        v2.addWidget(add_event_btn)   # ← リストの下
+
+        layout.addWidget(function_container)
+        layout.addWidget(event_container)
+        layout.addStretch()
 
     def _add_function(self):
-        # 簡易追加（実際はダイアログで入力）
         name = "NewFunction"
         self.function_list.addItem(name)
         self.role_functions.append(name)
 
     def _add_event(self):
-        # 簡易追加（実際はダイアログで入力）
         name = "NewEvent"
         self.event_list.addItem(name)
         self.transition_events.append(name)

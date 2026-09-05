@@ -14,9 +14,8 @@ sys.path.insert(0, project_root)
 sys.path.insert(0, gui_dir)
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QTextEdit
-from PySide6.QtCore import Qt
 
-from statable_gui.transition_editor_direct.draft import ActionDraft
+from statable_gui.transition_editor_direct.draft import ActionDraft, FlowItem
 from statable_gui.transition_editor_direct.dialog import ActionEditorDialog
 
 
@@ -58,13 +57,11 @@ class Runner(QMainWindow):
 
     def _open_existing(self):
         draft = ActionDraft(source="IDLE", event="START")
-        # 既存項目を設定
-        from statable_gui.transition_editor_direct.draft import FlowItem
         draft.flow_items.append(FlowItem(item_type="function", name="CheckSensor", edited_text="CheckSensor()"))
         draft.flow_items.append(FlowItem(
             item_type="transition",
             name="START",
-            edited_text="START: voltage > 800 → RUNNING (直前:SaveLog, ClearCounter)",
+            edited_text="START: voltage > 800 → RUNNING",
             params={
                 "event": "START",
                 "condition": "voltage > 800",
