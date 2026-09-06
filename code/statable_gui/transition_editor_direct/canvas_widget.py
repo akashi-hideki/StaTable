@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（D&D対応、ノード移動・位置保存対応）
+キャンバスウィジェット（D&D対応、ノード移動・位置保存・グリッドスナップ対応）
 """
 
 import json
@@ -43,7 +43,7 @@ class FlowNodeItem(QGraphicsRectItem):
         self.duplicate_callback = None
         self.move_up_callback = None
         self.move_down_callback = None
-        self.move_finished_callback = None   # 移動終了時に呼ばれる
+        self.move_finished_callback = None
 
         color = self.COLORS.get(item_type, QColor(200, 200, 200))
         self.setBrush(QBrush(color))
@@ -78,6 +78,14 @@ class FlowNodeItem(QGraphicsRectItem):
 
     def mouseReleaseEvent(self, event):
         logger.debug(f"FlowNodeItem.mouseReleaseEvent: type={self.item_type}")
+        # グリッドスナップ
+        if self.item_type in ("function", "transition") and self.scene():
+            grid = self.scene().views()[0]._grid_size if hasattr(self.scene().views()[0], '_grid_size') else 20
+            pos = self.pos()
+            snapped_x = round(pos.x() / grid) * grid
+            snapped_y = round(pos.y() / grid) * grid
+            self.setPos(snapped_x, snapped_y)
+            logger.debug(f"Snapped position: ({snapped_x}, {snapped_y})")
         super().mouseReleaseEvent(event)
         if self.move_finished_callback:
             self.move_finished_callback(self)
@@ -161,7 +169,7 @@ class FlowCanvas(QGraphicsView):
         self.setDragMode(QGraphicsView.NoDrag)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
 
-        self._grid_size = 20
+        self._grid_size = 20   # ★ グリッドサイズ
         self._zoom_factor = 1.15
 
         logger.debug("=== FlowCanvas init ===")
@@ -171,13 +179,6 @@ class FlowCanvas(QGraphicsView):
 
         self._rebuild()
         logger.debug("=== FlowCanvas init end ===")
-
-    def _get_node_key(self, node: FlowNodeItem):
-        """ノードを一意に識別するキーを取得（flow_itemのIDベース）"""
-        if node.flow_item:
-            return id(node.flow_item)
-        # flow_itemがないノード（pre_action, else, else_action）は移動を保存しない
-        return None
 
     def _rebuild(self):
         logger.debug("Rebuilding canvas START")

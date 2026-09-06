@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/palette_widget.py
 """
-カテゴリ別折りたたみパレット（共有ライブラリ対応・ドラッグ全段階ログ版）
+カテゴリ別折りたたみパレット（共有ライブラリ対応・ダブルクリック編集対応・ドラッグ開始対応）
 """
 
 import json
@@ -40,12 +40,13 @@ class PaletteListWidget(QListWidget):
         return mime
 
     def startDrag(self, supported_actions):
+        """ドラッグ開始をオーバーライドして確実にQDragを実行"""
         item = self.currentItem()
         if item is None:
             logger.debug("PaletteListWidget.startDrag: no current item")
             return
 
-        logger.debug(f"PaletteListWidget.startDrag START: type={self.item_type}, name='{item.text()}'")
+        logger.debug(f"PaletteListWidget.startDrag: type={self.item_type}, name='{item.text()}'")
 
         mime_data = QMimeData()
         data = {
@@ -58,10 +59,10 @@ class PaletteListWidget(QListWidget):
         drag = QDrag(self)
         drag.setMimeData(mime_data)
         result = drag.exec_(Qt.CopyAction)
-        logger.debug(f"PaletteListWidget.startDrag END: result={result}")
+        logger.debug(f"PaletteListWidget.startDrag: drag result={result}")
 
     def mouseDoubleClickEvent(self, event):
-        logger.debug(f"PaletteListWidget.mouseDoubleClickEvent: type={self.item_type}")
+        logger.debug(f"PaletteListWidget.mouseDoubleClickEvent called: type={self.item_type}")
         item = self.itemAt(event.position().toPoint())
         if item:
             text = item.text()
