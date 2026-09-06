@@ -333,64 +333,64 @@ class FlowCanvas(QGraphicsView):
 
     def dropEvent(self, event):
         logger.debug(f"FlowCanvas.dropEvent: formats={event.mimeData().formats()}")
-        if event.mimeData().hasFormat(self.MIME_TYPE):
-            data_bytes = event.mimeData().data(self.MIME_TYPE)
-            logger.debug(f"FlowCanvas.dropEvent: data_bytes={data_bytes}")
-            try:
+        try:
+            if event.mimeData().hasFormat(self.MIME_TYPE):
+                data_bytes = event.mimeData().data(self.MIME_TYPE)
+                logger.debug(f"FlowCanvas.dropEvent: data_bytes={data_bytes}")
                 data = json.loads(bytes(data_bytes).decode("utf-8"))
-            except Exception as e:
-                logger.error(f"FlowCanvas.dropEvent: JSON parse error: {e}")
-                event.ignore()
-                return
 
-            item_type = data.get("item_type", "function")
-            name = data.get("name", "")
+                item_type = data.get("item_type", "function")
+                name = data.get("name", "")
 
-            scene_pos = self.mapToScene(event.position().toPoint())
-            target_item = self.scene.itemAt(scene_pos, self.transform())
-            logger.debug(f"FlowCanvas.dropEvent: type={item_type}, name={name}, target={target_item.item_type if isinstance(target_item, FlowNodeItem) else 'none'}")
+                scene_pos = self.mapToScene(event.position().toPoint())
+                target_item = self.scene.itemAt(scene_pos, self.transform())
+                logger.debug(f"FlowCanvas.dropEvent: type={item_type}, name={name}, target={target_item.item_type if isinstance(target_item, FlowNodeItem) else 'none'}")
 
-            if item_type == "function":
-                if isinstance(target_item, FlowNodeItem):
-                    if target_item.item_type == "transition":
-                        target_flow_item = target_item.flow_item
-                        if target_flow_item:
-                            target_flow_item.params.setdefault('pre_actions', []).append(name)
-                            logger.debug(f"Added pre_action '{name}' to transition")
-                    elif target_item.item_type == "else":
-                        target_flow_item = target_item.flow_item
-                        if target_flow_item:
-                            target_flow_item.params.setdefault('else_actions', []).append(name)
-                            logger.debug(f"Added else_action '{name}' to transition")
+                if item_type == "function":
+                    if isinstance(target_item, FlowNodeItem):
+                        if target_item.item_type == "transition":
+                            target_flow_item = target_item.flow_item
+                            if target_flow_item:
+                                target_flow_item.params.setdefault('pre_actions', []).append(name)
+                                logger.debug(f"Added pre_action '{name}' to transition")
+                        elif target_item.item_type == "else":
+                            target_flow_item = target_item.flow_item
+                            if target_flow_item:
+                                target_flow_item.params.setdefault('else_actions', []).append(name)
+                                logger.debug(f"Added else_action '{name}' to transition")
+                        else:
+                            self.draft.flow_items.append(FlowItem(item_type="function", name=name))
+                            logger.debug(f"Added function to flow: {name}")
                     else:
                         self.draft.flow_items.append(FlowItem(item_type="function", name=name))
                         logger.debug(f"Added function to flow: {name}")
-                else:
-                    self.draft.flow_items.append(FlowItem(item_type="function", name=name))
-                    logger.debug(f"Added function to flow: {name}")
 
-            elif item_type == "transition":
-                event_name = self.draft.event if self.draft.event else "NewEvent"
-                display_name = event_name if event_name else "NewEvent"
-                flow_item = FlowItem(
-                    item_type="transition",
-                    name=display_name,
-                    edited_text=display_name,
-                    params={
-                        "event": event_name,
-                        "condition": "",
-                        "pre_actions": [],
-                        "target": "",
-                        "has_else": True,
-                        "else_target": "",
-                        "else_actions": [],
-                    }
-                )
-                self.draft.flow_items.append(flow_item)
-                logger.debug(f"Added transition condition: event='{event_name}'")
+                elif item_type == "transition":
+                    # ドロップされた名前をそのまま使用
+                    event_name = name if name else (self.draft.event or "NewEvent")
+                    display_name = event_name
+                    flow_item = FlowItem(
+                        item_type="transition",
+                        name=display_name,
+                        edited_text=display_name,
+                        params={
+                            "event": event_name,
+                            "condition": "",
+                            "pre_actions": [],
+                            "target": "",
+                            "has_else": True,
+                            "else_target": "",
+                            "else_actions": [],
+                        }
+                    )
+                    self.draft.flow_items.append(flow_item)
+                    logger.debug(f"Added transition condition: event='{event_name}'")
 
-            self._rebuild()
-            event.acceptProposedAction()
-        else:
-            logger.debug(f"FlowCanvas.dropEvent: rejected formats={event.mimeData().formats()}")
+                self._rebuild()
+                event.acceptProposedAction()
+            else:
+                logger.debug(f"FlowCanvas.dropEvent: rejected formats={event.mimeData().formats()}")
+                event.ignore()
+        except Exception as e:
+            logger.error(f"FlowCanvas.dropEvent error: {e}", exc_info=True)
             event.ignore()
