@@ -229,12 +229,14 @@ class FlowCanvas(QGraphicsView):
         self.node_delete_requested.emit(node)
 
     def dragEnterEvent(self, event):
-        if event.mimeData().hasFormat(self.MIME_TYPE) or event.mimeData().hasText():
+        if event.mimeData().hasFormat(self.MIME_TYPE):
             event.acceptProposedAction()
             logger.debug("Drag enter accepted")
+        else:
+            logger.debug(f"Drag enter rejected, formats: {event.mimeData().formats()}")
 
     def dragMoveEvent(self, event):
-        if event.mimeData().hasFormat(self.MIME_TYPE) or event.mimeData().hasText():
+        if event.mimeData().hasFormat(self.MIME_TYPE):
             event.acceptProposedAction()
             scene_pos = self.mapToScene(event.pos())
             item = self.scene.itemAt(scene_pos, self.transform())
@@ -242,14 +244,25 @@ class FlowCanvas(QGraphicsView):
                 QToolTip.showText(self.mapToGlobal(event.pos()), item.get_guidance_text())
             else:
                 QToolTip.hideText()
+        else:
+            logger.debug(f"Drag move rejected, formats: {event.mimeData().formats()}")
 
     def dragLeaveEvent(self, event):
         QToolTip.hideText()
         super().dragLeaveEvent(event)
 
     def dropEvent(self, event):
+        logger.debug("Drop event triggered")
         if event.mimeData().hasFormat(self.MIME_TYPE):
-            data = json.loads(event.mimeData().data(self.MIME_TYPE).data().decode("utf-8"))
+            data_bytes = event.mimeData().data(self.MIME_TYPE)
+            logger.debug(f"MIME data bytes: {data_bytes}")
+            try:
+                data = json.loads(bytes(data_bytes).decode("utf-8"))
+            except Exception as e:
+                logger.error(f"Failed to parse MIME data: {e}")
+                event.ignore()
+                return
+
             item_type = data.get("item_type", "function")
             name = data.get("name", "")
 
@@ -278,10 +291,13 @@ class FlowCanvas(QGraphicsView):
                     logger.debug(f"Added function to flow: {name}")
 
             elif item_type == "transition":
-                event_name = self.draft.event if self.draft.event else name
+                # 遷移条件ノードは、セルのイベント名をそのまま使用
+                event_name = self.draft.event  # 空でもよい（完了遷移）
+                display_name = event_name if event_name else "完了"
                 flow_item = FlowItem(
                     item_type="transition",
-                    name=event_name,
+                    name=display_name,
+                    edited_text=display_name,
                     params={
                         "event": event_name,
                         "condition": "",
@@ -293,9 +309,10 @@ class FlowCanvas(QGraphicsView):
                     }
                 )
                 self.draft.flow_items.append(flow_item)
-                logger.debug(f"Added transition condition: {event_name} (with else)")
+                logger.debug(f"Added transition condition: event='{event_name}'")
 
             self._rebuild()
             event.acceptProposedAction()
         else:
+            logger.debug(f"Drop rejected, formats: {event.mimeData().formats()}")
             event.ignore()
