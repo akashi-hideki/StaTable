@@ -1,12 +1,12 @@
 # statable_gui/transition_editor_direct/palette_widget.py
 """
-カテゴリ別折りたたみパレット（ドラッグ開始処理修正版）
+カテゴリ別折りたたみパレット（ドラッグ開始処理・デバッグログ強化版）
 """
 
 import json
 import logging
 
-from PySide6.QtCore import Qt, QMimeData
+from PySide6.QtCore import Qt, QMimeData, QPoint
 from PySide6.QtGui import QDrag
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
@@ -25,14 +25,35 @@ class PaletteListWidget(QListWidget):
         self.setDragEnabled(True)
         self.setDragDropMode(QAbstractItemView.DragOnly)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self._drag_start_pos = None
 
-    def startDrag(self, supported_actions):
-        """ドラッグ開始をオーバーライドして確実にMIMEデータを設定"""
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_start_pos = event.position().toPoint()
+            logger.debug(f"PaletteListWidget.mousePressEvent: pos={self._drag_start_pos}")
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton and self._drag_start_pos is not None:
+            distance = (event.position().toPoint() - self._drag_start_pos).manhattanLength()
+            if distance >= QApplication.startDragDistance():
+                logger.debug(f"PaletteListWidget.mouseMoveEvent: drag threshold exceeded, distance={distance}")
+                self._start_drag()
+                self._drag_start_pos = None
+                return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_start_pos = None
+        super().mouseReleaseEvent(event)
+
+    def _start_drag(self):
         item = self.currentItem()
         if item is None:
+            logger.debug("PaletteListWidget._start_drag: no current item")
             return
 
-        logger.debug(f"PaletteListWidget.startDrag: type={self.item_type}, text='{item.text()}'")
+        logger.debug(f"PaletteListWidget._start_drag: type={self.item_type}, text='{item.text()}'")
 
         mime_data = QMimeData()
         data = {
@@ -44,9 +65,13 @@ class PaletteListWidget(QListWidget):
 
         drag = QDrag(self)
         drag.setMimeData(mime_data)
-        drag.exec_(Qt.CopyAction)
+        result = drag.exec_(Qt.CopyAction)
+        logger.debug(f"PaletteListWidget._start_drag: drag exec result={result}")
 
-        logger.debug("PaletteListWidget.startDrag: drag completed")
+    # 念のため startDrag もオーバーライド（使われない可能性が高い）
+    def startDrag(self, supported_actions):
+        logger.debug("PaletteListWidget.startDrag called (fallback)")
+        self._start_drag()
 
 
 class PaletteWidget(QWidget):

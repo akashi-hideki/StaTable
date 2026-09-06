@@ -103,6 +103,8 @@ class FlowCanvas(QGraphicsView):
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
         self.setAcceptDrops(True)
+        # ビューポートにも設定
+        self.viewport().setAcceptDrops(True)
         self.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.setMinimumHeight(500)
 
@@ -229,46 +231,50 @@ class FlowCanvas(QGraphicsView):
         self.node_delete_requested.emit(node)
 
     def dragEnterEvent(self, event):
+        logger.debug(f"FlowCanvas.dragEnterEvent: formats={event.mimeData().formats()}")
         if event.mimeData().hasFormat(self.MIME_TYPE):
             event.acceptProposedAction()
-            logger.debug("Drag enter accepted")
+            logger.debug("FlowCanvas.dragEnterEvent: accepted")
         else:
-            logger.debug(f"Drag enter rejected, formats: {event.mimeData().formats()}")
+            logger.debug("FlowCanvas.dragEnterEvent: rejected (no MIME)")
+            event.ignore()
 
     def dragMoveEvent(self, event):
         if event.mimeData().hasFormat(self.MIME_TYPE):
             event.acceptProposedAction()
-            scene_pos = self.mapToScene(event.pos())
+            scene_pos = self.mapToScene(event.position().toPoint())
             item = self.scene.itemAt(scene_pos, self.transform())
+            logger.debug(f"FlowCanvas.dragMoveEvent: pos={event.position().toPoint()}, scene_pos={scene_pos}, item={type(item).__name__ if item else 'None'}")
             if isinstance(item, FlowNodeItem):
-                QToolTip.showText(self.mapToGlobal(event.pos()), item.get_guidance_text())
+                QToolTip.showText(self.mapToGlobal(event.position().toPoint()), item.get_guidance_text())
             else:
                 QToolTip.hideText()
         else:
-            logger.debug(f"Drag move rejected, formats: {event.mimeData().formats()}")
+            logger.debug(f"FlowCanvas.dragMoveEvent: rejected formats={event.mimeData().formats()}")
+            event.ignore()
 
     def dragLeaveEvent(self, event):
         QToolTip.hideText()
         super().dragLeaveEvent(event)
 
     def dropEvent(self, event):
-        logger.debug("Drop event triggered")
+        logger.debug(f"FlowCanvas.dropEvent: formats={event.mimeData().formats()}")
         if event.mimeData().hasFormat(self.MIME_TYPE):
             data_bytes = event.mimeData().data(self.MIME_TYPE)
-            logger.debug(f"MIME data bytes: {data_bytes}")
+            logger.debug(f"FlowCanvas.dropEvent: data_bytes={data_bytes}")
             try:
                 data = json.loads(bytes(data_bytes).decode("utf-8"))
             except Exception as e:
-                logger.error(f"Failed to parse MIME data: {e}")
+                logger.error(f"FlowCanvas.dropEvent: JSON parse error: {e}")
                 event.ignore()
                 return
 
             item_type = data.get("item_type", "function")
             name = data.get("name", "")
 
-            scene_pos = self.mapToScene(event.pos())
+            scene_pos = self.mapToScene(event.position().toPoint())
             target_item = self.scene.itemAt(scene_pos, self.transform())
-            logger.debug(f"Drop: type={item_type}, name={name}, target={target_item.item_type if isinstance(target_item, FlowNodeItem) else 'none'}")
+            logger.debug(f"FlowCanvas.dropEvent: type={item_type}, name={name}, target={target_item.item_type if isinstance(target_item, FlowNodeItem) else 'none'}")
 
             if item_type == "function":
                 if isinstance(target_item, FlowNodeItem):
@@ -314,5 +320,5 @@ class FlowCanvas(QGraphicsView):
             self._rebuild()
             event.acceptProposedAction()
         else:
-            logger.debug(f"Drop rejected, formats: {event.mimeData().formats()}")
+            logger.debug(f"FlowCanvas.dropEvent: rejected formats={event.mimeData().formats()}")
             event.ignore()
