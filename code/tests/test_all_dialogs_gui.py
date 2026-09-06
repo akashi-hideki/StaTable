@@ -12,6 +12,35 @@
 
 import sys
 import os
+import logging
+import sys
+import os
+import logging
+
+# 既存のハンドラをクリアしてから設定
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    force=True
+)
+
+# 該当ロガーを明示的にDEBUGに設定
+for name in [
+    "transition_editor_direct",
+    "transition_editor_direct.canvas",
+    "transition_editor_direct.palette",
+    "transition_editor_direct.dialog",
+    "transition_editor_direct.code",
+    "transition_editor_direct.draft"
+]:
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = True
+    if not logger.handlers:
+        logger.addHandler(logging.StreamHandler())
 
 # パス設定
 current_dir = os.path.dirname(os.path.abspath(__file__))

@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（D&D対応、全段階ログ版）
+キャンバスウィジェット（D&D対応、ノード移動・編集・削除対応、デバッグログ改善版）
 """
 
 import json
@@ -61,9 +61,24 @@ class FlowNodeItem(QGraphicsRectItem):
         self.setFlag(QGraphicsRectItem.ItemSendsGeometryChanges, True)
 
     def itemChange(self, change, value):
+        # ログを削減：移動中の毎回のログは出さない
         if change == QGraphicsRectItem.ItemPositionHasChanged:
-            logger.debug(f"FlowNodeItem position changed: type={self.item_type}, pos=({value.x():.1f}, {value.y():.1f})")
+            # デバッグ時のみ有効にする（普段は抑制）
+            if logger.getEffectiveLevel() <= 5:
+                logger.debug(f"FlowNodeItem position changed: type={self.item_type}, pos=({value.x():.1f}, {value.y():.1f})")
         return super().itemChange(change, value)
+
+    def mousePressEvent(self, event):
+        logger.debug(f"FlowNodeItem.mousePressEvent: type={self.item_type}, pos={event.pos()}")
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        # ドラッグ中のログは出さない（フリーズ回避のため）
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        logger.debug(f"FlowNodeItem.mouseReleaseEvent: type={self.item_type}, pos={event.pos()}")
+        super().mouseReleaseEvent(event)
 
     def hoverEnterEvent(self, event):
         QToolTip.showText(event.screenPos(), self.get_guidance_text())
@@ -154,6 +169,18 @@ class FlowCanvas(QGraphicsView):
 
         self._rebuild()
         logger.debug("=== FlowCanvas init end ===")
+
+    def mousePressEvent(self, event):
+        logger.debug(f"FlowCanvas.mousePressEvent: pos={event.position().toPoint()}")
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        # ドラッグ中のログは出さない（フリーズ回避のため）
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        logger.debug(f"FlowCanvas.mouseReleaseEvent: pos={event.position().toPoint()}")
+        super().mouseReleaseEvent(event)
 
     def _rebuild(self):
         logger.debug("Rebuilding canvas START")
@@ -311,20 +338,17 @@ class FlowCanvas(QGraphicsView):
         logger.debug("FlowCanvas.dragEnterEvent END")
 
     def dragMoveEvent(self, event):
-        logger.debug(f"FlowCanvas.dragMoveEvent START: pos={event.position().toPoint()}")
         if event.mimeData().hasFormat(self.MIME_TYPE):
             event.acceptProposedAction()
             scene_pos = self.mapToScene(event.position().toPoint())
             item = self.scene.itemAt(scene_pos, self.transform())
-            logger.debug(f"FlowCanvas.dragMoveEvent: scene_pos={scene_pos}, item={type(item).__name__ if item else 'None'}")
+            # ドラッグ中のログは抑制
             if isinstance(item, FlowNodeItem):
                 QToolTip.showText(self.mapToGlobal(event.position().toPoint()), item.get_guidance_text())
             else:
                 QToolTip.hideText()
         else:
-            logger.debug(f"FlowCanvas.dragMoveEvent: rejected formats={event.mimeData().formats()}")
             event.ignore()
-        logger.debug("FlowCanvas.dragMoveEvent END")
 
     def dragLeaveEvent(self, event):
         logger.debug("FlowCanvas.dragLeaveEvent called")
@@ -385,7 +409,6 @@ class FlowCanvas(QGraphicsView):
                     self.draft.flow_items.append(flow_item)
                     logger.debug(f"Added transition condition: event='{event_name}'")
 
-                # ★ 再構築を遅延させる（ドロップ処理完了後に実行）
                 logger.debug("Scheduling canvas rebuild...")
                 QTimer.singleShot(0, self._rebuild)
                 event.acceptProposedAction()
