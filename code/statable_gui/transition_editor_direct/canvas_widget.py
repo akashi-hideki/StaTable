@@ -1,12 +1,12 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（D&D対応、ノード移動・編集・削除対応、デバッグログ強化版）
+キャンバスウィジェット（D&D対応、全段階ログ版）
 """
 
 import json
 import logging
 
-from PySide6.QtCore import Qt, Signal, QPointF
+from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QBrush, QColor, QPen, QFont, QAction, QPainter
 from PySide6.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsRectItem,
@@ -74,9 +74,7 @@ class FlowNodeItem(QGraphicsRectItem):
         super().hoverLeaveEvent(event)
 
     def mouseDoubleClickEvent(self, event):
-        # 先にsuper()を呼び、オブジェクトが生きているうちに標準処理を済ませる
         super().mouseDoubleClickEvent(event)
-        # その後でコールバックを呼ぶ（再構築で削除されても安全）
         if self.edit_callback:
             logger.debug(f"FlowNodeItem.mouseDoubleClickEvent: type={self.item_type}")
             self.edit_callback(self)
@@ -158,7 +156,7 @@ class FlowCanvas(QGraphicsView):
         logger.debug("=== FlowCanvas init end ===")
 
     def _rebuild(self):
-        logger.debug("Rebuilding canvas")
+        logger.debug("Rebuilding canvas START")
         self.scene.clear()
         y = 30
         left_x = 30
@@ -263,7 +261,7 @@ class FlowCanvas(QGraphicsView):
 
         self.scene.setSceneRect(self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 40))
         self.draft_updated.emit()
-        logger.debug("Canvas rebuild completed")
+        logger.debug("Rebuilding canvas END")
 
     def _on_node_edit_requested(self, node: FlowNodeItem):
         logger.debug(f"Node edit requested: type={node.item_type}")
@@ -286,7 +284,6 @@ class FlowCanvas(QGraphicsView):
         self.node_move_down_requested.emit(node)
 
     def auto_align(self):
-        """ノードを縦に等間隔で整列"""
         y = 30
         for item in self.scene.items():
             if isinstance(item, FlowNodeItem) and item.flow_item is not None:
@@ -296,7 +293,6 @@ class FlowCanvas(QGraphicsView):
         self.draft_updated.emit()
 
     def wheelEvent(self, event):
-        """Ctrl+ホイールでズーム"""
         if event.modifiers() & Qt.ControlModifier:
             factor = self._zoom_factor if event.angleDelta().y() > 0 else 1 / self._zoom_factor
             self.scale(factor, factor)
@@ -305,20 +301,22 @@ class FlowCanvas(QGraphicsView):
             super().wheelEvent(event)
 
     def dragEnterEvent(self, event):
-        logger.debug(f"FlowCanvas.dragEnterEvent: formats={event.mimeData().formats()}")
+        logger.debug(f"FlowCanvas.dragEnterEvent START: formats={event.mimeData().formats()}")
         if event.mimeData().hasFormat(self.MIME_TYPE):
             event.acceptProposedAction()
             logger.debug("FlowCanvas.dragEnterEvent: accepted")
         else:
             logger.debug("FlowCanvas.dragEnterEvent: rejected (no MIME)")
             event.ignore()
+        logger.debug("FlowCanvas.dragEnterEvent END")
 
     def dragMoveEvent(self, event):
+        logger.debug(f"FlowCanvas.dragMoveEvent START: pos={event.position().toPoint()}")
         if event.mimeData().hasFormat(self.MIME_TYPE):
             event.acceptProposedAction()
             scene_pos = self.mapToScene(event.position().toPoint())
             item = self.scene.itemAt(scene_pos, self.transform())
-            logger.debug(f"FlowCanvas.dragMoveEvent: pos={event.position().toPoint()}, scene_pos={scene_pos}, item={type(item).__name__ if item else 'None'}")
+            logger.debug(f"FlowCanvas.dragMoveEvent: scene_pos={scene_pos}, item={type(item).__name__ if item else 'None'}")
             if isinstance(item, FlowNodeItem):
                 QToolTip.showText(self.mapToGlobal(event.position().toPoint()), item.get_guidance_text())
             else:
@@ -326,13 +324,15 @@ class FlowCanvas(QGraphicsView):
         else:
             logger.debug(f"FlowCanvas.dragMoveEvent: rejected formats={event.mimeData().formats()}")
             event.ignore()
+        logger.debug("FlowCanvas.dragMoveEvent END")
 
     def dragLeaveEvent(self, event):
+        logger.debug("FlowCanvas.dragLeaveEvent called")
         QToolTip.hideText()
         super().dragLeaveEvent(event)
 
     def dropEvent(self, event):
-        logger.debug(f"FlowCanvas.dropEvent: formats={event.mimeData().formats()}")
+        logger.debug(f"FlowCanvas.dropEvent START: formats={event.mimeData().formats()}")
         try:
             if event.mimeData().hasFormat(self.MIME_TYPE):
                 data_bytes = event.mimeData().data(self.MIME_TYPE)
@@ -366,7 +366,6 @@ class FlowCanvas(QGraphicsView):
                         logger.debug(f"Added function to flow: {name}")
 
                 elif item_type == "transition":
-                    # ドロップされた名前をそのまま使用
                     event_name = name if name else (self.draft.event or "NewEvent")
                     display_name = event_name
                     flow_item = FlowItem(
@@ -386,7 +385,9 @@ class FlowCanvas(QGraphicsView):
                     self.draft.flow_items.append(flow_item)
                     logger.debug(f"Added transition condition: event='{event_name}'")
 
-                self._rebuild()
+                # ★ 再構築を遅延させる（ドロップ処理完了後に実行）
+                logger.debug("Scheduling canvas rebuild...")
+                QTimer.singleShot(0, self._rebuild)
                 event.acceptProposedAction()
             else:
                 logger.debug(f"FlowCanvas.dropEvent: rejected formats={event.mimeData().formats()}")
@@ -394,3 +395,4 @@ class FlowCanvas(QGraphicsView):
         except Exception as e:
             logger.error(f"FlowCanvas.dropEvent error: {e}", exc_info=True)
             event.ignore()
+        logger.debug("FlowCanvas.dropEvent END")
