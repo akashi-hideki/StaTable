@@ -1,11 +1,11 @@
 # statable_gui/transition_editor_direct/draft.py
 """
-動作編集用ドラフトモデル（デフォルト名NewEvent対応版）
+動作編集用ドラフトモデル（ノード位置保存対応）
 """
 
 import logging
 from dataclasses import dataclass, field
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger("transition_editor_direct.draft")
 
@@ -50,7 +50,7 @@ class SystemGlobal:
 
 @dataclass
 class TransitionParams:
-    event: str = "NewEvent"  # デフォルトをNewEventに変更
+    event: str = "NewEvent"
     condition: str = ""
     pre_actions: List[str] = field(default_factory=list)
     target: str = ""
@@ -66,6 +66,10 @@ class FlowItem:
     edited_text: str = ""
     params: Dict[str, Any] = field(default_factory=dict)
 
+    # ★ ノード位置保存用（Canvasで自由移動を保持）
+    pos_x: Optional[float] = None
+    pos_y: Optional[float] = None
+
     def display_text(self) -> str:
         return self.edited_text or self.name
 
@@ -75,6 +79,8 @@ class FlowItem:
             'name': self.name,
             'edited_text': self.edited_text,
             'params': self.params,
+            'pos_x': self.pos_x,
+            'pos_y': self.pos_y,
         }
 
     @classmethod
@@ -84,6 +90,8 @@ class FlowItem:
             name=data.get('name', ''),
             edited_text=data.get('edited_text', ''),
             params=data.get('params', {}),
+            pos_x=data.get('pos_x'),
+            pos_y=data.get('pos_y'),
         )
 
 

@@ -1,12 +1,12 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（D&D対応、ノード移動・位置保持・再構築一回版）
+キャンバスウィジェット（D&D対応、ノード移動・位置保存対応）
 """
 
 import json
 import logging
 
-from PySide6.QtCore import Qt, Signal, QTimer, QPointF
+from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QBrush, QColor, QPen, QFont, QAction, QPainter
 from PySide6.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsRectItem,
@@ -58,7 +58,11 @@ class FlowNodeItem(QGraphicsRectItem):
 
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
-        self.setFlag(QGraphicsRectItem.ItemIsMovable, True)
+        # メインのfunction / transitionのみ移動可能
+        if item_type in ("function", "transition"):
+            self.setFlag(QGraphicsRectItem.ItemIsMovable, True)
+        else:
+            self.setFlag(QGraphicsRectItem.ItemIsMovable, False)
         self.setFlag(QGraphicsRectItem.ItemSendsGeometryChanges, True)
 
     def itemChange(self, change, value):
@@ -160,9 +164,6 @@ class FlowCanvas(QGraphicsView):
         self._grid_size = 20
         self._zoom_factor = 1.15
 
-        # ★ 位置保存用（key: id(flow_item), value: QPointF）
-        self.node_positions = {}
-
         logger.debug("=== FlowCanvas init ===")
         logger.debug(f"draft.flow_items count = {len(draft.flow_items)}")
         for i, item in enumerate(draft.flow_items):
@@ -194,9 +195,8 @@ class FlowCanvas(QGraphicsView):
                 node = FlowNodeItem("function", item.display_text(), flow_item=item)
                 self.scene.addItem(node)
                 # 保存された位置を復元
-                saved_pos = self.node_positions.get(id(item))
-                if saved_pos:
-                    node.setPos(saved_pos)
+                if item.pos_x is not None and item.pos_y is not None:
+                    node.setPos(item.pos_x, item.pos_y)
                 else:
                     node.setPos(left_x, y)
                 node.edit_callback = self._on_node_edit_requested
@@ -221,9 +221,9 @@ class FlowCanvas(QGraphicsView):
 
                 node = FlowNodeItem("transition", item.display_text(), flow_item=item)
                 self.scene.addItem(node)
-                saved_pos = self.node_positions.get(id(item))
-                if saved_pos:
-                    node.setPos(saved_pos)
+                # 保存された位置を復元
+                if item.pos_x is not None and item.pos_y is not None:
+                    node.setPos(item.pos_x, item.pos_y)
                 else:
                     node.setPos(left_x, y)
                 node.edit_callback = self._on_node_edit_requested
@@ -321,20 +321,20 @@ class FlowCanvas(QGraphicsView):
         self.node_move_down_requested.emit(node)
 
     def _on_node_move_finished(self, node: FlowNodeItem):
-        """ノード移動終了時に位置を保存し、再構築を遅延実行"""
-        key = self._get_node_key(node)
-        if key is not None:
-            self.node_positions[key] = node.pos()
-            logger.debug(f"Node move finished: type={node.item_type}, saved pos={node.pos()}")
-        # 再構築は1回だけ遅延実行
-        QTimer.singleShot(0, self._rebuild)
+        """ノード移動終了時にFlowItemへ位置を保存（再構築はしない）"""
+        if node.flow_item and node.item_type in ("function", "transition"):
+            pos = node.pos()
+            node.flow_item.pos_x = pos.x()
+            node.flow_item.pos_y = pos.y()
+            logger.debug(f"Saved position for '{node.flow_item.name}': ({pos.x():.1f}, {pos.y():.1f})")
 
     def auto_align(self):
         y = 30
         for item in self.scene.items():
             if isinstance(item, FlowNodeItem) and item.flow_item is not None:
                 item.setPos(30, y)
-                self.node_positions[id(item.flow_item)] = QPointF(30, y)
+                item.flow_item.pos_x = 30
+                item.flow_item.pos_y = y
                 y += item.rect().height() + 25
         self.scene.setSceneRect(self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 40))
         self.draft_updated.emit()

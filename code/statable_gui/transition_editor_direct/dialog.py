@@ -87,7 +87,7 @@ class ActionEditorDialog(QDialog):
 
         splitter = QSplitter(Qt.Horizontal)
 
-        # ★ ライブラリオブジェクトを直接渡す
+        # ライブラリオブジェクトを直接渡す
         self.palette = PaletteWidget(
             role_function_library=self.role_function_library,
             condition_library=self.condition_library
