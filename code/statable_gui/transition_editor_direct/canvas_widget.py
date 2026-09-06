@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（D&D対応、ノード移動・編集・削除対応、デバッグログ改善版）
+キャンバスウィジェット（D&D対応、ノード移動・編集・削除対応、原因特定ログ版）
 """
 
 import json
@@ -61,23 +61,25 @@ class FlowNodeItem(QGraphicsRectItem):
         self.setFlag(QGraphicsRectItem.ItemSendsGeometryChanges, True)
 
     def itemChange(self, change, value):
-        # ログを削減：移動中の毎回のログは出さない
-        if change == QGraphicsRectItem.ItemPositionHasChanged:
-            # デバッグ時のみ有効にする（普段は抑制）
-            if logger.getEffectiveLevel() <= 5:
-                logger.debug(f"FlowNodeItem position changed: type={self.item_type}, pos=({value.x():.1f}, {value.y():.1f})")
+        # ログは抑制（必要な時だけデバッグレベルを5以下に設定）
+        if change == QGraphicsRectItem.ItemPositionHasChanged and logger.getEffectiveLevel() <= 5:
+            logger.debug(f"FlowNodeItem position changed: type={self.item_type}, pos=({value.x():.1f}, {value.y():.1f})")
         return super().itemChange(change, value)
 
     def mousePressEvent(self, event):
-        logger.debug(f"FlowNodeItem.mousePressEvent: type={self.item_type}, pos={event.pos()}")
+        logger.debug(f"FlowNodeItem.mousePressEvent: type={self.item_type}")
+        event.accept()  # ★ これが必須
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        # ドラッグ中のログは出さない（フリーズ回避のため）
+        # ドラッグ中のログは最初の一回だけ（デバッグ用）
+        if logger.getEffectiveLevel() <= 5:
+            logger.debug(f"FlowNodeItem.mouseMoveEvent: type={self.item_type}")
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        logger.debug(f"FlowNodeItem.mouseReleaseEvent: type={self.item_type}, pos={event.pos()}")
+        logger.debug(f"FlowNodeItem.mouseReleaseEvent: type={self.item_type}, final_pos={self.pos()}")
+        event.accept()
         super().mouseReleaseEvent(event)
 
     def hoverEnterEvent(self, event):
@@ -175,7 +177,9 @@ class FlowCanvas(QGraphicsView):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        # ドラッグ中のログは出さない（フリーズ回避のため）
+        # ログは最小限に（デバッグレベル5以下なら最初の一回のみ）
+        if logger.getEffectiveLevel() <= 5:
+            logger.debug(f"FlowCanvas.mouseMoveEvent: pos={event.position().toPoint()}")
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
