@@ -96,7 +96,7 @@ class ActionEditorDialog(QDialog):
         # パレットには共有ライブラリの関数名リストを渡す
         function_names = [rf.name for rf in self.role_function_library.list_all()]
         if not function_names:
-            function_names = self.role_functions  # フォールバック
+            function_names = self.role_functions
 
         self.palette = PaletteWidget(function_names)
         self.palette.setMinimumWidth(200)
@@ -174,6 +174,7 @@ class ActionEditorDialog(QDialog):
                 logger.debug(f"  transition item condition='{flow_item.params.get('condition','')}'")
                 dlg = ConditionBuilderDialog(
                     condition=flow_item.params.get('condition', ''),
+                    event_name=flow_item.params.get('event', self.draft.event),
                     global_defs=self.global_defs,
                     state_machine=self.state_machine,
                     literal_library=self.literal_library,
@@ -181,13 +182,15 @@ class ActionEditorDialog(QDialog):
                 )
                 if dlg.exec() == QDialog.Accepted:
                     new_condition = dlg.get_condition_text()
-                    logger.debug(f"  new condition='{new_condition}'")
+                    new_event_name = dlg.get_event_name()
+                    logger.debug(f"  new condition='{new_condition}', new event='{new_event_name}'")
                     flow_item.params['condition'] = new_condition
-                    event_name = flow_item.params.get('event', self.draft.event)
+                    flow_item.params['event'] = new_event_name
+                    flow_item.name = new_event_name if new_event_name else "NewEvent"
                     if new_condition:
-                        flow_item.edited_text = f"{event_name}: {new_condition}"
+                        flow_item.edited_text = f"{new_event_name}: {new_condition}" if new_event_name else new_condition
                     else:
-                        flow_item.edited_text = event_name if event_name else "NewEvent"
+                        flow_item.edited_text = new_event_name if new_event_name else "NewEvent"
                     self.canvas._rebuild()
                     self.code_widget.update_code()
 

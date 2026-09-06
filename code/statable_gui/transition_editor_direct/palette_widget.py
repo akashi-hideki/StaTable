@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/palette_widget.py
 """
-カテゴリ別折りたたみパレット（タイトル・ラベル追加版）
+カテゴリ別折りたたみパレット（D&D・ボタン追加・デバッグログ強化版）
 """
 
 import json
@@ -103,10 +103,11 @@ class PaletteWidget(QWidget):
         logger.debug(f"Added function: {name}")
 
     def _add_transition(self):
-        """遷移条件追加ボタン（既存のリストに項目を追加）"""
+        """遷移条件追加ボタン：既存の「＋ 新しい条件」を維持しつつ、ログを出力"""
         # 既に「＋ 新しい条件」がある場合は何もしない
         for i in range(self.transition_list.count()):
             if self.transition_list.item(i).text() == "＋ 新しい条件":
+                logger.debug("Transition placeholder already exists")
                 return
         self.transition_list.addItem("＋ 新しい条件")
         logger.debug("Added transition placeholder")

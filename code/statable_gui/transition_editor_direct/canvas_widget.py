@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（D&D対応、編集・削除・整列・複製対応）
+キャンバスウィジェット（D&D対応、ノード移動・編集・削除対応、デバッグログ強化版）
 """
 
 import json
@@ -10,8 +10,7 @@ from PySide6.QtCore import Qt, Signal, QPointF
 from PySide6.QtGui import QBrush, QColor, QPen, QFont, QAction, QPainter
 from PySide6.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsRectItem,
-    QGraphicsTextItem, QGraphicsLineItem, QToolTip, QMenu,
-    QMessageBox
+    QGraphicsTextItem, QGraphicsLineItem, QToolTip, QMenu
 )
 
 from .draft import ActionDraft, FlowItem, ensure_list
@@ -59,6 +58,12 @@ class FlowNodeItem(QGraphicsRectItem):
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsRectItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsRectItem.ItemSendsGeometryChanges, True)
+
+    def itemChange(self, change, value):
+        if change == QGraphicsRectItem.ItemPositionHasChanged:
+            logger.debug(f"FlowNodeItem position changed: type={self.item_type}, pos=({value.x():.1f}, {value.y():.1f})")
+        return super().itemChange(change, value)
 
     def hoverEnterEvent(self, event):
         QToolTip.showText(event.screenPos(), self.get_guidance_text())
@@ -69,10 +74,12 @@ class FlowNodeItem(QGraphicsRectItem):
         super().hoverLeaveEvent(event)
 
     def mouseDoubleClickEvent(self, event):
+        # 先にsuper()を呼び、オブジェクトが生きているうちに標準処理を済ませる
+        super().mouseDoubleClickEvent(event)
+        # その後でコールバックを呼ぶ（再構築で削除されても安全）
         if self.edit_callback:
             logger.debug(f"FlowNodeItem.mouseDoubleClickEvent: type={self.item_type}")
             self.edit_callback(self)
-        super().mouseDoubleClickEvent(event)
 
     def contextMenuEvent(self, event):
         menu = QMenu()
@@ -136,13 +143,16 @@ class FlowCanvas(QGraphicsView):
         self.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.setMinimumHeight(500)
         self.setRenderHint(QPainter.Antialiasing)
-        self.setDragMode(QGraphicsView.RubberBandDrag)  # 複数選択
+        self.setDragMode(QGraphicsView.NoDrag)
+        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
 
-        self._grid_size = 20  # グリッドスナップ間隔
+        self._grid_size = 20
         self._zoom_factor = 1.15
 
         logger.debug("=== FlowCanvas init ===")
         logger.debug(f"draft.flow_items count = {len(draft.flow_items)}")
+        for i, item in enumerate(draft.flow_items):
+            logger.debug(f"  flow_item[{i}]: type={item.item_type}, params={item.params}")
 
         self._rebuild()
         logger.debug("=== FlowCanvas init end ===")
