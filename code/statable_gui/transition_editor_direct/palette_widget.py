@@ -1,12 +1,13 @@
 # statable_gui/transition_editor_direct/palette_widget.py
 """
-カテゴリ別折りたたみパレット（ロール関数＋遷移条件）
+カテゴリ別折りたたみパレット（ドラッグ開始処理修正版）
 """
 
 import json
 import logging
 
 from PySide6.QtCore import Qt, QMimeData
+from PySide6.QtGui import QDrag
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
     QAbstractItemView, QPushButton
@@ -25,16 +26,27 @@ class PaletteListWidget(QListWidget):
         self.setDragDropMode(QAbstractItemView.DragOnly)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
 
-    def mimeData(self, items):
-        mime = QMimeData()
-        if items:
-            data = {
-                "item_type": self.item_type,
-                "name": items[0].text(),
-            }
-            mime.setData(self.MIME_TYPE, json.dumps(data).encode("utf-8"))
-            mime.setText(items[0].text())
-        return mime
+    def startDrag(self, supported_actions):
+        """ドラッグ開始をオーバーライドして確実にMIMEデータを設定"""
+        item = self.currentItem()
+        if item is None:
+            return
+
+        logger.debug(f"PaletteListWidget.startDrag: type={self.item_type}, text='{item.text()}'")
+
+        mime_data = QMimeData()
+        data = {
+            "item_type": self.item_type,
+            "name": item.text(),
+        }
+        mime_data.setData(self.MIME_TYPE, json.dumps(data).encode("utf-8"))
+        mime_data.setText(item.text())
+
+        drag = QDrag(self)
+        drag.setMimeData(mime_data)
+        drag.exec_(Qt.CopyAction)
+
+        logger.debug("PaletteListWidget.startDrag: drag completed")
 
 
 class PaletteWidget(QWidget):
@@ -65,8 +77,8 @@ class PaletteWidget(QWidget):
         v1.addWidget(add_func_btn)
 
         # 🟦 遷移条件
-        event_container = QWidget()
-        v2 = QVBoxLayout(event_container)
+        transition_container = QWidget()
+        v2 = QVBoxLayout(transition_container)
         v2.setContentsMargins(0, 0, 0, 0)
 
         self.transition_list = PaletteListWidget("transition")
@@ -74,10 +86,9 @@ class PaletteWidget(QWidget):
         self.transition_list.addItem("＋ 新しい条件")
 
         v2.addWidget(self.transition_list)
-        # 追加ボタンは不要（固定1項目のみ）
 
         layout.addWidget(func_container)
-        layout.addWidget(event_container)
+        layout.addWidget(transition_container)
         layout.addStretch()
 
         logger.debug(f"Palette items: functions={self.function_list.count()}, "
