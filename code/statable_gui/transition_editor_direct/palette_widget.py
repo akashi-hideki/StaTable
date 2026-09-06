@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/palette_widget.py
 """
-カテゴリ別折りたたみパレット（共有ライブラリ対応・ボタン追加対応）
+カテゴリ別折りたたみパレット（共有ライブラリ対応・ダブルクリック編集対応）
 """
 
 import json
@@ -41,8 +41,9 @@ class PaletteListWidget(QListWidget):
 class PaletteWidget(QWidget):
     """カテゴリ別折りたたみパレット（イベント選択画面）"""
 
-    # 新しい遷移条件追加を要求するシグナル
-    add_transition_requested = Signal()
+    # ダブルクリックで編集要求を出すシグナル
+    edit_function_requested = Signal(str)      # ロール関数名
+    edit_transition_requested = Signal(str)    # 遷移条件名
 
     def __init__(self, role_functions=None, condition_templates=None, parent=None):
         super().__init__(parent)
@@ -72,6 +73,8 @@ class PaletteWidget(QWidget):
         for func in self.role_functions:
             self.function_list.addItem(func)
 
+        self.function_list.itemDoubleClicked.connect(self._on_function_double_clicked)
+
         add_func_btn = QPushButton("+ ロール関数追加")
         add_func_btn.clicked.connect(self._add_function)
 
@@ -87,14 +90,16 @@ class PaletteWidget(QWidget):
         self.transition_list = PaletteListWidget("transition")
 
         # 共有遷移条件ライブラリの一覧を表示
-        for ct in self.condition_templates:
-            self.transition_list.addItem(ct.name)
+        for ct_name in self.condition_templates:
+            self.transition_list.addItem(ct_name)
 
         # 新しい条件のプレースホルダー
         self.transition_list.addItem("＋ 新しい条件")
 
+        self.transition_list.itemDoubleClicked.connect(self._on_transition_double_clicked)
+
         add_transition_btn = QPushButton("+ 遷移条件追加")
-        add_transition_btn.clicked.connect(self._on_add_transition_clicked)
+        add_transition_btn.clicked.connect(self._add_transition)
         v2.addWidget(self.transition_list)
         v2.addWidget(add_transition_btn)
 
@@ -111,7 +116,37 @@ class PaletteWidget(QWidget):
         self.role_functions.append(name)
         logger.debug(f"Added function: {name}")
 
-    def _on_add_transition_clicked(self):
-        """ボタンが押されたらシグナルを発火（キャンバスに新しい遷移条件を1つ追加）"""
-        logger.debug("Add transition button clicked")
-        self.add_transition_requested.emit()
+    def _add_transition(self):
+        self.transition_list.addItem("＋ 新しい条件")
+        logger.debug("Added transition placeholder to palette")
+
+    def _on_function_double_clicked(self, item: QListWidgetItem):
+        name = item.text()
+        logger.debug(f"Function item double-clicked: '{name}'")
+        self.edit_function_requested.emit(name)
+
+    def _on_transition_double_clicked(self, item: QListWidgetItem):
+        name = item.text()
+        # プレースホルダーは編集しない
+        if name == "＋ 新しい条件":
+            logger.debug("Transition placeholder double-clicked (ignored)")
+            return
+        logger.debug(f"Transition item double-clicked: '{name}'")
+        self.edit_transition_requested.emit(name)
+
+    def refresh_lists(self, role_functions=None, condition_templates=None):
+        """リスト表示を更新する"""
+        if role_functions is not None:
+            self.role_functions = role_functions
+            self.function_list.clear()
+            for func in self.role_functions:
+                self.function_list.addItem(func)
+
+        if condition_templates is not None:
+            self.condition_templates = condition_templates
+            self.transition_list.clear()
+            for ct_name in self.condition_templates:
+                self.transition_list.addItem(ct_name)
+            self.transition_list.addItem("＋ 新しい条件")
+
+        logger.debug("Palette lists refreshed")
