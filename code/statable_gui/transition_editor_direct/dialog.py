@@ -87,13 +87,11 @@ class ActionEditorDialog(QDialog):
 
         splitter = QSplitter(Qt.Horizontal)
 
-        function_names = [rf.name for rf in self.role_function_library.list_all()]
-        if not function_names:
-            function_names = self.role_functions
-
-        condition_names = [ct.name for ct in self.condition_library.list_all()]
-
-        self.palette = PaletteWidget(function_names, condition_names)
+        # ★ ライブラリオブジェクトを直接渡す
+        self.palette = PaletteWidget(
+            role_function_library=self.role_function_library,
+            condition_library=self.condition_library
+        )
         self.palette.setMinimumWidth(200)
         splitter.addWidget(self.palette)
 
@@ -107,7 +105,7 @@ class ActionEditorDialog(QDialog):
         self.code_widget = CodeWidget(self.draft)
         self.tabs.addTab(self.code_widget, "コード")
 
-        # シグナル接続（node_move_finished は接続しない）
+        # シグナル接続
         self.canvas.node_edit_requested.connect(self._on_node_edit_requested)
         self.canvas.node_delete_requested.connect(self._on_node_delete_requested)
         self.canvas.node_duplicate_requested.connect(self._on_node_duplicate_requested)
@@ -136,7 +134,6 @@ class ActionEditorDialog(QDialog):
         self.canvas.auto_align()
 
     def _on_edit_function_requested(self, name: str):
-        """パレットのロール関数がダブルクリックされた"""
         logger.debug(f"ActionEditorDialog._on_edit_function_requested: name='{name}'")
         rf = self.role_function_library.get(name)
         if rf is None:
@@ -162,7 +159,6 @@ class ActionEditorDialog(QDialog):
             self.palette.refresh_lists()
 
     def _on_edit_transition_requested(self, name: str):
-        """パレットの遷移条件がダブルクリックされた"""
         logger.debug(f"ActionEditorDialog._on_edit_transition_requested: name='{name}'")
         ct = self.condition_library.get(name)
         if ct is None:
