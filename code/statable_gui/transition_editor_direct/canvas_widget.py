@@ -1,12 +1,12 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（D&D対応、ノード移動・編集・削除対応、リリース時再構築版）
+キャンバスウィジェット（D&D対応、ノード移動・位置保持・再構築一回版）
 """
 
 import json
 import logging
 
-from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtCore import Qt, Signal, QTimer, QPointF
 from PySide6.QtGui import QBrush, QColor, QPen, QFont, QAction, QPainter
 from PySide6.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsRectItem,
@@ -43,7 +43,7 @@ class FlowNodeItem(QGraphicsRectItem):
         self.duplicate_callback = None
         self.move_up_callback = None
         self.move_down_callback = None
-        self.move_finished_callback = None   # ★ 移動終了時に呼ばれる
+        self.move_finished_callback = None   # 移動終了時に呼ばれる
 
         color = self.COLORS.get(item_type, QColor(200, 200, 200))
         self.setBrush(QBrush(color))
@@ -75,7 +75,6 @@ class FlowNodeItem(QGraphicsRectItem):
     def mouseReleaseEvent(self, event):
         logger.debug(f"FlowNodeItem.mouseReleaseEvent: type={self.item_type}")
         super().mouseReleaseEvent(event)
-        # ★ 移動終了を親キャンバスへ通知
         if self.move_finished_callback:
             self.move_finished_callback(self)
 
@@ -144,7 +143,6 @@ class FlowCanvas(QGraphicsView):
     node_duplicate_requested = Signal(object)
     node_move_up_requested = Signal(object)
     node_move_down_requested = Signal(object)
-    node_move_finished = Signal(object)   # ★ 移動終了シグナル
 
     def __init__(self, draft: ActionDraft, parent=None):
         super().__init__(parent)
@@ -162,6 +160,9 @@ class FlowCanvas(QGraphicsView):
         self._grid_size = 20
         self._zoom_factor = 1.15
 
+        # ★ 位置保存用（key: id(flow_item), value: QPointF）
+        self.node_positions = {}
+
         logger.debug("=== FlowCanvas init ===")
         logger.debug(f"draft.flow_items count = {len(draft.flow_items)}")
         for i, item in enumerate(draft.flow_items):
@@ -170,14 +171,12 @@ class FlowCanvas(QGraphicsView):
         self._rebuild()
         logger.debug("=== FlowCanvas init end ===")
 
-    def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        super().mouseReleaseEvent(event)
+    def _get_node_key(self, node: FlowNodeItem):
+        """ノードを一意に識別するキーを取得（flow_itemのIDベース）"""
+        if node.flow_item:
+            return id(node.flow_item)
+        # flow_itemがないノード（pre_action, else, else_action）は移動を保存しない
+        return None
 
     def _rebuild(self):
         logger.debug("Rebuilding canvas START")
@@ -194,13 +193,18 @@ class FlowCanvas(QGraphicsView):
             if item.item_type == "function":
                 node = FlowNodeItem("function", item.display_text(), flow_item=item)
                 self.scene.addItem(node)
-                node.setPos(left_x, y)
+                # 保存された位置を復元
+                saved_pos = self.node_positions.get(id(item))
+                if saved_pos:
+                    node.setPos(saved_pos)
+                else:
+                    node.setPos(left_x, y)
                 node.edit_callback = self._on_node_edit_requested
                 node.delete_callback = self._on_node_delete_requested
                 node.duplicate_callback = self._on_node_duplicate_requested
                 node.move_up_callback = self._on_node_move_up_requested
                 node.move_down_callback = self._on_node_move_down_requested
-                node.move_finished_callback = self._on_node_move_finished   # ★
+                node.move_finished_callback = self._on_node_move_finished
 
                 if prev_bottom > 0:
                     self.scene.addItem(QGraphicsLineItem(prev_x + 120, prev_bottom, left_x + 120, y))
@@ -217,13 +221,17 @@ class FlowCanvas(QGraphicsView):
 
                 node = FlowNodeItem("transition", item.display_text(), flow_item=item)
                 self.scene.addItem(node)
-                node.setPos(left_x, y)
+                saved_pos = self.node_positions.get(id(item))
+                if saved_pos:
+                    node.setPos(saved_pos)
+                else:
+                    node.setPos(left_x, y)
                 node.edit_callback = self._on_node_edit_requested
                 node.delete_callback = self._on_node_delete_requested
                 node.duplicate_callback = self._on_node_duplicate_requested
                 node.move_up_callback = self._on_node_move_up_requested
                 node.move_down_callback = self._on_node_move_down_requested
-                node.move_finished_callback = self._on_node_move_finished   # ★
+                node.move_finished_callback = self._on_node_move_finished
 
                 if prev_bottom > 0:
                     self.scene.addItem(QGraphicsLineItem(prev_x + 120, prev_bottom, left_x + 120, y))
@@ -240,7 +248,7 @@ class FlowCanvas(QGraphicsView):
                     child.setPos(left_x + child_indent, child_y)
                     child.edit_callback = None
                     child.delete_callback = None
-                    child.move_finished_callback = self._on_node_move_finished   # ★
+                    # pre_actionは位置保存しない
                     self.scene.addItem(QGraphicsLineItem(left_x + 120, parent_bottom,
                                                          left_x + child_indent + 120, child_y))
                     child_y += child.rect().height() + 10
@@ -255,7 +263,7 @@ class FlowCanvas(QGraphicsView):
                     else_node.setPos(left_x + child_indent, child_y)
                     else_node.edit_callback = None
                     else_node.delete_callback = None
-                    else_node.move_finished_callback = self._on_node_move_finished   # ★
+                    # elseも位置保存しない
                     self.scene.addItem(QGraphicsLineItem(left_x + 120, parent_bottom,
                                                          left_x + child_indent + 120, child_y))
                     else_y = child_y + else_node.rect().height() + 10
@@ -267,7 +275,7 @@ class FlowCanvas(QGraphicsView):
                         ea_node.setPos(left_x + child_indent * 2, child_y)
                         ea_node.edit_callback = None
                         ea_node.delete_callback = None
-                        ea_node.move_finished_callback = self._on_node_move_finished   # ★
+                        # else_actionも位置保存しない
                         self.scene.addItem(QGraphicsLineItem(left_x + child_indent + 120, else_y - 10,
                                                              left_x + child_indent * 2 + 120, child_y))
                         child_y += ea_node.rect().height() + 10
@@ -313,15 +321,20 @@ class FlowCanvas(QGraphicsView):
         self.node_move_down_requested.emit(node)
 
     def _on_node_move_finished(self, node: FlowNodeItem):
-        """ノードの移動が終了したときに呼ばれる"""
-        logger.debug(f"Node move finished: type={node.item_type}")
-        self.node_move_finished.emit(node)
+        """ノード移動終了時に位置を保存し、再構築を遅延実行"""
+        key = self._get_node_key(node)
+        if key is not None:
+            self.node_positions[key] = node.pos()
+            logger.debug(f"Node move finished: type={node.item_type}, saved pos={node.pos()}")
+        # 再構築は1回だけ遅延実行
+        QTimer.singleShot(0, self._rebuild)
 
     def auto_align(self):
         y = 30
         for item in self.scene.items():
             if isinstance(item, FlowNodeItem) and item.flow_item is not None:
                 item.setPos(30, y)
+                self.node_positions[id(item.flow_item)] = QPointF(30, y)
                 y += item.rect().height() + 25
         self.scene.setSceneRect(self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 40))
         self.draft_updated.emit()
@@ -349,7 +362,6 @@ class FlowCanvas(QGraphicsView):
             event.acceptProposedAction()
             scene_pos = self.mapToScene(event.position().toPoint())
             item = self.scene.itemAt(scene_pos, self.transform())
-            # ドラッグ中のログは抑制
             if isinstance(item, FlowNodeItem):
                 QToolTip.showText(self.mapToGlobal(event.position().toPoint()), item.get_guidance_text())
             else:

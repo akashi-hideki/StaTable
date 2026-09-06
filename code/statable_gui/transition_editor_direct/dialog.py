@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/dialog.py
 """
-動作編集メインダイアログ（共有ライブラリ対応・パレット編集対応）
+動作編集メインダイアログ（共有ライブラリ対応・ノード編集対応）
 """
 
 import logging
@@ -87,11 +87,13 @@ class ActionEditorDialog(QDialog):
 
         splitter = QSplitter(Qt.Horizontal)
 
-        # パレットにライブラリオブジェクトを直接渡す
-        self.palette = PaletteWidget(
-            role_function_library=self.role_function_library,
-            condition_library=self.condition_library
-        )
+        function_names = [rf.name for rf in self.role_function_library.list_all()]
+        if not function_names:
+            function_names = self.role_functions
+
+        condition_names = [ct.name for ct in self.condition_library.list_all()]
+
+        self.palette = PaletteWidget(function_names, condition_names)
         self.palette.setMinimumWidth(200)
         splitter.addWidget(self.palette)
 
@@ -105,14 +107,13 @@ class ActionEditorDialog(QDialog):
         self.code_widget = CodeWidget(self.draft)
         self.tabs.addTab(self.code_widget, "コード")
 
-        # シグナル接続
+        # シグナル接続（node_move_finished は接続しない）
         self.canvas.node_edit_requested.connect(self._on_node_edit_requested)
         self.canvas.node_delete_requested.connect(self._on_node_delete_requested)
         self.canvas.node_duplicate_requested.connect(self._on_node_duplicate_requested)
         self.canvas.node_move_up_requested.connect(self._on_node_move_up_requested)
         self.canvas.node_move_down_requested.connect(self._on_node_move_down_requested)
         self.canvas.draft_updated.connect(self.code_widget.update_code)
-        self.canvas.node_move_finished.connect(self._on_node_move_finished)
 
         self.palette.edit_function_requested.connect(self._on_edit_function_requested)
         self.palette.edit_transition_requested.connect(self._on_edit_transition_requested)
@@ -288,9 +289,4 @@ class ActionEditorDialog(QDialog):
     def _open_system_global(self):
         dialog = SystemGlobalDialog(self.draft, self)
         dialog.exec()
-        self.code_widget.update_code()
-
-    def _on_node_move_finished(self, node):
-        """ノード移動終了後にキャンバスを再構築"""
-        self.canvas._rebuild()
         self.code_widget.update_code()
