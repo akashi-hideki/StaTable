@@ -17,6 +17,16 @@ from .global_defs import GlobalDefinitions
 from .transition_editor_direct.dialog import ActionEditorDialog
 from .transition_editor_direct.draft import ActionDraft, transition_to_flow_item, flow_item_to_transition
 
+# 共有ライブラリ
+try:
+    from libcntrl.role_function_library import RoleFunctionLibrary
+    from libcntrl.condition_library import ConditionLibrary
+    from libcntrl.literal_library import LiteralLibrary
+except ImportError:
+    from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary
+    from statable_gui.libcntrl.condition_library import ConditionLibrary
+    from statable_gui.libcntrl.literal_library import LiteralLibrary
+
 
 def _truncate_text(text: str, max_chars: int = 40) -> str:
     if not text:
@@ -54,10 +64,19 @@ def _event_header_label(event_name: str, delivery_type) -> str:
 class MatrixTableWidget(QTableWidget):
     transition_changed = Signal()
 
-    def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None, parent=None):
+    def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None,
+                 role_function_library: RoleFunctionLibrary = None,
+                 condition_library: ConditionLibrary = None,
+                 literal_library: LiteralLibrary = None,
+                 parent=None):
         super().__init__(0, 0, parent)
         self.sm = sm
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
+
+        # 共有ライブラリ
+        self.role_function_library = role_function_library if role_function_library else RoleFunctionLibrary()
+        self.condition_library = condition_library if condition_library else ConditionLibrary()
+        self.literal_library = literal_library if literal_library else LiteralLibrary()
 
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.verticalHeader().setSectionResizeMode(QHeaderView.Interactive)
@@ -179,7 +198,7 @@ class MatrixTableWidget(QTableWidget):
             StaTableLogger.debug(f"  converted flow_item: {fi}")
             draft.flow_items.append(fi)
 
-        role_func_names = list(self.sm.role_functions.keys())
+        role_func_names = [rf.name for rf in self.role_function_library.list_all()]
         states = list(self.sm.states.keys())
 
         dialog = ActionEditorDialog(
@@ -189,6 +208,9 @@ class MatrixTableWidget(QTableWidget):
             states=states,
             global_defs=self.global_defs,
             state_machine=self.sm,
+            role_function_library=self.role_function_library,
+            condition_library=self.condition_library,
+            literal_library=self.literal_library,
             parent=self
         )
 

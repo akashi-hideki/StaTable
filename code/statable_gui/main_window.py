@@ -1,9 +1,11 @@
 # statable_gui/main_window.py
 """
 StaTable メインウィンドウ
-コード生成機能・検証AI連携機能を統合
+コード生成機能・検証AI連携機能・共有ライブラリ管理を統合
 """
 
+import sys
+import os
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -29,9 +31,17 @@ from .event_definition_dialog import EventDefinitionDialog
 from .event_delivery_settings_dialog import EventDeliverySettingsDialog
 from .common_widgets import TypeManagerDialog
 
+# 共有ライブラリ
+try:
+    from libcntrl.role_function_library import RoleFunctionLibrary
+    from libcntrl.condition_library import ConditionLibrary
+    from libcntrl.literal_library import LiteralLibrary
+except ImportError:
+    from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary
+    from statable_gui.libcntrl.condition_library import ConditionLibrary
+    from statable_gui.libcntrl.literal_library import LiteralLibrary
+
 # コード生成モジュール
-import sys
-import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'codegen'))
 
@@ -76,6 +86,17 @@ class MainWindow(QMainWindow):
             f"flags={len(self.global_defs.flags)}, "
             f"interrupts={len(self.global_defs.interrupts)}, "
             f"placeholders={len(self.global_defs.placeholders)}"
+        )
+
+        # 共有ライブラリ（プロジェクト全体で共有）
+        self.role_function_library = RoleFunctionLibrary()
+        self.condition_library = ConditionLibrary()
+        self.literal_library = LiteralLibrary()
+        StaTableLogger.debug(
+            "MainWindow shared libraries initialized: "
+            f"roles={len(self.role_function_library.list_all())}, "
+            f"conditions={len(self.condition_library.list_all())}, "
+            f"literals={len(self.literal_library.list_all())}"
         )
 
         self.tab_widget = QTabWidget()
@@ -139,7 +160,6 @@ class MainWindow(QMainWindow):
 
         toolbar.addSeparator()
 
-        # 検証・AI診断ボタン
         validate_btn = QAction("検証・AI診断", self)
         validate_btn.setToolTip("コード生成前検証・AI連携診断を開く")
         validate_btn.triggered.connect(self.open_validation_dialog)
@@ -147,7 +167,6 @@ class MainWindow(QMainWindow):
 
         toolbar.addSeparator()
 
-        # コード生成ボタン
         generate_btn = QAction("コード生成", self)
         generate_btn.setToolTip("Cコードを生成")
         generate_btn.triggered.connect(self.open_code_generation_dialog)
@@ -282,14 +301,12 @@ class MainWindow(QMainWindow):
     # ===== 既存のメソッド =====
 
     def open_type_manager(self):
-        """ユーザー定義型管理ダイアログを開く"""
         StaTableLogger.debug("MainWindow.open_type_manager called")
         dlg = TypeManagerDialog(self, self.global_defs)
         dlg.exec()
         StaTableLogger.debug("TypeManagerDialog closed")
 
     def open_global_defs_dialog(self):
-        """グローバル変数・イベントフラグ定義ダイアログを開く"""
         StaTableLogger.debug("MainWindow.open_global_defs_dialog called")
         self.global_defs.add_timer_variables()
         dlg = GlobalDefinitionsDialog(self.global_defs, self)
@@ -297,10 +314,8 @@ class MainWindow(QMainWindow):
         StaTableLogger.debug("GlobalDefinitionsDialog closed")
 
     def open_event_definition_dialog(self):
-        """状態遷移イベント定義ダイアログを開く"""
         StaTableLogger.debug("MainWindow.open_event_definition_dialog called")
 
-        # 現在のタブの StateMachine を取得
         current_tab = self.tab_widget.currentWidget()
         if current_tab is None or not hasattr(current_tab, 'sm'):
             QMessageBox.warning(self, "Warning", "状態遷移タブがありません。")
@@ -311,7 +326,6 @@ class MainWindow(QMainWindow):
             StaTableLogger.info("Event definitions updated")
 
     def open_event_delivery_settings(self):
-        """イベント配送設定ダイアログを開く"""
         StaTableLogger.debug("MainWindow.open_event_delivery_settings called")
         current_tab = self.tab_widget.currentWidget()
         if current_tab is None or not hasattr(current_tab, 'sm'):
@@ -329,7 +343,6 @@ class MainWindow(QMainWindow):
             StaTableLogger.info("Event delivery settings updated")
 
     def open_interrupt_settings(self):
-        """割り込み処理・デバイスリソース・タイマ設定ダイアログを開く"""
         StaTableLogger.debug("MainWindow.open_interrupt_settings called")
 
         event_names = []
@@ -367,6 +380,7 @@ class MainWindow(QMainWindow):
         if not filepath:
             return
         try:
+            # TODO: 共有ライブラリの保存は今後対応
             project_to_xml(tabs, self.global_defs, filepath)
             self.prefs.last_project_dir = str(Path(filepath).parent)
             self.logger.info(f"Project saved to {filepath}")
@@ -427,7 +441,13 @@ class MainWindow(QMainWindow):
             self.logger.info(f"New tab added: {name.strip()}")
 
     def add_state_machine_tab(self, name: str, sm: StateMachine):
-        tab = StateMachineTab(sm, global_defs=self.global_defs)
+        tab = StateMachineTab(
+            sm,
+            global_defs=self.global_defs,
+            role_function_library=self.role_function_library,
+            condition_library=self.condition_library,
+            literal_library=self.literal_library
+        )
         idx = self.tab_widget.addTab(tab, name)
         self.tab_widget.setCurrentIndex(idx)
         self.logger.debug(f"Tab '{name}' added at index {idx}")
@@ -452,58 +472,51 @@ class MainWindow(QMainWindow):
     # ===== 検証・AI連携メソッド =====
 
     def _get_current_state_machine(self):
-        """現在のタブからStateMachineを取得"""
         current_tab = self.tab_widget.currentWidget()
         if current_tab is not None and hasattr(current_tab, 'sm'):
             return current_tab.sm
         return None
 
     def _get_current_data(self):
-        """現在のタブからデータを取得（フォールバックあり）"""
         sm = self._get_current_state_machine()
         if sm is not None and self.global_defs is not None:
             return sm, self.global_defs
-        
-        # サンプルデータを使用
+
         sample_gen = SampleDataGenerator()
         return sample_gen.get_sample_data()
 
     def open_validation_dialog(self):
-        """検証・AI連携ダイアログを開く"""
         StaTableLogger.debug("MainWindow.open_validation_dialog called")
-        
+
         sm, gd = self._get_current_data()
-        
+
         dialog = ValidationDialog(sm, gd, self)
         dialog.exec()
-        
+
         StaTableLogger.debug("ValidationDialog closed")
 
     # ===== コード生成関連メソッド =====
 
     def open_code_generation_dialog(self):
-        """コード生成ダイアログを開く"""
         StaTableLogger.debug("MainWindow.open_code_generation_dialog called")
-        
+
         state_machine, global_defs = self._get_current_data()
-        
+
         dialog = CodeGenerationDialog(
             state_machine=state_machine,
             global_defs=global_defs,
             parent=self
         )
-        
-        # 設定マネージャを共有
+
         dialog.config_manager = self.config_manager
         dialog._load_config_to_ui()
-        
+
         dialog.exec()
         StaTableLogger.debug("CodeGenerationDialog closed")
 
     def open_code_generation_settings(self):
-        """コード生成設定ダイアログを開く"""
         StaTableLogger.debug("MainWindow.open_code_generation_settings called")
-        
+
         dialog = CodeGenerationSettingsDialog(
             config_manager=self.config_manager,
             parent=self
@@ -512,39 +525,38 @@ class MainWindow(QMainWindow):
         StaTableLogger.debug("CodeGenerationSettingsDialog closed")
 
     def save_generated_code_direct(self):
-        """生成コードを直接保存（ダイアログなし）"""
         StaTableLogger.debug("MainWindow.save_generated_code_direct called")
-        
+
         state_machine, global_defs = self._get_current_data()
-        
+
         config = self.config_manager.get_config()
         output_dir = config.output_directory
-        
+
         if not output_dir:
-            QMessageBox.warning(self, "警告", 
+            QMessageBox.warning(self, "警告",
                 "出力先ディレクトリが設定されていません。\n先に設定ダイアログで出力先を指定してください。")
             self.open_code_generation_settings()
             config = self.config_manager.get_config()
             output_dir = config.output_directory
             if not output_dir:
                 return
-        
+
         try:
             generator = CCodeGenerator(config=config)
             generated_files = generator.generate_all(state_machine, global_defs)
-            
+
             os.makedirs(output_dir, exist_ok=True)
-            
+
             if config.save_with_merge:
                 saved_files = generator.save_generated_code_with_merge(generated_files, output_dir)
             else:
                 saved_files = generator.save_generated_code(generated_files, output_dir)
-            
+
             StaTableLogger.info(f"{len(saved_files)} files saved to {output_dir}")
-            
-            QMessageBox.information(self, "保存完了", 
+
+            QMessageBox.information(self, "保存完了",
                 f"{len(saved_files)}ファイルを保存しました。\n\n出力先: {output_dir}")
-            
+
         except Exception as e:
             QMessageBox.critical(self, "エラー", f"コード生成に失敗しました:\n{e}")
             StaTableLogger.error(f"Code generation failed: {e}")

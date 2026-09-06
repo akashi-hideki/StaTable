@@ -1,14 +1,23 @@
 # statable_gui/condition_builder_dialog.py
 """
-遷移条件ビルダーダイアログ（レイアウト修正＋デバッグ出力版）
-テキスト入力主体、左ペインからシンボル挿入、下部にCコード表示
+遷移条件ビルダーダイアログ（リテラル化機能対応版）
 """
 
 import re
+import sys
+import os
+
+# パス設定
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPlainTextEdit, QTreeWidget,
     QTreeWidgetItem, QLabel, QLineEdit, QPushButton, QDialogButtonBox,
-    QSplitter, QGroupBox, QFrame, QSizePolicy
+    QSplitter, QGroupBox, QFrame, QSizePolicy, QMessageBox, QTableWidget,
+    QTableWidgetItem, QHeaderView
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFontMetrics
@@ -16,18 +25,27 @@ from PySide6.QtGui import QFontMetrics
 from statable.global_defs import GlobalDefinitions
 from statable.state_machine import StateMachine
 
+# 共有リテラルライブラリ
+try:
+    from libcntrl.literal_library import LiteralLibrary, LiteralDefinition
+except ImportError:
+    from statable_gui.libcntrl.literal_library import LiteralLibrary, LiteralDefinition
+
 
 class ConditionBuilderDialog(QDialog):
-    """遷移条件式をGUIで構築するダイアログ"""
+    """遷移条件式をGUIで構築するダイアログ（リテラル化対応）"""
 
     def __init__(self, condition: str = "", global_defs: GlobalDefinitions = None,
-                 state_machine: StateMachine = None, parent=None):
+                 state_machine: StateMachine = None,
+                 literal_library: LiteralLibrary = None,
+                 parent=None):
         super().__init__(parent)
         self.setWindowTitle("遷移条件ビルダー")
-        self.setMinimumSize(900, 450)
+        self.setMinimumSize(1000, 700)
 
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.state_machine = state_machine if state_machine else StateMachine()
+        self.literal_library = literal_library if literal_library else LiteralLibrary()
 
         self._setup_ui()
         self.condition_edit.setPlainText(condition)
@@ -40,7 +58,6 @@ class ConditionBuilderDialog(QDialog):
         main_layout.setSpacing(4)
 
         main_splitter = QSplitter(Qt.Horizontal)
-        main_splitter.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
 
         # 左ペイン：カテゴリ別ツリー
         left_widget = QGroupBox("挿入するシンボル")
@@ -50,7 +67,6 @@ class ConditionBuilderDialog(QDialog):
 
         self.symbol_tree = QTreeWidget()
         self.symbol_tree.setHeaderHidden(True)
-        self.symbol_tree.setMinimumHeight(120)
         self.symbol_tree.itemDoubleClicked.connect(self._insert_symbol)
         left_layout.addWidget(self.symbol_tree)
 
@@ -72,6 +88,12 @@ class ConditionBuilderDialog(QDialog):
         right_layout.setContentsMargins(4, 4, 4, 4)
         right_layout.setSpacing(2)
 
+        # リテラル化ボタン
+        literal_btn = QPushButton("リテラル化")
+        literal_btn.setToolTip("条件式中の数値を名前付きリテラルに変換します")
+        literal_btn.clicked.connect(self._open_literalization)
+        right_layout.addWidget(literal_btn, alignment=Qt.AlignLeft)
+
         self.condition_edit = QPlainTextEdit()
         self.condition_edit.setPlaceholderText(
             "例: battery_voltage > 3000 && EVT_POWER_ON_REQ == 1"
@@ -85,12 +107,11 @@ class ConditionBuilderDialog(QDialog):
 
         fm = QFontMetrics(self.condition_edit.font())
         row_height = fm.height()
-        # 高さを2倍程度（10行分）に設定
         self.condition_edit.setMinimumHeight(row_height * 10 + 4)
         self.condition_edit.textChanged.connect(self._update_c_code_view)
         right_layout.addWidget(self.condition_edit, 1)
 
-        # クリアボタンを右下に配置
+        # クリアボタン
         clear_btn = QPushButton("クリア")
         clear_btn.clicked.connect(self._clear_condition)
         btn_layout = QHBoxLayout()
@@ -104,7 +125,6 @@ class ConditionBuilderDialog(QDialog):
 
         # 下部：ctx->形式のCコード表示
         bottom_widget = QGroupBox("生成されるCコード（ctx->形式）")
-        bottom_widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         bottom_layout = QVBoxLayout(bottom_widget)
         bottom_layout.setContentsMargins(4, 4, 4, 4)
         bottom_layout.setSpacing(2)
@@ -117,8 +137,7 @@ class ConditionBuilderDialog(QDialog):
         )
         self.c_code_view.document().setDocumentMargin(0)
         self.c_code_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.c_code_view.setFixedHeight(row_height * 2 + 4)  # 2行分
-
+        self.c_code_view.setFixedHeight(row_height * 2 + 4)
         bottom_layout.addWidget(self.c_code_view, 1)
         main_layout.addWidget(bottom_widget)
 
@@ -127,14 +146,16 @@ class ConditionBuilderDialog(QDialog):
         buttons.rejected.connect(self.reject)
         main_layout.addWidget(buttons)
 
-        # デバッグ出力用にウィジェット参照を保存
+        # レイアウトデバッグ用
         self.right_widget = right_widget
         self.bottom_widget = bottom_widget
         self.left_widget = left_widget
 
     def _populate_tree(self):
+        """利用可能なシンボルをカテゴリ別にツリーへ追加"""
         self.symbol_tree.clear()
 
+        # グローバル変数
         global_vars_item = QTreeWidgetItem(["グローバル変数"])
         for var in getattr(self.global_defs, 'variables', []):
             child = QTreeWidgetItem([var.name])
@@ -143,6 +164,7 @@ class ConditionBuilderDialog(QDialog):
             global_vars_item.addChild(child)
         self.symbol_tree.addTopLevelItem(global_vars_item)
 
+        # イベントフラグ
         flags_item = QTreeWidgetItem(["イベントフラグ"])
         for flag in getattr(self.global_defs, 'flags', []):
             child = QTreeWidgetItem([flag.name])
@@ -151,6 +173,7 @@ class ConditionBuilderDialog(QDialog):
             flags_item.addChild(child)
         self.symbol_tree.addTopLevelItem(flags_item)
 
+        # イベント変数
         event_vars_item = QTreeWidgetItem(["イベント変数"])
         for event in self.state_machine.events.values():
             data_name = getattr(event, 'data_name', '')
@@ -162,6 +185,7 @@ class ConditionBuilderDialog(QDialog):
                 event_vars_item.addChild(child)
         self.symbol_tree.addTopLevelItem(event_vars_item)
 
+        # ロール関数（bool）
         role_funcs_item = QTreeWidgetItem(["ロール関数（bool）"])
         for rf in self.state_machine.role_functions.values():
             if getattr(rf, 'return_type', '') == 'bool':
@@ -172,6 +196,16 @@ class ConditionBuilderDialog(QDialog):
                 role_funcs_item.addChild(child)
         self.symbol_tree.addTopLevelItem(role_funcs_item)
 
+        # リテラル
+        literal_item = QTreeWidgetItem(["リテラル"])
+        for lit in self.literal_library.list_all():
+            child = QTreeWidgetItem([lit.name])
+            child.setData(0, Qt.UserRole, lit.name)
+            child.setToolTip(0, f"{lit.name} = {lit.value} ({lit.literal_type})")
+            literal_item.addChild(child)
+        self.symbol_tree.addTopLevelItem(literal_item)
+
+        # 定数シンボル
         const_item = QTreeWidgetItem(["定数シンボル"])
         true_child = QTreeWidgetItem(["true"])
         true_child.setData(0, Qt.UserRole, "true")
@@ -287,23 +321,110 @@ class ConditionBuilderDialog(QDialog):
                 return False
         return False
 
+    def _open_literalization(self):
+        """リテラル化ダイアログを開く"""
+        text = self.condition_edit.toPlainText()
+        if not text.strip():
+            QMessageBox.information(self, "情報", "条件式が入力されていません。")
+            return
+
+        dialog = LiteralizationDialog(text, self.literal_library, self)
+        if dialog.exec() == QDialog.Accepted:
+            new_text = dialog.get_updated_condition_text()
+            self.condition_edit.setPlainText(new_text)
+            self._populate_tree()  # リテラル一覧を更新
+            self._update_c_code_view()
+
     def get_condition_text(self) -> str:
-        """右ペインのシンボル名テキストを返す"""
         return self.condition_edit.toPlainText().strip()
 
     def get_c_code_text(self) -> str:
-        """下部のCコードテキストを返す"""
         return self.c_code_view.toPlainText().strip()
 
-    def _debug_layout(self):
-        """レイアウトデバッグ出力"""
-        print("=== Layout Debug ===")
-        print(f"Dialog size: {self.size()}")
-        print(f"condition_edit size: {self.condition_edit.size()}")
-        print(f"condition_edit height: {self.condition_edit.height()}")
-        print(f"c_code_view size: {self.c_code_view.size()}")
-        print(f"c_code_view height: {self.c_code_view.height()}")
-        print(f"bottom_widget size: {self.bottom_widget.size()}")
-        print(f"right_widget size: {self.right_widget.size()}")
-        print(f"symbol_tree size: {self.symbol_tree.size()}")
-        print("====================")
+
+class LiteralizationDialog(QDialog):
+    """条件式中の数値をリテラル化するダイアログ"""
+
+    def __init__(self, condition_text: str, literal_library: LiteralLibrary, parent=None):
+        super().__init__(parent)
+        self.condition_text = condition_text
+        self.literal_library = literal_library
+        self.literal_mappings = []  # (line_no, original_value, literal_name)
+
+        self.setWindowTitle("リテラル化")
+        self.setMinimumSize(600, 400)
+
+        self._setup_ui()
+        self._scan_numbers()
+
+    def _setup_ui(self):
+        layout = QVBoxLayout(self)
+
+        layout.addWidget(QLabel("条件式中の数値をリテラル化します。各行の数値に名前を付けてください。"))
+
+        self.table = QTableWidget(0, 3)
+        self.table.setHorizontalHeaderLabels(["行", "数値", "リテラル名"])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        layout.addWidget(self.table)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self._on_accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _scan_numbers(self):
+        """行ごとに数値リテラルを検出"""
+        lines = self.condition_text.splitlines()
+        for line_no, line in enumerate(lines):
+            # 整数と小数を検出
+            for match in re.finditer(r'\b\d+(\.\d+)?\b', line):
+                value = match.group()
+                self.table.insertRow(self.table.rowCount())
+                row = self.table.rowCount() - 1
+
+                line_item = QTableWidgetItem(str(line_no + 1))
+                value_item = QTableWidgetItem(value)
+                name_item = QTableWidgetItem(f"LITERAL_{row + 1}")
+
+                self.table.setItem(row, 0, line_item)
+                self.table.setItem(row, 1, value_item)
+                self.table.setItem(row, 2, name_item)
+
+    def _on_accept(self):
+        """OKボタン：置換とリテラル登録"""
+        # マッピングを収集
+        replace_map = {}  # (line_no, value) -> literal_name
+        for row in range(self.table.rowCount()):
+            line_no = self.table.item(row, 0).text().strip()
+            value = self.table.item(row, 1).text().strip()
+            literal_name = self.table.item(row, 2).text().strip()
+
+            if not literal_name:
+                continue
+
+            # リテラルライブラリに登録
+            try:
+                lit = LiteralDefinition(name=literal_name, value=value, literal_type="int")
+                self.literal_library.add(lit)
+            except ValueError:
+                # 既に同名が存在する場合は続行（上書きはしない）
+                pass
+
+            replace_map[(line_no, value)] = literal_name
+
+        # 条件式を置換
+        lines = self.condition_text.splitlines()
+        updated_lines = []
+        for line_no, line in enumerate(lines):
+            updated_line = line
+            for (target_line, value), literal_name in replace_map.items():
+                if int(target_line) == line_no + 1:
+                    updated_line = updated_line.replace(value, literal_name)
+            updated_lines.append(updated_line)
+
+        self.updated_condition_text = '\n'.join(updated_lines)
+        self.accept()
+
+    def get_updated_condition_text(self) -> str:
+        """置換後の条件式を返す"""
+        return getattr(self, 'updated_condition_text', self.condition_text)

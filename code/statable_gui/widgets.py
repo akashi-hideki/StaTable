@@ -1,3 +1,8 @@
+# statable_gui/widgets.py
+"""
+StaTable メインウィジェット（共有ライブラリ対応版）
+"""
+
 import tempfile
 from typing import Optional, List
 
@@ -26,11 +31,20 @@ from .config import (
     MERMAID_PREVIEW_MIN_HEIGHT, MAX_COLUMN_WIDTH, MIN_ROW_HEIGHT, MAX_ROW_HEIGHT
 )
 from .matrix_table import MatrixTableWidget
-from .dialogs import TransitionListDialog
 from .role_function_dialog import RoleFunctionDialog
 from .action_edit_dialog import ActionEditDialog
 from .global_defs import GlobalDefinitions
 from .event_definition_dialog import EventDefinitionDialog
+
+# 共有ライブラリ
+try:
+    from libcntrl.role_function_library import RoleFunctionLibrary
+    from libcntrl.condition_library import ConditionLibrary
+    from libcntrl.literal_library import LiteralLibrary
+except ImportError:
+    from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary
+    from statable_gui.libcntrl.condition_library import ConditionLibrary
+    from statable_gui.libcntrl.literal_library import LiteralLibrary
 
 
 # ----------------------------------------------------------------------
@@ -152,7 +166,7 @@ class SettingsPanel(QWidget):
         state_layout.addLayout(btn_state)
         self.tab.addTab(state_tab, "状態一覧")
 
-        # ロール関数タブ
+        # ロール関数タブ（共有ライブラリには移行せず、従来のStateMachine.role_functionsを使用）
         role_tab = QWidget()
         role_layout = QVBoxLayout(role_tab)
         self.role_table = QTableWidget(0, 8)
@@ -171,18 +185,14 @@ class SettingsPanel(QWidget):
         btn_role.addWidget(del_role_btn)
         role_layout.addLayout(btn_role)
 
-        # イベント定義ボタン（新設）
         event_btn = QPushButton("イベント定義...")
         event_btn.clicked.connect(self.open_event_definition)
         role_layout.addWidget(event_btn)
 
         self.tab.addTab(role_tab, "ロール関数")
 
-        # 変更検知
         self.state_table.itemChanged.connect(self.on_state_table_item_changed)
         self.role_table.itemChanged.connect(self.on_role_table_item_changed)
-
-        # 状態一覧のセルダブルクリックでActionEditDialogを開く
         self.state_table.cellDoubleClicked.connect(self.on_state_table_cell_double_clicked)
 
         self.populate()
@@ -274,7 +284,6 @@ class SettingsPanel(QWidget):
                 self.state_table.removeRow(row)
 
     def open_event_definition(self):
-        """状態遷移イベント定義ダイアログを開く"""
         StaTableLogger.debug("SettingsPanel.open_event_definition called")
         dlg = EventDefinitionDialog(self.sm, self.global_defs, self)
         if dlg.exec() == QDialog.Accepted:
@@ -352,10 +361,20 @@ class SettingsPanel(QWidget):
 # 単一タブのコンテンツ
 # ----------------------------------------------------------------------
 class StateMachineTab(QWidget):
-    def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None, parent=None):
+    def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None,
+                 role_function_library: RoleFunctionLibrary = None,
+                 condition_library: ConditionLibrary = None,
+                 literal_library: LiteralLibrary = None,
+                 parent=None):
         super().__init__(parent)
         self.sm = sm
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
+
+        # 共有ライブラリ
+        self.role_function_library = role_function_library if role_function_library else RoleFunctionLibrary()
+        self.condition_library = condition_library if condition_library else ConditionLibrary()
+        self.literal_library = literal_library if literal_library else LiteralLibrary()
+
         StaTableLogger.debug(
             f"StateMachineTab.__init__: global_defs id={id(self.global_defs)}, "
             f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
@@ -364,7 +383,13 @@ class StateMachineTab(QWidget):
         layout = QHBoxLayout(self)
 
         left_split = QSplitter(Qt.Vertical)
-        self.table = MatrixTableWidget(sm, global_defs=self.global_defs)
+        self.table = MatrixTableWidget(
+            sm,
+            global_defs=self.global_defs,
+            role_function_library=self.role_function_library,
+            condition_library=self.condition_library,
+            literal_library=self.literal_library
+        )
         self.mermaid = MermaidWidget()
         left_split.addWidget(self.table)
         left_split.addWidget(self.mermaid)

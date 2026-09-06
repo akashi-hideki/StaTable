@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/draft.py
 """
-動作編集用ドラフトモデル（デバッグログ強化版・型安全化）
+動作編集用ドラフトモデル（デフォルト名NewEvent対応版）
 """
 
 import logging
@@ -50,7 +50,7 @@ class SystemGlobal:
 
 @dataclass
 class TransitionParams:
-    event: str = ""
+    event: str = "NewEvent"  # デフォルトをNewEventに変更
     condition: str = ""
     pre_actions: List[str] = field(default_factory=list)
     target: str = ""
@@ -151,14 +151,17 @@ def transition_to_flow_item(trans) -> FlowItem:
         logger.error(f"Condition is not str: {type(condition)}. Using empty string.")
         condition = ""
 
-    logger.debug(f"transition_to_flow_item: condition='{condition}', pre_actions={pre_actions}, else_actions={else_actions}")
+    # イベント名が空の場合は「NewEvent」をデフォルトにする
+    event_name = trans.event if trans.event else "NewEvent"
+
+    logger.debug(f"transition_to_flow_item: event='{event_name}', condition='{condition}', pre_actions={pre_actions}, else_actions={else_actions}")
 
     return FlowItem(
         item_type="transition",
-        name=trans.event or "完了",
-        edited_text=trans.title if trans.title != "(無題遷移)" else trans.event or "完了",
+        name=event_name,
+        edited_text=trans.title if trans.title != "(無題遷移)" else event_name,
         params={
-            "event": trans.event,
+            "event": event_name,
             "condition": condition,
             "pre_actions": pre_actions,
             "target": trans.target,

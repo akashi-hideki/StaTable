@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/palette_widget.py
 """
-カテゴリ別折りたたみパレット（mimeDataオーバーライド方式）
+カテゴリ別折りたたみパレット（タイトル・ラベル追加版）
 """
 
 import json
@@ -9,7 +9,7 @@ import logging
 from PySide6.QtCore import Qt, QMimeData
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
-    QAbstractItemView, QPushButton
+    QAbstractItemView, QPushButton, QLabel, QGroupBox
 )
 
 logger = logging.getLogger("transition_editor_direct.palette")
@@ -26,7 +26,6 @@ class PaletteListWidget(QListWidget):
         self.setSelectionMode(QAbstractItemView.SingleSelection)
 
     def mimeData(self, items):
-        """ドラッグ開始時に呼ばれる。カスタムMIMEデータを設定する"""
         mime = QMimeData()
         if items:
             data = {
@@ -40,7 +39,7 @@ class PaletteListWidget(QListWidget):
 
 
 class PaletteWidget(QWidget):
-    """カテゴリ別折りたたみパレット（ロール関数＋遷移条件）"""
+    """カテゴリ別折りたたみパレット（イベント選択画面）"""
 
     def __init__(self, role_functions=None, parent=None):
         super().__init__(parent)
@@ -51,11 +50,19 @@ class PaletteWidget(QWidget):
     def _setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
 
-        # 🟧 ロール関数
-        func_container = QWidget()
-        v1 = QVBoxLayout(func_container)
-        v1.setContentsMargins(0, 0, 0, 0)
+        # タイトル
+        title_label = QLabel("イベント選択画面")
+        title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        title_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title_label)
+
+        # ロール関数セクション
+        func_group = QGroupBox("ロール関数")
+        v1 = QVBoxLayout(func_group)
+        v1.setContentsMargins(4, 4, 4, 4)
+        v1.setSpacing(2)
 
         self.function_list = PaletteListWidget("function")
         for func in self.role_functions:
@@ -63,22 +70,27 @@ class PaletteWidget(QWidget):
 
         add_func_btn = QPushButton("+ ロール関数追加")
         add_func_btn.clicked.connect(self._add_function)
+
         v1.addWidget(self.function_list)
         v1.addWidget(add_func_btn)
 
-        # 🟦 遷移条件
-        transition_container = QWidget()
-        v2 = QVBoxLayout(transition_container)
-        v2.setContentsMargins(0, 0, 0, 0)
+        # 遷移条件セクション
+        transition_group = QGroupBox("遷移条件")
+        v2 = QVBoxLayout(transition_group)
+        v2.setContentsMargins(4, 4, 4, 4)
+        v2.setSpacing(2)
 
         self.transition_list = PaletteListWidget("transition")
-        # 固定で「＋ 新しい条件」を追加
         self.transition_list.addItem("＋ 新しい条件")
 
-        v2.addWidget(self.transition_list)
+        add_transition_btn = QPushButton("+ 遷移条件追加")
+        add_transition_btn.clicked.connect(self._add_transition)
 
-        layout.addWidget(func_container)
-        layout.addWidget(transition_container)
+        v2.addWidget(self.transition_list)
+        v2.addWidget(add_transition_btn)
+
+        layout.addWidget(func_group)
+        layout.addWidget(transition_group)
         layout.addStretch()
 
         logger.debug(f"Palette items: functions={self.function_list.count()}, "
@@ -89,3 +101,12 @@ class PaletteWidget(QWidget):
         self.function_list.addItem(name)
         self.role_functions.append(name)
         logger.debug(f"Added function: {name}")
+
+    def _add_transition(self):
+        """遷移条件追加ボタン（既存のリストに項目を追加）"""
+        # 既に「＋ 新しい条件」がある場合は何もしない
+        for i in range(self.transition_list.count()):
+            if self.transition_list.item(i).text() == "＋ 新しい条件":
+                return
+        self.transition_list.addItem("＋ 新しい条件")
+        logger.debug("Added transition placeholder")

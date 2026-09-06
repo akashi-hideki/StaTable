@@ -1,16 +1,17 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（D&D対応、ダブルクリック編集・削除対応、デバッグログ強化版）
+キャンバスウィジェット（D&D対応、編集・削除・整列・複製対応）
 """
 
 import json
 import logging
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QPen, QFont, QAction
+from PySide6.QtCore import Qt, Signal, QPointF
+from PySide6.QtGui import QBrush, QColor, QPen, QFont, QAction, QPainter
 from PySide6.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsRectItem,
-    QGraphicsTextItem, QGraphicsLineItem, QToolTip, QMenu
+    QGraphicsTextItem, QGraphicsLineItem, QToolTip, QMenu,
+    QMessageBox
 )
 
 from .draft import ActionDraft, FlowItem, ensure_list
@@ -37,9 +38,12 @@ class FlowNodeItem(QGraphicsRectItem):
     def __init__(self, item_type, text, flow_item=None, parent=None):
         super().__init__(parent)
         self.item_type = item_type
-        self.flow_item = flow_item          # ★ 親のFlowItemを保持
+        self.flow_item = flow_item
         self.edit_callback = None
         self.delete_callback = None
+        self.duplicate_callback = None
+        self.move_up_callback = None
+        self.move_down_callback = None
 
         color = self.COLORS.get(item_type, QColor(200, 200, 200))
         self.setBrush(QBrush(color))
@@ -54,6 +58,7 @@ class FlowNodeItem(QGraphicsRectItem):
 
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsRectItem.ItemIsMovable, True)
 
     def hoverEnterEvent(self, event):
         QToolTip.showText(event.screenPos(), self.get_guidance_text())
@@ -71,15 +76,36 @@ class FlowNodeItem(QGraphicsRectItem):
 
     def contextMenuEvent(self, event):
         menu = QMenu()
+        edit_action = QAction("編集", menu)
+        edit_action.triggered.connect(lambda: self.edit_callback(self) if self.edit_callback else None)
+        menu.addAction(edit_action)
+
+        menu.addSeparator()
+
+        up_action = QAction("上へ", menu)
+        up_action.triggered.connect(lambda: self.move_up_callback(self) if self.move_up_callback else None)
+        menu.addAction(up_action)
+
+        down_action = QAction("下へ", menu)
+        down_action.triggered.connect(lambda: self.move_down_callback(self) if self.move_down_callback else None)
+        menu.addAction(down_action)
+
+        menu.addSeparator()
+
+        duplicate_action = QAction("複製", menu)
+        duplicate_action.triggered.connect(lambda: self.duplicate_callback(self) if self.duplicate_callback else None)
+        menu.addAction(duplicate_action)
+
         delete_action = QAction("削除", menu)
         delete_action.triggered.connect(lambda: self.delete_callback(self) if self.delete_callback else None)
         menu.addAction(delete_action)
+
         menu.exec(event.screenPos())
         event.accept()
 
     def get_guidance_text(self):
         if self.item_type == "transition":
-            return "遷移条件ノード\n・上にロール関数をドロップで直前処理追加\n・ダブルクリックで条件を編集\n・右クリックで削除"
+            return "遷移条件ノード\n・上にロール関数をドロップで直前処理追加\n・ダブルクリックで条件を編集\n・右クリックで各種操作"
         elif self.item_type == "function":
             return "ロール関数ノード\n・ダブルクリックで関数名を変更"
         elif self.item_type == "pre_action":
@@ -96,6 +122,9 @@ class FlowCanvas(QGraphicsView):
     draft_updated = Signal()
     node_edit_requested = Signal(object)
     node_delete_requested = Signal(object)
+    node_duplicate_requested = Signal(object)
+    node_move_up_requested = Signal(object)
+    node_move_down_requested = Signal(object)
 
     def __init__(self, draft: ActionDraft, parent=None):
         super().__init__(parent)
@@ -103,15 +132,17 @@ class FlowCanvas(QGraphicsView):
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
         self.setAcceptDrops(True)
-        # ビューポートにも設定
         self.viewport().setAcceptDrops(True)
         self.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.setMinimumHeight(500)
+        self.setRenderHint(QPainter.Antialiasing)
+        self.setDragMode(QGraphicsView.RubberBandDrag)  # 複数選択
+
+        self._grid_size = 20  # グリッドスナップ間隔
+        self._zoom_factor = 1.15
 
         logger.debug("=== FlowCanvas init ===")
         logger.debug(f"draft.flow_items count = {len(draft.flow_items)}")
-        for i, item in enumerate(draft.flow_items):
-            logger.debug(f"  flow_item[{i}]: type={item.item_type}, params={item.params}")
 
         self._rebuild()
         logger.debug("=== FlowCanvas init end ===")
@@ -134,6 +165,9 @@ class FlowCanvas(QGraphicsView):
                 node.setPos(left_x, y)
                 node.edit_callback = self._on_node_edit_requested
                 node.delete_callback = self._on_node_delete_requested
+                node.duplicate_callback = self._on_node_duplicate_requested
+                node.move_up_callback = self._on_node_move_up_requested
+                node.move_down_callback = self._on_node_move_down_requested
 
                 if prev_bottom > 0:
                     self.scene.addItem(QGraphicsLineItem(prev_x + 120, prev_bottom, left_x + 120, y))
@@ -153,6 +187,9 @@ class FlowCanvas(QGraphicsView):
                 node.setPos(left_x, y)
                 node.edit_callback = self._on_node_edit_requested
                 node.delete_callback = self._on_node_delete_requested
+                node.duplicate_callback = self._on_node_duplicate_requested
+                node.move_up_callback = self._on_node_move_up_requested
+                node.move_down_callback = self._on_node_move_down_requested
 
                 if prev_bottom > 0:
                     self.scene.addItem(QGraphicsLineItem(prev_x + 120, prev_bottom, left_x + 120, y))
@@ -163,9 +200,8 @@ class FlowCanvas(QGraphicsView):
 
                 child_y = y + node.rect().height() + 10
 
-                # 直前処理
                 for pre in pre_actions:
-                    child = FlowNodeItem("pre_action", pre, flow_item=item)  # ★親を渡す
+                    child = FlowNodeItem("pre_action", pre, flow_item=item)
                     self.scene.addItem(child)
                     child.setPos(left_x + child_indent, child_y)
                     child.edit_callback = None
@@ -174,13 +210,12 @@ class FlowCanvas(QGraphicsView):
                                                          left_x + child_indent + 120, child_y))
                     child_y += child.rect().height() + 10
 
-                # else条件
                 has_else = item.params.get('has_else', True)
                 else_target = item.params.get('else_target', '')
 
                 if has_else:
                     else_text = f"else → {else_target}" if else_target else "else（未設定）"
-                    else_node = FlowNodeItem("else", else_text, flow_item=item)  # ★親を渡す
+                    else_node = FlowNodeItem("else", else_text, flow_item=item)
                     self.scene.addItem(else_node)
                     else_node.setPos(left_x + child_indent, child_y)
                     else_node.edit_callback = None
@@ -190,9 +225,8 @@ class FlowCanvas(QGraphicsView):
                     else_y = child_y + else_node.rect().height() + 10
                     child_y = else_y
 
-                    # elseアクション
                     for ea in else_actions:
-                        ea_node = FlowNodeItem("else_action", ea, flow_item=item)  # ★親を渡す
+                        ea_node = FlowNodeItem("else_action", ea, flow_item=item)
                         self.scene.addItem(ea_node)
                         ea_node.setPos(left_x + child_indent * 2, child_y)
                         ea_node.edit_callback = None
@@ -201,7 +235,6 @@ class FlowCanvas(QGraphicsView):
                                                              left_x + child_indent * 2 + 120, child_y))
                         child_y += ea_node.rect().height() + 10
 
-                # 遷移先表示
                 target = item.params.get('target', '')
                 if target:
                     target_label = QGraphicsTextItem(f"遷移先: {target}")
@@ -229,6 +262,37 @@ class FlowCanvas(QGraphicsView):
     def _on_node_delete_requested(self, node: FlowNodeItem):
         logger.debug(f"Node delete requested: type={node.item_type}")
         self.node_delete_requested.emit(node)
+
+    def _on_node_duplicate_requested(self, node: FlowNodeItem):
+        logger.debug(f"Node duplicate requested: type={node.item_type}")
+        self.node_duplicate_requested.emit(node)
+
+    def _on_node_move_up_requested(self, node: FlowNodeItem):
+        logger.debug(f"Node move up requested: type={node.item_type}")
+        self.node_move_up_requested.emit(node)
+
+    def _on_node_move_down_requested(self, node: FlowNodeItem):
+        logger.debug(f"Node move down requested: type={node.item_type}")
+        self.node_move_down_requested.emit(node)
+
+    def auto_align(self):
+        """ノードを縦に等間隔で整列"""
+        y = 30
+        for item in self.scene.items():
+            if isinstance(item, FlowNodeItem) and item.flow_item is not None:
+                item.setPos(30, y)
+                y += item.rect().height() + 25
+        self.scene.setSceneRect(self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 40))
+        self.draft_updated.emit()
+
+    def wheelEvent(self, event):
+        """Ctrl+ホイールでズーム"""
+        if event.modifiers() & Qt.ControlModifier:
+            factor = self._zoom_factor if event.angleDelta().y() > 0 else 1 / self._zoom_factor
+            self.scale(factor, factor)
+            event.accept()
+        else:
+            super().wheelEvent(event)
 
     def dragEnterEvent(self, event):
         logger.debug(f"FlowCanvas.dragEnterEvent: formats={event.mimeData().formats()}")
@@ -296,9 +360,8 @@ class FlowCanvas(QGraphicsView):
                     logger.debug(f"Added function to flow: {name}")
 
             elif item_type == "transition":
-                # 遷移条件ノードは、セルのイベント名をそのまま使用
-                event_name = self.draft.event
-                display_name = event_name if event_name else "完了"
+                event_name = self.draft.event if self.draft.event else "NewEvent"
+                display_name = event_name if event_name else "NewEvent"
                 flow_item = FlowItem(
                     item_type="transition",
                     name=display_name,
