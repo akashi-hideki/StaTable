@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（D&D対応、ノード移動・編集・削除対応、原因特定ログ版）
+キャンバスウィジェット（D&D対応、ノード移動・編集・削除対応、リリース時再構築版）
 """
 
 import json
@@ -43,6 +43,7 @@ class FlowNodeItem(QGraphicsRectItem):
         self.duplicate_callback = None
         self.move_up_callback = None
         self.move_down_callback = None
+        self.move_finished_callback = None   # ★ 移動終了時に呼ばれる
 
         color = self.COLORS.get(item_type, QColor(200, 200, 200))
         self.setBrush(QBrush(color))
@@ -61,26 +62,22 @@ class FlowNodeItem(QGraphicsRectItem):
         self.setFlag(QGraphicsRectItem.ItemSendsGeometryChanges, True)
 
     def itemChange(self, change, value):
-        # ログは抑制（必要な時だけデバッグレベルを5以下に設定）
-        if change == QGraphicsRectItem.ItemPositionHasChanged and logger.getEffectiveLevel() <= 5:
-            logger.debug(f"FlowNodeItem position changed: type={self.item_type}, pos=({value.x():.1f}, {value.y():.1f})")
         return super().itemChange(change, value)
 
     def mousePressEvent(self, event):
         logger.debug(f"FlowNodeItem.mousePressEvent: type={self.item_type}")
-        event.accept()  # ★ これが必須
+        event.accept()
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        # ドラッグ中のログは最初の一回だけ（デバッグ用）
-        if logger.getEffectiveLevel() <= 5:
-            logger.debug(f"FlowNodeItem.mouseMoveEvent: type={self.item_type}")
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        logger.debug(f"FlowNodeItem.mouseReleaseEvent: type={self.item_type}, final_pos={self.pos()}")
-        event.accept()
+        logger.debug(f"FlowNodeItem.mouseReleaseEvent: type={self.item_type}")
         super().mouseReleaseEvent(event)
+        # ★ 移動終了を親キャンバスへ通知
+        if self.move_finished_callback:
+            self.move_finished_callback(self)
 
     def hoverEnterEvent(self, event):
         QToolTip.showText(event.screenPos(), self.get_guidance_text())
@@ -147,6 +144,7 @@ class FlowCanvas(QGraphicsView):
     node_duplicate_requested = Signal(object)
     node_move_up_requested = Signal(object)
     node_move_down_requested = Signal(object)
+    node_move_finished = Signal(object)   # ★ 移動終了シグナル
 
     def __init__(self, draft: ActionDraft, parent=None):
         super().__init__(parent)
@@ -173,17 +171,12 @@ class FlowCanvas(QGraphicsView):
         logger.debug("=== FlowCanvas init end ===")
 
     def mousePressEvent(self, event):
-        logger.debug(f"FlowCanvas.mousePressEvent: pos={event.position().toPoint()}")
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        # ログは最小限に（デバッグレベル5以下なら最初の一回のみ）
-        if logger.getEffectiveLevel() <= 5:
-            logger.debug(f"FlowCanvas.mouseMoveEvent: pos={event.position().toPoint()}")
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        logger.debug(f"FlowCanvas.mouseReleaseEvent: pos={event.position().toPoint()}")
         super().mouseReleaseEvent(event)
 
     def _rebuild(self):
@@ -207,6 +200,7 @@ class FlowCanvas(QGraphicsView):
                 node.duplicate_callback = self._on_node_duplicate_requested
                 node.move_up_callback = self._on_node_move_up_requested
                 node.move_down_callback = self._on_node_move_down_requested
+                node.move_finished_callback = self._on_node_move_finished   # ★
 
                 if prev_bottom > 0:
                     self.scene.addItem(QGraphicsLineItem(prev_x + 120, prev_bottom, left_x + 120, y))
@@ -229,6 +223,7 @@ class FlowCanvas(QGraphicsView):
                 node.duplicate_callback = self._on_node_duplicate_requested
                 node.move_up_callback = self._on_node_move_up_requested
                 node.move_down_callback = self._on_node_move_down_requested
+                node.move_finished_callback = self._on_node_move_finished   # ★
 
                 if prev_bottom > 0:
                     self.scene.addItem(QGraphicsLineItem(prev_x + 120, prev_bottom, left_x + 120, y))
@@ -245,6 +240,7 @@ class FlowCanvas(QGraphicsView):
                     child.setPos(left_x + child_indent, child_y)
                     child.edit_callback = None
                     child.delete_callback = None
+                    child.move_finished_callback = self._on_node_move_finished   # ★
                     self.scene.addItem(QGraphicsLineItem(left_x + 120, parent_bottom,
                                                          left_x + child_indent + 120, child_y))
                     child_y += child.rect().height() + 10
@@ -259,6 +255,7 @@ class FlowCanvas(QGraphicsView):
                     else_node.setPos(left_x + child_indent, child_y)
                     else_node.edit_callback = None
                     else_node.delete_callback = None
+                    else_node.move_finished_callback = self._on_node_move_finished   # ★
                     self.scene.addItem(QGraphicsLineItem(left_x + 120, parent_bottom,
                                                          left_x + child_indent + 120, child_y))
                     else_y = child_y + else_node.rect().height() + 10
@@ -270,6 +267,7 @@ class FlowCanvas(QGraphicsView):
                         ea_node.setPos(left_x + child_indent * 2, child_y)
                         ea_node.edit_callback = None
                         ea_node.delete_callback = None
+                        ea_node.move_finished_callback = self._on_node_move_finished   # ★
                         self.scene.addItem(QGraphicsLineItem(left_x + child_indent + 120, else_y - 10,
                                                              left_x + child_indent * 2 + 120, child_y))
                         child_y += ea_node.rect().height() + 10
@@ -313,6 +311,11 @@ class FlowCanvas(QGraphicsView):
     def _on_node_move_down_requested(self, node: FlowNodeItem):
         logger.debug(f"Node move down requested: type={node.item_type}")
         self.node_move_down_requested.emit(node)
+
+    def _on_node_move_finished(self, node: FlowNodeItem):
+        """ノードの移動が終了したときに呼ばれる"""
+        logger.debug(f"Node move finished: type={node.item_type}")
+        self.node_move_finished.emit(node)
 
     def auto_align(self):
         y = 30

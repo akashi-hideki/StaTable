@@ -112,6 +112,7 @@ class ActionEditorDialog(QDialog):
         self.canvas.node_move_up_requested.connect(self._on_node_move_up_requested)
         self.canvas.node_move_down_requested.connect(self._on_node_move_down_requested)
         self.canvas.draft_updated.connect(self.code_widget.update_code)
+        self.canvas.node_move_finished.connect(self._on_node_move_finished)
 
         self.palette.edit_function_requested.connect(self._on_edit_function_requested)
         self.palette.edit_transition_requested.connect(self._on_edit_transition_requested)
@@ -287,4 +288,9 @@ class ActionEditorDialog(QDialog):
     def _open_system_global(self):
         dialog = SystemGlobalDialog(self.draft, self)
         dialog.exec()
+        self.code_widget.update_code()
+
+    def _on_node_move_finished(self, node):
+        """ノード移動終了後にキャンバスを再構築"""
+        self.canvas._rebuild()
         self.code_widget.update_code()
