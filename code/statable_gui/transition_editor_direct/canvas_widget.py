@@ -37,7 +37,7 @@ class FlowNodeItem(QGraphicsRectItem):
     def __init__(self, item_type, text, flow_item=None, parent=None):
         super().__init__(parent)
         self.item_type = item_type
-        self.flow_item = flow_item
+        self.flow_item = flow_item          # ★ 親のFlowItemを保持
         self.edit_callback = None
         self.delete_callback = None
 
@@ -165,7 +165,7 @@ class FlowCanvas(QGraphicsView):
 
                 # 直前処理
                 for pre in pre_actions:
-                    child = FlowNodeItem("pre_action", pre)
+                    child = FlowNodeItem("pre_action", pre, flow_item=item)  # ★親を渡す
                     self.scene.addItem(child)
                     child.setPos(left_x + child_indent, child_y)
                     child.edit_callback = None
@@ -180,7 +180,7 @@ class FlowCanvas(QGraphicsView):
 
                 if has_else:
                     else_text = f"else → {else_target}" if else_target else "else（未設定）"
-                    else_node = FlowNodeItem("else", else_text)
+                    else_node = FlowNodeItem("else", else_text, flow_item=item)  # ★親を渡す
                     self.scene.addItem(else_node)
                     else_node.setPos(left_x + child_indent, child_y)
                     else_node.edit_callback = None
@@ -192,7 +192,7 @@ class FlowCanvas(QGraphicsView):
 
                     # elseアクション
                     for ea in else_actions:
-                        ea_node = FlowNodeItem("else_action", ea)
+                        ea_node = FlowNodeItem("else_action", ea, flow_item=item)  # ★親を渡す
                         self.scene.addItem(ea_node)
                         ea_node.setPos(left_x + child_indent * 2, child_y)
                         ea_node.edit_callback = None
@@ -284,11 +284,10 @@ class FlowCanvas(QGraphicsView):
                             target_flow_item.params.setdefault('pre_actions', []).append(name)
                             logger.debug(f"Added pre_action '{name}' to transition")
                     elif target_item.item_type == "else":
-                        for flow_item in self.draft.flow_items:
-                            if flow_item.item_type == "transition":
-                                flow_item.params.setdefault('else_actions', []).append(name)
-                                logger.debug(f"Added else_action '{name}' to transition")
-                                break
+                        target_flow_item = target_item.flow_item
+                        if target_flow_item:
+                            target_flow_item.params.setdefault('else_actions', []).append(name)
+                            logger.debug(f"Added else_action '{name}' to transition")
                     else:
                         self.draft.flow_items.append(FlowItem(item_type="function", name=name))
                         logger.debug(f"Added function to flow: {name}")
@@ -298,7 +297,7 @@ class FlowCanvas(QGraphicsView):
 
             elif item_type == "transition":
                 # 遷移条件ノードは、セルのイベント名をそのまま使用
-                event_name = self.draft.event  # 空でもよい（完了遷移）
+                event_name = self.draft.event
                 display_name = event_name if event_name else "完了"
                 flow_item = FlowItem(
                     item_type="transition",

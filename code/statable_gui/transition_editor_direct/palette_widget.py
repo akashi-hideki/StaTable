@@ -10,7 +10,7 @@ from PySide6.QtCore import Qt, QMimeData, QPoint
 from PySide6.QtGui import QDrag
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
-    QAbstractItemView, QPushButton
+    QAbstractItemView, QPushButton, QApplication
 )
 
 logger = logging.getLogger("transition_editor_direct.palette")
