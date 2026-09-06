@@ -25,11 +25,8 @@ from .canvas_widget import FlowCanvas, FlowNodeItem
 from .code_widget import CodeWidget
 from .system_global_dialog import SystemGlobalDialog
 
-# 条件ビルダー
-try:
-    from condition_builder_dialog import ConditionBuilderDialog
-except ImportError:
-    from statable_gui.condition_builder_dialog import ConditionBuilderDialog
+# 条件ビルダー（絶対インポート）
+from statable_gui.condition_builder_dialog import ConditionBuilderDialog
 
 # 共有ライブラリ
 try:
@@ -98,7 +95,10 @@ class ActionEditorDialog(QDialog):
         if not function_names:
             function_names = self.role_functions
 
-        self.palette = PaletteWidget(function_names)
+        # 共有遷移条件ライブラリの名前リスト
+        condition_names = [ct.name for ct in self.condition_library.list_all()]
+
+        self.palette = PaletteWidget(function_names, condition_names)
         self.palette.setMinimumWidth(200)
         splitter.addWidget(self.palette)
 
@@ -120,6 +120,9 @@ class ActionEditorDialog(QDialog):
         self.canvas.node_move_down_requested.connect(self._on_node_move_down_requested)
         self.canvas.draft_updated.connect(self.code_widget.update_code)
 
+        # パレットの「+ 遷移条件追加」ボタン
+        self.palette.add_transition_requested.connect(self._on_add_transition_requested)
+
         global_btn = QPushButton("システムグローバル...")
         global_btn.clicked.connect(self._open_system_global)
         main_layout.addWidget(global_btn)
@@ -137,6 +140,29 @@ class ActionEditorDialog(QDialog):
     def canvas_auto_align(self):
         """キャンバスのノードを自動整列"""
         self.canvas.auto_align()
+
+    def _on_add_transition_requested(self):
+        """パレットのボタンで新しい遷移条件を追加"""
+        event_name = self.draft.event if self.draft.event else "NewEvent"
+        display_name = event_name if event_name else "NewEvent"
+        flow_item = FlowItem(
+            item_type="transition",
+            name=display_name,
+            edited_text=display_name,
+            params={
+                "event": event_name,
+                "condition": "",
+                "pre_actions": [],
+                "target": "",
+                "has_else": True,
+                "else_target": "",
+                "else_actions": [],
+            }
+        )
+        self.draft.flow_items.append(flow_item)
+        self.canvas._rebuild()
+        self.code_widget.update_code()
+        logger.debug(f"Added new transition condition: event='{event_name}'")
 
     def _on_node_edit_requested(self, node: FlowNodeItem):
         logger.debug(f"Node edit requested: type={node.item_type}")

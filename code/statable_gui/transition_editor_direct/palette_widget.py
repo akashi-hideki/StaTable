@@ -1,12 +1,12 @@
 # statable_gui/transition_editor_direct/palette_widget.py
 """
-カテゴリ別折りたたみパレット（D&D・ボタン追加・デバッグログ強化版）
+カテゴリ別折りたたみパレット（共有ライブラリ対応・ボタン追加対応）
 """
 
 import json
 import logging
 
-from PySide6.QtCore import Qt, QMimeData
+from PySide6.QtCore import Qt, QMimeData, Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
     QAbstractItemView, QPushButton, QLabel, QGroupBox
@@ -41,9 +41,13 @@ class PaletteListWidget(QListWidget):
 class PaletteWidget(QWidget):
     """カテゴリ別折りたたみパレット（イベント選択画面）"""
 
-    def __init__(self, role_functions=None, parent=None):
+    # 新しい遷移条件追加を要求するシグナル
+    add_transition_requested = Signal()
+
+    def __init__(self, role_functions=None, condition_templates=None, parent=None):
         super().__init__(parent)
         self.role_functions = role_functions or []
+        self.condition_templates = condition_templates or []
         self._setup_ui()
         logger.debug("PaletteWidget initialized")
 
@@ -81,11 +85,16 @@ class PaletteWidget(QWidget):
         v2.setSpacing(2)
 
         self.transition_list = PaletteListWidget("transition")
+
+        # 共有遷移条件ライブラリの一覧を表示
+        for ct in self.condition_templates:
+            self.transition_list.addItem(ct.name)
+
+        # 新しい条件のプレースホルダー
         self.transition_list.addItem("＋ 新しい条件")
 
         add_transition_btn = QPushButton("+ 遷移条件追加")
-        add_transition_btn.clicked.connect(self._add_transition)
-
+        add_transition_btn.clicked.connect(self._on_add_transition_clicked)
         v2.addWidget(self.transition_list)
         v2.addWidget(add_transition_btn)
 
@@ -102,12 +111,7 @@ class PaletteWidget(QWidget):
         self.role_functions.append(name)
         logger.debug(f"Added function: {name}")
 
-    def _add_transition(self):
-        """遷移条件追加ボタン：既存の「＋ 新しい条件」を維持しつつ、ログを出力"""
-        # 既に「＋ 新しい条件」がある場合は何もしない
-        for i in range(self.transition_list.count()):
-            if self.transition_list.item(i).text() == "＋ 新しい条件":
-                logger.debug("Transition placeholder already exists")
-                return
-        self.transition_list.addItem("＋ 新しい条件")
-        logger.debug("Added transition placeholder")
+    def _on_add_transition_clicked(self):
+        """ボタンが押されたらシグナルを発火（キャンバスに新しい遷移条件を1つ追加）"""
+        logger.debug("Add transition button clicked")
+        self.add_transition_requested.emit()
