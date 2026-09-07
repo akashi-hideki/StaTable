@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（D&D対応、ノード移動・位置保存・重なり解消・詳細ログ版）
+キャンバスウィジェット（D&D対応、ノード移動・位置保存・全ノード重なり解消版）
 """
 
 import json
@@ -206,9 +206,6 @@ class FlowCanvas(QGraphicsView):
                     node.setPos(left_x, y)
                     logger.debug(f"  no saved position, placed at: ({left_x},{y})")
 
-                # 重なり解消（既存メインノードと重なっていたら下へずらす）
-                self._resolve_overlap(node, placed_main_nodes)
-
                 node.edit_callback = self._on_node_edit_requested
                 node.delete_callback = self._on_node_delete_requested
                 node.duplicate_callback = self._on_node_duplicate_requested
@@ -240,9 +237,6 @@ class FlowCanvas(QGraphicsView):
                 else:
                     node.setPos(left_x, y)
                     logger.debug(f"  no saved position, placed at: ({left_x},{y})")
-
-                # 重なり解消
-                self._resolve_overlap(node, placed_main_nodes)
 
                 node.edit_callback = self._on_node_edit_requested
                 node.delete_callback = self._on_node_delete_requested
@@ -316,13 +310,38 @@ class FlowCanvas(QGraphicsView):
             label.setPos(left_x, y + 20)
             self.scene.addItem(label)
 
+        # ★ 全メインノードの重なりを一括解消
+        self._resolve_all_overlaps(placed_main_nodes)
+
         self.scene.setSceneRect(self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 40))
         self.draft_updated.emit()
 
-        # ★ 再構築後の全ノード位置と重なりをログ出力
+        # 再構築後の全ノード位置と重なりをログ出力
         self._log_all_nodes_and_overlaps()
 
         logger.debug("=== _rebuild END ===")
+
+    def _resolve_all_overlaps(self, main_nodes: list):
+        """メインノード全体の重なりを解消する"""
+        changed = True
+        while changed:
+            changed = False
+            for i, node1 in enumerate(main_nodes):
+                for node2 in main_nodes[i+1:]:
+                    rect1 = node1.sceneBoundingRect()
+                    rect2 = node2.sceneBoundingRect()
+                    if rect1.intersects(rect2):
+                        # node2を下へずらす
+                        new_y = rect1.bottom() + 10
+                        new_y = round(new_y / self._grid_size) * self._grid_size
+                        node2.setY(new_y)
+                        if node2.flow_item:
+                            node2.flow_item.pos_y = new_y
+                        logger.debug(f"  Resolved overlap: moved '{node2.flow_item.name if node2.flow_item else node2.item_type}' to y={new_y}")
+                        changed = True
+                        break
+                if changed:
+                    break
 
     def _log_all_nodes_and_overlaps(self):
         """再構築後に全ノードの位置と重なりを出力"""
@@ -348,27 +367,6 @@ class FlowCanvas(QGraphicsView):
                 logger.warning(f"  - '{pair[0]}' and '{pair[1]}'")
         else:
             logger.debug("No overlaps after rebuild")
-
-    def _resolve_overlap(self, node: FlowNodeItem, placed_nodes: list):
-        """移動してきたノードが既存ノードと重なっていたら下にずらして解消する"""
-        node_rect = node.sceneBoundingRect()
-        for placed in placed_nodes:
-            if placed is node:
-                continue
-            placed_rect = placed.sceneBoundingRect()
-            if node_rect.intersects(placed_rect):
-                # 重なった相手の下端＋10にYをずらす
-                new_y = placed_rect.bottom() + 10
-                # グリッドに整える
-                new_y = round(new_y / self._grid_size) * self._grid_size
-                node.setY(new_y)
-                # 位置を更新
-                if node.flow_item:
-                    node.flow_item.pos_y = new_y
-                logger.debug(f"  Moved '{node.flow_item.name if node.flow_item else node.item_type}' down to y={new_y} due to overlap with '{placed.flow_item.name if placed.flow_item else placed.item_type}'")
-                # 再帰的に再チェック
-                node_rect = node.sceneBoundingRect()
-                self._resolve_overlap(node, placed_nodes)
 
     def _on_node_edit_requested(self, node: FlowNodeItem):
         logger.debug(f"Node edit requested: type={node.item_type}")
