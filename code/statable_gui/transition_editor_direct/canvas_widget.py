@@ -1,12 +1,12 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（D&D対応、ノード移動・位置保存・重なり解消版）
+キャンバスウィジェット（D&D対応、ノード移動・位置保存・重なり解消・詳細ログ版）
 """
 
 import json
 import logging
 
-from PySide6.QtCore import Qt, Signal, QTimer, QPointF, QRectF
+from PySide6.QtCore import Qt, Signal, QTimer, QPointF
 from PySide6.QtGui import QBrush, QColor, QPen, QFont, QAction, QPainter
 from PySide6.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsRectItem,
@@ -169,7 +169,7 @@ class FlowCanvas(QGraphicsView):
         self.setDragMode(QGraphicsView.NoDrag)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
 
-        self._grid_size = 20   # グリッドサイズ
+        self._grid_size = 20
         self._zoom_factor = 1.15
 
         logger.debug("=== FlowCanvas init ===")
@@ -318,7 +318,36 @@ class FlowCanvas(QGraphicsView):
 
         self.scene.setSceneRect(self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 40))
         self.draft_updated.emit()
+
+        # ★ 再構築後の全ノード位置と重なりをログ出力
+        self._log_all_nodes_and_overlaps()
+
         logger.debug("=== _rebuild END ===")
+
+    def _log_all_nodes_and_overlaps(self):
+        """再構築後に全ノードの位置と重なりを出力"""
+        nodes = [item for item in self.scene.items() if isinstance(item, FlowNodeItem)]
+        logger.debug("--- All nodes after rebuild ---")
+        for node in nodes:
+            name = node.flow_item.name if node.flow_item else node.item_type
+            rect = node.sceneBoundingRect()
+            logger.debug(f"  {node.item_type:12s} '{name:15s}' pos=({rect.x():.0f},{rect.y():.0f}) size=({rect.width():.0f}x{rect.height():.0f})")
+
+        # 重なりペアをチェック
+        overlapping_pairs = []
+        for i, node1 in enumerate(nodes):
+            for node2 in nodes[i+1:]:
+                if node1.sceneBoundingRect().intersects(node2.sceneBoundingRect()):
+                    name1 = node1.flow_item.name if node1.flow_item else node1.item_type
+                    name2 = node2.flow_item.name if node2.flow_item else node2.item_type
+                    overlapping_pairs.append((name1, name2))
+
+        if overlapping_pairs:
+            logger.warning("Overlap still exists after rebuild:")
+            for pair in overlapping_pairs:
+                logger.warning(f"  - '{pair[0]}' and '{pair[1]}'")
+        else:
+            logger.debug("No overlaps after rebuild")
 
     def _resolve_overlap(self, node: FlowNodeItem, placed_nodes: list):
         """移動してきたノードが既存ノードと重なっていたら下にずらして解消する"""
@@ -336,7 +365,7 @@ class FlowCanvas(QGraphicsView):
                 # 位置を更新
                 if node.flow_item:
                     node.flow_item.pos_y = new_y
-                logger.debug(f"  Moved '{node.flow_item.name if node.flow_item else node.item_type}' down to y={new_y} due to overlap")
+                logger.debug(f"  Moved '{node.flow_item.name if node.flow_item else node.item_type}' down to y={new_y} due to overlap with '{placed.flow_item.name if placed.flow_item else placed.item_type}'")
                 # 再帰的に再チェック
                 node_rect = node.sceneBoundingRect()
                 self._resolve_overlap(node, placed_nodes)
