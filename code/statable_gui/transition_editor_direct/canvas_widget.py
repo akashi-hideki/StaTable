@@ -1,12 +1,12 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（D&D対応、ノード移動・位置保存・重なりチェックデバッグ版）
+キャンバスウィジェット（D&D対応、ノード移動・位置保存・重なり解消版）
 """
 
 import json
 import logging
 
-from PySide6.QtCore import Qt, Signal, QTimer, QPointF
+from PySide6.QtCore import Qt, Signal, QTimer, QPointF, QRectF
 from PySide6.QtGui import QBrush, QColor, QPen, QFont, QAction, QPainter
 from PySide6.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsRectItem,
@@ -189,6 +189,9 @@ class FlowCanvas(QGraphicsView):
         prev_bottom = 0
         prev_x = left_x
 
+        # 配置済みメインノードを保持するリスト（重なり解消用）
+        placed_main_nodes = []
+
         for item_idx, item in enumerate(self.draft.flow_items):
             logger.debug(f"--- flow_item[{item_idx}]: type={item.item_type}, name={item.name}, saved_pos=({item.pos_x},{item.pos_y})")
 
@@ -202,12 +205,18 @@ class FlowCanvas(QGraphicsView):
                 else:
                     node.setPos(left_x, y)
                     logger.debug(f"  no saved position, placed at: ({left_x},{y})")
+
+                # 重なり解消（既存メインノードと重なっていたら下へずらす）
+                self._resolve_overlap(node, placed_main_nodes)
+
                 node.edit_callback = self._on_node_edit_requested
                 node.delete_callback = self._on_node_delete_requested
                 node.duplicate_callback = self._on_node_duplicate_requested
                 node.move_up_callback = self._on_node_move_up_requested
                 node.move_down_callback = self._on_node_move_down_requested
                 node.move_finished_callback = self._on_node_move_finished
+
+                placed_main_nodes.append(node)
 
                 if prev_bottom > 0:
                     self.scene.addItem(QGraphicsLineItem(prev_x + 120, prev_bottom, left_x + 120, y))
@@ -231,12 +240,18 @@ class FlowCanvas(QGraphicsView):
                 else:
                     node.setPos(left_x, y)
                     logger.debug(f"  no saved position, placed at: ({left_x},{y})")
+
+                # 重なり解消
+                self._resolve_overlap(node, placed_main_nodes)
+
                 node.edit_callback = self._on_node_edit_requested
                 node.delete_callback = self._on_node_delete_requested
                 node.duplicate_callback = self._on_node_duplicate_requested
                 node.move_up_callback = self._on_node_move_up_requested
                 node.move_down_callback = self._on_node_move_down_requested
                 node.move_finished_callback = self._on_node_move_finished
+
+                placed_main_nodes.append(node)
 
                 if prev_bottom > 0:
                     self.scene.addItem(QGraphicsLineItem(prev_x + 120, prev_bottom, left_x + 120, y))
@@ -305,6 +320,27 @@ class FlowCanvas(QGraphicsView):
         self.draft_updated.emit()
         logger.debug("=== _rebuild END ===")
 
+    def _resolve_overlap(self, node: FlowNodeItem, placed_nodes: list):
+        """移動してきたノードが既存ノードと重なっていたら下にずらして解消する"""
+        node_rect = node.sceneBoundingRect()
+        for placed in placed_nodes:
+            if placed is node:
+                continue
+            placed_rect = placed.sceneBoundingRect()
+            if node_rect.intersects(placed_rect):
+                # 重なった相手の下端＋10にYをずらす
+                new_y = placed_rect.bottom() + 10
+                # グリッドに整える
+                new_y = round(new_y / self._grid_size) * self._grid_size
+                node.setY(new_y)
+                # 位置を更新
+                if node.flow_item:
+                    node.flow_item.pos_y = new_y
+                logger.debug(f"  Moved '{node.flow_item.name if node.flow_item else node.item_type}' down to y={new_y} due to overlap")
+                # 再帰的に再チェック
+                node_rect = node.sceneBoundingRect()
+                self._resolve_overlap(node, placed_nodes)
+
     def _on_node_edit_requested(self, node: FlowNodeItem):
         logger.debug(f"Node edit requested: type={node.item_type}")
         self.node_edit_requested.emit(node)
@@ -326,70 +362,24 @@ class FlowCanvas(QGraphicsView):
         self.node_move_down_requested.emit(node)
 
     def _on_node_move_finished(self, node: FlowNodeItem):
-        """ノード移動終了時に位置保存＋重なりチェック"""
+        """ノード移動終了時に位置保存し、重なりがあれば遅延再構築"""
         if node.flow_item and node.item_type in ("function", "transition"):
             pos = node.pos()
             node.flow_item.pos_x = pos.x()
             node.flow_item.pos_y = pos.y()
             logger.debug(f"Saved position for '{node.flow_item.name}': ({pos.x():.1f}, {pos.y():.1f})")
 
-            # ★ 重なりチェック
-            self._check_overlap(node)
-
-    def _check_overlap(self, node: FlowNodeItem):
-        """ノードが他のノードと重なっているかチェックしてログ出力"""
-        node_rect = node.sceneBoundingRect()
-        overlapping = []
-        for other in self.scene.items():
-            if isinstance(other, FlowNodeItem) and other is not node:
-                if node_rect.intersects(other.sceneBoundingRect()):
-                    overlapping.append(other)
-
-        if overlapping:
-            node_name = node.flow_item.name if node.flow_item else node.item_type
-            logger.warning(f"Overlap detected for '{node_name}' at {node.pos()}:")
-            for other in overlapping:
-                other_name = other.flow_item.name if other.flow_item else other.item_type
-                logger.warning(f"  - overlaps with '{other_name}' at {other.pos()}")
-            # 空き位置を探す（デバッグ用）
-            free_pos = self._find_free_position(node, node.pos())
-            if free_pos:
-                logger.warning(f"  Recommended free position: ({free_pos.x():.1f}, {free_pos.y():.1f})")
-            else:
-                logger.warning("  No free position found nearby")
-        else:
-            node_name = node.flow_item.name if node.flow_item else node.item_type
-            logger.debug(f"No overlap for '{node_name}' at {node.pos()}")
-
-    def _find_free_position(self, node: FlowNodeItem, start_pos: QPointF):
-        """重ならない位置をグリッド周囲で探索（デバッグ用・実際の移動はしない）"""
-        grid = self._grid_size
-        # 現在位置を中心に周囲8方向＋少し離れた位置を試す
-        candidates = [
-            start_pos,
-            start_pos + QPointF(grid, 0), start_pos + QPointF(-grid, 0),
-            start_pos + QPointF(0, grid), start_pos + QPointF(0, -grid),
-            start_pos + QPointF(grid, grid), start_pos + QPointF(-grid, grid),
-            start_pos + QPointF(grid, -grid), start_pos + QPointF(-grid, -grid),
-            start_pos + QPointF(grid*2, 0), start_pos + QPointF(-grid*2, 0),
-            start_pos + QPointF(0, grid*2), start_pos + QPointF(0, -grid*2),
-        ]
-
-        for candidate in candidates:
-            # 一時的に移動して重なりチェック
-            original_pos = node.pos()
-            node.setPos(candidate)
+            # 重なりチェック
             node_rect = node.sceneBoundingRect()
-            overlapping = False
+            has_overlap = False
             for other in self.scene.items():
-                if isinstance(other, FlowNodeItem) and other is not node:
+                if isinstance(other, FlowNodeItem) and other is not node and other.item_type in ("function", "transition"):
                     if node_rect.intersects(other.sceneBoundingRect()):
-                        overlapping = True
+                        has_overlap = True
                         break
-            node.setPos(original_pos)  # 元に戻す
-            if not overlapping:
-                return candidate
-        return None
+            if has_overlap:
+                logger.debug("Overlap detected after move, scheduling rebuild...")
+                QTimer.singleShot(0, self._rebuild)
 
     def auto_align(self):
         y = 30
