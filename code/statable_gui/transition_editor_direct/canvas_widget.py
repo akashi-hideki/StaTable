@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（D&D対応、ノード移動・位置保存・全ノード重なり解消版）
+キャンバスウィジェット（A案：移動時再構築なし、位置保存、再構築時重なり解消）
 """
 
 import json
@@ -206,6 +206,9 @@ class FlowCanvas(QGraphicsView):
                     node.setPos(left_x, y)
                     logger.debug(f"  no saved position, placed at: ({left_x},{y})")
 
+                # メインノード同士の重なり解消
+                self._resolve_main_overlap(node, placed_main_nodes)
+
                 node.edit_callback = self._on_node_edit_requested
                 node.delete_callback = self._on_node_delete_requested
                 node.duplicate_callback = self._on_node_duplicate_requested
@@ -237,6 +240,9 @@ class FlowCanvas(QGraphicsView):
                 else:
                     node.setPos(left_x, y)
                     logger.debug(f"  no saved position, placed at: ({left_x},{y})")
+
+                # メインノード同士の重なり解消
+                self._resolve_main_overlap(node, placed_main_nodes)
 
                 node.edit_callback = self._on_node_edit_requested
                 node.delete_callback = self._on_node_delete_requested
@@ -310,52 +316,47 @@ class FlowCanvas(QGraphicsView):
             label.setPos(left_x, y + 20)
             self.scene.addItem(label)
 
-        # ★ 全メインノードの重なりを一括解消
-        self._resolve_all_overlaps(placed_main_nodes)
-
         self.scene.setSceneRect(self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 40))
         self.draft_updated.emit()
 
-        # 再構築後の全ノード位置と重なりをログ出力
-        self._log_all_nodes_and_overlaps()
+        # 再構築後のメインノード重なりチェック
+        self._log_main_overlaps()
 
         logger.debug("=== _rebuild END ===")
 
-    def _resolve_all_overlaps(self, main_nodes: list):
-        """メインノード全体の重なりを解消する"""
-        changed = True
-        while changed:
-            changed = False
-            for i, node1 in enumerate(main_nodes):
-                for node2 in main_nodes[i+1:]:
-                    rect1 = node1.sceneBoundingRect()
-                    rect2 = node2.sceneBoundingRect()
-                    if rect1.intersects(rect2):
-                        # node2を下へずらす
-                        new_y = rect1.bottom() + 10
-                        new_y = round(new_y / self._grid_size) * self._grid_size
-                        node2.setY(new_y)
-                        if node2.flow_item:
-                            node2.flow_item.pos_y = new_y
-                        logger.debug(f"  Resolved overlap: moved '{node2.flow_item.name if node2.flow_item else node2.item_type}' to y={new_y}")
-                        changed = True
-                        break
-                if changed:
-                    break
+    def _resolve_main_overlap(self, node: FlowNodeItem, placed_nodes: list):
+        """メインノード同士の重なりを解消（下にずらす）"""
+        node_rect = node.sceneBoundingRect()
+        for placed in placed_nodes:
+            if placed is node:
+                continue
+            placed_rect = placed.sceneBoundingRect()
+            if node_rect.intersects(placed_rect):
+                new_y = placed_rect.bottom() + 10
+                new_y = round(new_y / self._grid_size) * self._grid_size
+                node.setY(new_y)
+                if node.flow_item:
+                    node.flow_item.pos_y = new_y
+                logger.debug(f"  Moved '{node.flow_item.name if node.flow_item else node.item_type}' down to y={new_y} due to overlap with '{placed.flow_item.name if placed.flow_item else placed.item_type}'")
+                node_rect = node.sceneBoundingRect()
+                # 再帰的に再チェック
+                self._resolve_main_overlap(node, placed_nodes)
 
-    def _log_all_nodes_and_overlaps(self):
-        """再構築後に全ノードの位置と重なりを出力"""
-        nodes = [item for item in self.scene.items() if isinstance(item, FlowNodeItem)]
-        logger.debug("--- All nodes after rebuild ---")
-        for node in nodes:
+    def _log_main_overlaps(self):
+        """メインノード同士の重なりチェック（function/transitionのみ）"""
+        main_nodes = [item for item in self.scene.items()
+                      if isinstance(item, FlowNodeItem) and item.item_type in ("function", "transition")]
+
+        logger.debug("--- Main nodes after rebuild ---")
+        for node in main_nodes:
             name = node.flow_item.name if node.flow_item else node.item_type
             rect = node.sceneBoundingRect()
             logger.debug(f"  {node.item_type:12s} '{name:15s}' pos=({rect.x():.0f},{rect.y():.0f}) size=({rect.width():.0f}x{rect.height():.0f})")
 
         # 重なりペアをチェック
         overlapping_pairs = []
-        for i, node1 in enumerate(nodes):
-            for node2 in nodes[i+1:]:
+        for i, node1 in enumerate(main_nodes):
+            for node2 in main_nodes[i+1:]:
                 if node1.sceneBoundingRect().intersects(node2.sceneBoundingRect()):
                     name1 = node1.flow_item.name if node1.flow_item else node1.item_type
                     name2 = node2.flow_item.name if node2.flow_item else node2.item_type
@@ -366,7 +367,7 @@ class FlowCanvas(QGraphicsView):
             for pair in overlapping_pairs:
                 logger.warning(f"  - '{pair[0]}' and '{pair[1]}'")
         else:
-            logger.debug("No overlaps after rebuild")
+            logger.debug("No overlaps after rebuild (main nodes)")
 
     def _on_node_edit_requested(self, node: FlowNodeItem):
         logger.debug(f"Node edit requested: type={node.item_type}")
@@ -389,18 +390,19 @@ class FlowCanvas(QGraphicsView):
         self.node_move_down_requested.emit(node)
 
     def _on_node_move_finished(self, node: FlowNodeItem):
-        """ノード移動終了時に位置保存し、重なりがあれば遅延再構築"""
+        """ノード移動終了時：位置保存し、重なりがあれば遅延再構築"""
         if node.flow_item and node.item_type in ("function", "transition"):
             pos = node.pos()
             node.flow_item.pos_x = pos.x()
             node.flow_item.pos_y = pos.y()
             logger.debug(f"Saved position for '{node.flow_item.name}': ({pos.x():.1f}, {pos.y():.1f})")
 
-            # 重なりチェック
-            node_rect = node.sceneBoundingRect()
+            # メインノード同士の重なりチェック
             has_overlap = False
+            node_rect = node.sceneBoundingRect()
             for other in self.scene.items():
-                if isinstance(other, FlowNodeItem) and other is not node and other.item_type in ("function", "transition"):
+                if isinstance(other, FlowNodeItem) and other is not node \
+                        and other.item_type in ("function", "transition"):
                     if node_rect.intersects(other.sceneBoundingRect()):
                         has_overlap = True
                         break
