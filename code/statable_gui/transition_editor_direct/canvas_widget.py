@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（A案：移動時再構築なし、位置保存、再構築時重なり解消）
+キャンバスウィジェット（C案：再構築時に子ノード含む全体レイアウト再計算）
 """
 
 import json
@@ -175,188 +175,127 @@ class FlowCanvas(QGraphicsView):
         logger.debug("=== FlowCanvas init ===")
         logger.debug(f"draft.flow_items count = {len(draft.flow_items)}")
         for i, item in enumerate(draft.flow_items):
-            logger.debug(f"  flow_item[{i}]: type={item.item_type}, name={item.name}, pos=({item.pos_x},{item.pos_y})")
+            logger.debug(f"  flow_item[{i}]: type={item.item_type}, name={item.name}")
 
         self._rebuild()
         logger.debug("=== FlowCanvas init end ===")
 
     def _rebuild(self):
-        logger.debug("=== _rebuild START ===")
+        """
+        C案: 子ノードを含む全ノードを上から順に配置し、重なりを解消する。
+        """
+        logger.debug("=== _rebuild START (C案: 全ノード再配置) ===")
         self.scene.clear()
-        y = 30
-        left_x = 30
-        child_indent = 30
-        prev_bottom = 0
-        prev_x = left_x
 
-        # 配置済みメインノードを保持するリスト（重なり解消用）
-        placed_main_nodes = []
+        # ノードと接続線ペアを保持するリスト
+        nodes = []                # (FlowNodeItem, indent_x)
+        connection_pairs = []     # (parent_node, child_node)
 
+        # 1. flow_items から全ノードを生成
         for item_idx, item in enumerate(self.draft.flow_items):
-            logger.debug(f"--- flow_item[{item_idx}]: type={item.item_type}, name={item.name}, saved_pos=({item.pos_x},{item.pos_y})")
-
             if item.item_type == "function":
                 node = FlowNodeItem("function", item.display_text(), flow_item=item)
-                self.scene.addItem(node)
-                # 保存された位置を復元
-                if item.pos_x is not None and item.pos_y is not None:
-                    node.setPos(item.pos_x, item.pos_y)
-                    logger.debug(f"  restored saved position: ({item.pos_x},{item.pos_y})")
-                else:
-                    node.setPos(left_x, y)
-                    logger.debug(f"  no saved position, placed at: ({left_x},{y})")
-
-                # メインノード同士の重なり解消
-                self._resolve_main_overlap(node, placed_main_nodes)
-
-                node.edit_callback = self._on_node_edit_requested
-                node.delete_callback = self._on_node_delete_requested
-                node.duplicate_callback = self._on_node_duplicate_requested
-                node.move_up_callback = self._on_node_move_up_requested
-                node.move_down_callback = self._on_node_move_down_requested
-                node.move_finished_callback = self._on_node_move_finished
-
-                placed_main_nodes.append(node)
-
-                if prev_bottom > 0:
-                    self.scene.addItem(QGraphicsLineItem(prev_x + 120, prev_bottom, left_x + 120, y))
-
-                prev_bottom = y + node.rect().height()
-                prev_x = left_x
-                y += node.rect().height() + 25
+                nodes.append((node, 30))  # インデント30
+                self._setup_node_callbacks(node)
 
             elif item.item_type == "transition":
+                # メイン transition
                 pre_actions = ensure_list(item.params.get('pre_actions', []))
                 else_actions = ensure_list(item.params.get('else_actions', []))
-                condition = item.params.get('condition', '')
-                logger.debug(f"  transition: event='{item.params.get('event','')}', condition='{condition}', pre_actions={pre_actions}, else_actions={else_actions}")
-
-                node = FlowNodeItem("transition", item.display_text(), flow_item=item)
-                self.scene.addItem(node)
-                # 保存された位置を復元
-                if item.pos_x is not None and item.pos_y is not None:
-                    node.setPos(item.pos_x, item.pos_y)
-                    logger.debug(f"  restored saved position: ({item.pos_x},{item.pos_y})")
-                else:
-                    node.setPos(left_x, y)
-                    logger.debug(f"  no saved position, placed at: ({left_x},{y})")
-
-                # メインノード同士の重なり解消
-                self._resolve_main_overlap(node, placed_main_nodes)
-
-                node.edit_callback = self._on_node_edit_requested
-                node.delete_callback = self._on_node_delete_requested
-                node.duplicate_callback = self._on_node_duplicate_requested
-                node.move_up_callback = self._on_node_move_up_requested
-                node.move_down_callback = self._on_node_move_down_requested
-                node.move_finished_callback = self._on_node_move_finished
-
-                placed_main_nodes.append(node)
-
-                if prev_bottom > 0:
-                    self.scene.addItem(QGraphicsLineItem(prev_x + 120, prev_bottom, left_x + 120, y))
-
-                parent_bottom = y + node.rect().height()
-                prev_bottom = parent_bottom
-                prev_x = left_x
-
-                child_y = y + node.rect().height() + 10
-
-                for pre in pre_actions:
-                    child = FlowNodeItem("pre_action", pre, flow_item=item)
-                    self.scene.addItem(child)
-                    child.setPos(left_x + child_indent, child_y)
-                    child.edit_callback = None
-                    child.delete_callback = None
-                    # pre_actionは位置保存しない
-                    self.scene.addItem(QGraphicsLineItem(left_x + 120, parent_bottom,
-                                                         left_x + child_indent + 120, child_y))
-                    child_y += child.rect().height() + 10
-
                 has_else = item.params.get('has_else', True)
                 else_target = item.params.get('else_target', '')
 
+                main_node = FlowNodeItem("transition", item.display_text(), flow_item=item)
+                nodes.append((main_node, 30))
+                self._setup_node_callbacks(main_node)
+
+                # pre_actions
+                for pre in pre_actions:
+                    pre_node = FlowNodeItem("pre_action", pre, flow_item=item)
+                    nodes.append((pre_node, 60))
+                    connection_pairs.append((main_node, pre_node))
+
+                # else node
                 if has_else:
                     else_text = f"else → {else_target}" if else_target else "else（未設定）"
                     else_node = FlowNodeItem("else", else_text, flow_item=item)
-                    self.scene.addItem(else_node)
-                    else_node.setPos(left_x + child_indent, child_y)
-                    else_node.edit_callback = None
-                    else_node.delete_callback = None
-                    # elseも位置保存しない
-                    self.scene.addItem(QGraphicsLineItem(left_x + 120, parent_bottom,
-                                                         left_x + child_indent + 120, child_y))
-                    else_y = child_y + else_node.rect().height() + 10
-                    child_y = else_y
+                    nodes.append((else_node, 60))
+                    connection_pairs.append((main_node, else_node))
 
+                    # else_actions
                     for ea in else_actions:
                         ea_node = FlowNodeItem("else_action", ea, flow_item=item)
-                        self.scene.addItem(ea_node)
-                        ea_node.setPos(left_x + child_indent * 2, child_y)
-                        ea_node.edit_callback = None
-                        ea_node.delete_callback = None
-                        # else_actionも位置保存しない
-                        self.scene.addItem(QGraphicsLineItem(left_x + child_indent + 120, else_y - 10,
-                                                             left_x + child_indent * 2 + 120, child_y))
-                        child_y += ea_node.rect().height() + 10
+                        nodes.append((ea_node, 90))
+                        connection_pairs.append((else_node, ea_node))
 
-                target = item.params.get('target', '')
-                if target:
-                    target_label = QGraphicsTextItem(f"遷移先: {target}")
-                    target_label.setDefaultTextColor(Qt.darkGreen)
-                    target_label.setFont(QFont("Arial", 10, QFont.Bold))
-                    target_label.setPos(left_x + child_indent, child_y)
-                    self.scene.addItem(target_label)
-                    child_y += 30
+        # 2. ノードを上から順に配置
+        current_y = 30
+        placed_nodes = []   # 配置済みノード（重なり判定用）
 
-                y = child_y + 15 if (pre_actions or has_else or else_actions or target) else parent_bottom + 25
+        for node, indent_x in nodes:
+            # X座標はインデント固定
+            node.setPos(indent_x, current_y)
 
-        if self.draft.default_target:
-            label = QGraphicsTextItem(f"デフォルト遷移先: {self.draft.default_target}")
-            label.setPos(left_x, y + 20)
-            self.scene.addItem(label)
+            # 既配置ノードと重ならないようにYを調整
+            while self._has_overlap_with_any(node, placed_nodes):
+                # 重なった相手の下端 + 10 に下げる
+                max_bottom = 0
+                node_rect = node.sceneBoundingRect()
+                for placed in placed_nodes:
+                    placed_rect = placed.sceneBoundingRect()
+                    if node_rect.intersects(placed_rect):
+                        max_bottom = max(max_bottom, placed_rect.bottom())
+                new_y = max_bottom + 10
+                node.setY(new_y)
+                node_rect = node.sceneBoundingRect()
 
+            # 配置済みリストに追加
+            placed_nodes.append(node)
+            self.scene.addItem(node)
+
+            # 次の初期Y
+            current_y = node.sceneBoundingRect().bottom() + 10
+
+        # 3. 接続線を追加
+        for parent, child in connection_pairs:
+            p_rect = parent.sceneBoundingRect()
+            c_rect = child.sceneBoundingRect()
+            line = QGraphicsLineItem(
+                p_rect.center().x(), p_rect.bottom(),
+                c_rect.center().x(), c_rect.top()
+            )
+            line.setPen(QPen(QColor(100, 100, 100), 1, Qt.DashLine))
+            self.scene.addItem(line)
+
+        # 4. シーン矩形更新
         self.scene.setSceneRect(self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 40))
         self.draft_updated.emit()
 
-        # 再構築後のメインノード重なりチェック
-        self._log_main_overlaps()
+        # 5. 全ノードの重なりチェックログ
+        self._log_all_overlaps(placed_nodes)
 
-        logger.debug("=== _rebuild END ===")
+        logger.debug("=== _rebuild END (C案) ===")
 
-    def _resolve_main_overlap(self, node: FlowNodeItem, placed_nodes: list):
-        """メインノード同士の重なりを解消（下にずらす）"""
+    def _has_overlap_with_any(self, node, placed_nodes):
+        """配置済みノードのいずれかと重なるか判定"""
         node_rect = node.sceneBoundingRect()
         for placed in placed_nodes:
-            if placed is node:
-                continue
-            placed_rect = placed.sceneBoundingRect()
-            if node_rect.intersects(placed_rect):
-                new_y = placed_rect.bottom() + 10
-                new_y = round(new_y / self._grid_size) * self._grid_size
-                node.setY(new_y)
-                if node.flow_item:
-                    node.flow_item.pos_y = new_y
-                logger.debug(f"  Moved '{node.flow_item.name if node.flow_item else node.item_type}' down to y={new_y} due to overlap with '{placed.flow_item.name if placed.flow_item else placed.item_type}'")
-                node_rect = node.sceneBoundingRect()
-                # 再帰的に再チェック
-                self._resolve_main_overlap(node, placed_nodes)
+            if node_rect.intersects(placed.sceneBoundingRect()):
+                return True
+        return False
 
-    def _log_main_overlaps(self):
-        """メインノード同士の重なりチェック（function/transitionのみ）"""
-        main_nodes = [item for item in self.scene.items()
-                      if isinstance(item, FlowNodeItem) and item.item_type in ("function", "transition")]
-
-        logger.debug("--- Main nodes after rebuild ---")
-        for node in main_nodes:
+    def _log_all_overlaps(self, nodes):
+        """全ノードの位置と重なりペアをログ出力"""
+        logger.debug("--- All nodes after rebuild ---")
+        for node in nodes:
             name = node.flow_item.name if node.flow_item else node.item_type
             rect = node.sceneBoundingRect()
             logger.debug(f"  {node.item_type:12s} '{name:15s}' pos=({rect.x():.0f},{rect.y():.0f}) size=({rect.width():.0f}x{rect.height():.0f})")
 
         # 重なりペアをチェック
         overlapping_pairs = []
-        for i, node1 in enumerate(main_nodes):
-            for node2 in main_nodes[i+1:]:
+        for i, node1 in enumerate(nodes):
+            for node2 in nodes[i+1:]:
                 if node1.sceneBoundingRect().intersects(node2.sceneBoundingRect()):
                     name1 = node1.flow_item.name if node1.flow_item else node1.item_type
                     name2 = node2.flow_item.name if node2.flow_item else node2.item_type
@@ -367,7 +306,16 @@ class FlowCanvas(QGraphicsView):
             for pair in overlapping_pairs:
                 logger.warning(f"  - '{pair[0]}' and '{pair[1]}'")
         else:
-            logger.debug("No overlaps after rebuild (main nodes)")
+            logger.debug("No overlaps after rebuild (all nodes)")
+
+    def _setup_node_callbacks(self, node):
+        """ノードにコールバックを設定"""
+        node.edit_callback = self._on_node_edit_requested
+        node.delete_callback = self._on_node_delete_requested
+        node.duplicate_callback = self._on_node_duplicate_requested
+        node.move_up_callback = self._on_node_move_up_requested
+        node.move_down_callback = self._on_node_move_down_requested
+        node.move_finished_callback = self._on_node_move_finished
 
     def _on_node_edit_requested(self, node: FlowNodeItem):
         logger.debug(f"Node edit requested: type={node.item_type}")
@@ -390,36 +338,20 @@ class FlowCanvas(QGraphicsView):
         self.node_move_down_requested.emit(node)
 
     def _on_node_move_finished(self, node: FlowNodeItem):
-        """ノード移動終了時：位置保存し、重なりがあれば遅延再構築"""
+        """
+        ノード移動終了時：
+        C案では、移動後に自動で全体レイアウトを再構築する。
+        """
         if node.flow_item and node.item_type in ("function", "transition"):
             pos = node.pos()
-            node.flow_item.pos_x = pos.x()
-            node.flow_item.pos_y = pos.y()
-            logger.debug(f"Saved position for '{node.flow_item.name}': ({pos.x():.1f}, {pos.y():.1f})")
-
-            # メインノード同士の重なりチェック
-            has_overlap = False
-            node_rect = node.sceneBoundingRect()
-            for other in self.scene.items():
-                if isinstance(other, FlowNodeItem) and other is not node \
-                        and other.item_type in ("function", "transition"):
-                    if node_rect.intersects(other.sceneBoundingRect()):
-                        has_overlap = True
-                        break
-            if has_overlap:
-                logger.debug("Overlap detected after move, scheduling rebuild...")
-                QTimer.singleShot(0, self._rebuild)
+            # 位置はFlowItemに保存しない（再構築で自動配置するため）
+            logger.debug(f"Node moved: '{node.flow_item.name}' to ({pos.x():.1f}, {pos.y():.1f})")
+            # 即座に再構築を予約
+            QTimer.singleShot(0, self._rebuild)
 
     def auto_align(self):
-        y = 30
-        for item in self.scene.items():
-            if isinstance(item, FlowNodeItem) and item.flow_item is not None:
-                item.setPos(30, y)
-                item.flow_item.pos_x = 30
-                item.flow_item.pos_y = y
-                y += item.rect().height() + 25
-        self.scene.setSceneRect(self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 40))
-        self.draft_updated.emit()
+        """全ノードを自動整列（C案では_rebuildと同じ）"""
+        self._rebuild()
 
     def wheelEvent(self, event):
         if event.modifiers() & Qt.ControlModifier:
