@@ -1,6 +1,6 @@
 # statable_gui/condition_builder_dialog.py
 """
-遷移条件ビルダーダイアログ（リテラル化対応・イベント名編集欄追加）
+遷移条件ビルダーダイアログ（リテラル化対応・イベント名編集欄追加・遷移先ステート指定対応）
 """
 
 import re
@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPlainTextEdit, QTreeWidget,
     QTreeWidgetItem, QLabel, QLineEdit, QPushButton, QDialogButtonBox,
     QSplitter, QGroupBox, QFrame, QSizePolicy, QMessageBox, QTableWidget,
-    QTableWidgetItem, QHeaderView
+    QTableWidgetItem, QHeaderView, QComboBox
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFontMetrics
@@ -39,6 +39,7 @@ class ConditionBuilderDialog(QDialog):
                  global_defs: GlobalDefinitions = None,
                  state_machine: StateMachine = None,
                  literal_library: LiteralLibrary = None,
+                 states: list = None,
                  parent=None):
         super().__init__(parent)
         self.setWindowTitle("遷移条件ビルダー")
@@ -49,11 +50,20 @@ class ConditionBuilderDialog(QDialog):
         self.literal_library = literal_library if literal_library else LiteralLibrary()
         self.event_name = event_name
 
+        # 遷移先ステート選択肢（外部から渡されたリスト、なければステートマシンから取得）
+        self.states = states if states is not None else self._get_states_from_state_machine()
+
         self._setup_ui()
         self.condition_edit.setPlainText(condition)
         self.event_name_edit.setText(event_name)
         self._populate_tree()
         self._update_c_code_view()
+
+    def _get_states_from_state_machine(self):
+        """ステートマシンから状態名リストを取得"""
+        if self.state_machine:
+            return [s.name for s in self.state_machine.states.values()]
+        return []
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -66,6 +76,24 @@ class ConditionBuilderDialog(QDialog):
         self.event_name_edit = QLineEdit()
         event_layout.addWidget(self.event_name_edit)
         main_layout.addLayout(event_layout)
+
+        # 遷移先ステート選択
+        target_layout = QHBoxLayout()
+        target_layout.addWidget(QLabel("遷移先:"))
+        self.target_combo = QComboBox()
+        self.target_combo.addItem("")           # 未設定用
+        self.target_combo.addItems(self.states)
+        target_layout.addWidget(self.target_combo)
+        main_layout.addLayout(target_layout)
+
+        # else遷移先ステート選択
+        else_target_layout = QHBoxLayout()
+        else_target_layout.addWidget(QLabel("else遷移先:"))
+        self.else_target_combo = QComboBox()
+        self.else_target_combo.addItem("")      # 未設定用
+        self.else_target_combo.addItems(self.states)
+        else_target_layout.addWidget(self.else_target_combo)
+        main_layout.addLayout(else_target_layout)
 
         main_splitter = QSplitter(Qt.Horizontal)
 
@@ -321,6 +349,12 @@ class ConditionBuilderDialog(QDialog):
 
     def get_event_name(self) -> str:
         return self.event_name_edit.text().strip()
+
+    def get_target_state(self) -> str:
+        return self.target_combo.currentText().strip()
+
+    def get_else_target_state(self) -> str:
+        return self.else_target_combo.currentText().strip()
 
     def get_c_code_text(self) -> str:
         return self.c_code_view.toPlainText().strip()

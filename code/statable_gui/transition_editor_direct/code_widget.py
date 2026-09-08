@@ -32,20 +32,23 @@ class CodeWidget(QPlainTextEdit):
         if self.draft.system_globals:
             lines.append("")
 
-        # ロール関数プロトタイプ収集
-        proto_lines = []
+        # ロール関数プロトタイプ収集（重複を除去）
+        proto_names = set()
         for item in self.draft.flow_items:
             if item.item_type == "transition":
                 pre_actions = ensure_list(item.params.get('pre_actions', []))
                 else_actions = ensure_list(item.params.get('else_actions', []))
                 for p in pre_actions:
-                    proto_lines.append(f"void RoleFunc_{p}(SystemContext_t *ctx, const TransitionContext_t *transition);")
+                    proto_names.add(p)
                 for ea in else_actions:
-                    proto_lines.append(f"void RoleFunc_{ea}(SystemContext_t *ctx, const TransitionContext_t *transition);")
+                    proto_names.add(ea)
             elif item.item_type == "function":
-                proto_lines.append(f"void RoleFunc_{item.name}(SystemContext_t *ctx, const TransitionContext_t *transition);")
-        if proto_lines:
-            lines.extend(proto_lines)
+                proto_names.add(item.name)
+
+        if proto_names:
+            # ソートして安定した順序で出力
+            for name in sorted(proto_names):
+                lines.append(f"void RoleFunc_{name}(SystemContext_t *ctx, const TransitionContext_t *transition);")
             lines.append("")
 
         # 本体
@@ -53,16 +56,23 @@ class CodeWidget(QPlainTextEdit):
             if item.item_type == "transition":
                 cond = item.params.get('condition', '')
                 target = item.params.get('target', '')
+                if not target:
+                    target = self.draft.default_target  # フォールバック
                 pre_actions = ensure_list(item.params.get('pre_actions', []))
                 else_actions = ensure_list(item.params.get('else_actions', []))
                 has_else = item.params.get('has_else', True)
                 else_target = item.params.get('else_target', '')
+                if not else_target:
+                    else_target = self.draft.default_target  # フォールバック
 
                 if cond:
                     lines.append(f"if ({cond}) {{")
                     for p in pre_actions:
                         lines.append(f"    RoleFunc_{p}(ctx, transition);")
-                    lines.append(f"    next_state = {target};")
+                    if target:
+                        lines.append(f"    next_state = {target};")
+                    else:
+                        lines.append("    // 遷移先未設定")
                     lines.append("}")
                     if has_else:
                         lines.append("else {")
@@ -74,11 +84,11 @@ class CodeWidget(QPlainTextEdit):
                             lines.append("    // else遷移先（未設定）")
                         lines.append("}")
                 else:
-                    lines.append(f"next_state = {target};")
+                    if target:
+                        lines.append(f"next_state = {target};")
+                    else:
+                        lines.append("// 遷移先未設定")
             elif item.item_type == "function":
                 lines.append(f"RoleFunc_{item.name}(ctx, transition);")
-
-        if self.draft.default_target:
-            lines.append(f"// default: {self.draft.default_target}")
 
         return "\n".join(lines)

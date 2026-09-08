@@ -171,6 +171,7 @@ class ActionEditorDialog(QDialog):
             global_defs=self.global_defs,
             state_machine=self.state_machine,
             literal_library=self.literal_library,
+            states=[s.name for s in self.state_machine.states.values()] if self.state_machine else [],
             parent=self
         )
         if dlg.exec() == QDialog.Accepted:
@@ -215,12 +216,15 @@ class ActionEditorDialog(QDialog):
         elif node.item_type == "transition":
             flow_item = node.flow_item
             if flow_item:
+                # 遷移先ステートの選択肢をステートマシンから取得
+                states_list = [s.name for s in self.state_machine.states.values()] if self.state_machine else []
                 dlg = ConditionBuilderDialog(
                     condition=flow_item.params.get('condition', ''),
                     event_name=flow_item.params.get('event', self.draft.event),
                     global_defs=self.global_defs,
                     state_machine=self.state_machine,
                     literal_library=self.literal_library,
+                    states=states_list,
                     parent=self
                 )
                 if dlg.exec() == QDialog.Accepted:
@@ -228,6 +232,8 @@ class ActionEditorDialog(QDialog):
                     new_event_name = dlg.get_event_name()
                     flow_item.params['condition'] = new_condition
                     flow_item.params['event'] = new_event_name
+                    flow_item.params['target'] = dlg.get_target_state()
+                    flow_item.params['else_target'] = dlg.get_else_target_state()
                     flow_item.name = new_event_name if new_event_name else "NewEvent"
                     if new_condition:
                         flow_item.edited_text = f"{new_event_name}: {new_condition}" if new_event_name else new_condition
