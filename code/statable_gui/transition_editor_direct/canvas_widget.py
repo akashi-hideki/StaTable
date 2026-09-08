@@ -1,6 +1,9 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
 """
-キャンバスウィジェット（C案：再構築時に子ノード含む全体レイアウト再計算）
+キャンバスウィジェット（案C：順序リスト方式対応版）
+- ノードのドラッグ移動を無効化
+- ドラッグ試行時にメッセージ表示
+- フローアイテムの順序に基づく自動整列（子ノード込み）
 """
 
 import json
@@ -10,7 +13,8 @@ from PySide6.QtCore import Qt, Signal, QTimer, QPointF
 from PySide6.QtGui import QBrush, QColor, QPen, QFont, QAction, QPainter
 from PySide6.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsRectItem,
-    QGraphicsTextItem, QGraphicsLineItem, QToolTip, QMenu
+    QGraphicsTextItem, QGraphicsLineItem, QToolTip, QMenu,
+    QMessageBox, QApplication
 )
 
 from .draft import ActionDraft, FlowItem, ensure_list
@@ -58,37 +62,45 @@ class FlowNodeItem(QGraphicsRectItem):
 
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
-        # メインのfunction / transitionのみ移動可能
-        if item_type in ("function", "transition"):
-            self.setFlag(QGraphicsRectItem.ItemIsMovable, True)
-        else:
-            self.setFlag(QGraphicsRectItem.ItemIsMovable, False)
+
+        # ★ キャンバス内でのドラッグ移動を完全に無効化（案C）
+        self.setFlag(QGraphicsRectItem.ItemIsMovable, False)
+
         self.setFlag(QGraphicsRectItem.ItemSendsGeometryChanges, True)
+
+        # ドラッグ試行検出用
+        self._drag_start_pos = None
 
     def itemChange(self, change, value):
         return super().itemChange(change, value)
 
     def mousePressEvent(self, event):
-        logger.debug(f"FlowNodeItem.mousePressEvent: type={self.item_type}")
+        if event.button() == Qt.LeftButton:
+            self._drag_start_pos = event.scenePos()
+            logger.debug(f"FlowNodeItem.mousePressEvent: type={self.item_type}, pos={self._drag_start_pos}")
         event.accept()
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        # 左ボタンを押しながら一定距離動いたらメッセージ表示
+        if event.buttons() & Qt.LeftButton and self._drag_start_pos is not None:
+            if (event.scenePos() - self._drag_start_pos).manhattanLength() > QApplication.startDragDistance():
+                logger.debug(f"FlowNodeItem.mouseMoveEvent: drag attempted on type={self.item_type}")
+                QMessageBox.information(
+                    None,
+                    "操作不可",
+                    "キャンバス内でのノード移動はできません。\n順序リストで並べ替えてください。"
+                )
+                self._drag_start_pos = None  # 連続表示を防止
+                event.ignore()
+                return
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         logger.debug(f"FlowNodeItem.mouseReleaseEvent: type={self.item_type}")
-        # グリッドスナップ
-        if self.item_type in ("function", "transition") and self.scene():
-            grid = self.scene().views()[0]._grid_size if hasattr(self.scene().views()[0], '_grid_size') else 20
-            pos = self.pos()
-            snapped_x = round(pos.x() / grid) * grid
-            snapped_y = round(pos.y() / grid) * grid
-            self.setPos(snapped_x, snapped_y)
-            logger.debug(f"Snapped position: ({snapped_x}, {snapped_y})")
+        self._drag_start_pos = None
+        # 移動不可のため、move_finished_callback は呼ばない
         super().mouseReleaseEvent(event)
-        if self.move_finished_callback:
-            self.move_finished_callback(self)
 
     def hoverEnterEvent(self, event):
         QToolTip.showText(event.screenPos(), self.get_guidance_text())
@@ -109,27 +121,20 @@ class FlowNodeItem(QGraphicsRectItem):
         edit_action = QAction("編集", menu)
         edit_action.triggered.connect(lambda: self.edit_callback(self) if self.edit_callback else None)
         menu.addAction(edit_action)
-
         menu.addSeparator()
-
         up_action = QAction("上へ", menu)
         up_action.triggered.connect(lambda: self.move_up_callback(self) if self.move_up_callback else None)
         menu.addAction(up_action)
-
         down_action = QAction("下へ", menu)
         down_action.triggered.connect(lambda: self.move_down_callback(self) if self.move_down_callback else None)
         menu.addAction(down_action)
-
         menu.addSeparator()
-
         duplicate_action = QAction("複製", menu)
         duplicate_action.triggered.connect(lambda: self.duplicate_callback(self) if self.duplicate_callback else None)
         menu.addAction(duplicate_action)
-
         delete_action = QAction("削除", menu)
         delete_action.triggered.connect(lambda: self.delete_callback(self) if self.delete_callback else None)
         menu.addAction(delete_action)
-
         menu.exec(event.screenPos())
         event.accept()
 
@@ -139,11 +144,11 @@ class FlowNodeItem(QGraphicsRectItem):
         elif self.item_type == "function":
             return "ロール関数ノード\n・ダブルクリックで関数名を変更"
         elif self.item_type == "pre_action":
-            return "遷移直前処理\n・ドラッグで並べ替え"
+            return "遷移直前処理\n・順序リストで並べ替え"
         elif self.item_type == "else":
             return "else条件\n・上に関数をドロップでelseアクション追加"
         elif self.item_type == "else_action":
-            return "elseアクション\n・ドラッグで並べ替え"
+            return "elseアクション\n・順序リストで並べ替え"
         return ""
 
 
@@ -175,141 +180,123 @@ class FlowCanvas(QGraphicsView):
         logger.debug("=== FlowCanvas init ===")
         logger.debug(f"draft.flow_items count = {len(draft.flow_items)}")
         for i, item in enumerate(draft.flow_items):
-            logger.debug(f"  flow_item[{i}]: type={item.item_type}, name={item.name}")
+            logger.debug(f"  flow_item[{i}]: type={item.item_type}, name={item.name}, pos=({item.pos_x},{item.pos_y})")
 
         self._rebuild()
         logger.debug("=== FlowCanvas init end ===")
 
     def _rebuild(self):
-        """
-        C案: 子ノードを含む全ノードを上から順に配置し、重なりを解消する。
-        """
-        logger.debug("=== _rebuild START (C案: 全ノード再配置) ===")
+        logger.debug("=== _rebuild START ===")
         self.scene.clear()
 
-        # ノードと接続線ペアを保持するリスト
-        nodes = []                # (FlowNodeItem, indent_x)
-        connection_pairs = []     # (parent_node, child_node)
+        # フローアイテムを順序（order_index）でソート（現状はリスト順）
+        # 将来的には order_index を使う
+        flow_items = self.draft.flow_items
 
-        # 1. flow_items から全ノードを生成
-        for item_idx, item in enumerate(self.draft.flow_items):
+        # 表示開始Y座標
+        current_y = 30
+
+        for item in flow_items:
+            logger.debug(f"Processing flow_item: type={item.item_type}, name={item.name}")
             if item.item_type == "function":
                 node = FlowNodeItem("function", item.display_text(), flow_item=item)
-                nodes.append((node, 30))  # インデント30
                 self._setup_node_callbacks(node)
+                self.scene.addItem(node)
+                node.setPos(30, current_y)
+                logger.debug(f"  function '{item.name}' placed at y={current_y}")
+
+                # 次のメインノードの開始Yを更新
+                current_y += node.rect().height() + 20  # 40 + 20間隔
 
             elif item.item_type == "transition":
-                # メイン transition
                 pre_actions = ensure_list(item.params.get('pre_actions', []))
                 else_actions = ensure_list(item.params.get('else_actions', []))
                 has_else = item.params.get('has_else', True)
                 else_target = item.params.get('else_target', '')
 
                 main_node = FlowNodeItem("transition", item.display_text(), flow_item=item)
-                nodes.append((main_node, 30))
                 self._setup_node_callbacks(main_node)
+                self.scene.addItem(main_node)
+                main_node.setPos(30, current_y)
+                logger.debug(f"  transition '{item.name}' placed at y={current_y}")
 
-                # pre_actions
+                # 子ノードの開始Y
+                child_y = current_y + main_node.rect().height() + 10
+
                 for pre in pre_actions:
                     pre_node = FlowNodeItem("pre_action", pre, flow_item=item)
-                    nodes.append((pre_node, 60))
-                    connection_pairs.append((main_node, pre_node))
+                    self.scene.addItem(pre_node)
+                    pre_node.setPos(60, child_y)
+                    logger.debug(f"    child pre_action '{pre}' placed at y={child_y}")
+                    child_y += pre_node.rect().height() + 10
 
-                # else node
                 if has_else:
                     else_text = f"else → {else_target}" if else_target else "else（未設定）"
                     else_node = FlowNodeItem("else", else_text, flow_item=item)
-                    nodes.append((else_node, 60))
-                    connection_pairs.append((main_node, else_node))
+                    self.scene.addItem(else_node)
+                    else_node.setPos(60, child_y)
+                    logger.debug(f"    child else placed at y={child_y}")
+                    child_y += else_node.rect().height() + 10
 
-                    # else_actions
                     for ea in else_actions:
                         ea_node = FlowNodeItem("else_action", ea, flow_item=item)
-                        nodes.append((ea_node, 90))
-                        connection_pairs.append((else_node, ea_node))
+                        self.scene.addItem(ea_node)
+                        ea_node.setPos(90, child_y)
+                        logger.debug(f"    child else_action '{ea}' placed at y={child_y}")
+                        child_y += ea_node.rect().height() + 10
 
-        # 2. ノードを上から順に配置
-        current_y = 30
-        placed_nodes = []   # 配置済みノード（重なり判定用）
+                # 次のメインノードの開始Yを更新（子ノードの終端＋間隔）
+                # child_y は最後の子ノードの次を指しているので、そのまま使う
+                current_y = child_y + 20  # 子ノード群の後に間隔を空ける
 
-        for node, indent_x in nodes:
-            # X座標はインデント固定
-            node.setPos(indent_x, current_y)
+            else:
+                logger.warning(f"Unknown item_type: {item.item_type}")
 
-            # 既配置ノードと重ならないようにYを調整
-            while self._has_overlap_with_any(node, placed_nodes):
-                # 重なった相手の下端 + 10 に下げる
-                max_bottom = 0
-                node_rect = node.sceneBoundingRect()
-                for placed in placed_nodes:
-                    placed_rect = placed.sceneBoundingRect()
-                    if node_rect.intersects(placed_rect):
-                        max_bottom = max(max_bottom, placed_rect.bottom())
-                new_y = max_bottom + 10
-                node.setY(new_y)
-                node_rect = node.sceneBoundingRect()
-
-            # 配置済みリストに追加
-            placed_nodes.append(node)
-            self.scene.addItem(node)
-
-            # 次の初期Y
-            current_y = node.sceneBoundingRect().bottom() + 10
-
-        # 3. 接続線を追加
-        for parent, child in connection_pairs:
-            p_rect = parent.sceneBoundingRect()
-            c_rect = child.sceneBoundingRect()
-            line = QGraphicsLineItem(
-                p_rect.center().x(), p_rect.bottom(),
-                c_rect.center().x(), c_rect.top()
-            )
-            line.setPen(QPen(QColor(100, 100, 100), 1, Qt.DashLine))
-            self.scene.addItem(line)
-
-        # 4. シーン矩形更新
         self.scene.setSceneRect(self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 40))
         self.draft_updated.emit()
 
-        # 5. 全ノードの重なりチェックログ
-        self._log_all_overlaps(placed_nodes)
+        # ログ出力
+        self._log_all_nodes_after_rebuild()
+        self._log_main_overlaps()
 
-        logger.debug("=== _rebuild END (C案) ===")
+        logger.debug("=== _rebuild END ===")
 
-    def _has_overlap_with_any(self, node, placed_nodes):
-        """配置済みノードのいずれかと重なるか判定"""
-        node_rect = node.sceneBoundingRect()
-        for placed in placed_nodes:
-            if node_rect.intersects(placed.sceneBoundingRect()):
-                return True
-        return False
+    def _log_flow_items_before_rebuild(self):
+        """再構築前の全フローアイテムの保存位置を出力"""
+        logger.debug("--- flow_items before rebuild ---")
+        for i, item in enumerate(self.draft.flow_items):
+            logger.debug(f"  [{i}] type={item.item_type}, name={item.name}, pos=({item.pos_x},{item.pos_y})")
 
-    def _log_all_overlaps(self, nodes):
-        """全ノードの位置と重なりペアをログ出力"""
+    def _log_all_nodes_after_rebuild(self):
+        """再構築後の全ノード位置とサイズを出力"""
+        all_nodes = [item for item in self.scene.items() if isinstance(item, FlowNodeItem)]
         logger.debug("--- All nodes after rebuild ---")
-        for node in nodes:
+        for node in all_nodes:
             name = node.flow_item.name if node.flow_item else node.item_type
             rect = node.sceneBoundingRect()
             logger.debug(f"  {node.item_type:12s} '{name:15s}' pos=({rect.x():.0f},{rect.y():.0f}) size=({rect.width():.0f}x{rect.height():.0f})")
 
-        # 重なりペアをチェック
+    def _log_main_overlaps(self):
+        """メインノード同士の重なりチェック"""
+        main_nodes = [item for item in self.scene.items()
+                      if isinstance(item, FlowNodeItem) and item.item_type in ("function", "transition")]
+
         overlapping_pairs = []
-        for i, node1 in enumerate(nodes):
-            for node2 in nodes[i+1:]:
+        for i, node1 in enumerate(main_nodes):
+            for node2 in main_nodes[i+1:]:
                 if node1.sceneBoundingRect().intersects(node2.sceneBoundingRect()):
                     name1 = node1.flow_item.name if node1.flow_item else node1.item_type
                     name2 = node2.flow_item.name if node2.flow_item else node2.item_type
                     overlapping_pairs.append((name1, name2))
 
         if overlapping_pairs:
-            logger.warning("Overlap still exists after rebuild:")
+            logger.warning("Overlap still exists after rebuild (main nodes):")
             for pair in overlapping_pairs:
                 logger.warning(f"  - '{pair[0]}' and '{pair[1]}'")
         else:
-            logger.debug("No overlaps after rebuild (all nodes)")
+            logger.debug("No overlaps after rebuild (main nodes)")
 
     def _setup_node_callbacks(self, node):
-        """ノードにコールバックを設定"""
         node.edit_callback = self._on_node_edit_requested
         node.delete_callback = self._on_node_delete_requested
         node.duplicate_callback = self._on_node_duplicate_requested
@@ -317,40 +304,32 @@ class FlowCanvas(QGraphicsView):
         node.move_down_callback = self._on_node_move_down_requested
         node.move_finished_callback = self._on_node_move_finished
 
-    def _on_node_edit_requested(self, node: FlowNodeItem):
+    def _on_node_edit_requested(self, node):
         logger.debug(f"Node edit requested: type={node.item_type}")
         self.node_edit_requested.emit(node)
 
-    def _on_node_delete_requested(self, node: FlowNodeItem):
+    def _on_node_delete_requested(self, node):
         logger.debug(f"Node delete requested: type={node.item_type}")
         self.node_delete_requested.emit(node)
 
-    def _on_node_duplicate_requested(self, node: FlowNodeItem):
+    def _on_node_duplicate_requested(self, node):
         logger.debug(f"Node duplicate requested: type={node.item_type}")
         self.node_duplicate_requested.emit(node)
 
-    def _on_node_move_up_requested(self, node: FlowNodeItem):
+    def _on_node_move_up_requested(self, node):
         logger.debug(f"Node move up requested: type={node.item_type}")
         self.node_move_up_requested.emit(node)
 
-    def _on_node_move_down_requested(self, node: FlowNodeItem):
+    def _on_node_move_down_requested(self, node):
         logger.debug(f"Node move down requested: type={node.item_type}")
         self.node_move_down_requested.emit(node)
 
-    def _on_node_move_finished(self, node: FlowNodeItem):
-        """
-        ノード移動終了時：
-        C案では、移動後に自動で全体レイアウトを再構築する。
-        """
-        if node.flow_item and node.item_type in ("function", "transition"):
-            pos = node.pos()
-            # 位置はFlowItemに保存しない（再構築で自動配置するため）
-            logger.debug(f"Node moved: '{node.flow_item.name}' to ({pos.x():.1f}, {pos.y():.1f})")
-            # 即座に再構築を予約
-            QTimer.singleShot(0, self._rebuild)
+    def _on_node_move_finished(self, node):
+        """移動終了時（現在は呼ばれない）"""
+        logger.debug("_on_node_move_finished called but node movement is disabled.")
 
     def auto_align(self):
-        """全ノードを自動整列（C案では_rebuildと同じ）"""
+        """自動整列：フローアイテムの順序に従い、子ノード込みで上から等間隔に配置"""
         self._rebuild()
 
     def wheelEvent(self, event):
@@ -416,10 +395,16 @@ class FlowCanvas(QGraphicsView):
                                 target_flow_item.params.setdefault('else_actions', []).append(name)
                                 logger.debug(f"Added else_action '{name}' to transition")
                         else:
-                            self.draft.flow_items.append(FlowItem(item_type="function", name=name))
+                            new_item = FlowItem(item_type="function", name=name)
+                            new_item.pos_x = scene_pos.x()
+                            new_item.pos_y = scene_pos.y()
+                            self.draft.flow_items.append(new_item)
                             logger.debug(f"Added function to flow: {name}")
                     else:
-                        self.draft.flow_items.append(FlowItem(item_type="function", name=name))
+                        new_item = FlowItem(item_type="function", name=name)
+                        new_item.pos_x = scene_pos.x()
+                        new_item.pos_y = scene_pos.y()
+                        self.draft.flow_items.append(new_item)
                         logger.debug(f"Added function to flow: {name}")
 
                 elif item_type == "transition":
@@ -439,6 +424,8 @@ class FlowCanvas(QGraphicsView):
                             "else_actions": [],
                         }
                     )
+                    flow_item.pos_x = scene_pos.x()
+                    flow_item.pos_y = scene_pos.y()
                     self.draft.flow_items.append(flow_item)
                     logger.debug(f"Added transition condition: event='{event_name}'")
 
