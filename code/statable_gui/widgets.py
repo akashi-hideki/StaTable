@@ -36,7 +36,6 @@ from .action_edit_dialog import ActionEditDialog
 from .global_defs import GlobalDefinitions
 from .event_definition_dialog import EventDefinitionDialog
 
-# 共有ライブラリ
 try:
     from libcntrl.role_function_library import RoleFunctionLibrary
     from libcntrl.condition_library import ConditionLibrary
@@ -47,9 +46,6 @@ except ImportError:
     from statable_gui.libcntrl.literal_library import LiteralLibrary
 
 
-# ----------------------------------------------------------------------
-# Mermaidプレビューウィジェット
-# ----------------------------------------------------------------------
 class MermaidWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -127,9 +123,6 @@ class MermaidWidget(QWidget):
             self.web_view.page().runJavaScript("renderMermaid();")
 
 
-# ----------------------------------------------------------------------
-# 状態設定パネル（イベント辞書タブを廃止）
-# ----------------------------------------------------------------------
 class SettingsPanel(QWidget):
     settings_changed = Signal()
 
@@ -148,7 +141,6 @@ class SettingsPanel(QWidget):
         self.tab = QTabWidget()
         layout.addWidget(self.tab)
 
-        # 状態一覧タブ
         state_tab = QWidget()
         state_layout = QVBoxLayout(state_tab)
         self.state_table = QTableWidget(0, 6)
@@ -166,7 +158,6 @@ class SettingsPanel(QWidget):
         state_layout.addLayout(btn_state)
         self.tab.addTab(state_tab, "状態一覧")
 
-        # ロール関数タブ（共有ライブラリには移行せず、従来のStateMachine.role_functionsを使用）
         role_tab = QWidget()
         role_layout = QVBoxLayout(role_tab)
         self.role_table = QTableWidget(0, 8)
@@ -321,7 +312,6 @@ class SettingsPanel(QWidget):
         self._debounce_timer.start()
 
     def apply_changes(self):
-        # 状態テーブル
         for row in range(self.state_table.rowCount()):
             name = self.state_table.item(row, 0).text().strip() if self.state_table.item(row, 0) else ""
             desc = self.state_table.item(row, 1).text().strip() if self.state_table.item(row, 1) else ""
@@ -341,7 +331,6 @@ class SettingsPanel(QWidget):
                     self.sm.add_state(State(name, type=StateType(type_str), description=desc,
                                              entry=entry, exit=exit_, do=do))
 
-        # ロール関数テーブル
         self.sm.role_functions.clear()
         for row in range(self.role_table.rowCount()):
             title = self.role_table.item(row, 0).text().strip() if self.role_table.item(row, 0) else ""
@@ -357,9 +346,6 @@ class SettingsPanel(QWidget):
         StaTableLogger.debug("Settings changes applied")
 
 
-# ----------------------------------------------------------------------
-# 単一タブのコンテンツ
-# ----------------------------------------------------------------------
 class StateMachineTab(QWidget):
     def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None,
                  role_function_library: RoleFunctionLibrary = None,
@@ -370,15 +356,25 @@ class StateMachineTab(QWidget):
         self.sm = sm
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
 
-        # 共有ライブラリ
         self.role_function_library = role_function_library if role_function_library else RoleFunctionLibrary()
         self.condition_library = condition_library if condition_library else ConditionLibrary()
         self.literal_library = literal_library if literal_library else LiteralLibrary()
 
+        # ★ デバッグログ: StateMachineTab 初期化時の共有ライブラリ内容
         StaTableLogger.debug(
             f"StateMachineTab.__init__: global_defs id={id(self.global_defs)}, "
             f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
         )
+        StaTableLogger.debug(
+            f"StateMachineTab shared libraries: "
+            f"roles={len(self.role_function_library.list_all())}, "
+            f"conditions={len(self.condition_library.list_all())}, "
+            f"literals={len(self.literal_library.list_all())}"
+        )
+        for rf in self.role_function_library.list_all():
+            StaTableLogger.debug(f"  role in tab: {rf.name}")
+        for ct in self.condition_library.list_all():
+            StaTableLogger.debug(f"  condition in tab: {ct.name}")
 
         layout = QHBoxLayout(self)
 

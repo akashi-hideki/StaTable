@@ -92,12 +92,20 @@ class MainWindow(QMainWindow):
         self.role_function_library = RoleFunctionLibrary()
         self.condition_library = ConditionLibrary()
         self.literal_library = LiteralLibrary()
+
+        # ★ デバッグログ: 共有ライブラリの初期内容を出力
         StaTableLogger.debug(
             "MainWindow shared libraries initialized: "
             f"roles={len(self.role_function_library.list_all())}, "
             f"conditions={len(self.condition_library.list_all())}, "
             f"literals={len(self.literal_library.list_all())}"
         )
+        for rf in self.role_function_library.list_all():
+            StaTableLogger.debug(f"  role: {rf.name}")
+        for ct in self.condition_library.list_all():
+            StaTableLogger.debug(f"  condition: {ct.name}")
+        for lit in self.literal_library.list_all():
+            StaTableLogger.debug(f"  literal: {lit.name}")
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
@@ -220,7 +228,6 @@ class MainWindow(QMainWindow):
     def create_menus(self):
         menubar = self.menuBar()
 
-        # File menu
         file_menu = menubar.addMenu("File")
         open_action = QAction("Open Project...", self)
         open_action.triggered.connect(self.open_project)
@@ -239,9 +246,7 @@ class MainWindow(QMainWindow):
         new_tab_action.triggered.connect(self.add_new_tab)
         file_menu.addAction(new_tab_action)
 
-        # Edit menu
         edit_menu = menubar.addMenu("Edit")
-
         global_defs_action = QAction("Global Definitions...", self)
         global_defs_action.triggered.connect(self.open_global_defs_dialog)
         edit_menu.addAction(global_defs_action)
@@ -262,17 +267,13 @@ class MainWindow(QMainWindow):
         interrupt_action.triggered.connect(self.open_interrupt_settings)
         edit_menu.addAction(interrupt_action)
 
-        # 検証メニュー
         validation_menu = menubar.addMenu("検証(&V)")
-
         validate_action = QAction("検証・AI診断...", self)
         validate_action.setShortcut("Ctrl+Shift+V")
         validate_action.triggered.connect(self.open_validation_dialog)
         validation_menu.addAction(validate_action)
 
-        # Code Generation menu
         code_gen_menu = menubar.addMenu("コード生成(&G)")
-
         generate_action = QAction("コード生成...", self)
         generate_action.setShortcut("Ctrl+G")
         generate_action.triggered.connect(self.open_code_generation_dialog)
@@ -284,21 +285,17 @@ class MainWindow(QMainWindow):
         code_gen_menu.addAction(gen_settings_action)
 
         code_gen_menu.addSeparator()
-
         gen_save_action = QAction("生成コードを保存...", self)
         gen_save_action.setShortcut("Ctrl+Shift+S")
         gen_save_action.triggered.connect(self.save_generated_code_direct)
         code_gen_menu.addAction(gen_save_action)
 
-        # View menu
         view_menu = menubar.addMenu("View")
         toggle_traceball = QAction("TraceBall", self)
         toggle_traceball.setCheckable(True)
         toggle_traceball.setChecked(False)
         toggle_traceball.toggled.connect(self.toggle_traceball)
         view_menu.addAction(toggle_traceball)
-
-    # ===== 既存のメソッド =====
 
     def open_type_manager(self):
         StaTableLogger.debug("MainWindow.open_type_manager called")
@@ -364,7 +361,6 @@ class MainWindow(QMainWindow):
         StaTableLogger.debug("InterruptHandlerEditDialog closed")
 
     def save_project(self):
-        """全タブとグローバル定義を1つのXMLファイルに保存する"""
         tabs = []
         for index in range(self.tab_widget.count()):
             tab = self.tab_widget.widget(index)
@@ -380,7 +376,6 @@ class MainWindow(QMainWindow):
         if not filepath:
             return
         try:
-            # TODO: 共有ライブラリの保存は今後対応
             project_to_xml(tabs, self.global_defs, filepath)
             self.prefs.last_project_dir = str(Path(filepath).parent)
             self.logger.info(f"Project saved to {filepath}")
@@ -389,7 +384,6 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Failed to save project: {filepath}, error: {e}")
 
     def open_project(self):
-        """XMLファイルからプロジェクト全体（タブ＋グローバル定義）を読み込む"""
         last_dir = self.prefs.last_project_dir
         filepath, _ = QFileDialog.getOpenFileName(
             self, "Open Project", last_dir, "XML files (*.xml)"
@@ -441,6 +435,14 @@ class MainWindow(QMainWindow):
             self.logger.info(f"New tab added: {name.strip()}")
 
     def add_state_machine_tab(self, name: str, sm: StateMachine):
+        # ★ デバッグログ: タブ追加前のライブラリ内容
+        StaTableLogger.debug(
+            f"add_state_machine_tab: name={name}, "
+            f"roles={len(self.role_function_library.list_all())}, "
+            f"conditions={len(self.condition_library.list_all())}, "
+            f"literals={len(self.literal_library.list_all())}"
+        )
+
         tab = StateMachineTab(
             sm,
             global_defs=self.global_defs,
@@ -469,8 +471,6 @@ class MainWindow(QMainWindow):
             self.traceball.hide()
             self.logger.debug("TraceBall hidden")
 
-    # ===== 検証・AI連携メソッド =====
-
     def _get_current_state_machine(self):
         current_tab = self.tab_widget.currentWidget()
         if current_tab is not None and hasattr(current_tab, 'sm'):
@@ -487,36 +487,26 @@ class MainWindow(QMainWindow):
 
     def open_validation_dialog(self):
         StaTableLogger.debug("MainWindow.open_validation_dialog called")
-
         sm, gd = self._get_current_data()
-
         dialog = ValidationDialog(sm, gd, self)
         dialog.exec()
-
         StaTableLogger.debug("ValidationDialog closed")
-
-    # ===== コード生成関連メソッド =====
 
     def open_code_generation_dialog(self):
         StaTableLogger.debug("MainWindow.open_code_generation_dialog called")
-
         state_machine, global_defs = self._get_current_data()
-
         dialog = CodeGenerationDialog(
             state_machine=state_machine,
             global_defs=global_defs,
             parent=self
         )
-
         dialog.config_manager = self.config_manager
         dialog._load_config_to_ui()
-
         dialog.exec()
         StaTableLogger.debug("CodeGenerationDialog closed")
 
     def open_code_generation_settings(self):
         StaTableLogger.debug("MainWindow.open_code_generation_settings called")
-
         dialog = CodeGenerationSettingsDialog(
             config_manager=self.config_manager,
             parent=self
@@ -526,9 +516,7 @@ class MainWindow(QMainWindow):
 
     def save_generated_code_direct(self):
         StaTableLogger.debug("MainWindow.save_generated_code_direct called")
-
         state_machine, global_defs = self._get_current_data()
-
         config = self.config_manager.get_config()
         output_dir = config.output_directory
 
@@ -544,7 +532,6 @@ class MainWindow(QMainWindow):
         try:
             generator = CCodeGenerator(config=config)
             generated_files = generator.generate_all(state_machine, global_defs)
-
             os.makedirs(output_dir, exist_ok=True)
 
             if config.save_with_merge:
@@ -553,7 +540,6 @@ class MainWindow(QMainWindow):
                 saved_files = generator.save_generated_code(generated_files, output_dir)
 
             StaTableLogger.info(f"{len(saved_files)} files saved to {output_dir}")
-
             QMessageBox.information(self, "保存完了",
                 f"{len(saved_files)}ファイルを保存しました。\n\n出力先: {output_dir}")
 

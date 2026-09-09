@@ -1,3 +1,8 @@
+# statable_gui/matrix_table.py
+"""
+状態遷移表ウィジェット（D&Dエディタ直接起動対応）
+"""
+
 from typing import List
 
 from PySide6.QtCore import Qt, Signal
@@ -13,11 +18,9 @@ from .logger import StaTableLogger
 from .config import MAX_COLUMN_WIDTH, MIN_ROW_HEIGHT, MAX_ROW_HEIGHT
 from .global_defs import GlobalDefinitions
 
-# D&Dエディタ直接起動
 from .transition_editor_direct.dialog import ActionEditorDialog
 from .transition_editor_direct.draft import ActionDraft, transition_to_flow_item, flow_item_to_transition
 
-# 共有ライブラリ
 try:
     from libcntrl.role_function_library import RoleFunctionLibrary
     from libcntrl.condition_library import ConditionLibrary
@@ -73,10 +76,16 @@ class MatrixTableWidget(QTableWidget):
         self.sm = sm
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
 
-        # 共有ライブラリ
         self.role_function_library = role_function_library if role_function_library else RoleFunctionLibrary()
         self.condition_library = condition_library if condition_library else ConditionLibrary()
         self.literal_library = literal_library if literal_library else LiteralLibrary()
+
+        # ★ デバッグログ: MatrixTableWidget 初期化時の共有ライブラリ内容
+        StaTableLogger.debug(
+            f"MatrixTableWidget.__init__: roles={len(self.role_function_library.list_all())}, "
+            f"conditions={len(self.condition_library.list_all())}, "
+            f"literals={len(self.literal_library.list_all())}"
+        )
 
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.verticalHeader().setSectionResizeMode(QHeaderView.Interactive)
@@ -191,7 +200,6 @@ class MatrixTableWidget(QTableWidget):
         for i, t in enumerate(existing_list):
             StaTableLogger.debug(f"  existing[{i}]: condition='{t.condition}', pre_actions={t.pre_actions}, target={t.target}, title={t.title}")
 
-        # ActionDraft 構築
         draft = ActionDraft(source=state, event=event_name)
         for trans in existing_list:
             fi = transition_to_flow_item(trans)
@@ -200,6 +208,17 @@ class MatrixTableWidget(QTableWidget):
 
         role_func_names = [rf.name for rf in self.role_function_library.list_all()]
         states = list(self.sm.states.keys())
+
+        # ★ デバッグログ: ActionEditorDialog に渡す共有ライブラリ内容
+        StaTableLogger.debug(
+            f"open_transition_dialog: roles={len(self.role_function_library.list_all())}, "
+            f"conditions={len(self.condition_library.list_all())}, "
+            f"literals={len(self.literal_library.list_all())}"
+        )
+        for rf in self.role_function_library.list_all():
+            StaTableLogger.debug(f"  role to dialog: {rf.name}")
+        for ct in self.condition_library.list_all():
+            StaTableLogger.debug(f"  condition to dialog: {ct.name}")
 
         dialog = ActionEditorDialog(
             draft,
