@@ -4,13 +4,15 @@
 - ノードのドラッグ移動を無効化
 - ドラッグ試行時にメッセージ表示
 - フローアイテムの順序に基づく自動整列（子ノード込み）
-- デバッグログ強化：ラベル生成過程を詳細に出力
+- transitionノードは常に3行表示（イベント名・条件・遷移先）
+- 未定義項目は「条件: なし」「→ 未設定」と明示
+- テキスト色を白に変更し視認性向上
 """
 
 import json
 import logging
 
-from PySide6.QtCore import Qt, Signal, QTimer, QPointF
+from PySide6.QtCore import Qt, Signal, QTimer, QPointF, QRectF
 from PySide6.QtGui import QBrush, QColor, QPen, QFont, QAction, QPainter
 from PySide6.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsRectItem,
@@ -56,13 +58,46 @@ class FlowNodeItem(QGraphicsRectItem):
         color = self.COLORS.get(item_type, QColor(200, 200, 200))
         self.setBrush(QBrush(color))
         self.setPen(QPen(Qt.black, 1))
-        self.setRect(0, 0, 240, 40)
 
-        label = f"{self.ICONS.get(item_type, '')} {text}"
-        self.text_item = QGraphicsTextItem(label, self)
-        self.text_item.setDefaultTextColor(Qt.black)
-        self.text_item.setFont(QFont("Arial", 9))
-        self.text_item.setPos(8, 8)
+        # テキストアイテムを作成
+        self.text_item = QGraphicsTextItem(self)
+        self.text_item.setDefaultTextColor(Qt.white)   # ★ 白文字に変更
+        self.text_item.setFont(QFont("Arial", 10))     # ★ フォントサイズ10
+
+        # ノードのサイズと表示内容を設定
+        if item_type == "transition":
+            # 常に3行表示（イベント名・条件・遷移先）に固定
+            lines = []
+            lines.append(f"{self.ICONS.get(item_type, '')} {text}")  # イベント名
+            if flow_item:
+                condition = flow_item.params.get('condition', '')
+                target = flow_item.params.get('target', '')
+                # 条件式が空なら「条件: なし」を表示
+                if condition:
+                    lines.append(f"条件: {condition}")
+                else:
+                    lines.append("条件: なし")
+                # 遷移先が空なら「→ 未設定」を表示
+                if target:
+                    lines.append(f"→ {target}")
+                else:
+                    lines.append("→ 未設定")
+            else:
+                # flow_item が無い場合も3行を維持
+                lines.append("条件: なし")
+                lines.append("→ 未設定")
+
+            label = "\n".join(lines)
+            height = 20 * 3 + 8  # 3行固定なので高さも固定
+        else:
+            label = f"{self.ICONS.get(item_type, '')} {text}"
+            height = 40
+
+        self.text_item.setPlainText(label)
+        self.text_item.setPos(8, 4)
+
+        # 矩形を設定
+        self.setRect(0, 0, 240, height)
 
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
@@ -197,7 +232,6 @@ class FlowCanvas(QGraphicsView):
         for item in flow_items:
             logger.debug(f"Processing flow_item: type={item.item_type}, name={item.name}")
             if item.item_type == "function":
-                # ★ デバッグログ: function の display_text
                 disp_text = item.display_text()
                 logger.debug(f"  function display_text() = '{disp_text}'")
                 node = FlowNodeItem("function", disp_text, flow_item=item)
@@ -214,21 +248,12 @@ class FlowCanvas(QGraphicsView):
                 target = item.params.get('target', '')
                 else_target = item.params.get('else_target', '')
 
-                # ★ デバッグログ: 遷移先と display_text の関係
                 disp_text = item.display_text()
                 logger.debug(f"  transition '{item.name}': target='{target}', else_target='{else_target}'")
                 logger.debug(f"  transition display_text() = '{disp_text}'")
 
-                # ★ ラベルに遷移先を含めるかどうかの判定
-                # ここで target を含めたラベルを作成（テスト用）
-                label_text = disp_text
-                if target:
-                    label_text = f"{disp_text} → {target}"
-                    logger.debug(f"  label_text with target = '{label_text}'")
-                else:
-                    logger.debug(f"  label_text without target = '{label_text}'")
-
-                main_node = FlowNodeItem("transition", label_text, flow_item=item)
+                # FlowNodeItem側で3行表示を行う
+                main_node = FlowNodeItem("transition", disp_text, flow_item=item)
                 self._setup_node_callbacks(main_node)
                 self.scene.addItem(main_node)
                 main_node.setPos(30, current_y)
@@ -265,6 +290,20 @@ class FlowCanvas(QGraphicsView):
 
         self.scene.setSceneRect(self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 40))
         self.draft_updated.emit()
+
+        # ★ デバッグログ: シーン矩形とビューポート情報
+        logger.debug(f"Scene rect after rebuild: {self.scene.sceneRect()}")
+        logger.debug(f"Viewport size: {self.viewport().size()}")
+        logger.debug(f"Visible scene rect: {self.mapToScene(self.viewport().rect()).boundingRect()}")
+
+        # ★ デバッグログ: 全アイテムの可視性とテキストアイテム状態
+        for item in self.scene.items():
+            if isinstance(item, FlowNodeItem):
+                logger.debug(f"Item: type={item.item_type}, sceneBoundingRect={item.sceneBoundingRect()}, "
+                             f"isVisible={item.isVisible()}, opacity={item.opacity()}")
+                if hasattr(item, 'text_item'):
+                    logger.debug(f"  Child text item: visible={item.text_item.isVisible()}, "
+                                 f"pos={item.text_item.pos()}, text='{item.text_item.toPlainText()}'")
 
         self._log_all_nodes_after_rebuild()
         self._log_main_overlaps()

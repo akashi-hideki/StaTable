@@ -40,6 +40,8 @@ class ConditionBuilderDialog(QDialog):
                  state_machine: StateMachine = None,
                  literal_library: LiteralLibrary = None,
                  states: list = None,
+                 target_state: str = "",          # 追加：現在の遷移先
+                 else_target_state: str = "",     # 追加：現在のelse遷移先
                  parent=None):
         super().__init__(parent)
         self.setWindowTitle("遷移条件ビルダー")
@@ -52,8 +54,12 @@ class ConditionBuilderDialog(QDialog):
 
         # 遷移先ステート選択肢（外部から渡されたリスト、なければステートマシンから取得）
         self.states = states if states is not None else self._get_states_from_state_machine()
+        self.target_state = target_state
+        self.else_target_state = else_target_state
 
         self._setup_ui()
+        # UI構築後に現在値をコンボボックスへ反映
+        self.set_current_targets()
         self.condition_edit.setPlainText(condition)
         self.event_name_edit.setText(event_name)
         self._populate_tree()
@@ -175,6 +181,17 @@ class ConditionBuilderDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         main_layout.addWidget(buttons)
+
+    def set_current_targets(self):
+        """現在の遷移先をコンボボックスに反映する"""
+        if self.target_state in self.states:
+            idx = self.target_combo.findText(self.target_state)
+            if idx >= 0:
+                self.target_combo.setCurrentIndex(idx)
+        if self.else_target_state in self.states:
+            idx = self.else_target_combo.findText(self.else_target_state)
+            if idx >= 0:
+                self.else_target_combo.setCurrentIndex(idx)
 
     def _populate_tree(self):
         """利用可能なシンボルをカテゴリ別にツリーへ追加"""

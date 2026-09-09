@@ -225,6 +225,8 @@ class ActionEditorDialog(QDialog):
                     state_machine=self.state_machine,
                     literal_library=self.literal_library,
                     states=states_list,
+                    target_state=flow_item.params.get('target', ''),          # ★ 現在の遷移先を渡す
+                    else_target_state=flow_item.params.get('else_target', ''), # ★ 現在のelse遷移先を渡す
                     parent=self
                 )
                 if dlg.exec() == QDialog.Accepted:
