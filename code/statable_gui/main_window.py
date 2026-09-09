@@ -96,22 +96,22 @@ class MainWindow(QMainWindow):
         # ★ サンプルステートマシンから共有ライブラリへデータ登録
         sample_sm = create_sample_state_machine()
 
-        # ロール関数を共有ライブラリへ登録
+        # ロール関数を共有ライブラリへ登録（必要最小限の引数で生成）
         for rf in sample_sm.role_functions.values():
+            StaTableLogger.debug(f"Attempting to register role function: name={rf.name}, title={rf.title}")
             try:
-                self.role_function_library.add(RoleFunction(
+                # RoleFunctionLibrary.add が受け付ける形式に合わせて生成
+                lib_rf = RoleFunction(
                     name=rf.name,
                     title=rf.title,
-                    description=rf.description,
-                    return_type=rf.return_type,
-                    arg1_type=rf.arg1_type,
-                    arg1_name=rf.arg1_name,
-                    arg2_type=rf.arg2_type,
-                    arg2_name=rf.arg2_name,
-                ))
+                    description=getattr(rf, 'description', ''),
+                )
+                self.role_function_library.add(lib_rf)
                 StaTableLogger.debug(f"Registered role function to shared library: {rf.name}")
             except Exception as e:
-                StaTableLogger.warning(f"Failed to register role function {rf.name}: {e}")
+                StaTableLogger.error(f"Failed to register role function {rf.name}: {e}", exc_info=True)
+
+        StaTableLogger.debug(f"After role registration: roles={len(self.role_function_library.list_all())}")
 
         # 条件テンプレートを追加
         try:
@@ -482,7 +482,6 @@ class MainWindow(QMainWindow):
             self.logger.info(f"New tab added: {name.strip()}")
 
     def add_state_machine_tab(self, name: str, sm: StateMachine):
-        # ★ デバッグログ: タブ追加前のライブラリ内容
         StaTableLogger.debug(
             f"add_state_machine_tab: name={name}, "
             f"roles={len(self.role_function_library.list_all())}, "
