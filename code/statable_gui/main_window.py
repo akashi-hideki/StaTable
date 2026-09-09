@@ -33,13 +33,13 @@ from .common_widgets import TypeManagerDialog
 
 # 共有ライブラリ
 try:
-    from libcntrl.role_function_library import RoleFunctionLibrary
-    from libcntrl.condition_library import ConditionLibrary
-    from libcntrl.literal_library import LiteralLibrary
+    from libcntrl.role_function_library import RoleFunctionLibrary, RoleFunction
+    from libcntrl.condition_library import ConditionLibrary, ConditionTemplate
+    from libcntrl.literal_library import LiteralLibrary, LiteralDefinition
 except ImportError:
-    from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary
-    from statable_gui.libcntrl.condition_library import ConditionLibrary
-    from statable_gui.libcntrl.literal_library import LiteralLibrary
+    from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary, RoleFunction
+    from statable_gui.libcntrl.condition_library import ConditionLibrary, ConditionTemplate
+    from statable_gui.libcntrl.literal_library import LiteralLibrary, LiteralDefinition
 
 # コード生成モジュール
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -93,7 +93,43 @@ class MainWindow(QMainWindow):
         self.condition_library = ConditionLibrary()
         self.literal_library = LiteralLibrary()
 
-        # ★ デバッグログ: 共有ライブラリの初期内容を出力
+        # ★ サンプルステートマシンから共有ライブラリへデータ登録
+        sample_sm = create_sample_state_machine()
+
+        # ロール関数を共有ライブラリへ登録
+        for rf in sample_sm.role_functions.values():
+            try:
+                self.role_function_library.add(RoleFunction(
+                    name=rf.name,
+                    title=rf.title,
+                    description=rf.description,
+                    return_type=rf.return_type,
+                    arg1_type=rf.arg1_type,
+                    arg1_name=rf.arg1_name,
+                    arg2_type=rf.arg2_type,
+                    arg2_name=rf.arg2_name,
+                ))
+                StaTableLogger.debug(f"Registered role function to shared library: {rf.name}")
+            except Exception as e:
+                StaTableLogger.warning(f"Failed to register role function {rf.name}: {e}")
+
+        # 条件テンプレートを追加
+        try:
+            self.condition_library.add(ConditionTemplate(name="ERROR", condition="err_code != 0"))
+            self.condition_library.add(ConditionTemplate(name="RETRY", condition="retry_count < RETRY_THRESHOLD"))
+            StaTableLogger.debug("Registered condition templates to shared library")
+        except Exception as e:
+            StaTableLogger.warning(f"Failed to register condition templates: {e}")
+
+        # リテラルを追加
+        try:
+            self.literal_library.add(LiteralDefinition(name="RETRY_THRESHOLD", value="3", literal_type="int", description="リトライ回数閾値"))
+            self.literal_library.add(LiteralDefinition(name="VOLTAGE_MIN", value="2.5", literal_type="float", description="最小電圧"))
+            StaTableLogger.debug("Registered literals to shared library")
+        except Exception as e:
+            StaTableLogger.warning(f"Failed to register literals: {e}")
+
+        # ★ デバッグログ: 共有ライブラリの内容を出力
         StaTableLogger.debug(
             "MainWindow shared libraries initialized: "
             f"roles={len(self.role_function_library.list_all())}, "
@@ -130,11 +166,13 @@ class MainWindow(QMainWindow):
         self.traceball.hide()
 
         # 初期タブ
-        sample_sm = create_sample_state_machine()
         self.add_state_machine_tab("Application", sample_sm)
 
         self.logger.debug("MainWindow initialization completed")
 
+    # ----------------------------------------------------------------------
+    # ツールバー・メニュー
+    # ----------------------------------------------------------------------
     def create_toolbar(self):
         toolbar = QToolBar("メインツールバー", self)
         toolbar.setMovable(False)
@@ -297,6 +335,9 @@ class MainWindow(QMainWindow):
         toggle_traceball.toggled.connect(self.toggle_traceball)
         view_menu.addAction(toggle_traceball)
 
+    # ----------------------------------------------------------------------
+    # 各ダイアログ起動メソッド
+    # ----------------------------------------------------------------------
     def open_type_manager(self):
         StaTableLogger.debug("MainWindow.open_type_manager called")
         dlg = TypeManagerDialog(self, self.global_defs)
@@ -360,6 +401,9 @@ class MainWindow(QMainWindow):
         dlg.exec()
         StaTableLogger.debug("InterruptHandlerEditDialog closed")
 
+    # ----------------------------------------------------------------------
+    # プロジェクト保存・読込
+    # ----------------------------------------------------------------------
     def save_project(self):
         tabs = []
         for index in range(self.tab_widget.count()):
@@ -409,6 +453,9 @@ class MainWindow(QMainWindow):
             self.tab_widget.removeTab(0)
             widget.deleteLater()
 
+    # ----------------------------------------------------------------------
+    # タブ管理
+    # ----------------------------------------------------------------------
     def rename_current_tab(self):
         index = self.tab_widget.currentIndex()
         if index >= 0:
@@ -463,6 +510,9 @@ class MainWindow(QMainWindow):
         widget.deleteLater()
         self.logger.info(f"Tab closed at index {index}")
 
+    # ----------------------------------------------------------------------
+    # ログ・検証・コード生成
+    # ----------------------------------------------------------------------
     def toggle_traceball(self, checked: bool):
         if checked:
             self.traceball.show()
