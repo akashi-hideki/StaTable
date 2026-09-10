@@ -96,7 +96,7 @@ class MainWindow(QMainWindow):
         # ★ サンプルステートマシンから共有ライブラリへデータ登録
         sample_sm = create_sample_state_machine()
 
-        # ロール関数を共有ライブラリへ登録（必要最小限の引数で生成）
+        # ロール関数を共有ライブラリへ登録
         for rf in sample_sm.role_functions.values():
             StaTableLogger.debug(f"Attempting to register role function: name={rf.name}, title={rf.title}")
             try:
@@ -136,12 +136,6 @@ class MainWindow(QMainWindow):
             f"conditions={len(self.condition_library.list_all())}, "
             f"literals={len(self.literal_library.list_all())}"
         )
-        for rf in self.role_function_library.list_all():
-            StaTableLogger.debug(f"  role: {rf.name}")
-        for ct in self.condition_library.list_all():
-            StaTableLogger.debug(f"  condition: {ct.name}")
-        for lit in self.literal_library.list_all():
-            StaTableLogger.debug(f"  literal: {lit.name}")
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
@@ -405,6 +399,7 @@ class MainWindow(QMainWindow):
     # プロジェクト保存・読込
     # ----------------------------------------------------------------------
     def save_project(self):
+        """全タブとグローバル定義、共有ライブラリを1つのXMLファイルに保存する"""
         tabs = []
         for index in range(self.tab_widget.count()):
             tab = self.tab_widget.widget(index)
@@ -420,14 +415,24 @@ class MainWindow(QMainWindow):
         if not filepath:
             return
         try:
-            project_to_xml(tabs, self.global_defs, filepath)
+            # ★ 共有ライブラリも一緒に保存
+            project_to_xml(
+                tabs,
+                self.global_defs,
+                filepath,
+                role_function_library=self.role_function_library,
+                condition_library=self.condition_library,
+                literal_library=self.literal_library,
+            )
             self.prefs.last_project_dir = str(Path(filepath).parent)
             self.logger.info(f"Project saved to {filepath}")
         except Exception as e:
+            import traceback
+            self.logger.error(f"Failed to save project: {filepath}, error: {e}\n{traceback.format_exc()}")
             QMessageBox.critical(self, "Error", f"Failed to save project:\n{e}")
-            self.logger.error(f"Failed to save project: {filepath}, error: {e}")
 
     def open_project(self):
+        """XMLファイルからプロジェクト全体（タブ＋グローバル定義＋共有ライブラリ）を読み込む"""
         last_dir = self.prefs.last_project_dir
         filepath, _ = QFileDialog.getOpenFileName(
             self, "Open Project", last_dir, "XML files (*.xml)"
@@ -435,17 +440,44 @@ class MainWindow(QMainWindow):
         if not filepath:
             return
         try:
-            tabs, global_defs = project_from_xml(filepath)
+            # ★ 5つの戻り値を受け取る
+            tabs, global_defs, role_lib, cond_lib, lit_lib = project_from_xml(filepath)
+
             self.close_all_tabs()
             for name, sm in tabs:
                 self.add_state_machine_tab(name, sm)
+
             self.global_defs = global_defs
             self.global_defs.add_timer_variables()
+
+            # ★ 共有ライブラリも置き換え
+            if role_lib is not None:
+                self.role_function_library = role_lib
+            if cond_lib is not None:
+                self.condition_library = cond_lib
+            if lit_lib is not None:
+                self.literal_library = lit_lib
+
+            # ★ 既存タブのライブラリ参照を更新
+            for index in range(self.tab_widget.count()):
+                tab = self.tab_widget.widget(index)
+                if hasattr(tab, 'role_function_library'):
+                    tab.role_function_library = self.role_function_library
+                if hasattr(tab, 'condition_library'):
+                    tab.condition_library = self.condition_library
+                if hasattr(tab, 'literal_library'):
+                    tab.literal_library = self.literal_library
+                if hasattr(tab, 'table'):
+                    tab.table.role_function_library = self.role_function_library
+                    tab.table.condition_library = self.condition_library
+                    tab.table.literal_library = self.literal_library
+
             self.prefs.last_project_dir = str(Path(filepath).parent)
             self.logger.info(f"Project loaded from {filepath}")
         except Exception as e:
+            import traceback
+            self.logger.error(f"Failed to open project: {filepath}, error: {e}\n{traceback.format_exc()}")
             QMessageBox.critical(self, "Error", f"Failed to open project:\n{e}")
-            self.logger.error(f"Failed to open project: {filepath}, error: {e}")
 
     def close_all_tabs(self):
         while self.tab_widget.count() > 0:

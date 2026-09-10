@@ -52,6 +52,20 @@
             <Queue name="UartQueue" size="16" element_type="uint8_t" event_ids="ERROR" priority_enabled="false" interrupt_safe="true" rtos_enabled="false" description="UART受信キュー" title="UART受信キュー" />
         </EventQueues>
     </GlobalDefinitions>
+    <SharedLibraries>
+        <RoleFunctionLibrary>
+            <RoleFunction name="Sensor_Init" title="センサ初期化" description="センサ初期化" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Error_Log" title="エラーログ出力" description="エラーログ出力" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+        </RoleFunctionLibrary>
+        <ConditionLibrary>
+            <Condition name="ERROR" condition="err_code != 0" />
+            <Condition name="RETRY" condition="retry_count &lt; RETRY_THRESHOLD" />
+        </ConditionLibrary>
+        <LiteralLibrary>
+            <Literal name="RETRY_THRESHOLD" value="3" literal_type="int" description="リトライ回数閾値" />
+            <Literal name="VOLTAGE_MIN" value="2.5" literal_type="float" description="最小電圧" />
+        </LiteralLibrary>
+    </SharedLibraries>
     <Tab name="Application">
         <StateMachine initial="Idle">
             <States>
@@ -86,12 +100,10 @@
                 </Transition>
                 <Transition source="Error" event="" condition="retry_count &lt; 3" action="" target="Active" transition_type="external" title="リトライ" has_else="true" else_target="">
                     <PreAction action="retry_count++" />
-                    <ElseAction action="Error_Log" />
-                </Transition>
-                <Transition source="Error" event="" condition="retry_count &gt;= 3" action="" target="Halt" transition_type="external" title="停止へ" has_else="true" else_target="">
                     <PreAction action="Sensor_Init" />
-                    <ElseAction action="Error_Log" />
+                    <ElseAction action="Sensor_Init" />
                 </Transition>
+                <Transition source="Error" event="" condition="retry_count &gt;= 3" action="" target="Halt" transition_type="external" title="停止へ" has_else="true" else_target="" />
             </Transitions>
         </StateMachine>
     </Tab>

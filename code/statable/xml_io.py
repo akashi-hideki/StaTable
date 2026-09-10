@@ -4,6 +4,7 @@ XML入出力（共有ライブラリ対応版・デバッグログ強化・pre_a
 - プロジェクト保存/読込で共有ライブラリ（ロール関数・遷移条件・リテラル）を保存
 - Transitionのpre_actions/else_actions/has_else/else_targetも保存
 - 文字列→リスト正規化、1文字分解の自動結合
+- libcntrl.RoleFunction の引数互換対応
 - 各段階でデバッグログを出力
 """
 
@@ -549,27 +550,36 @@ def role_function_library_to_element(lib) -> Optional[ET.Element]:
 
 
 def role_function_library_from_element(elem: Optional[ET.Element]):
+    """
+    libcntrl.RoleFunction は name/title/description のみ受け付けるため、
+    それ以外の属性は hasattr で確認してから setattr する。
+    """
     if elem is None:
         logger.debug("role_function_library_from_element: elem is None")
         return RoleFunctionLibrary() if RoleFunctionLibrary else None
     lib = RoleFunctionLibrary()
     count = 0
     for rf_elem in elem.findall("RoleFunction"):
+        name = rf_elem.get("name", "")
         try:
+            # ★ libcntrl.RoleFunction が受け付ける引数のみで生成
             rf = LibRoleFunction(
-                name=rf_elem.get("name", ""),
+                name=name,
                 title=rf_elem.get("title", ""),
                 description=rf_elem.get("description", ""),
-                return_type=rf_elem.get("return_type", "int"),
-                arg1_type=rf_elem.get("arg1_type", "int"),
-                arg1_name=rf_elem.get("arg1_name", "arg1"),
-                arg2_type=rf_elem.get("arg2_type", "int"),
-                arg2_name=rf_elem.get("arg2_name", "arg2"),
             )
+            # 追加属性は存在する場合のみ設定
+            for attr in ('return_type', 'arg1_type', 'arg1_name', 'arg2_type', 'arg2_name'):
+                if hasattr(rf, attr):
+                    setattr(rf, attr, rf_elem.get(attr, ''))
             lib.add(rf)
             count += 1
+            logger.debug(f"role_function_library_from_element: loaded role '{name}'")
         except Exception as e:
-            logger.error(f"role_function_library_from_element: failed to load {rf_elem.get('name')}: {e}", exc_info=True)
+            logger.error(
+                f"role_function_library_from_element: failed to load '{name}': {e}",
+                exc_info=True
+            )
     logger.debug(f"role_function_library_from_element: loaded {count} items")
     return lib
 
