@@ -7,6 +7,8 @@
 - transitionノードは常に3行表示（イベント名・条件・遷移先）
 - 未定義項目は「条件: なし」「→ 未設定」と明示
 - テキスト色を白に変更し視認性向上
+- ドロップ時のターゲット検出を改善（テキストアイテムを透過）
+- ★ pre_action / else_action の上へのドロップも親 transition に追加
 """
 
 import json
@@ -61,14 +63,16 @@ class FlowNodeItem(QGraphicsRectItem):
 
         # テキストアイテムを作成
         self.text_item = QGraphicsTextItem(self)
-        self.text_item.setDefaultTextColor(Qt.white)   # ★ 白文字に変更
-        self.text_item.setFont(QFont("Arial", 10))     # ★ フォントサイズ10
+        self.text_item.setDefaultTextColor(Qt.white)
+        self.text_item.setFont(QFont("Arial", 10))
+        # テキストアイテムがマウスイベントを受け取らないようにする
+        self.text_item.setAcceptedMouseButtons(Qt.NoButton)
 
         # ノードのサイズと表示内容を設定
         if item_type == "transition":
             # 常に3行表示（イベント名・条件・遷移先）に固定
             lines = []
-            lines.append(f"{self.ICONS.get(item_type, '')} {text}")  # イベント名
+            lines.append(f"{self.ICONS.get(item_type, '')} {text}")
             if flow_item:
                 condition = flow_item.params.get('condition', '')
                 target = flow_item.params.get('target', '')
@@ -88,7 +92,7 @@ class FlowNodeItem(QGraphicsRectItem):
                 lines.append("→ 未設定")
 
             label = "\n".join(lines)
-            height = 20 * 3 + 8  # 3行固定なので高さも固定
+            height = 20 * 3 + 8
         else:
             label = f"{self.ICONS.get(item_type, '')} {text}"
             height = 40
@@ -222,6 +226,23 @@ class FlowCanvas(QGraphicsView):
         self._rebuild()
         logger.debug("=== FlowCanvas init end ===")
 
+    def _find_flow_node_at(self, scene_pos):
+        """
+        指定シーン座標にある FlowNodeItem を探す。
+        QGraphicsTextItem などの子アイテムを透過して、親の FlowNodeItem を返す。
+        """
+        items = self.scene.items(scene_pos, Qt.IntersectsItemShape,
+                                 Qt.DescendingOrder, self.transform())
+        for item in items:
+            if isinstance(item, FlowNodeItem):
+                return item
+            parent = item.parentItem()
+            while parent is not None:
+                if isinstance(parent, FlowNodeItem):
+                    return parent
+                parent = parent.parentItem()
+        return None
+
     def _rebuild(self):
         logger.debug("=== _rebuild START ===")
         self.scene.clear()
@@ -233,7 +254,6 @@ class FlowCanvas(QGraphicsView):
             logger.debug(f"Processing flow_item: type={item.item_type}, name={item.name}")
             if item.item_type == "function":
                 disp_text = item.display_text()
-                logger.debug(f"  function display_text() = '{disp_text}'")
                 node = FlowNodeItem("function", disp_text, flow_item=item)
                 self._setup_node_callbacks(node)
                 self.scene.addItem(node)
@@ -250,7 +270,6 @@ class FlowCanvas(QGraphicsView):
 
                 disp_text = item.display_text()
                 logger.debug(f"  transition '{item.name}': target='{target}', else_target='{else_target}'")
-                logger.debug(f"  transition display_text() = '{disp_text}'")
 
                 # FlowNodeItem側で3行表示を行う
                 main_node = FlowNodeItem("transition", disp_text, flow_item=item)
@@ -294,26 +313,11 @@ class FlowCanvas(QGraphicsView):
         # ★ デバッグログ: シーン矩形とビューポート情報
         logger.debug(f"Scene rect after rebuild: {self.scene.sceneRect()}")
         logger.debug(f"Viewport size: {self.viewport().size()}")
-        logger.debug(f"Visible scene rect: {self.mapToScene(self.viewport().rect()).boundingRect()}")
-
-        # ★ デバッグログ: 全アイテムの可視性とテキストアイテム状態
-        for item in self.scene.items():
-            if isinstance(item, FlowNodeItem):
-                logger.debug(f"Item: type={item.item_type}, sceneBoundingRect={item.sceneBoundingRect()}, "
-                             f"isVisible={item.isVisible()}, opacity={item.opacity()}")
-                if hasattr(item, 'text_item'):
-                    logger.debug(f"  Child text item: visible={item.text_item.isVisible()}, "
-                                 f"pos={item.text_item.pos()}, text='{item.text_item.toPlainText()}'")
 
         self._log_all_nodes_after_rebuild()
         self._log_main_overlaps()
 
         logger.debug("=== _rebuild END ===")
-
-    def _log_flow_items_before_rebuild(self):
-        logger.debug("--- flow_items before rebuild ---")
-        for i, item in enumerate(self.draft.flow_items):
-            logger.debug(f"  [{i}] type={item.item_type}, name={item.name}, pos=({item.pos_x},{item.pos_y})")
 
     def _log_all_nodes_after_rebuild(self):
         all_nodes = [item for item in self.scene.items() if isinstance(item, FlowNodeItem)]
@@ -392,14 +396,13 @@ class FlowCanvas(QGraphicsView):
         else:
             logger.debug("FlowCanvas.dragEnterEvent: rejected (no MIME)")
             event.ignore()
-        logger.debug("FlowCanvas.dragEnterEvent END")
 
     def dragMoveEvent(self, event):
         if event.mimeData().hasFormat(self.MIME_TYPE):
             event.acceptProposedAction()
             scene_pos = self.mapToScene(event.position().toPoint())
-            item = self.scene.itemAt(scene_pos, self.transform())
-            if isinstance(item, FlowNodeItem):
+            item = self._find_flow_node_at(scene_pos)
+            if item is not None:
                 QToolTip.showText(self.mapToGlobal(event.position().toPoint()), item.get_guidance_text())
             else:
                 QToolTip.hideText()
@@ -423,33 +426,38 @@ class FlowCanvas(QGraphicsView):
                 name = data.get("name", "")
 
                 scene_pos = self.mapToScene(event.position().toPoint())
-                target_item = self.scene.itemAt(scene_pos, self.transform())
-                logger.debug(f"FlowCanvas.dropEvent: type={item_type}, name={name}, target={target_item.item_type if isinstance(target_item, FlowNodeItem) else 'none'}")
+                target_item = self._find_flow_node_at(scene_pos)
+                logger.debug(f"FlowCanvas.dropEvent: type={item_type}, name={name}, "
+                             f"target={target_item.item_type if target_item else 'none'}")
 
                 if item_type == "function":
+                    handled = False
                     if isinstance(target_item, FlowNodeItem):
-                        if target_item.item_type == "transition":
-                            target_flow_item = target_item.flow_item
+                        target_type = target_item.item_type
+                        target_flow_item = target_item.flow_item
+
+                        # ★ transition または pre_action → pre_actions に追加
+                        if target_type in ("transition", "pre_action"):
                             if target_flow_item:
                                 target_flow_item.params.setdefault('pre_actions', []).append(name)
-                                logger.debug(f"Added pre_action '{name}' to transition")
-                        elif target_item.item_type == "else":
-                            target_flow_item = target_item.flow_item
+                                logger.debug(f"Added pre_action '{name}' to transition "
+                                             f"'{target_flow_item.name}' (via {target_type})")
+                                handled = True
+                        # ★ else または else_action → else_actions に追加
+                        elif target_type in ("else", "else_action"):
                             if target_flow_item:
                                 target_flow_item.params.setdefault('else_actions', []).append(name)
-                                logger.debug(f"Added else_action '{name}' to transition")
-                        else:
-                            new_item = FlowItem(item_type="function", name=name)
-                            new_item.pos_x = scene_pos.x()
-                            new_item.pos_y = scene_pos.y()
-                            self.draft.flow_items.append(new_item)
-                            logger.debug(f"Added function to flow: {name}")
-                    else:
+                                logger.debug(f"Added else_action '{name}' to transition "
+                                             f"'{target_flow_item.name}' (via {target_type})")
+                                handled = True
+
+                    # どこにも追加されなかった場合は standalone function
+                    if not handled:
                         new_item = FlowItem(item_type="function", name=name)
                         new_item.pos_x = scene_pos.x()
                         new_item.pos_y = scene_pos.y()
                         self.draft.flow_items.append(new_item)
-                        logger.debug(f"Added function to flow: {name}")
+                        logger.debug(f"Added standalone function to flow: {name}")
 
                 elif item_type == "transition":
                     event_name = name if name else (self.draft.event or "NewEvent")
