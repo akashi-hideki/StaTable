@@ -11,14 +11,21 @@ logger = logging.getLogger("transition_editor_direct.draft")
 
 
 def ensure_list(value) -> List[str]:
-    """値がリストでなければ空リストを返す（デバッグログ付き）"""
+    """
+    値がリストでなければリストに変換して返す。
+    - None や空文字列は空リスト
+    - 文字列が来た場合は単一要素のリストとして扱う
+    - リストならそのまま返す
+    """
     if isinstance(value, list):
         return value
-    if isinstance(value, str):
-        logger.error(f"Expected list but got string: '{value}'. Returning empty list.")
-        return []
     if value is None:
         return []
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return []
+        return [stripped]
     logger.warning(f"Unexpected type for list: {type(value)}. Returning empty list.")
     return []
 
