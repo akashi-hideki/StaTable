@@ -2,6 +2,7 @@
 """
 コード生成設定ダイアログ
 - 基本設定、ログ設定、外部インクルード、出力設定のタブ構成
+- 生成方式・テーブル方式は固定（テーブル駆動 + 配列方式のみ）
 """
 
 import os
@@ -39,7 +40,7 @@ class CodeGenerationSettingsDialog(QDialog):
         self.config = self.config_manager.get_config()
         
         self.setWindowTitle("コード生成設定")
-        self.setMinimumSize(600, 550)
+        self.setMinimumSize(600, 600)
         
         self._setup_ui()
         self._load_config()
@@ -99,25 +100,34 @@ class CodeGenerationSettingsDialog(QDialog):
         
         self.project_name_edit = QLineEdit()
         self.project_name_edit.setPlaceholderText("例: MyProject")
+        self.project_name_edit.setToolTip("生成ファイル名 <project_name>_run.c に使用されます")
         project_layout.addRow("プロジェクト名:", self.project_name_edit)
         
         layout.addWidget(project_group)
         
-        # 生成スタイル
+        # ★ 生成スタイル（固定表示）
         style_group = QGroupBox("生成スタイル")
         style_layout = QFormLayout(style_group)
         
-        self.style_combo = QComboBox()
-        self.style_combo.addItem("テーブル駆動方式", "table_driven")
-        self.style_combo.addItem("switch-case方式", "switch_case")
-        style_layout.addRow("生成方式:", self.style_combo)
+        # 生成方式: 固定
+        style_value_label = QLabel("テーブル駆動方式（セル単位関数 + 関数テーブル）")
+        style_value_label.setStyleSheet("font-weight: bold;")
+        style_layout.addRow("生成方式:", style_value_label)
         
-        self.table_type_combo = QComboBox()
-        self.table_type_combo.addItem("配列方式", "array")
-        self.table_type_combo.addItem("switch-case方式", "switch")
-        self.table_type_combo.addItem("辞書方式（非推奨）", "dictionary")
-        style_layout.addRow("テーブル方式:", self.table_type_combo)
+        # テーブル方式: 固定
+        table_value_label = QLabel("配列方式（2次元配列 + O(1) アクセス）")
+        table_value_label.setStyleSheet("font-weight: bold;")
+        style_layout.addRow("テーブル方式:", table_value_label)
         
+        # 説明
+        note_label = QLabel(
+            "※ C言語向けに最適化された方式で固定されています。\n"
+            "   セル単位の遷移関数を生成し、関数テーブルで管理します。"
+        )
+        note_label.setStyleSheet("color: gray; font-size: 10px; margin-left: 10px;")
+        style_layout.addRow("", note_label)
+        
+        # OS種別（これは意味があるので選択可能）
         self.os_type_combo = QComboBox()
         self.os_type_combo.addItem("NonRTOS（ベアメタル）", "non_rtos")
         self.os_type_combo.addItem("FreeRTOS", "freertos")
@@ -131,7 +141,7 @@ class CodeGenerationSettingsDialog(QDialog):
         naming_layout = QFormLayout(naming_group)
         
         self.naming_prefix_edit = QLineEdit()
-        self.naming_prefix_edit.setPlaceholderText("関数名のプレフィックス")
+        self.naming_prefix_edit.setPlaceholderText("関数名のプレフィックス（任意）")
         naming_layout.addRow("プレフィックス:", self.naming_prefix_edit)
         
         self.state_prefix_edit = QLineEdit()
@@ -186,6 +196,10 @@ class CodeGenerationSettingsDialog(QDialog):
         self.max_pending_spin = QSpinBox()
         self.max_pending_spin.setRange(1, 255)
         self.max_pending_spin.setValue(16)
+        self.max_pending_spin.setToolTip(
+            "保留イベントの連続処理回数の上限。\n"
+            "この回数を超えると無限ループを防止するため処理を打ち切ります。"
+        )
         pending_layout.addRow("最大連続処理回数:", self.max_pending_spin)
         
         layout.addWidget(pending_group)
@@ -199,7 +213,10 @@ class CodeGenerationSettingsDialog(QDialog):
         include_group = QGroupBox("外部インクルードファイル")
         include_layout = QVBoxLayout(include_group)
         
-        hint_label = QLabel("Renesas Smart Configurator 等の生成ヘッダを指定します。")
+        hint_label = QLabel(
+            "Renesas Smart Configurator 等の生成ヘッダを指定します。\n"
+            "指定したヘッダは、選択された挿入先に #include されます。"
+        )
         hint_label.setStyleSheet("color: gray; font-size: 10px;")
         include_layout.addWidget(hint_label)
         
@@ -327,15 +344,11 @@ class CodeGenerationSettingsDialog(QDialog):
         # プロジェクト名
         self.project_name_edit.setText(self.config.project_name)
         
-        # スタイル
-        idx = self.style_combo.findData(self.config.generation_style)
-        if idx >= 0:
-            self.style_combo.setCurrentIndex(idx)
+        # ★ 生成方式・テーブル方式は固定のため、内部設定を強制
+        self.config.generation_style = "table_driven"
+        self.config.table_type = "array"
         
-        idx = self.table_type_combo.findData(self.config.table_type)
-        if idx >= 0:
-            self.table_type_combo.setCurrentIndex(idx)
-        
+        # OS種別
         idx = self.os_type_combo.findData(self.config.os_type)
         if idx >= 0:
             self.os_type_combo.setCurrentIndex(idx)
@@ -392,9 +405,11 @@ class CodeGenerationSettingsDialog(QDialog):
         # プロジェクト名
         self.config.project_name = self.project_name_edit.text().strip() or "MyProject"
         
-        # スタイル
-        self.config.generation_style = self.style_combo.currentData()
-        self.config.table_type = self.table_type_combo.currentData()
+        # ★ 生成方式・テーブル方式は固定
+        self.config.generation_style = "table_driven"
+        self.config.table_type = "array"
+        
+        # OS種別
         self.config.os_type = self.os_type_combo.currentData()
         
         # 命名規則
