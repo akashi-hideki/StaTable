@@ -1,3 +1,4 @@
+# statable/state_machine.py
 from typing import Dict, List, Optional
 from .model import State, Event, Transition, RoleFunction
 
@@ -9,6 +10,10 @@ class StateMachine:
         self.transitions: List[Transition] = []
         self.role_functions: Dict[str, RoleFunction] = {}
         self.initial_state: Optional[str] = None
+
+        # ★ レイヤ設定（Phase 1 追加）
+        self.layer_priority: int = 5          # 実行優先度（1〜9）
+        self.layer_description: str = ""      # 層の説明（任意）
 
     def add_state(self, state: State):
         if state.name in self.states:

@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 class CodeGenerationConfig:
     """コード生成設定"""
     
-    # 生成スタイル
+    # ===== 生成スタイル =====
     generation_style: str = "table_driven"  # table_driven / switch_case
     
     # 遷移テーブル方式
@@ -21,27 +21,52 @@ class CodeGenerationConfig:
     # OS種別
     os_type: str = "non_rtos"  # non_rtos / freertos / threadx
     
-    # 命名規則
-    naming_prefix: str = ""  # 関数名のプレフィックス
+    # ===== 命名規則 =====
+    naming_prefix: str = ""
     state_prefix: str = "STATE"
     event_prefix: str = "EVENT"
     flag_prefix: str = "FLAG"
     
-    # デバッグログ
+    # ===== デバッグログ =====
     enable_debug_logs: bool = True
     enable_info_logs: bool = True
     enable_error_logs: bool = True
     
-    # コメント生成
+    # ===== コメント生成 =====
     enable_comments: bool = True
     enable_doxygen: bool = True
     
-    # マーカー
+    # ===== マーカー =====
     enable_user_markers: bool = True
     
-    # 出力設定
+    # ===== 出力設定 =====
     output_directory: str = ""
     save_with_merge: bool = True
+    
+    # ===== プロジェクト設定 =====
+    project_name: str = "MyProject"
+    
+    # ===== フォルダ構成 =====
+    folder_structure: str = "by_type"       # flat / by_layer / by_type
+    include_dir_name: str = "include"
+    source_dir_name: str = "src"
+    common_dir_name: str = "common"
+    project_dir_name: str = "project"
+    
+    # ===== スーパーインクルード =====
+    generate_super_include: bool = True
+    super_include_file: str = "statable_all.h"
+    super_include_dir: str = "common"
+    
+    # ===== 外部インクルード =====
+    external_includes: List[str] = field(default_factory=list)
+    external_includes_in_super: bool = True
+    external_includes_in_role: bool = True
+    external_includes_in_transitions: bool = False
+    external_includes_in_common: bool = False
+    
+    # ===== 予約イベント制限 =====
+    max_consecutive_pending_events: int = 16
     
     def to_dict(self) -> Dict:
         """辞書に変換"""
@@ -61,12 +86,30 @@ class CodeGenerationConfig:
             'enable_user_markers': self.enable_user_markers,
             'output_directory': self.output_directory,
             'save_with_merge': self.save_with_merge,
+            'project_name': self.project_name,
+            'folder_structure': self.folder_structure,
+            'include_dir_name': self.include_dir_name,
+            'source_dir_name': self.source_dir_name,
+            'common_dir_name': self.common_dir_name,
+            'project_dir_name': self.project_dir_name,
+            'generate_super_include': self.generate_super_include,
+            'super_include_file': self.super_include_file,
+            'super_include_dir': self.super_include_dir,
+            'external_includes': self.external_includes,
+            'external_includes_in_super': self.external_includes_in_super,
+            'external_includes_in_role': self.external_includes_in_role,
+            'external_includes_in_transitions': self.external_includes_in_transitions,
+            'external_includes_in_common': self.external_includes_in_common,
+            'max_consecutive_pending_events': self.max_consecutive_pending_events,
         }
     
     @classmethod
     def from_dict(cls, data: Dict) -> 'CodeGenerationConfig':
         """辞書から復元"""
-        return cls(**data)
+        # 未知のキーは無視
+        valid_keys = {f.name for f in cls.__dataclass_fields__.values()}
+        filtered = {k: v for k, v in data.items() if k in valid_keys}
+        return cls(**filtered)
 
 
 class ConfigManager:
@@ -114,4 +157,11 @@ class ConfigManager:
             'non_rtos': 'NonRTOS（ベアメタル）',
             'freertos': 'FreeRTOS',
             'threadx': 'ThreadX',
+        }
+    
+    def get_available_folder_structures(self) -> Dict[str, str]:
+        return {
+            'flat': 'フラット',
+            'by_layer': '層ごと',
+            'by_type': 'include/src分離',
         }

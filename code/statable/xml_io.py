@@ -1,10 +1,11 @@
 # statable/xml_io.py
 """
-XML入出力（共有ライブラリ対応版・デバッグログ強化・pre_actions分解修正）
+XML入出力（プロジェクト設定・レイヤ優先度対応版）
 - プロジェクト保存/読込で共有ライブラリ（ロール関数・遷移条件・リテラル）を保存
 - Transitionのpre_actions/else_actions/has_else/else_targetも保存
 - 文字列→リスト正規化、1文字分解の自動結合
 - libcntrl.RoleFunction の引数互換対応
+- レイヤ優先度・プロジェクト名の保存/復元
 - 各段階でデバッグログを出力
 """
 
@@ -80,6 +81,12 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
     root = ET.Element("StateMachine")
     if sm.initial_state:
         root.set("initial", sm.initial_state)
+
+    # ★ レイヤ設定
+    root.set("layer_priority", str(getattr(sm, 'layer_priority', 5)))
+    root.set("layer_description", getattr(sm, 'layer_description', ''))
+    logger.debug(f"  layer_priority={getattr(sm, 'layer_priority', 5)}, "
+                 f"layer_description='{getattr(sm, 'layer_description', '')}'")
 
     states_elem = ET.SubElement(root, "States")
     for state in sm.states.values():
@@ -165,6 +172,15 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
     sm = StateMachine()
     initial_state_name = elem.get("initial")
     logger.debug(f"  initial_state_name={initial_state_name}")
+
+    # ★ レイヤ設定
+    try:
+        sm.layer_priority = int(elem.get("layer_priority", "5"))
+    except ValueError:
+        sm.layer_priority = 5
+    sm.layer_description = elem.get("layer_description", "")
+    logger.debug(f"  layer_priority={sm.layer_priority}, "
+                 f"layer_description='{sm.layer_description}'")
 
     states_elem = elem.find("States")
     if states_elem is None:
@@ -657,6 +673,96 @@ def literal_library_from_element(elem: Optional[ET.Element]):
 
 
 # ======================================================================
+# プロジェクト設定 → XML
+# ======================================================================
+def _project_settings_to_element(settings: Optional[dict]) -> ET.Element:
+    """プロジェクト設定をXML要素に変換"""
+    logger.debug(f"_project_settings_to_element: settings={settings is not None}")
+    elem = ET.Element("ProjectSettings")
+
+    if settings:
+        cg = ET.SubElement(elem, "CodeGeneration")
+        cg.set("project_name", settings.get('project_name', 'MyProject'))
+        cg.set("table_type", settings.get('table_type', 'array'))
+        cg.set("generation_style", settings.get('generation_style', 'table_driven'))
+        cg.set("os_type", settings.get('os_type', 'non_rtos'))
+        cg.set("folder_structure", settings.get('folder_structure', 'by_type'))
+        cg.set("include_dir_name", settings.get('include_dir_name', 'include'))
+        cg.set("source_dir_name", settings.get('source_dir_name', 'src'))
+        cg.set("common_dir_name", settings.get('common_dir_name', 'common'))
+        cg.set("project_dir_name", settings.get('project_dir_name', 'project'))
+        cg.set("generate_super_include",
+               "true" if settings.get('generate_super_include', True) else "false")
+        cg.set("super_include_file", settings.get('super_include_file', 'statable_all.h'))
+        cg.set("max_consecutive_pending_events",
+               str(settings.get('max_consecutive_pending_events', 16)))
+
+        # 外部インクルード
+        ext_includes = settings.get('external_includes', [])
+        if ext_includes:
+            ext_elem = ET.SubElement(cg, "ExternalIncludes")
+            for inc in ext_includes:
+                ET.SubElement(ext_elem, "Include", name=inc)
+            logger.debug(f"  external_includes: {ext_includes}")
+
+        cg.set("external_includes_in_super",
+               "true" if settings.get('external_includes_in_super', True) else "false")
+        cg.set("external_includes_in_role",
+               "true" if settings.get('external_includes_in_role', True) else "false")
+        cg.set("external_includes_in_transitions",
+               "true" if settings.get('external_includes_in_transitions', False) else "false")
+        cg.set("external_includes_in_common",
+               "true" if settings.get('external_includes_in_common', False) else "false")
+
+    return elem
+
+
+def _project_settings_from_element(elem: Optional[ET.Element]) -> dict:
+    """XML要素からプロジェクト設定を復元"""
+    logger.debug(f"_project_settings_from_element: elem={elem is not None}")
+    settings = {}
+
+    if elem is None:
+        return settings
+
+    cg = elem.find("CodeGeneration")
+    if cg is None:
+        logger.debug("  <CodeGeneration> element not found")
+        return settings
+
+    settings['project_name'] = cg.get("project_name", "MyProject")
+    settings['table_type'] = cg.get("table_type", "array")
+    settings['generation_style'] = cg.get("generation_style", "table_driven")
+    settings['os_type'] = cg.get("os_type", "non_rtos")
+    settings['folder_structure'] = cg.get("folder_structure", "by_type")
+    settings['include_dir_name'] = cg.get("include_dir_name", "include")
+    settings['source_dir_name'] = cg.get("source_dir_name", "src")
+    settings['common_dir_name'] = cg.get("common_dir_name", "common")
+    settings['project_dir_name'] = cg.get("project_dir_name", "project")
+    settings['generate_super_include'] = cg.get("generate_super_include", "true").lower() == "true"
+    settings['super_include_file'] = cg.get("super_include_file", "statable_all.h")
+    try:
+        settings['max_consecutive_pending_events'] = int(cg.get("max_consecutive_pending_events", "16"))
+    except ValueError:
+        settings['max_consecutive_pending_events'] = 16
+
+    ext_elem = cg.find("ExternalIncludes")
+    if ext_elem is not None:
+        settings['external_includes'] = [inc.get("name", "") for inc in ext_elem.findall("Include")]
+    else:
+        settings['external_includes'] = []
+
+    settings['external_includes_in_super'] = cg.get("external_includes_in_super", "true").lower() == "true"
+    settings['external_includes_in_role'] = cg.get("external_includes_in_role", "true").lower() == "true"
+    settings['external_includes_in_transitions'] = cg.get("external_includes_in_transitions", "false").lower() == "true"
+    settings['external_includes_in_common'] = cg.get("external_includes_in_common", "false").lower() == "true"
+
+    logger.debug(f"  loaded project_settings: project_name='{settings['project_name']}', "
+                 f"external_includes={settings['external_includes']}")
+    return settings
+
+
+# ======================================================================
 # プロジェクト保存/読込
 # ======================================================================
 def project_to_xml(
@@ -666,19 +772,31 @@ def project_to_xml(
         role_function_library=None,
         condition_library=None,
         literal_library=None,
+        project_settings: Optional[dict] = None,
 ) -> None:
-    """Save project to XML file（共有ライブラリ含む）"""
+    """Save project to XML file（共有ライブラリ + プロジェクト設定含む）"""
     logger.debug(f"=== project_to_xml START ===")
     logger.debug(f"  filepath={filepath}")
     logger.debug(f"  tabs={len(tabs)}")
     for name, sm in tabs:
-        logger.debug(f"    tab '{name}': states={len(sm.states)}, transitions={len(sm.transitions)}")
+        logger.debug(f"    tab '{name}': states={len(sm.states)}, transitions={len(sm.transitions)}, "
+                     f"layer_priority={getattr(sm, 'layer_priority', 5)}")
     logger.debug(f"  global_defs: vars={len(global_defs.variables)}, flags={len(global_defs.flags)}")
     logger.debug(f"  role_function_library={role_function_library is not None}")
     logger.debug(f"  condition_library={condition_library is not None}")
     logger.debug(f"  literal_library={literal_library is not None}")
+    logger.debug(f"  project_settings={project_settings is not None}")
 
     root = ET.Element("Project")
+
+    # ★ プロジェクト設定
+    project_name = "MyProject"
+    if project_settings:
+        project_name = project_settings.get('project_name', 'MyProject')
+        root.append(_project_settings_to_element(project_settings))
+    root.set("name", project_name)
+    logger.debug(f"  project_name='{project_name}'")
+
     root.append(global_defs_to_element(global_defs))
 
     if role_function_library is not None or condition_library is not None or literal_library is not None:
@@ -704,7 +822,8 @@ def project_to_xml(
 def project_from_xml(filepath: str):
     """
     Load project from XML file.
-    Returns (tabs, global_defs, role_function_library, condition_library, literal_library)
+    Returns:
+        (tabs, global_defs, role_lib, cond_lib, lit_lib, project_settings)
     """
     logger.debug(f"=== project_from_xml START ===")
     logger.debug(f"  filepath={filepath}")
@@ -712,6 +831,12 @@ def project_from_xml(filepath: str):
     tree = ET.parse(filepath)
     root = tree.getroot()
     logger.debug(f"  root tag={root.tag}")
+
+    # プロジェクト設定
+    project_settings = _project_settings_from_element(root.find("ProjectSettings"))
+    if 'project_name' not in project_settings and root.get("name"):
+        project_settings['project_name'] = root.get("name")
+        logger.debug(f"  project_name from root attr: '{root.get('name')}'")
 
     gd_elem = root.find("GlobalDefinitions")
     logger.debug(f"  GlobalDefinitions found: {gd_elem is not None}")
@@ -747,6 +872,7 @@ def project_from_xml(filepath: str):
     logger.debug(f"  role_function_library: {len(role_function_library.list_all()) if role_function_library else 0}")
     logger.debug(f"  condition_library: {len(condition_library.list_all()) if condition_library else 0}")
     logger.debug(f"  literal_library: {len(literal_library.list_all()) if literal_library else 0}")
+    logger.debug(f"  project_settings keys: {list(project_settings.keys())}")
     logger.debug(f"=== project_from_xml END ===")
 
-    return tabs, global_defs, role_function_library, condition_library, literal_library
+    return tabs, global_defs, role_function_library, condition_library, literal_library, project_settings

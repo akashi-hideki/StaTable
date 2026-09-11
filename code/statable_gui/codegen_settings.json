@@ -1,6 +1,6 @@
 {
-  "output_directory": "C:\\Users\\user\\AppData\\Local\\Temp\\statable_gen_test_g7yzpt_x",
-  "generation_style": "switch_case",
-  "os_type": "freertos",
-  "save_with_merge": false
+  "output_directory": "",
+  "generation_style": "table_driven",
+  "os_type": "non_rtos",
+  "save_with_merge": true
 }

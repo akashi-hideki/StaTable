@@ -30,6 +30,7 @@ from .interrupt_handler_edit_dialog import InterruptHandlerEditDialog
 from .event_definition_dialog import EventDefinitionDialog
 from .event_delivery_settings_dialog import EventDeliverySettingsDialog
 from .common_widgets import TypeManagerDialog
+from .layer_settings_dialog import LayerSettingsDialog
 
 # 共有ライブラリ
 try:
@@ -136,6 +137,12 @@ class MainWindow(QMainWindow):
             f"conditions={len(self.condition_library.list_all())}, "
             f"literals={len(self.literal_library.list_all())}"
         )
+        for rf in self.role_function_library.list_all():
+            StaTableLogger.debug(f"  role: {rf.name}")
+        for ct in self.condition_library.list_all():
+            StaTableLogger.debug(f"  condition: {ct.name}")
+        for lit in self.literal_library.list_all():
+            StaTableLogger.debug(f"  literal: {lit.name}")
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
@@ -165,7 +172,7 @@ class MainWindow(QMainWindow):
         self.logger.debug("MainWindow initialization completed")
 
     # ----------------------------------------------------------------------
-    # ツールバー・メニュー
+    # ツールバー
     # ----------------------------------------------------------------------
     def create_toolbar(self):
         toolbar = QToolBar("メインツールバー", self)
@@ -197,6 +204,12 @@ class MainWindow(QMainWindow):
         interrupt_btn.setToolTip("割り込み処理・デバイスリソース・タイマ設定を開く")
         interrupt_btn.triggered.connect(self.open_interrupt_settings)
         toolbar.addAction(interrupt_btn)
+
+        # ★ レイヤ設定
+        layer_btn = QAction("レイヤ設定", self)
+        layer_btn.setToolTip("層の実行優先度・初期化順序を設定")
+        layer_btn.triggered.connect(self.open_layer_settings)
+        toolbar.addAction(layer_btn)
 
         toolbar.addSeparator()
 
@@ -257,6 +270,9 @@ class MainWindow(QMainWindow):
 
         StaTableLogger.debug("Toolbar created")
 
+    # ----------------------------------------------------------------------
+    # メニュー
+    # ----------------------------------------------------------------------
     def create_menus(self):
         menubar = self.menuBar()
 
@@ -299,6 +315,11 @@ class MainWindow(QMainWindow):
         interrupt_action.triggered.connect(self.open_interrupt_settings)
         edit_menu.addAction(interrupt_action)
 
+        # ★ レイヤ設定
+        layer_settings_action = QAction("Layer Settings...", self)
+        layer_settings_action.triggered.connect(self.open_layer_settings)
+        edit_menu.addAction(layer_settings_action)
+
         validation_menu = menubar.addMenu("検証(&V)")
         validate_action = QAction("検証・AI診断...", self)
         validate_action.setShortcut("Ctrl+Shift+V")
@@ -328,6 +349,42 @@ class MainWindow(QMainWindow):
         toggle_traceball.setChecked(False)
         toggle_traceball.toggled.connect(self.toggle_traceball)
         view_menu.addAction(toggle_traceball)
+
+    # ----------------------------------------------------------------------
+    # ★ レイヤ設定
+    # ----------------------------------------------------------------------
+    def open_layer_settings(self):
+        """レイヤ設定ダイアログを開く"""
+        StaTableLogger.debug("MainWindow.open_layer_settings called")
+
+        layers = []
+        for index in range(self.tab_widget.count()):
+            tab = self.tab_widget.widget(index)
+            if hasattr(tab, 'sm'):
+                name = self.tab_widget.tabText(index)
+                layers.append((name, tab.sm))
+                StaTableLogger.debug(
+                    f"  layer[{index}]: name='{name}', "
+                    f"priority={getattr(tab.sm, 'layer_priority', 5)}, "
+                    f"description='{getattr(tab.sm, 'layer_description', '')}'"
+                )
+
+        if not layers:
+            QMessageBox.warning(self, "Warning", "層が定義されていません。")
+            return
+
+        StaTableLogger.debug(f"Opening LayerSettingsDialog with {len(layers)} layers")
+        dlg = LayerSettingsDialog(layers, self)
+        if dlg.exec() == QDialog.Accepted:
+            dlg.apply_settings()
+            StaTableLogger.info("Layer settings updated")
+            for name, sm in layers:
+                StaTableLogger.debug(
+                    f"  after apply: '{name}' -> priority={sm.layer_priority}, "
+                    f"description='{sm.layer_description}'"
+                )
+        else:
+            StaTableLogger.debug("LayerSettingsDialog cancelled")
 
     # ----------------------------------------------------------------------
     # 各ダイアログ起動メソッド
@@ -399,7 +456,9 @@ class MainWindow(QMainWindow):
     # プロジェクト保存・読込
     # ----------------------------------------------------------------------
     def save_project(self):
-        """全タブとグローバル定義、共有ライブラリを1つのXMLファイルに保存する"""
+        """全タブ・グローバル定義・共有ライブラリ・プロジェクト設定を保存"""
+        StaTableLogger.debug("MainWindow.save_project called")
+
         tabs = []
         for index in range(self.tab_widget.count()):
             tab = self.tab_widget.widget(index)
@@ -413,9 +472,32 @@ class MainWindow(QMainWindow):
             self, "Save Project", default_path, "XML files (*.xml)"
         )
         if not filepath:
+            StaTableLogger.debug("Save cancelled")
             return
         try:
-            # ★ 共有ライブラリも一緒に保存
+            # ★ プロジェクト設定を収集
+            config = self.config_manager.get_config()
+            project_settings = {
+                'project_name': config.project_name,
+                'table_type': config.table_type,
+                'generation_style': config.generation_style,
+                'os_type': config.os_type,
+                'folder_structure': config.folder_structure,
+                'include_dir_name': config.include_dir_name,
+                'source_dir_name': config.source_dir_name,
+                'common_dir_name': config.common_dir_name,
+                'project_dir_name': config.project_dir_name,
+                'generate_super_include': config.generate_super_include,
+                'super_include_file': config.super_include_file,
+                'external_includes': list(config.external_includes),
+                'external_includes_in_super': config.external_includes_in_super,
+                'external_includes_in_role': config.external_includes_in_role,
+                'external_includes_in_transitions': config.external_includes_in_transitions,
+                'external_includes_in_common': config.external_includes_in_common,
+                'max_consecutive_pending_events': config.max_consecutive_pending_events,
+            }
+            StaTableLogger.debug(f"Project settings: {project_settings}")
+
             project_to_xml(
                 tabs,
                 self.global_defs,
@@ -423,6 +505,7 @@ class MainWindow(QMainWindow):
                 role_function_library=self.role_function_library,
                 condition_library=self.condition_library,
                 literal_library=self.literal_library,
+                project_settings=project_settings,
             )
             self.prefs.last_project_dir = str(Path(filepath).parent)
             self.logger.info(f"Project saved to {filepath}")
@@ -432,16 +515,29 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Failed to save project:\n{e}")
 
     def open_project(self):
-        """XMLファイルからプロジェクト全体（タブ＋グローバル定義＋共有ライブラリ）を読み込む"""
+        """プロジェクト全体を読み込む（6値タプル対応）"""
+        StaTableLogger.debug("MainWindow.open_project called")
+
         last_dir = self.prefs.last_project_dir
         filepath, _ = QFileDialog.getOpenFileName(
             self, "Open Project", last_dir, "XML files (*.xml)"
         )
         if not filepath:
+            StaTableLogger.debug("Open cancelled")
             return
         try:
-            # ★ 5つの戻り値を受け取る
-            tabs, global_defs, role_lib, cond_lib, lit_lib = project_from_xml(filepath)
+            # ★ 6つの戻り値
+            StaTableLogger.debug(f"Calling project_from_xml: {filepath}")
+            tabs, global_defs, role_lib, cond_lib, lit_lib, project_settings = \
+                project_from_xml(filepath)
+
+            StaTableLogger.debug(
+                f"Loaded: tabs={len(tabs)}, "
+                f"role_lib={len(role_lib.list_all()) if role_lib else 0}, "
+                f"cond_lib={len(cond_lib.list_all()) if cond_lib else 0}, "
+                f"lit_lib={len(lit_lib.list_all()) if lit_lib else 0}, "
+                f"project_settings={project_settings}"
+            )
 
             self.close_all_tabs()
             for name, sm in tabs:
@@ -458,7 +554,16 @@ class MainWindow(QMainWindow):
             if lit_lib is not None:
                 self.literal_library = lit_lib
 
-            # ★ 既存タブのライブラリ参照を更新
+            # ★ プロジェクト設定を反映
+            if project_settings:
+                config = self.config_manager.get_config()
+                for key, value in project_settings.items():
+                    if hasattr(config, key):
+                        setattr(config, key, value)
+                        StaTableLogger.debug(f"  config.{key} = {value}")
+                self.config_manager.set_config(config)
+
+            # 既存タブのライブラリ参照を更新
             for index in range(self.tab_widget.count()):
                 tab = self.tab_widget.widget(index)
                 if hasattr(tab, 'role_function_library'):
@@ -480,6 +585,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Failed to open project:\n{e}")
 
     def close_all_tabs(self):
+        StaTableLogger.debug("close_all_tabs called")
         while self.tab_widget.count() > 0:
             widget = self.tab_widget.widget(0)
             self.tab_widget.removeTab(0)
@@ -516,6 +622,7 @@ class MainWindow(QMainWindow):
     def add_state_machine_tab(self, name: str, sm: StateMachine):
         StaTableLogger.debug(
             f"add_state_machine_tab: name={name}, "
+            f"layer_priority={getattr(sm, 'layer_priority', 5)}, "
             f"roles={len(self.role_function_library.list_all())}, "
             f"conditions={len(self.condition_library.list_all())}, "
             f"literals={len(self.literal_library.list_all())}"
