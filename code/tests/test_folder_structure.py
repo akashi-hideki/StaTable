@@ -1,6 +1,7 @@
 # tests/test_folder_structure.py
 """
 フォルダ構成反映の単体テスト
+（13ファイル対応版）
 """
 
 import sys
@@ -23,8 +24,9 @@ from c_code_generator import CCodeGenerator
 from config import CodeGenerationConfig
 
 
-# 期待ファイル数（スーパーインクルード含む）
-EXPECTED_FILE_COUNT = 12
+# 期待ファイル数（スーパーインクルード + スーパーループ含む）
+# = 11 (基本) + 1 (super_include) + 1 (super_loop)
+EXPECTED_FILE_COUNT = 13
 
 
 def make_sample():
@@ -71,7 +73,8 @@ class TestResolveOutputPath(unittest.TestCase):
                      'statable_init.c',
                      'statable_event_queue.c',
                      'statable_interrupt.c',
-                     'statable_timer.c']:
+                     'statable_timer.c',
+                     'MyProject_run.c']:
             self.assertEqual(
                 gen._resolve_output_path(name),
                 os.path.join('src', name),
@@ -164,7 +167,6 @@ class TestSaveGeneratedCode(unittest.TestCase):
         files = gen.generate_all(self.sm, self.gd)
         saved = gen.save_generated_code(files, self.tmpdir)
 
-        # ★ 12 に変更（statable_all.h 含む）
         self.assertEqual(len(saved), EXPECTED_FILE_COUNT)
         for path in saved:
             self.assertTrue(os.path.isfile(path))
@@ -210,7 +212,8 @@ class TestSaveGeneratedCode(unittest.TestCase):
                      'statable_init.c',
                      'statable_event_queue.c',
                      'statable_interrupt.c',
-                     'statable_timer.c']:
+                     'statable_timer.c',
+                     'MyProject_run.c']:
             path = os.path.join(self.tmpdir, 'src', name)
             self.assertTrue(os.path.isfile(path),
                             f"missing: {path}")
@@ -226,8 +229,8 @@ class TestSaveGeneratedCode(unittest.TestCase):
             self.assertTrue(os.path.isfile(path),
                             f"missing: {path}")
 
-    def test_by_type_total_12_files(self):
-        """★ 11 → 12 に変更"""
+    def test_by_type_total_13_files(self):
+        """★ 12 → 13 に変更"""
         cfg = CodeGenerationConfig(folder_structure='by_type')
         gen = CCodeGenerator(config=cfg)
         files = gen.generate_all(self.sm, self.gd)
@@ -267,7 +270,7 @@ class TestSaveWithMerge(unittest.TestCase):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_merge_by_type(self):
-        """★ 11 → 12 に変更"""
+        """★ 12 → 13 に変更"""
         cfg = CodeGenerationConfig(
             folder_structure='by_type',
             save_with_merge=True,
@@ -327,10 +330,9 @@ class TestIntegrationWithExisting(unittest.TestCase):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_generate_all_still_works(self):
-        """generate_all が 12ファイル生成する"""
+        """generate_all が 13ファイル生成する"""
         gen = CCodeGenerator()
         files = gen.generate_all(self.sm, self.gd)
-        # ★ 11 → 12 に変更
         self.assertEqual(len(files), EXPECTED_FILE_COUNT)
 
     def test_backward_compatible_flat(self):
@@ -340,7 +342,6 @@ class TestIntegrationWithExisting(unittest.TestCase):
         files = gen.generate_all(self.sm, self.gd)
         saved = gen.save_generated_code(files, self.tmpdir)
 
-        # ★ 11 → 12 に変更
         top_level = os.listdir(self.tmpdir)
         self.assertEqual(len(top_level), EXPECTED_FILE_COUNT)
 

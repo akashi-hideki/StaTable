@@ -1,6 +1,7 @@
 # tests/test_super_include.py
 """
 スーパーインクルード statable_all.h の単体テスト
+（13ファイル対応版）
 """
 
 import sys
@@ -23,6 +24,15 @@ from c_code_generator import CCodeGenerator
 from config import CodeGenerationConfig
 
 
+# ================================================================
+# 期待ファイル数
+# ================================================================
+# 基本 11 + super_include + super_loop = 13
+FULL_FILE_COUNT = 13
+# super_include 無効時: 11 + super_loop = 12
+NO_SUPER_INCLUDE_COUNT = 12
+
+
 def make_sample():
     return SampleDataGenerator().get_sample_data()
 
@@ -40,14 +50,16 @@ class TestGenerationToggle(unittest.TestCase):
         gen = CCodeGenerator(config=cfg)
         files = gen.generate_all(self.sm, self.gd)
         self.assertIn('statable_all.h', files)
-        self.assertEqual(len(files), 12)
+        # ★ 13 に変更（super_loop 追加）
+        self.assertEqual(len(files), FULL_FILE_COUNT)
 
     def test_generate_super_include_false(self):
         cfg = CodeGenerationConfig(generate_super_include=False)
         gen = CCodeGenerator(config=cfg)
         files = gen.generate_all(self.sm, self.gd)
         self.assertNotIn('statable_all.h', files)
-        self.assertEqual(len(files), 11)
+        # ★ 12 に変更（super_loop は常時生成）
+        self.assertEqual(len(files), NO_SUPER_INCLUDE_COUNT)
 
 
 # ============================================================
@@ -91,6 +103,14 @@ class TestContent(unittest.TestCase):
 
     def test_no_external_section_when_empty(self):
         self.assertNotIn('外部インクルード', self.code)
+
+    def test_blank_line_before_user_section(self):
+        """プロジェクトセクションとユーザーセクションの間に空行"""
+        self.assertIn(
+            '#include "osal.h"\n\n'
+            '/* ---- スーパーループ変数（extern） ---- */',
+            self.code,
+        )
 
 
 # ============================================================
@@ -140,7 +160,6 @@ class TestExternalIncludes(unittest.TestCase):
         code = files['statable_all.h']
 
         self.assertIn('#include <stdio.h>', code)
-        # 二重 #include になっていない
         self.assertNotIn('#include "#include', code)
 
 
@@ -197,7 +216,8 @@ class TestPlacement(unittest.TestCase):
         )
         self.assertTrue(os.path.isfile(path))
 
-    def test_by_type_total_12_files(self):
+    def test_by_type_total_13_files(self):
+        """★ 12 → 13 に変更"""
         cfg = CodeGenerationConfig(
             folder_structure='by_type',
             generate_super_include=True,
@@ -206,12 +226,12 @@ class TestPlacement(unittest.TestCase):
         files = gen.generate_all(self.sm, self.gd)
         saved = gen.save_generated_code(files, self.tmpdir)
 
-        self.assertEqual(len(saved), 12)
+        self.assertEqual(len(saved), FULL_FILE_COUNT)
 
         count = 0
         for root, _, filenames in os.walk(self.tmpdir):
             count += len(filenames)
-        self.assertEqual(count, 12)
+        self.assertEqual(count, FULL_FILE_COUNT)
 
 
 # ============================================================
@@ -275,11 +295,11 @@ class TestIntegration(unittest.TestCase):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_generate_all_default_still_works(self):
-        """generate_all の基本動作は変わらない"""
+        """generate_all の基本動作"""
         gen = CCodeGenerator()
         files = gen.generate_all(self.sm, self.gd)
-        # デフォルト: generate_super_include=True → 12ファイル
-        self.assertEqual(len(files), 12)
+        # ★ 12 → 13 に変更
+        self.assertEqual(len(files), FULL_FILE_COUNT)
 
     def test_save_with_merge_super_include(self):
         """マージ保存でも statable_all.h が出力される"""
@@ -293,7 +313,8 @@ class TestIntegration(unittest.TestCase):
             files, self.tmpdir
         )
 
-        self.assertEqual(len(saved), 12)
+        # ★ 12 → 13 に変更
+        self.assertEqual(len(saved), FULL_FILE_COUNT)
         path = os.path.join(
             self.tmpdir, 'common', 'statable_all.h'
         )

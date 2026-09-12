@@ -300,7 +300,7 @@ class CodeTemplates:
 }''',
     }
     
-    # スーパーインクルード用テンプレート
+        # スーパーインクルード用テンプレート
     SUPER_INCLUDE_TEMPLATES = {
         'file_comment': '''/**
  * @file    {filename}
@@ -320,9 +320,17 @@ class CodeTemplates:
         'user_marker_start': '/* [[STABLE_USER_INCLUDES_START]] */',
         'user_marker_end': '/* [[STABLE_USER_INCLUDES_END]] */',
         'guard_end': '#endif /* STATABLE_ALL_H */',
+        # ★ extern 宣言用
+        'extern_var_section': '/* ---- スーパーループ変数（extern） ---- */',
+        'extern_context': 'extern SystemContext_t g_ctx;',
+        'extern_state': 'extern STATE_{layer}_t g_{layer}_state;',
+        'extern_state_nolayer': 'extern STATE_t g_state;',
+        'extern_func_section': '/* ---- スーパーループ関数 ---- */',
+        'extern_init': 'void {project_name}_Init(void);',
+        'extern_run': 'void {project_name}_Run(void);',
     }
     
-    # スーパーループ用テンプレート
+    # スーパーループ用テンプレート（extern 対応版）
     SUPER_LOOP_TEMPLATES = {
         'file_comment': '''/**
  * @file    {project_name}_run.c
@@ -331,6 +339,10 @@ class CodeTemplates:
  * @note    このファイルはユーザーが編集しないこと
  *          ハードウェア初期化等は main.c で行い、本ファイルを呼び出す
  */''',
+        'include': '#include "statable_all.h"',
+        'context_var': 'SystemContext_t g_ctx;',
+        'state_var': 'STATE_{layer}_t g_{layer}_state;',
+        'state_var_nolayer': 'STATE_t g_state;',
         'init_func_comment': '''/**
  * @brief  ステートマシン初期化
  * @note   各層のステートマシンを優先度昇順で初期化
@@ -338,7 +350,8 @@ class CodeTemplates:
         'init_func_signature': 'void {project_name}_Init(void)',
         'init_func_open': '{',
         'init_context': '    SystemContext_Init(&g_ctx);',
-        'init_state': '    g_{layer}_state = STATE_{layer}_Idle;',
+        'init_state': '    g_{layer}_state = STATE_{layer}_{initial};',
+        'init_state_nolayer': '    g_state = STATE_{initial};',
         'init_func_close': '}',
         'run_func_comment': '''/**
  * @brief  ステートマシン メインループ
@@ -346,17 +359,16 @@ class CodeTemplates:
         'run_func_signature': 'void {project_name}_Run(void)',
         'run_func_open': '{',
         'run_while': '    while (1) {',
-        'run_layer_block': '''        /* 優先度 {priority}: {layer} */
-        {{
-            EVENT_{layer}_t evt = StateMachine_GetNextEvent_{layer}(&g_ctx);
-            if (evt != EVENT_{layer}_NONE) {{
-                g_{layer}_state = StateMachine_Process_{layer}(g_{layer}_state, evt, &g_ctx);
-            }}
+        'run_block': '''        EVENT_{layer}_t evt = StateMachine_GetNextEvent_{layer}(&g_ctx);
+        if (evt != EVENT_{layer}_NONE) {{
+            g_{layer}_state = StateMachine_Process_{layer}(g_{layer}_state, evt, &g_ctx);
         }}''',
+        'run_block_nolayer': '''        EVENT_t evt = StateMachine_GetNextEvent(&g_ctx);
+        if (evt != EVENT_NONE) {
+            g_state = StateMachine_Process(g_state, evt, &g_ctx);
+        }''',
         'run_while_close': '    }',
         'run_func_close': '}',
-        'static_context': 'static SystemContext_t g_ctx;',
-        'static_state': 'static STATE_{layer}_t g_{layer}_state;',
     }
     
     # ===== デバッグログメッセージ定義 =====
