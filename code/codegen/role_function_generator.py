@@ -1,6 +1,10 @@
 # codegen/role_function_generator.py
 """
-ロール関数生成モジュール（完全データ駆動版・マーカー対応）
+ロール関数生成モジュール（多層ステートマシン対応版）
+新シグネチャ: int RoleFunc_<Layer>_<Name>(
+    const TransitionContext_<Layer>_t *transition,
+    SystemContext_t *ctx
+)
 """
 
 import sys
@@ -27,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 class RoleFunctionGenerator:
-    """ロール関数生成クラス（完全データ駆動・マーカー対応）"""
+    """ロール関数生成クラス（多層ステートマシン対応）"""
     
     def __init__(self):
         self.mapper = CTypeMapper()
@@ -37,137 +41,98 @@ class RoleFunctionGenerator:
         self.formats = self.templates.FORMATS
         self.merger = CodeMerger()
         
-        self.default_return_values = {
-            'void': '', 'bool': 'false', 'int': '0', 'int8': '0',
-            'int16': '0', 'int32': '0', 'int64': '0', 'uint': '0',
-            'uint8': '0', 'uint16': '0', 'uint32': '0', 'uint64': '0',
-            'float': '0.0f', 'double': '0.0', 'char': '0', 'string': 'NULL',
-        }
-        
-        self.function_generators = {
-            'declaration': self._generate_declaration,
-            'implementation': self._generate_implementation,
-            'call': self._generate_call,
-        }
-        
-        self.return_comments = {
-            'void': 'なし', 'bool': '条件成立の場合true',
-            'default': '実行結果（0: 成功, 0以外: エラー）',
-        }
-        
-        self.standard_args = [
-            ('current_state', 'STATE_t *', '現在の状態ポインタ'),
-            ('ctx', 'SystemContext_t *', 'システムコンテキストポインタ'),
-        ]
-        
-        self.declaration_steps = [
-            {'action': 'comment'},
-            {'action': 'signature'},
-            {'action': 'semicolon'},
-        ]
-        
-        self.implementation_steps = [
-            {'action': 'comment'},
-            {'action': 'signature'},
-            {'action': 'open_brace'},
-            {'action': 'todo'},
-            {'action': 'user_markers'},
-            {'action': 'unused_args'},
-            {'action': 'blank'},
-            {'action': 'entry_log'},
-            {'action': 'blank'},
-            {'action': 'return_value'},
-            {'action': 'close_brace'},
-        ]
-        
-        self.step_executors = {
-            'comment': self._execute_comment_step,
-            'signature': self._execute_signature_step,
-            'semicolon': self._execute_semicolon_step,
-            'open_brace': self._execute_open_brace_step,
-            'todo': self._execute_todo_step,
-            'user_markers': self._execute_user_markers_step,
-            'unused_args': self._execute_unused_args_step,
-            'blank': self._execute_blank_step,
-            'entry_log': self._execute_entry_log_step,
-            'return_value': self._execute_return_value_step,
-            'close_brace': self._execute_close_brace_step,
-        }
+        # ★ 層名（コンストラクタ引数 or set_layer で設定）
+        self.layer_name: str = ""
+    
+    def set_layer(self, layer_name: str):
+        """層名を設定"""
+        self.layer_name = layer_name
     
     def _log_debug(self, message, level='debug'):
         log_func = getattr(logger, level, logger.debug)
         log_func(message)
     
-    def _has_custom_args(self, func):
-        """カスタム引数があるか判定"""
-        arg1_type = getattr(func, 'arg1_type', '')
-        arg1_name = getattr(func, 'arg1_name', '')
-        arg2_type = getattr(func, 'arg2_type', '')
-        arg2_name = getattr(func, 'arg2_name', '')
-        
-        has_arg1 = bool(arg1_type and arg1_name and arg1_name != 'arg1')
-        has_arg2 = bool(arg2_type and arg2_name and arg2_name != 'arg2')
-        
-        return has_arg1, has_arg2
-    
-    def _collect_args(self, func):
-        """引数情報を収集（デフォルト引数を除外）"""
-        args = list(self.standard_args)
-        
-        has_arg1, has_arg2 = self._has_custom_args(func)
-        
-        if has_arg1:
-            args.append((
-                self.naming.sanitize_identifier(getattr(func, 'arg1_name', '')),
-                self.mapper.map_type(getattr(func, 'arg1_type', 'void')),
-                '引数1'
-            ))
-        
-        if has_arg2:
-            args.append((
-                self.naming.sanitize_identifier(getattr(func, 'arg2_name', '')),
-                self.mapper.map_type(getattr(func, 'arg2_type', 'void')),
-                '引数2'
-            ))
-        
-        return args
-    
-    def _generate_args_str(self, func):
-        """引数文字列を生成（ポインタ表記修正済み）"""
-        indent = self.strings['indent_1']
-        args = self._collect_args(func)
-        
-        arg_lines = []
-        for arg_name, arg_type, arg_desc in args:
-            # 修正: *の後にスペースを入れない
-            if '*' in arg_type:
-                # 'STATE_t *' → 'STATE_t *'
-                # 'SystemContext_t *' → 'SystemContext_t *'
-                # そのまま使用（呼び出し側で正しく結合）
-                arg_lines.append(f"{indent}{arg_type}{arg_name}")
-            else:
-                arg_lines.append(f"{indent}{arg_type} {arg_name}")
-        
-        return ',\n'.join(arg_lines)
-    
-    def _generate_function_name(self, func):
-        """ロール関数名を生成"""
-        prefix = self.templates.FUNCTION_NAMES['role_func_prefix']
+    # ===== ★ 関数名生成（層名付き） =====
+    def _generate_function_name(self, func) -> str:
+        """
+        ロール関数名: RoleFunc_<Layer>_<Name>
+        例: RoleFunc_Driver_CheckSensor
+        """
         name = getattr(func, 'name', 'unnamed')
         pascal_name = self.naming.to_pascal_case(name)
-        return f"{prefix}_{pascal_name}"
-    
-    def _get_pascal_func_name(self, func):
-        return self.naming.to_pascal_case(getattr(func, 'name', 'unnamed'))
-    
-    def _execute_comment_step(self, step, context):
-        """コメントステップ実行"""
-        func = context['func']
-        lines = ["/**"]
         
+        if self.layer_name:
+            return f"RoleFunc_{self.layer_name}_{pascal_name}"
+        return f"RoleFunc_{pascal_name}"
+    
+    def _get_short_func_name(self, func) -> str:
+        """層名を含まない短縮名（マーカー用）"""
         name = getattr(func, 'name', 'unnamed')
-        title = getattr(func, 'title', '')
+        return self.naming.to_pascal_case(name)
+    
+    # ===== ★ 引数（固定: transition, ctx） =====
+    def _generate_args_str(self, indent: str = None) -> str:
+        """
+        固定引数を生成:
+            const TransitionContext_<Layer>_t *transition,
+            SystemContext_t *ctx
+        """
+        if indent is None:
+            indent = self.strings['indent_1']
         
+        if self.layer_name:
+            context_type = f"TransitionContext_{self.layer_name}_t"
+        else:
+            context_type = "TransitionContext_t"
+        
+        return (
+            f"{indent}const {context_type} *transition,\n"
+            f"{indent}SystemContext_t *ctx"
+        )
+    
+    # ===== ★ 宣言生成 =====
+    def generate_declaration(self, func) -> str:
+        """ロール関数の宣言を生成"""
+        self._log_debug(f"Generating declaration: {getattr(func, 'name', 'unknown')}")
+        
+        func_name = self._generate_function_name(func)
+        lines = []
+        
+        # コメント
+        lines.append("/**")
+        title = getattr(func, 'title', '')
+        name = getattr(func, 'name', 'unnamed')
+        if title and title != f"ロール関数: {name}":
+            lines.append(f" * @brief  ロール関数: {title}")
+        else:
+            lines.append(f" * @brief  ロール関数: {name}")
+        if getattr(func, 'description', ''):
+            lines.append(f" * @note   {func.description}")
+        lines.append(f" * @param  transition  遷移コンテキスト（セル情報）")
+        lines.append(f" * @param  ctx         システムコンテキストポインタ")
+        lines.append(f" * @return 0: 成功, 0以外: エラー（条件判定にも使用可）")
+        lines.append(" */")
+        
+        # シグネチャ
+        lines.append(f"int {func_name}(")
+        lines.append(self._generate_args_str())
+        lines.append(");")
+        
+        return '\n'.join(lines)
+    
+    # ===== ★ 実装生成 =====
+    def generate_implementation(self, func) -> str:
+        """ロール関数の実装を生成"""
+        self._log_debug(f"Generating implementation: {getattr(func, 'name', 'unknown')}")
+        
+        func_name = self._generate_function_name(func)
+        short_name = self._get_short_func_name(func)
+        lines = []
+        
+        # コメント
+        lines.append("/**")
+        title = getattr(func, 'title', '')
+        name = getattr(func, 'name', 'unnamed')
         if title and title != f"ロール関数: {name}":
             lines.append(f" * @brief  ロール関数: {title}")
         else:
@@ -175,128 +140,73 @@ class RoleFunctionGenerator:
         
         if getattr(func, 'description', ''):
             lines.append(f" * @note   {func.description}")
-        
-        args = self._collect_args(func)
-        for arg_name, arg_type, arg_desc in args:
-            lines.append(f" * @param  {arg_name}  {arg_desc}")
-        
-        return_type = getattr(func, 'return_type', 'void')
-        return_comment = self.return_comments.get(return_type, self.return_comments['default'])
-        lines.append(f" * @return {return_comment}")
         lines.append(" */")
-        return lines
-    
-    def _execute_signature_step(self, step, context):
-        """シグネチャステップ実行"""
-        func = context['func']
-        return_type = self.mapper.map_type(getattr(func, 'return_type', 'void'))
-        func_name = self._generate_function_name(func)
-        return [f"{return_type} {func_name}("]
-    
-    def _execute_semicolon_step(self, step, context):
-        """セミコロンステップ実行"""
-        func = context['func']
-        args = self._generate_args_str(func)
-        return [args, ");"]
-    
-    def _execute_open_brace_step(self, step, context):
-        """開き波括弧ステップ実行"""
-        func = context['func']
-        args = self._generate_args_str(func)
-        return [args, ")", "{"]
-    
-    def _execute_todo_step(self, step, context):
-        return [f"    /* {self.strings['todo']} */"]
-    
-    def _execute_user_markers_step(self, step, context):
-        """ユーザーコードマーカーを生成"""
-        func = context['func']
-        pascal_name = self._get_pascal_func_name(func)
-        start = self.merger.markers['func_user_start'].format(func_name=pascal_name)
-        end = self.merger.markers['func_user_end'].format(func_name=pascal_name)
         
-        return [
-            f"    {start}",
-            f"    // ユーザー実装コードをここに記述",
-            f"    {end}",
+        # シグネチャ + ボディ開始
+        lines.append(f"int {func_name}(")
+        lines.append(self._generate_args_str())
+        lines.append(")")
+        lines.append("{")
+        lines.append("    (void)transition;  /* 未使用引数の警告抑制 */")
+        lines.append("    (void)ctx;         /* 未使用引数の警告抑制 */")
+        lines.append(f"    /* {self.strings['todo']} */")
+        lines.append("")
+        
+        # ユーザーコードマーカー
+        start = self.merger.markers['func_user_start'].format(func_name=short_name)
+        end = self.merger.markers['func_user_end'].format(func_name=short_name)
+        lines.append(f"    {start}")
+        lines.append(f"    /* ユーザー実装コードをここに記述 */")
+        lines.append(f"    {end}")
+        lines.append("")
+        
+        # 戻り値
+        lines.append("    return 0;  /* デフォルト値: 0 = 成功 */")
+        lines.append("}")
+        
+        return '\n'.join(lines)
+    
+    # ===== ★ 呼び出し生成（セル単位関数から使用） =====
+    def generate_call(self, func_name: str) -> str:
+        """
+        ロール関数の呼び出しを生成:
+            RoleFunc_<Layer>_<Name>(transition, ctx)
+        """
+        # func_name が既に完全名か短縮名か判定
+        if func_name.startswith("RoleFunc_"):
+            full_name = func_name
+        elif self.layer_name:
+            full_name = f"RoleFunc_{self.layer_name}_{self.naming.to_pascal_case(func_name)}"
+        else:
+            full_name = f"RoleFunc_{self.naming.to_pascal_case(func_name)}"
+        
+        return f"{full_name}(transition, ctx)"
+    
+    # ===== ★ 一括生成 =====
+    def generate_all_declarations(self, role_functions: List) -> str:
+        """全ロール関数の宣言を生成"""
+        lines = []
+        for func in role_functions:
+            lines.append(self.generate_declaration(func))
+            lines.append("")
+        return '\n'.join(lines)
+    
+    def generate_all_implementations(self, role_functions: List) -> str:
+        """全ロール関数の実装を生成"""
+        lines = []
+        for func in role_functions:
+            lines.append(self.generate_implementation(func))
+            lines.append("")
+        return '\n'.join(lines)
+    
+    # ===== 後方互換: 明示的な型引数を持つ場合 =====
+    def _collect_args(self, func) -> List[tuple]:
+        """
+        カスタム引数がある場合はそれを返す（後方互換）
+        ※ 新シグネチャでは使われない
+        """
+        args = [
+            ('transition', f'const TransitionContext_{self.layer_name}_t *' if self.layer_name else 'const TransitionContext_t *', '遷移コンテキスト'),
+            ('ctx', 'SystemContext_t *', 'システムコンテキストポインタ'),
         ]
-    
-    def _execute_unused_args_step(self, step, context):
-        func = context['func']
-        all_args = self._collect_args(func)
-        lines = []
-        for arg_name, arg_type, arg_desc in all_args:
-            lines.append(f"    (void){arg_name};  /* {self.strings['unused_arg']} */")
-        return lines
-    
-    def _execute_blank_step(self, step, context):
-        return [""]
-    
-    def _execute_entry_log_step(self, step, context):
-        func = context['func']
-        func_name = self._generate_function_name(func)
-        return [f"    {self.strings['log_debug']}(\"Enter {func_name}\");"]
-    
-    def _execute_return_value_step(self, step, context):
-        func = context['func']
-        return_type = self.mapper.map_type(getattr(func, 'return_type', 'void'))
-        if return_type == 'void':
-            return ["    return;"]
-        default_return = self.default_return_values.get(getattr(func, 'return_type', 'void'), '0')
-        return [f"    return {default_return};  /* デフォルト値 */"]
-    
-    def _execute_close_brace_step(self, step, context):
-        return ["}"]
-    
-    def _generate_declaration(self, func):
-        self._log_debug(f"Generating declaration: {getattr(func, 'name', 'unknown')}")
-        lines = []
-        context = {'func': func}
-        for step in self.declaration_steps:
-            executor = self.step_executors.get(step['action'])
-            if executor:
-                lines.extend(executor(step, context))
-        return '\n'.join(lines)
-    
-    def _generate_implementation(self, func):
-        self._log_debug(f"Generating implementation: {getattr(func, 'name', 'unknown')}")
-        lines = []
-        context = {'func': func}
-        for step in self.implementation_steps:
-            executor = self.step_executors.get(step['action'])
-            if executor:
-                lines.extend(executor(step, context))
-        return '\n'.join(lines)
-    
-    def _generate_call(self, func):
-        self._log_debug(f"Generating call: {getattr(func, 'name', 'unknown')}")
-        func_name = self._generate_function_name(func)
-        args = ["current_state", "ctx"]
-        
-        has_arg1, has_arg2 = self._has_custom_args(func)
-        if has_arg1:
-            args.append(self.naming.sanitize_identifier(getattr(func, 'arg1_name', '')))
-        if has_arg2:
-            args.append(self.naming.sanitize_identifier(getattr(func, 'arg2_name', '')))
-        
-        return f"{func_name}({', '.join(args)})"
-    
-    def generate_function(self, generation_type, func):
-        generator = self.function_generators.get(generation_type)
-        if generator:
-            return generator(func)
-        raise ValueError(f"Unknown generation type: {generation_type}")
-    
-    def generate_all_declarations(self, role_functions):
-        lines = []
-        for func in role_functions:
-            lines.append(self.generate_function('declaration', func))
-            lines.append("")
-        return '\n'.join(lines)
-    
-    def generate_all_implementations(self, role_functions):
-        lines = []
-        for func in role_functions:
-            lines.append(self.generate_function('implementation', func))
-            lines.append("")
-        return '\n'.join(lines)
+        return args
