@@ -1,5 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
-<Project>
+<Project name="MyProject">
+    <ProjectSettings>
+        <CodeGeneration project_name="MyProject" table_type="array" generation_style="table_driven" os_type="non_rtos" folder_structure="by_type" include_dir_name="include" source_dir_name="src" common_dir_name="common" project_dir_name="project" generate_super_include="true" super_include_file="statable_all.h" max_consecutive_pending_events="16" external_includes_in_super="true" external_includes_in_role="true" external_includes_in_transitions="false" external_includes_in_common="false" />
+    </ProjectSettings>
     <GlobalDefinitions>
         <CustomTypes>
             <CustomType name="SystemStatus_t" description="システムステータス構造体" title="システムステータス">
@@ -67,7 +70,7 @@
         </LiteralLibrary>
     </SharedLibraries>
     <Tab name="Application">
-        <StateMachine initial="Idle">
+        <StateMachine initial="Idle" layer_priority="5" layer_description="">
             <States>
                 <State name="Idle" type="normal" parent="" entry="Idle_entry" exit="" do="" description="初期状態" />
                 <State name="Active" type="normal" parent="" entry="" exit="" do="Active_do" description="動作中" />
@@ -95,15 +98,13 @@
                 <Transition source="Active" event="ERROR" condition="err_code != 0" action="" target="Error" transition_type="external" title="エラーへ" has_else="true" else_target="">
                     <PreAction action="log()" />
                 </Transition>
+                <Transition source="Error" event="" condition="retry_count &lt; 3" action="" target="Active" transition_type="external" title="リトライ" has_else="true" else_target="">
+                    <PreAction action="retry_count++" />
+                </Transition>
+                <Transition source="Error" event="" condition="retry_count &gt;= 3" action="" target="Halt" transition_type="external" title="停止へ" has_else="true" else_target="" />
                 <Transition source="Active" event="ERROR" condition="err_code == 0" action="" target="Active" transition_type="external" title="無視" has_else="true" else_target="">
                     <PreAction action="ignore()" />
                 </Transition>
-                <Transition source="Error" event="" condition="retry_count &lt; 3" action="" target="Active" transition_type="external" title="リトライ" has_else="true" else_target="">
-                    <PreAction action="retry_count++" />
-                    <PreAction action="Sensor_Init" />
-                    <ElseAction action="Sensor_Init" />
-                </Transition>
-                <Transition source="Error" event="" condition="retry_count &gt;= 3" action="" target="Halt" transition_type="external" title="停止へ" has_else="true" else_target="" />
             </Transitions>
         </StateMachine>
     </Tab>

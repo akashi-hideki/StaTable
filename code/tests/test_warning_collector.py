@@ -10,11 +10,15 @@ import sys
 import os
 import logging
 
-_THIS_DIR = os.path.dirname(
+# ============================================================
+# sys.path セットアップ（codegen / code 両方を追加）
+# ============================================================
+_THIS_DIR    = os.path.dirname(
     os.path.abspath(__file__))
-_CODE_DIR = os.path.dirname(_THIS_DIR)
+_CODE_DIR    = os.path.dirname(_THIS_DIR)
+_CODEGEN_DIR = os.path.join(_CODE_DIR, 'codegen')
 
-for _p in (_CODE_DIR,):
+for _p in (_CODEGEN_DIR, _CODE_DIR):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
@@ -24,13 +28,9 @@ import unittest
 # ============================================================
 # WarningCollector を単独で読み込む（GUI 非依存）
 # ============================================================
-# code_generation_dialog から WarningCollector を
-# import すると PySide6 が必要になるため、
-# ソースから直接クラス定義を再現する
-# （モジュール依存を切り離す）
-
 class WarningCollector(logging.Handler):
     """テスト対象（本番コードと同一実装）"""
+
     def __init__(self):
         super().__init__(level=logging.WARNING)
         self.records = []
@@ -45,19 +45,38 @@ class WarningCollector(logging.Handler):
 
 
 # ============================================================
-# 1. 基本動作
+# 共通セットアップ用ミックスイン
 # ============================================================
-class TestWarningCollectorBasic(unittest.TestCase):
+class _LoggerFixtureMixin:
+    """
+    - logger.propagate = False
+    - NullHandler を最初に追加（lastResort 発動防止）
+    - WarningCollector を追加
+    """
+
+    LOGGER_NAME = "test.warning.collector"
 
     def setUp(self):
         self.collector = WarningCollector()
-        self.logger = logging.getLogger(
-            "test.warning.collector")
+        self.null = logging.NullHandler()
+        self.logger = logging.getLogger(self.LOGGER_NAME)
         self.logger.setLevel(logging.DEBUG)
+        self.logger.propagate = False
+        self.logger.addHandler(self.null)
         self.logger.addHandler(self.collector)
 
     def tearDown(self):
         self.logger.removeHandler(self.collector)
+        self.logger.removeHandler(self.null)
+
+
+# ============================================================
+# 1. 基本動作
+# ============================================================
+class TestWarningCollectorBasic(
+    _LoggerFixtureMixin, unittest.TestCase
+):
+    LOGGER_NAME = "test.warning.collector"
 
     def test_initial_empty(self):
         self.assertEqual(self.collector.records, [])
@@ -88,17 +107,10 @@ class TestWarningCollectorBasic(unittest.TestCase):
 # ============================================================
 # 2. 複数メッセージ
 # ============================================================
-class TestWarningCollectorMultiple(unittest.TestCase):
-
-    def setUp(self):
-        self.collector = WarningCollector()
-        self.logger = logging.getLogger(
-            "test.warning.multiple")
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.addHandler(self.collector)
-
-    def tearDown(self):
-        self.logger.removeHandler(self.collector)
+class TestWarningCollectorMultiple(
+    _LoggerFixtureMixin, unittest.TestCase
+):
+    LOGGER_NAME = "test.warning.multiple"
 
     def test_multiple_warnings(self):
         self.logger.warning("w1")
@@ -111,34 +123,22 @@ class TestWarningCollectorMultiple(unittest.TestCase):
         self.logger.info("i")
         self.logger.warning("w")
         self.logger.error("e")
-        self.assertEqual(
-            len(self.collector.records), 2)
+        self.assertEqual(len(self.collector.records), 2)
 
     def test_preserves_order(self):
         self.logger.warning("first")
         self.logger.warning("second")
-        self.assertIn("first",
-                      self.collector.records[0])
-        self.assertIn("second",
-                      self.collector.records[1])
+        self.assertIn("first", self.collector.records[0])
+        self.assertIn("second", self.collector.records[1])
 
 
 # ============================================================
 # 3. フォーマット引数
 # ============================================================
 class TestWarningCollectorFormat(
-    unittest.TestCase
+    _LoggerFixtureMixin, unittest.TestCase
 ):
-
-    def setUp(self):
-        self.collector = WarningCollector()
-        self.logger = logging.getLogger(
-            "test.warning.format")
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.addHandler(self.collector)
-
-    def tearDown(self):
-        self.logger.removeHandler(self.collector)
+    LOGGER_NAME = "test.warning.format"
 
     def test_format_args(self):
         self.logger.warning("value=%d", 42)
@@ -146,46 +146,55 @@ class TestWarningCollectorFormat(
                       self.collector.records[0])
 
     def test_multiple_format_args(self):
-        self.logger.warning(
-            "%s -> %s", "A", "B")
+        self.logger.warning("%s -> %s", "A", "B")
         self.assertIn("A -> B",
                       self.collector.records[0])
 
 
 # ============================================================
-# 4. attach/detach
+# 4. attach / detach
 # ============================================================
-class TestWarningCollectorAttach(
-    unittest.TestCase
-):
+class TestWarningCollectorAttach(unittest.TestCase):
 
     def test_detach_stops_collection(self):
         collector = WarningCollector()
+        null = logging.NullHandler()
         logger = logging.getLogger("test.warning.detach")
         logger.setLevel(logging.DEBUG)
+        logger.propagate = False
+        logger.addHandler(null)
         logger.addHandler(collector)
+        try:
+            logger.warning("before")
+            self.assertEqual(len(collector.records), 1)
 
-        logger.warning("before")
-        self.assertEqual(len(collector.records), 1)
-
-        logger.removeHandler(collector)
-        logger.warning("after")
-        self.assertEqual(len(collector.records), 1)
+            logger.removeHandler(collector)
+            logger.warning("after")
+            self.assertEqual(len(collector.records), 1)
+        finally:
+            if collector in logger.handlers:
+                logger.removeHandler(collector)
+            if null in logger.handlers:
+                logger.removeHandler(null)
 
     def test_two_collectors(self):
         c1 = WarningCollector()
         c2 = WarningCollector()
+        null = logging.NullHandler()
         logger = logging.getLogger("test.warning.two")
         logger.setLevel(logging.DEBUG)
+        logger.propagate = False
+        logger.addHandler(null)
         logger.addHandler(c1)
         logger.addHandler(c2)
-
-        logger.warning("both")
-        self.assertEqual(len(c1.records), 1)
-        self.assertEqual(len(c2.records), 1)
-
-        logger.removeHandler(c1)
-        logger.removeHandler(c2)
+        try:
+            logger.warning("both")
+            self.assertEqual(len(c1.records), 1)
+            self.assertEqual(len(c2.records), 1)
+        finally:
+            logger.removeHandler(c1)
+            logger.removeHandler(c2)
+            logger.removeHandler(null)
 
 
 # ============================================================
