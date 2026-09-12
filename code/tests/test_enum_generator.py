@@ -37,8 +37,18 @@ def build_test_items():
         Event(name="ERROR", kind=EventKind.SIGNAL, description="エラー通知"),
     ]
     flags = [
-        EventFlag(name="EVT_START_REQ", description="起動要求フラグ"),
-        EventFlag(name="EVT_MODE", description="モード指示"),
+        EventFlag(
+            name="EVT_START_REQ",
+            min_value=0,
+            max_value=1,
+            description="起動要求フラグ",
+        ),
+        EventFlag(
+            name="EVT_MODE",
+            min_value=0,
+            max_value=3,
+            description="モード指示",
+        ),
     ]
     return states, events, flags
 
