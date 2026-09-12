@@ -65,8 +65,12 @@ class TransitionGenerator:
     # 遷移テーブルの最小列幅
     TABLE_MIN_COL_WIDTH = 14
 
+    # デフォルト設定値
+    DEFAULT_TABLE_TYPE = 'array'
+    DEFAULT_GENERATION_STYLE = 'table_driven'
+
     # ==================================================================
-    # 【データテーブル①】セル単位の遷移関数
+    # テンプレート群（変更なし）
     # ==================================================================
     CELL_TEMPLATES = {
         # --- ヘッダーコメント ---
@@ -151,9 +155,7 @@ class TransitionGenerator:
     # ==================================================================
     CELL_PROTO_TEMPLATES = {
         # --- セクションコメント ---
-        'section_comment': (
-            '/* ===== セル単位遷移関数の前方宣言 ===== */\n'
-        ),
+        'section_comment': '/* ===== セル単位遷移関数の前方宣言 ===== */\n',
 
         # --- プロトタイプ本体 ---
         'prototype': Template(
@@ -168,9 +170,7 @@ class TransitionGenerator:
     # ==================================================================
     TABLE_TEMPLATES = {
         # --- 関数ポインタ型 ---
-        'func_ptr_comment': (
-            '/* 遷移関数ポインタ型 */\n'
-        ),
+        'func_ptr_comment': '/* 遷移関数ポインタ型 */\n',
         'func_ptr_typedef': Template(
             'typedef $state_type (*$func_type)(\n'
             '    const $context_type *, SystemContext_t *);\n'
@@ -192,9 +192,7 @@ class TransitionGenerator:
         ),
 
         # --- テーブル終了 ---
-        'table_close': (
-            '};\n'
-        ),
+        'table_close': '};\n',
     }
 
     # ==================================================================
@@ -264,16 +262,11 @@ class TransitionGenerator:
         ),
 
         # --- エントリ構造体終了 ---
-        'struct_close': Template(
-            '}} $dict_type;\n'
-        ),
+        'struct_close': Template('}} $dict_type;\n'),
 
-        # --- ディクショナリコメント ---
-        'dict_comment': (
-            '\n'
-            '/* 遷移関数ディクショナリ */\n'
-        ),
 
+        # --- ディクショナリコメント --
+        'dict_comment': '\n/* 遷移関数ディクショナリ */\n',
         # --- ディクショナリ開始 ---
         'dict_open': Template(
             'static const $dict_type $dict_name[] = {\n'
@@ -287,9 +280,7 @@ class TransitionGenerator:
         ),
 
         # --- ディクショナリ終了 ---
-        'dict_close': (
-            '};\n'
-        ),
+        'dict_close': '};\n',
 
         # --- サイズマクロ ---
         'dict_size': Template(
@@ -347,7 +338,6 @@ class TransitionGenerator:
         'comment': Template(
             '/**\n'
             ' * @brief  $layer層の次のイベントを取得\n'
-            ' *         保留イベントがあればそれを返し、なければ NONE を返す\n'
             ' * @param  ctx  システムコンテキストポインタ\n'
             ' * @return 次のイベント（保留なしの場合は $event_none）\n'
             ' */\n'
@@ -392,10 +382,24 @@ class TransitionGenerator:
         self.formats = self.templates.FORMATS
         self.layer_name: str = ""
 
+        # ★ dispatch テーブル（table_type）
+        #   将来 switch / dictionary 実装時は
+        #   該当メソッドの中身を書くだけ
+        self.table_generators: Dict[str, callable] = {
+            'array':      self._generate_table_array,
+            'switch':     self._generate_table_switch,
+            'dictionary': self._generate_table_dictionary,
+        }
+
+        # ★ dispatch テーブル（generation_style）
+        self.process_generators: Dict[str, callable] = {
+            'table_driven': self._generate_process_table_driven,
+            'switch_case':  self._generate_process_switch_case,
+        }
+
     def set_layer(self, layer_name: str):
         """層名を設定（例: 'Driver', 'Middle', 'Application'）"""
         self.layer_name = layer_name
-        logger.debug(f"TransitionGenerator.set_layer: layer_name='{layer_name}'")
 
     def _log_debug(self, message, level='debug'):
         log_func = getattr(logger, level, logger.debug)
@@ -455,12 +459,10 @@ class TransitionGenerator:
         return f"{full}(transition, ctx)"
 
     # ==================================================================
-    # 1. セル単位の遷移関数
+    # セル単位の遷移関数
     # ==================================================================
     def generate_transition_cell_functions(self, state_machine: StateMachine) -> str:
         """全セルの遷移関数を生成"""
-        self._log_debug(f"=== generate_transition_cell_functions START "
-                        f"(layer='{self.layer_name}') ===")
         cell_blocks = []
 
         for state in state_machine.states.values():
@@ -469,11 +471,7 @@ class TransitionGenerator:
                 if not transitions:
                     continue
                 cell_blocks.append(self._build_cell_function(state, event, transitions))
-
-        result = '\n'.join(cell_blocks)
-        self._log_debug(f"=== generate_transition_cell_functions END: "
-                        f"{len(cell_blocks)} cells ===")
-        return result
+        return '\n'.join(cell_blocks)
 
     # ==================================================================
     # 1b. セル単位の遷移関数（前方宣言）
@@ -491,13 +489,8 @@ class TransitionGenerator:
                 const TransitionContext_Driver_t *transition,
                 SystemContext_t *ctx);
         """
-        self._log_debug("=== generate_transition_cell_prototypes START ===")
         T = self.CELL_PROTO_TEMPLATES
-        parts = []
-
-        parts.append(T['section_comment'])
-
-        count = 0
+        parts = [T['section_comment']]
         for state in state_machine.states.values():
             for event in state_machine.events.values():
                 transitions = state_machine.get_transitions_for_cell(state.name, event.name)
@@ -509,14 +502,9 @@ class TransitionGenerator:
                     func_name=self._cell_func_name(state.name, event.name),
                     context_type=self._context_type(),
                 ))
-                count += 1
-
-        self._log_debug(f"=== generate_transition_cell_prototypes END: "
-                        f"{count} prototypes ===")
         return ''.join(parts)
 
-    def _build_cell_function(self, state: State, event: Event,
-                             transitions: List[Transition]) -> str:
+    def _build_cell_function(self, state, event, transitions) -> str:
         """1セル分の遷移関数を文字列として組み立て"""
         parts = []
         T = self.CELL_TEMPLATES
@@ -550,10 +538,9 @@ class TransitionGenerator:
 
         return ''.join(parts)
 
-    def _build_transition_block(self, trans: Transition, idx: int) -> str:
+    def _build_transition_block(self, trans, idx) -> str:
         """1つの遷移ブロックを文字列として組み立て"""
         T = self.CELL_TEMPLATES
-
         condition = getattr(trans, 'condition', '')
         pre_actions = ensure_list(getattr(trans, 'pre_actions', []))
         target = getattr(trans, 'target', '')
@@ -576,7 +563,7 @@ class TransitionGenerator:
             target_enum=self._state_enum(target) if target else "next_state",
         )
 
-    def _build_else_block(self, trans: Transition) -> str:
+    def _build_else_block(self, trans) -> str:
         """else 節を文字列として組み立て"""
         T = self.CELL_TEMPLATES
         else_actions = ensure_list(getattr(trans, 'else_actions', []))
@@ -599,11 +586,43 @@ class TransitionGenerator:
         return ''.join(parts)
 
     # ==================================================================
-    # 2. 遷移テーブル（グローバル + 横並び）
+    # ★ 遷移テーブル（dispatch 版）
     # ==================================================================
-    def generate_transition_table(self, state_machine: StateMachine) -> str:
-        """2次元配列の遷移テーブルを生成"""
-        self._log_debug("=== generate_transition_table START (global, horizontal) ===")
+    def generate_transition_table(self, state_machine: StateMachine,
+                                  table_type: str = None) -> str:
+        """遷移テーブルを生成
+
+        Args:
+            state_machine: StateMachine
+            table_type: 'array' / 'switch' / 'dictionary'
+                        （None の場合はデフォルト 'array'）
+        """
+        if table_type is None:
+            table_type = self.DEFAULT_TABLE_TYPE
+
+        generator = self.table_generators.get(table_type)
+
+        if generator is None:
+            self._log_debug(
+                f"Unknown table_type '{table_type}', "
+                f"falling back to '{self.DEFAULT_TABLE_TYPE}'",
+                'warning'
+            )
+            generator = self.table_generators[self.DEFAULT_TABLE_TYPE]
+        elif table_type != 'array':
+            # switch / dictionary は未実装 → array にフォールバック
+            self._log_debug(
+                f"table_type '{table_type}' is not implemented yet, "
+                f"falling back to 'array'",
+                'warning'
+            )
+            generator = self.table_generators['array']
+
+        return generator(state_machine)
+
+    def _generate_table_array(self, state_machine: StateMachine) -> str:
+        """配列方式（現行実装）"""
+        self._log_debug("=== _generate_table_array START ===")
         T = self.TABLE_TEMPLATES
         parts = []
 
@@ -688,22 +707,37 @@ class TransitionGenerator:
 
         # --- テーブル終了 ---
         parts.append(T['table_close'])
-
-        self._log_debug("=== generate_transition_table END ===")
+        self._log_debug("=== _generate_table_array END ===")
         return ''.join(parts)
 
+    def _generate_table_switch(self, state_machine: StateMachine) -> str:
+        """switch 方式（未実装 → array フォールバック）"""
+        self._log_debug(
+            "_generate_table_switch: not implemented, "
+            "falling back to array",
+            'warning'
+        )
+        return self._generate_table_array(state_machine)
+
+    def _generate_table_dictionary(self, state_machine: StateMachine) -> str:
+        """dictionary 方式（未実装 → array フォールバック）"""
+        self._log_debug(
+            "_generate_table_dictionary: not implemented, "
+            "falling back to array",
+            'warning'
+        )
+        return self._generate_table_array(state_machine)
+
     # ==================================================================
-    # 2b. ヘッダ用 extern 宣言
+    # ヘッダ用 extern 宣言
     # ==================================================================
     def generate_transition_table_header(self, state_machine: StateMachine) -> str:
-        self._log_debug("=== generate_transition_table_header START ===")
         T = self.TABLE_HEADER_TEMPLATES
 
         parts = []
         parts.append(T['header_comment'].substitute(
             layer=self.layer_name or "システム",
-            row_desc="状態",
-            col_desc="イベント",
+            row_desc="状態", col_desc="イベント",
         ))
         parts.append(T['func_ptr_typedef'].substitute(
             state_type=self._state_type(),
@@ -717,16 +751,13 @@ class TransitionGenerator:
             state_max=self._state_max(),
             event_max=self._event_max(),
         ))
-
-        self._log_debug("=== generate_transition_table_header END ===")
         return ''.join(parts)
 
     # ==================================================================
-    # 3. 関数ディクショナリ
+    # 関数ディクショナリ
     # ==================================================================
     def generate_function_dictionary(self, state_machine: StateMachine) -> str:
         """名前ベースの関数ディクショナリを生成"""
-        self._log_debug("=== generate_function_dictionary START ===")
         T = self.DICT_TEMPLATES
         parts = []
 
@@ -754,13 +785,11 @@ class TransitionGenerator:
             dict_type=dict_type, dict_name=dict_name,
         ))
 
-        entry_count = 0
         for state in state_machine.states.values():
             for event in state_machine.events.values():
                 transitions = state_machine.get_transitions_for_cell(state.name, event.name)
                 if not transitions:
                     continue
-
                 for idx, trans in enumerate(transitions):
                     # 遷移名
                     base_name = f"{self.layer_name}_{state.name}_{event.name or 'NONE'}" \
@@ -770,7 +799,6 @@ class TransitionGenerator:
                     # 代表遷移先
                     target = trans.target or state.name
                     condition = trans.condition.replace('"', '\\"') if trans.condition else ""
-
                     parts.append(T['dict_entry'].substitute(
                         trans_name=trans_name,
                         state_enum=self._state_enum(state.name),
@@ -779,26 +807,52 @@ class TransitionGenerator:
                         condition=condition,
                         func_name=self._cell_func_name(state.name, event.name),
                     ))
-                    entry_count += 1
 
         parts.append(T['dict_close'])
         parts.append(T['dict_size'].substitute(
             size_macro=size_macro, dict_name=dict_name,
         ))
-
-        self._log_debug(f"=== generate_function_dictionary END: {entry_count} entries ===")
         return ''.join(parts)
 
     # ==================================================================
-    # 4. StateMachine_Process_<Layer>
+    # ★ StateMachine_Process（dispatch 版）
     # ==================================================================
-    def generate_process_function(self, state_machine: StateMachine) -> str:
-        """メインの状態遷移関数を生成"""
-        self._log_debug("=== generate_process_function START ===")
+    def generate_process_function(self, state_machine: StateMachine,
+                                  generation_style: str = None) -> str:
+        """状態遷移処理関数を生成
+
+        Args:
+            state_machine: StateMachine
+            generation_style: 'table_driven' / 'switch_case'
+                              （None の場合はデフォルト 'table_driven'）
+        """
+        if generation_style is None:
+            generation_style = self.DEFAULT_GENERATION_STYLE
+
+        generator = self.process_generators.get(generation_style)
+
+        if generator is None:
+            self._log_debug(
+                f"Unknown generation_style '{generation_style}', "
+                f"falling back to '{self.DEFAULT_GENERATION_STYLE}'",
+                'warning'
+            )
+            generator = self.process_generators[self.DEFAULT_GENERATION_STYLE]
+        elif generation_style != 'table_driven':
+            self._log_debug(
+                f"generation_style '{generation_style}' is not implemented yet, "
+                f"falling back to 'table_driven'",
+                'warning'
+            )
+            generator = self.process_generators['table_driven']
+
+        return generator(state_machine)
+
+    def _generate_process_table_driven(self, state_machine: StateMachine) -> str:
+        """テーブル駆動方式（現行実装）"""
         T = self.PROCESS_TEMPLATES
         func_name = f"StateMachine_Process_{self.layer_name}" if self.layer_name \
             else "StateMachine_Process"
-
         parts = []
         parts.append(T['comment'].substitute(layer=self.layer_name or "システム"))
         parts.append(T['signature'].substitute(
@@ -811,16 +865,22 @@ class TransitionGenerator:
             func_type=self._func_type(),
             table_name=self._table_name(),
         ))
-
-        self._log_debug("=== generate_process_function END ===")
         return ''.join(parts)
 
+    def _generate_process_switch_case(self, state_machine: StateMachine) -> str:
+        """switch 方式（未実装 → table_driven フォールバック）"""
+        self._log_debug(
+            "_generate_process_switch_case: not implemented, "
+            "falling back to table_driven",
+            'warning'
+        )
+        return self._generate_process_table_driven(state_machine)
+
     # ==================================================================
-    # 5. StateMachine_GetNextEvent_<Layer>
+    # GetNextEvent（変更なし）
     # ==================================================================
     def generate_get_next_event_function(self, state_machine: StateMachine) -> str:
         """保留イベントを取得する関数を生成"""
-        self._log_debug("=== generate_get_next_event_function START ===")
         T = self.GET_NEXT_TEMPLATES
 
         func_name = f"StateMachine_GetNextEvent_{self.layer_name}" if self.layer_name \
@@ -840,12 +900,10 @@ class TransitionGenerator:
             event_type=self._event_type(),
             event_none=event_none,
         ))
-
-        self._log_debug("=== generate_get_next_event_function END ===")
         return ''.join(parts)
 
     # ==================================================================
-    # 6. 一括生成
+    # 一括生成
     # ==================================================================
     def generate_all(self, state_machine: StateMachine) -> Dict[str, str]:
         """
@@ -862,8 +920,7 @@ class TransitionGenerator:
                 'get_next_event': str,         # StateMachine_GetNextEvent_<Layer>
             }
         """
-        self._log_debug(f"=== generate_all START (layer='{self.layer_name}') ===")
-        result = {
+        return {
             'cell_prototypes': self.generate_transition_cell_prototypes(state_machine),
             'cell_functions': self.generate_transition_cell_functions(state_machine),
             'transition_table': self.generate_transition_table(state_machine),
@@ -872,8 +929,6 @@ class TransitionGenerator:
             'process_func': self.generate_process_function(state_machine),
             'get_next_event': self.generate_get_next_event_function(state_machine),
         }
-        self._log_debug(f"=== generate_all END ===")
-        return result
 
     # ==================================================================
     # 後方互換 API

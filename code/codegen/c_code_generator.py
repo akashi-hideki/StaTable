@@ -605,11 +605,11 @@ class CCodeGenerator:
                 .generate_transition_cell_prototypes(
                     ctx['state_machine']
                 )]
-
-    # ★ 修正: config 引数を削除
     def _step_transition_table(self, step, ctx):
+        # ★ config 反映: table_type
         return [self.transition_gen.generate_transition_table(
             ctx['state_machine'],
+            table_type=ctx['config'].table_type,
         )]
 
     # ★ 追加: セル関数の本体
@@ -618,11 +618,11 @@ class CCodeGenerator:
                 .generate_transition_cell_functions(
                     ctx['state_machine']
                 )]
-
-    # ★ 修正: config 引数を削除
     def _step_process_func(self, step, ctx):
+        # ★ config 反映: generation_style
         return [self.transition_gen.generate_process_function(
             ctx['state_machine'],
+            generation_style=ctx['config'].generation_style,
         )]
 
     def _step_role_decls(self, step, ctx):
