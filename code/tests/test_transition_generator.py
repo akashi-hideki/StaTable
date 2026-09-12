@@ -183,7 +183,42 @@ class TestTransitionGeneratorHorizontal(unittest.TestCase):
         print(f"\n=== generate_all summary ===")
         for key, val in result.items():
             print(f"  {key}: {len(val)} chars")
+            
+    def test_cell_prototypes_generation(self):
+        """セル関数の前方宣言が生成される"""
+        self.gen.set_layer("Driver")
+        sm = build_test_sm()
+        result = self.gen.generate_transition_cell_prototypes(sm)
 
+        print("\n=== Cell Prototypes ===")
+        print(result)
+
+        # 検証
+        self.assertIn("/* ===== セル単位遷移関数の前方宣言 ===== */", result)
+        self.assertIn("static STATE_Driver_t t_Idle_START(", result)
+        self.assertIn("static STATE_Driver_t t_Active_ERROR(", result)
+        self.assertIn("const TransitionContext_Driver_t *transition,", result)
+        self.assertIn("SystemContext_t *ctx);", result)
+
+
+    def test_generate_all_includes_prototypes(self):
+        """generate_all に cell_prototypes が含まれる"""
+        self.gen.set_layer("Driver")
+        sm = build_test_sm()
+        result = self.gen.generate_all(sm)
+
+        self.assertIn('cell_prototypes', result)
+        self.assertIn('cell_functions', result)
+        self.assertIn('transition_table', result)
+        self.assertIn('transition_table_header', result)
+        self.assertIn('function_dict', result)
+        self.assertIn('process_func', result)
+        self.assertIn('get_next_event', result)
+
+        print(f"\n=== generate_all summary ===")
+        for key, val in result.items():
+            print(f"  {key}: {len(val)} chars")
+        
     def test_table_horizontal_alignment(self):
         """横並びテーブルの罫線と列の整列を確認"""
         self.gen.set_layer("Driver")
@@ -194,7 +229,6 @@ class TestTransitionGeneratorHorizontal(unittest.TestCase):
         self.assertIn("/* Idle", result)
         self.assertIn("*/ {", result)  # 状態名の後に { があること
         self.assertIn("};", result)
-
 
 def main():
     print("=" * 70)

@@ -4,6 +4,8 @@
 
 生成物:
   1. セル単位の遷移関数（static、短縮名 t_<State>_<Event>）
+     - 前方宣言（プロトタイプ）
+     - 実装本体
   2. 遷移テーブル（グローバル const、extern 宣言付き）
   3. 関数ディクショナリ（デバッグ・リフレクション用）
   4. StateMachine_Process_<Layer>() 関数
@@ -12,6 +14,7 @@
 設計方針:
   - 遷移テーブルは外部から参照可能（グローバル）
   - セル関数は static（内部実装詳細）
+  - セル関数は前方宣言してから、テーブル・実装を出力（順序非依存）
   - テーブルは行=状態、列=イベントの横並び仕様書形式
 """
 
@@ -140,6 +143,23 @@ class TransitionGenerator:
             '\n'
             '    return next_state;\n'
             '}\n'
+        ),
+    }
+
+    # ==================================================================
+    # 【データテーブル①-b】セル関数の前方宣言
+    # ==================================================================
+    CELL_PROTO_TEMPLATES = {
+        # --- セクションコメント ---
+        'section_comment': (
+            '/* ===== セル単位遷移関数の前方宣言 ===== */\n'
+        ),
+
+        # --- プロトタイプ本体 ---
+        'prototype': Template(
+            'static $state_type $func_name(\n'
+            '    const $context_type *transition,\n'
+            '    SystemContext_t *ctx);\n'
         ),
     }
 
@@ -454,6 +474,46 @@ class TransitionGenerator:
         self._log_debug(f"=== generate_transition_cell_functions END: "
                         f"{len(cell_blocks)} cells ===")
         return result
+
+    # ==================================================================
+    # 1b. セル単位の遷移関数（前方宣言）
+    # ==================================================================
+    def generate_transition_cell_prototypes(self, state_machine: StateMachine) -> str:
+        """
+        セル単位遷移関数の前方宣言（プロトタイプ）を生成
+
+        生成例:
+            /* ===== セル単位遷移関数の前方宣言 ===== */
+            static STATE_Driver_t t_Idle_START(
+                const TransitionContext_Driver_t *transition,
+                SystemContext_t *ctx);
+            static STATE_Driver_t t_Active_ERROR(
+                const TransitionContext_Driver_t *transition,
+                SystemContext_t *ctx);
+        """
+        self._log_debug("=== generate_transition_cell_prototypes START ===")
+        T = self.CELL_PROTO_TEMPLATES
+        parts = []
+
+        parts.append(T['section_comment'])
+
+        count = 0
+        for state in state_machine.states.values():
+            for event in state_machine.events.values():
+                transitions = state_machine.get_transitions_for_cell(state.name, event.name)
+                if not transitions:
+                    continue
+
+                parts.append(T['prototype'].substitute(
+                    state_type=self._state_type(),
+                    func_name=self._cell_func_name(state.name, event.name),
+                    context_type=self._context_type(),
+                ))
+                count += 1
+
+        self._log_debug(f"=== generate_transition_cell_prototypes END: "
+                        f"{count} prototypes ===")
+        return ''.join(parts)
 
     def _build_cell_function(self, state: State, event: Event,
                              transitions: List[Transition]) -> str:
@@ -788,9 +848,23 @@ class TransitionGenerator:
     # 6. 一括生成
     # ==================================================================
     def generate_all(self, state_machine: StateMachine) -> Dict[str, str]:
-        """全生成物を辞書で返す"""
+        """
+        全生成物を辞書で返す
+
+        Returns:
+            {
+                'cell_prototypes': str,        # セル関数の前方宣言
+                'cell_functions': str,         # セル関数実装
+                'transition_table': str,       # 2次元配列テーブル（グローバル）
+                'transition_table_header': str,# テーブルの extern 宣言
+                'function_dict': str,          # 関数ディクショナリ
+                'process_func': str,           # StateMachine_Process_<Layer>
+                'get_next_event': str,         # StateMachine_GetNextEvent_<Layer>
+            }
+        """
         self._log_debug(f"=== generate_all START (layer='{self.layer_name}') ===")
         result = {
+            'cell_prototypes': self.generate_transition_cell_prototypes(state_machine),
             'cell_functions': self.generate_transition_cell_functions(state_machine),
             'transition_table': self.generate_transition_table(state_machine),
             'transition_table_header': self.generate_transition_table_header(state_machine),
@@ -806,10 +880,11 @@ class TransitionGenerator:
     # ==================================================================
     def generate_all_transitions(self, state_machine, table_type='array',
                                  process_type='table_driven'):
-        """後方互換: 単一文字列として返す"""
+        """後方互換: 単一文字列として返す（前方宣言 + 実装 + テーブル + Process）"""
         result = self.generate_all(state_machine)
         return '\n'.join([
-            result['cell_functions'],
+            result['cell_prototypes'],
             result['transition_table'],
+            result['cell_functions'],
             result['process_func'],
         ])
