@@ -9,6 +9,7 @@ Cコード生成メインクラス
   - _run_steps() がステップ列を順に実行
   - 条件付きステップは 'when' 述語で宣言的に表現
   - ファイル間ディスパッチは FILE_DISPATCH 辞書で管理
+  - フォルダ構成は FOLDER_STRUCTURE_RESOLVERS で解決
 """
 
 import sys
@@ -237,6 +238,32 @@ class CCodeGenerator:
             '_generate_osal_header',
         'osal.c':
             '_generate_osal_source',
+    }
+
+    # ================================================================
+    # 【テーブル④】ファイル名 → カテゴリ（by_type 用）
+    # ================================================================
+    FILE_CATEGORY: Dict[str, str] = {
+        'statable_types.h':          'include',
+        'statable_transitions.h':    'include',
+        'statable_role_functions.h': 'include',
+        'statable_transitions.c':    'src',
+        'statable_role_functions.c': 'src',
+        'statable_init.c':           'src',
+        'statable_event_queue.c':    'src',
+        'statable_interrupt.c':      'src',
+        'statable_timer.c':          'src',
+        'osal.h':                    'common',
+        'osal.c':                    'common',
+    }
+
+    # ================================================================
+    # 【テーブル⑤】folder_structure → パス解決メソッド
+    # ================================================================
+    FOLDER_STRUCTURE_RESOLVERS: Dict[str, str] = {
+        'flat':     '_resolve_path_flat',
+        'by_type':  '_resolve_path_by_type',
+        'by_layer': '_resolve_path_by_layer',
     }
 
     # ================================================================
@@ -474,6 +501,74 @@ class CCodeGenerator:
         return '\n'.join(lines)
 
     # ================================================================
+    # フォルダ構成解決
+    # ================================================================
+    def _resolve_output_path(self, filename: str,
+                             layer_name: str = '') -> str:
+        """
+        ファイル名から保存先の相対パスを返す
+
+        Args:
+            filename:   生成ファイル名
+            layer_name: 層名（by_layer 用、省略時は ''）
+
+        Returns:
+            相対パス（例: 'include/statable_types.h'）
+        """
+        structure = self.config.folder_structure
+        resolver_name = self.FOLDER_STRUCTURE_RESOLVERS.get(
+            structure, '_resolve_path_flat'
+        )
+        resolver = getattr(self, resolver_name,
+                           self._resolve_path_flat)
+        return resolver(filename, layer_name)
+
+    def _resolve_path_flat(self, filename: str,
+                           layer_name: str = '') -> str:
+        """flat: 全ファイルを同じフォルダに"""
+        return filename
+
+    def _resolve_path_by_type(self, filename: str,
+                              layer_name: str = '') -> str:
+        """by_type: include / src / common に分類"""
+        category = self.FILE_CATEGORY.get(filename, '')
+        if category == 'include':
+            return os.path.join(
+                self.config.include_dir_name, filename
+            )
+        elif category == 'src':
+            return os.path.join(
+                self.config.source_dir_name, filename
+            )
+        elif category == 'common':
+            return os.path.join(
+                self.config.common_dir_name, filename
+            )
+        # 未分類は flat
+        self._log_debug(
+            f"_resolve_path_by_type: "
+            f"unclassified '{filename}' -> flat",
+            'warning'
+        )
+        return filename
+
+    def _resolve_path_by_layer(self, filename: str,
+                               layer_name: str = '') -> str:
+        """
+        by_layer: 層名フォルダに格納（将来対応）
+
+        現状はスタブ: layer_name が空なら flat と同じ
+        """
+        if not layer_name:
+            self._log_debug(
+                "_resolve_path_by_layer: layer_name is empty, "
+                "falling back to flat",
+                'warning'
+            )
+            return filename
+        return os.path.join(layer_name, filename)
+
+    # ================================================================
     # 汎用ステップ実行
     # ================================================================
     def _run_steps(self, filename,
@@ -599,27 +694,28 @@ class CCodeGenerator:
             ");",
         ]
 
-    # ★ 追加: セル関数の前方宣言
+    # セル関数の前方宣言
     def _step_cell_prototypes(self, step, ctx):
         return [self.transition_gen
                 .generate_transition_cell_prototypes(
                     ctx['state_machine']
                 )]
+
     def _step_transition_table(self, step, ctx):
-        # ★ config 反映: table_type
+        # config 反映: table_type
         return [self.transition_gen.generate_transition_table(
             ctx['state_machine'],
             table_type=ctx['config'].table_type,
         )]
 
-    # ★ 追加: セル関数の本体
     def _step_cell_functions(self, step, ctx):
         return [self.transition_gen
                 .generate_transition_cell_functions(
                     ctx['state_machine']
                 )]
+
     def _step_process_func(self, step, ctx):
-        # ★ config 反映: generation_style
+        # config 反映: generation_style
         return [self.transition_gen.generate_process_function(
             ctx['state_machine'],
             generation_style=ctx['config'].generation_style,
@@ -792,40 +888,68 @@ class CCodeGenerator:
         finally:
             self._current_role_function_library = prev
 
-    def save_generated_code(self, generated_files, output_dir):
-        """生成コードの保存（マージなし）"""
+    # ================================================================
+    # 保存（フォルダ構成反映）
+    # ================================================================
+    def save_generated_code(self, generated_files, output_dir,
+                            layer_name: str = ''):
+        """生成コードの保存（マージなし・フォルダ構成反映）"""
         self._log_debug(
-            f"Saving generated code to: {output_dir}"
+            f"Saving generated code to: {output_dir} "
+            f"(structure={self.config.folder_structure})"
         )
         saved_files = []
         os.makedirs(output_dir, exist_ok=True)
+
         for filename, content in generated_files.items():
-            filepath = os.path.join(output_dir, filename)
+            # フォルダ構成反映
+            rel_path = self._resolve_output_path(
+                filename, layer_name
+            )
+            filepath = os.path.join(output_dir, rel_path)
+
+            # 親ディレクトリを作成
+            parent = os.path.dirname(filepath)
+            if parent:
+                os.makedirs(parent, exist_ok=True)
+
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
             saved_files.append(filepath)
             self._log_debug(f"Saved: {filepath}")
+
         return saved_files
 
     def save_generated_code_with_merge(self, generated_files,
-                                       output_dir):
-        """ユーザーコードを保持しながら保存（マージあり）"""
-        self._log_debug(f"Merging and saving to: {output_dir}")
+                                       output_dir,
+                                       layer_name: str = ''):
+        """ユーザーコードを保持しながら保存（フォルダ構成反映）"""
+        self._log_debug(
+            f"Merging and saving to: {output_dir} "
+            f"(structure={self.config.folder_structure})"
+        )
+        # マージ処理にも path_resolver を渡す
         merged_files = self.merger.merge_all_files(
-            generated_files, output_dir
+            generated_files, output_dir,
+            path_resolver=self._resolve_output_path,
+            layer_name=layer_name,
         )
         return self.save_generated_code(
-            merged_files, output_dir
+            merged_files, output_dir, layer_name
         )
 
-    def get_merge_summary(self, generated_files, output_dir):
+    def get_merge_summary(self, generated_files, output_dir,
+                          layer_name: str = ''):
         """マージ結果のサマリーを取得"""
         self._log_debug(
             f"Getting merge summary for: {output_dir}"
         )
         summary = {}
         for filename, content in generated_files.items():
-            existing_path = os.path.join(output_dir, filename)
+            rel_path = self._resolve_output_path(
+                filename, layer_name
+            )
+            existing_path = os.path.join(output_dir, rel_path)
             if os.path.exists(existing_path):
                 with open(existing_path, 'r',
                           encoding='utf-8') as f:

@@ -1,5 +1,5 @@
 {
-  "output_directory": "C:/usr/project",
+  "output_directory": "C:/usr/prj",
   "generation_style": "table_driven",
   "os_type": "non_rtos",
   "save_with_merge": true
