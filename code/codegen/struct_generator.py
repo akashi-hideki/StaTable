@@ -73,9 +73,9 @@ class CStructGenerator:
             '    bool pending_event_valid;       /* 保留イベント有効フラグ */\n'
         ),
 
-        # --- struct 終了 ---
+        # --- struct 終了（★ }} → } に修正） ---
         'struct_end': Template(
-            '}} $type_name;\n'
+            '} $type_name;\n'
         ),
     }
 
@@ -151,8 +151,9 @@ class CStructGenerator:
         'member_event': Template(
             '    $event_type event;        /* 発生イベント */\n'
         ),
+        # ★ }} → } に修正
         'struct_end': Template(
-            '}} $type_name;\n'
+            '} $type_name;\n'
         ),
     }
 
