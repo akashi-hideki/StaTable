@@ -1,7 +1,7 @@
 # codegen/c_code_generator.py
 """
 Cコード生成メインクラス
-（ステップテーブル駆動版・13ファイル対応・複数層対応）
+（ステップテーブル駆動版・13ファイル対応・複数層対応・by_layer対応）
 
 設計方針:
   - ファイルごとの生成手順は FILE_STEPS テーブルで宣言
@@ -12,6 +12,7 @@ Cコード生成メインクラス
   - フォルダ構成は FOLDER_STRUCTURE_RESOLVERS で解決
   - スーパーインクルード / スーパーループは常に生成
   - 複数層は generate_all_layers() で一括生成
+  - by_layer では層固有ファイルを層フォルダに分離
 """
 
 import sys
@@ -66,7 +67,7 @@ class CCodeGenerator:
        （ステップテーブル駆動・13ファイル対応・複数層対応）"""
 
     # ================================================================
-    # 【テーブル①】ファイル別ステップ定義（固定ファイル）
+    # 【テーブル①】ファイル別ステップ定義
     # ================================================================
     FILE_STEPS: Dict[str, List[Dict[str, Any]]] = {
         'statable_types.h': [
@@ -300,6 +301,27 @@ class CCodeGenerator:
     }
 
     # ================================================================
+    # 【テーブル⑥】★ by_layer 用ファイル分類
+    # ================================================================
+    LAYER_SPECIFIC_FILES = {
+        'statable_types.h',
+        'statable_transitions.h',
+        'statable_transitions.c',
+        'statable_role_functions.h',
+        'statable_role_functions.c',
+    }
+
+    COMMON_FILES = {
+        'statable_init.c',
+        'statable_event_queue.c',
+        'statable_interrupt.c',
+        'statable_timer.c',
+        'osal.h',
+        'osal.c',
+        'statable_all.h',
+    }
+
+    # ================================================================
     # コンストラクタ
     # ================================================================
     def __init__(self,
@@ -338,7 +360,7 @@ class CCodeGenerator:
             f"{self.config.project_name}_run.c"
         )
 
-        # インスタンスレベルにコピー（動的追加のため）
+        # インスタンスレベルにコピー
         self.FILE_STEPS = dict(self.__class__.FILE_STEPS)
         self.FILE_DISPATCH = dict(self.__class__.FILE_DISPATCH)
         self.FILE_CATEGORY = dict(self.__class__.FILE_CATEGORY)
@@ -515,17 +537,14 @@ class CCodeGenerator:
     def set_config(self, config: CodeGenerationConfig):
         self.config_manager.set_config(config)
         self.config = self.config_manager.get_config()
-        self._log_debug("Config updated")
 
     def update_config(self, **kwargs):
         self.config_manager.update(**kwargs)
         self.config = self.config_manager.get_config()
-        self._log_debug(f"Config updated: {kwargs}")
 
     def reset_config(self):
         self.config_manager.reset()
         self.config = self.config_manager.get_config()
-        self._log_debug("Config reset")
 
     # ================================================================
     # ヘルパー
@@ -546,12 +565,6 @@ class CCodeGenerator:
                 name = getattr(rf, 'name', None)
                 if name and name not in funcs:
                     funcs[name] = rf
-            self._log_debug(
-                f"_get_role_functions_list: "
-                f"merged {len(funcs)} funcs "
-                f"(state={len(state_machine.role_functions)}, "
-                f"lib={len(lib.list_all())})"
-            )
         return list(funcs.values())
 
     def _get_layer_name(self, state_machine) -> str:
@@ -644,10 +657,6 @@ class CCodeGenerator:
     def _setup_layer_generators(self, state_machine):
         """state_machine.layer_name を各サブジェネレータに反映"""
         layer_name = self._get_layer_name(state_machine)
-        self._log_debug(
-            f"_setup_layer_generators: layer_name='{layer_name}'"
-        )
-
         for name, gen in [
             ('enum_gen',       self.enum_gen),
             ('transition_gen', self.transition_gen),
@@ -662,7 +671,17 @@ class CCodeGenerator:
     # ================================================================
     def _resolve_output_path(self, filename: str,
                              layer_name: str = '') -> str:
-        """ファイル名から保存先の相対パスを返す"""
+        """
+        ファイル名から保存先の相対パスを返す
+
+        ★ filename に既にパス区切り（'/' or '\\'）が含まれる場合は
+          そのまま使用（by_layer の "Driver/statable_types.h" 等）
+        """
+        # 既にパス形式 → そのまま
+        if '/' in filename or '\\' in filename:
+            return filename
+
+        # スーパーインクルード特別扱い
         if filename == 'statable_all.h':
             return self._resolve_super_include_path(layer_name)
 
@@ -673,7 +692,6 @@ class CCodeGenerator:
         resolver = getattr(self, resolver_name,
                            self._resolve_path_flat)
         return resolver(filename, layer_name)
-
     def _resolve_super_include_path(self, layer_name: str = '') -> str:
         """スーパーインクルードの保存パスを解決"""
         fname = self.config.super_include_file
@@ -686,6 +704,7 @@ class CCodeGenerator:
                 self.config.super_include_dir, fname
             )
         elif structure == 'by_layer':
+            # ★ layer_name があれば層フォルダ、なければルート
             if layer_name:
                 return os.path.join(layer_name, fname)
             return fname
@@ -712,29 +731,25 @@ class CCodeGenerator:
             return os.path.join(
                 self.config.common_dir_name, filename
             )
-        # 未分類は flat
-        self._log_debug(
-            f"_resolve_path_by_type: "
-            f"unclassified '{filename}' -> flat",
-            'warning'
-        )
         return filename
 
     def _resolve_path_by_layer(self, filename: str,
                                layer_name: str = '') -> str:
         """
-        by_layer: 層名フォルダに格納（将来対応）
+        by_layer: 層名フォルダに格納
 
-        現状はスタブ: layer_name が空なら flat と同じ
+        generate_all_layers が by_layer の場合、
+        キーに既に "layer/filename" が含まれるため、
+        通常この関数は呼ばれない（_resolve_output_path の早期 return）。
+
+        単層 generate_all で by_layer を使う場合のフォールバック。
         """
         if not layer_name:
-            self._log_debug(
-                "_resolve_path_by_layer: layer_name is empty, "
-                "falling back to flat",
-                'warning'
-            )
             return filename
-        return os.path.join(layer_name, filename)
+        # 層固有ファイルのみフォルダ分け
+        if filename in self.LAYER_SPECIFIC_FILES:
+            return os.path.join(layer_name, filename)
+        return filename
 
     # ================================================================
     # 汎用ステップ実行（単層）
@@ -743,8 +758,9 @@ class CCodeGenerator:
                    state_machine, global_defs) -> str:
         """ステップテーブルに従って1ファイルを生成（単層）"""
         return self._run_steps_multi(
-            filename, [(self._get_layer_name(state_machine),
-                        state_machine)], global_defs
+            filename,
+            [(self._get_layer_name(state_machine), state_machine)],
+            global_defs
         )
 
     # ================================================================
@@ -761,7 +777,7 @@ class CCodeGenerator:
         steps = self.FILE_STEPS.get(filename, [])
         context = {
             'layers':        layers,
-            'state_machine': layers[0][1],     # 主層（後方互換）
+            'state_machine': layers[0][1],
             'global_defs':   global_defs,
             'file_config':   file_config,
             'filename':      filename,
@@ -858,9 +874,6 @@ class CCodeGenerator:
         kind = step.get('kind', '')
         method_name = self.STRUCT_KIND_DISPATCH.get(kind)
         if method_name is None:
-            self._log_debug(
-                f"Unknown struct kind: {kind}", 'warning'
-            )
             return []
         # struct_gen.generate_struct の第一引数は kind
         return [self.struct_gen.generate_struct(
@@ -1063,18 +1076,44 @@ class CCodeGenerator:
 
     def _step_super_include_common(self, step, ctx):
         T = self.templates.SUPER_INCLUDE_TEMPLATES
-        return [
-            T['common_section'],
-            '#include "statable_types.h"',
-        ]
+        layers = ctx['layers']
+        structure = self.config.folder_structure
+
+        parts = [T['common_section']]
+
+        if structure == 'by_layer':
+            # 層フォルダ内の statable_types.h を include
+            for layer_name, sm in layers:
+                layer = self._get_layer_name(sm)
+                if layer:
+                    parts.append(
+                        f'#include "{layer}/statable_types.h"'
+                    )
+        else:
+            parts.append('#include "statable_types.h"')
+        return parts
 
     def _step_super_include_layer(self, step, ctx):
         T = self.templates.SUPER_INCLUDE_TEMPLATES
-        return [
-            T['layer_section'],
-            '#include "statable_transitions.h"',
-            '#include "statable_role_functions.h"',
-        ]
+        layers = ctx['layers']
+        structure = self.config.folder_structure
+
+        parts = [T['layer_section']]
+
+        if structure == 'by_layer':
+            for layer_name, sm in layers:
+                layer = self._get_layer_name(sm)
+                if layer:
+                    parts.append(
+                        f'#include "{layer}/statable_transitions.h"'
+                    )
+                    parts.append(
+                        f'#include "{layer}/statable_role_functions.h"'
+                    )
+        else:
+            parts.append('#include "statable_transitions.h"')
+            parts.append('#include "statable_role_functions.h"')
+        return parts
 
     def _step_super_include_project(self, step, ctx):
         T = self.templates.SUPER_INCLUDE_TEMPLATES
@@ -1212,7 +1251,7 @@ class CCodeGenerator:
         return parts
 
     # ================================================================
-    # ファイル生成メソッド（すべて _run_steps に委譲）
+    # ファイル生成メソッド
     # ================================================================
     def _generate_types_header(self, sm, gd):
         return self._run_steps('statable_types.h', sm, gd)
@@ -1260,15 +1299,11 @@ class CCodeGenerator:
     def generate_all(self, state_machine, global_defs,
                      role_function_library=None):
         """単層の全コード生成（後方互換）"""
-        self._log_debug("Generating all code (single-layer)")
-
         self._setup_layer_generators(state_machine)
 
         prev = self._current_role_function_library
         self._current_role_function_library = role_function_library
         try:
-            layers = [(self._get_layer_name(state_machine),
-                       state_machine)]
             generated_files = {}
             for filename in self.file_generators.keys():
                 # スーパーインクルードのスキップ判定
@@ -1291,8 +1326,6 @@ class CCodeGenerator:
     def generate_file(self, filename, state_machine, global_defs,
                       role_function_library=None):
         """特定ファイルの生成（単層）"""
-        self._log_debug(f"Generating file: {filename}")
-
         self._setup_layer_generators(state_machine)
 
         prev = self._current_role_function_library
@@ -1321,16 +1354,23 @@ class CCodeGenerator:
 
         Returns:
             Dict[str, str]: 生成ファイル辞書
+            - by_type / flat: 通常のファイル名
+            - by_layer: "layer/filename" 形式（層固有）
+                        + 通常のファイル名（共通）
         """
-        self._log_debug("Generating all code (multi-layer)")
-
         # 正規化 + 優先度順ソート
         norm_layers = self._normalize_layers(layers)
         if not norm_layers:
-            self._log_debug("No layers, aborting", 'warning')
             return {}
 
-        # 主層（= 最初の層）で setup
+        structure = self.config.folder_structure
+
+        if structure == 'by_layer':
+            return self._generate_all_by_layer(
+                norm_layers, global_defs, role_function_library
+            )
+
+        # by_type / flat: 全層を1ファイルにマージ（既存）
         primary_sm = norm_layers[0][1]
         self._setup_layer_generators(primary_sm)
 
@@ -1341,16 +1381,75 @@ class CCodeGenerator:
             for filename in self.file_generators.keys():
                 if (filename == 'statable_all.h'
                         and not self.config.generate_super_include):
-                    self._log_debug(
-                        "Skipping statable_all.h "
-                        "(generate_super_include=False)"
-                    )
                     continue
-
-                self._log_debug(f"Generating: {filename}")
                 generated_files[filename] = self._run_steps_multi(
                     filename, norm_layers, global_defs
                 )
+            return generated_files
+        finally:
+            self._current_role_function_library = prev
+
+    def _generate_all_by_layer(self, layers, global_defs,
+                               role_function_library):
+        """
+        by_layer 専用生成
+
+        層固有ファイル: 各層を単独で generate_all → "layer/filename"
+        共通ファイル: 複数層で _run_steps_multi → "filename"
+        """
+        self._log_debug(
+            f"_generate_all_by_layer: {len(layers)} layers"
+        )
+        generated_files = {}
+
+        prev = self._current_role_function_library
+        self._current_role_function_library = role_function_library
+        try:
+            # === 1. 層固有ファイル ===
+            for layer_name, sm in layers:
+                if not layer_name:
+                    # 層名なし → ルート直下
+                    self._setup_layer_generators(sm)
+                    layer_files = {}
+                    for fname in self.LAYER_SPECIFIC_FILES:
+                        method_name = self.FILE_DISPATCH.get(fname)
+                        if method_name is None:
+                            continue
+                        method = getattr(self, method_name, None)
+                        if method is None:
+                            continue
+                        layer_files[fname] = method(sm, global_defs)
+                    generated_files.update(layer_files)
+                    continue
+
+                self._setup_layer_generators(sm)
+                for fname in self.LAYER_SPECIFIC_FILES:
+                    method_name = self.FILE_DISPATCH.get(fname)
+                    if method_name is None:
+                        continue
+                    method = getattr(self, method_name, None)
+                    if method is None:
+                        continue
+                    content = method(sm, global_defs)
+                    # "layer/filename" 形式でキー登録
+                    generated_files[
+                        f"{layer_name}/{fname}"
+                    ] = content
+
+            # === 2. 共通ファイル ===
+            common_names = list(self.COMMON_FILES) + [
+                self.super_loop_filename
+            ]
+            for fname in common_names:
+                # スーパーインクルードのスキップ判定
+                if (fname == 'statable_all.h'
+                        and not self.config.generate_super_include):
+                    continue
+                content = self._run_steps_multi(
+                    fname, layers, global_defs
+                )
+                generated_files[fname] = content
+
             return generated_files
         finally:
             self._current_role_function_library = prev
@@ -1361,10 +1460,6 @@ class CCodeGenerator:
     def save_generated_code(self, generated_files, output_dir,
                             layer_name: str = ''):
         """生成コードの保存（マージなし）"""
-        self._log_debug(
-            f"Saving generated code to: {output_dir} "
-            f"(structure={self.config.folder_structure})"
-        )
         saved_files = []
         os.makedirs(output_dir, exist_ok=True)
 
@@ -1383,7 +1478,6 @@ class CCodeGenerator:
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
             saved_files.append(filepath)
-            self._log_debug(f"Saved: {filepath}")
 
         return saved_files
 
@@ -1391,10 +1485,6 @@ class CCodeGenerator:
                                        output_dir,
                                        layer_name: str = ''):
         """ユーザーコードを保持しながら保存"""
-        self._log_debug(
-            f"Merging and saving to: {output_dir}"
-        )
-        # マージ処理にも path_resolver を渡す
         merged_files = self.merger.merge_all_files(
             generated_files, output_dir,
             path_resolver=self._resolve_output_path,
