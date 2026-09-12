@@ -1,6 +1,14 @@
 # codegen/c_code_generator.py
 """
-Cコード生成メインクラス（完全データ駆動版・11ファイル対応・設定対応）
+Cコード生成メインクラス
+（ステップテーブル駆動版・11ファイル対応・設定対応）
+
+設計方針:
+  - ファイルごとの生成手順は FILE_STEPS テーブルで宣言
+  - 各ステップは step_executors 辞書で実行関数に紐付け
+  - _run_steps() がステップ列を順に実行
+  - 条件付きステップは 'when' 述語で宣言的に表現
+  - ファイル間ディスパッチは DISPATCH 辞書で管理
 """
 
 import sys
@@ -9,7 +17,9 @@ import logging
 from typing import Dict, Callable, List, Any, Optional
 from datetime import datetime
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 
 from statable.state_machine import StateMachine
 from statable.global_defs import GlobalDefinitions
@@ -49,9 +59,186 @@ logger = logging.getLogger(__name__)
 
 
 class CCodeGenerator:
-    """Cコード生成メインクラス（完全データ駆動・11ファイル対応・設定対応）"""
-    
-    def __init__(self, config: Optional[CodeGenerationConfig] = None):
+    """Cコード生成メインクラス
+       （ステップテーブル駆動・11ファイル対応・設定対応）"""
+
+    # ================================================================
+    # 【テーブル①】ファイル別ステップ定義
+    # ================================================================
+    FILE_STEPS: Dict[str, List[Dict[str, Any]]] = {
+        'statable_types.h': [
+            {'action': 'file_header',
+             'filename': 'statable_types.h'},
+            {'action': 'blank'},
+            {'action': 'guard_start'},
+            {'action': 'include_section', 'key': 'types'},
+            {'action': 'section_header', 'key': 'type_defs'},
+            {'action': 'blank'},
+            {'action': 'enums'},
+            {'action': 'blank'},
+            {'action': 'custom_types',
+             'when': lambda c: bool(c['global_defs'].custom_types)},
+            {'action': 'section_header', 'key': 'system_structs'},
+            {'action': 'blank'},
+            {'action': 'struct', 'kind': 'system_data'},
+            {'action': 'blank'},
+            {'action': 'struct', 'kind': 'event_flags'},
+            {'action': 'blank'},
+            {'action': 'struct', 'kind': 'system_context'},
+            {'action': 'blank'},
+            {'action': 'section_header', 'key': 'var_macros'},
+            {'action': 'blank'},
+            {'action': 'var_macros'},
+            {'action': 'blank'},
+            {'action': 'guard_end'},
+        ],
+        'statable_transitions.h': [
+            {'action': 'file_header',
+             'filename': 'statable_transitions.h'},
+            {'action': 'blank'},
+            {'action': 'guard_start'},
+            {'action': 'include_section',
+             'key': 'transitions_h'},
+            {'action': 'section_header',
+             'key': 'function_decls'},
+            {'action': 'blank'},
+            {'action': 'state_machine_decl'},
+            {'action': 'blank'},
+            {'action': 'guard_end'},
+        ],
+        'statable_transitions.c': [
+            {'action': 'file_header',
+             'filename': 'statable_transitions.c'},
+            {'action': 'blank'},
+            {'action': 'include_section',
+             'key': 'transitions_c'},
+            {'action': 'section_header',
+             'key': 'transition_table'},
+            {'action': 'blank'},
+            {'action': 'transition_table'},
+            {'action': 'blank'},
+            {'action': 'section_header',
+             'key': 'transition_func'},
+            {'action': 'blank'},
+            {'action': 'process_func'},
+        ],
+        'statable_role_functions.h': [
+            {'action': 'file_header',
+             'filename': 'statable_role_functions.h'},
+            {'action': 'blank'},
+            {'action': 'guard_start'},
+            {'action': 'include_section',
+             'key': 'role_functions_h'},
+            {'action': 'section_header',
+             'key': 'role_functions'},
+            {'action': 'blank'},
+            {'action': 'role_decls'},
+            {'action': 'blank'},
+            {'action': 'guard_end'},
+        ],
+        'statable_role_functions.c': [
+            {'action': 'file_header',
+             'filename': 'statable_role_functions.c'},
+            {'action': 'blank'},
+            {'action': 'include_section',
+             'key': 'role_functions_c'},
+            {'action': 'section_header', 'key': 'role_impl'},
+            {'action': 'blank'},
+            {'action': 'role_impls'},
+        ],
+        'statable_init.c': [
+            {'action': 'file_header',
+             'filename': 'statable_init.c'},
+            {'action': 'blank'},
+            {'action': 'include_section', 'key': 'init_c'},
+            {'action': 'section_header', 'key': 'init_func'},
+            {'action': 'blank'},
+            {'action': 'init_func'},
+        ],
+        'statable_event_queue.c': [
+            {'action': 'file_header',
+             'filename': 'statable_event_queue.c'},
+            {'action': 'blank'},
+            {'action': 'include_section',
+             'key': 'event_queue_c'},
+            {'action': 'event_queues'},
+        ],
+        'statable_interrupt.c': [
+            {'action': 'file_header',
+             'filename': 'statable_interrupt.c'},
+            {'action': 'blank'},
+            {'action': 'include_section',
+             'key': 'interrupt_c'},
+            {'action': 'interrupts'},
+        ],
+        'statable_timer.c': [
+            {'action': 'file_header',
+             'filename': 'statable_timer.c'},
+            {'action': 'blank'},
+            {'action': 'include_section', 'key': 'timer_c'},
+            {'action': 'section_header', 'key': 'type_defs'},
+            {'action': 'blank'},
+            {'action': 'timer_struct'},
+            {'action': 'blank'},
+            {'action': 'section_header', 'key': 'init_func'},
+            {'action': 'blank'},
+            {'action': 'timer_init'},
+            {'action': 'blank'},
+            {'action': 'section_header',
+             'key': 'transition_func'},
+            {'action': 'blank'},
+            {'action': 'timer_update'},
+        ],
+        'osal.h': [
+            {'action': 'osal_header'},
+        ],
+        'osal.c': [
+            {'action': 'osal_source'},
+        ],
+    }
+
+    # ================================================================
+    # 【テーブル②】struct 種類 → 生成メソッド ディスパッチ
+    # ================================================================
+    STRUCT_KIND_DISPATCH: Dict[str, str] = {
+        'system_data':    'system_data',
+        'event_flags':    'event_flags',
+        'system_context': 'system_context',
+    }
+
+    # ================================================================
+    # 【テーブル③】ファイル名 → 生成メソッド ディスパッチ
+    # ================================================================
+    FILE_DISPATCH: Dict[str, str] = {
+        'statable_types.h':
+            '_generate_types_header',
+        'statable_transitions.h':
+            '_generate_transitions_header',
+        'statable_transitions.c':
+            '_generate_transitions_source',
+        'statable_role_functions.h':
+            '_generate_role_functions_header',
+        'statable_role_functions.c':
+            '_generate_role_functions_source',
+        'statable_init.c':
+            '_generate_init_source',
+        'statable_event_queue.c':
+            '_generate_event_queue_source',
+        'statable_interrupt.c':
+            '_generate_interrupt_source',
+        'statable_timer.c':
+            '_generate_timer_source',
+        'osal.h':
+            '_generate_osal_header',
+        'osal.c':
+            '_generate_osal_source',
+    }
+
+    # ================================================================
+    # コンストラクタ
+    # ================================================================
+    def __init__(self,
+                 config: Optional[CodeGenerationConfig] = None):
         self.mapper = CTypeMapper()
         self.naming = CNamingConvention()
         self.struct_gen = CStructGenerator()
@@ -67,412 +254,524 @@ class CCodeGenerator:
         self.strings = self.templates.STRINGS
         self.formats = self.templates.FORMATS
         self.merger = CodeMerger()
-        
+
         # 設定
         self.config_manager = ConfigManager()
         if config:
             self.config_manager.set_config(config)
         self.config = self.config_manager.get_config()
-        
-        self.generation_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        # ===== ファイル生成設定辞書（11ファイル） =====
+
+        self.generation_date = (
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
+
+        # 生成中のみ有効な共有ライブラリ
+        self._current_role_function_library = None
+
+        # ===== ファイル生成メタ =====
         self.file_generators: Dict[str, Dict] = {
             'statable_types.h': {
-                'method': self._generate_types_header,
                 'description': '状態遷移システムの型定義',
                 'guard_name': 'STATABLE_TYPES_H',
             },
             'statable_transitions.h': {
-                'method': self._generate_transitions_header,
                 'description': '状態遷移関数宣言',
                 'guard_name': 'STATABLE_TRANSITIONS_H',
             },
             'statable_transitions.c': {
-                'method': self._generate_transitions_source,
                 'description': '状態遷移ロジック',
                 'guard_name': None,
             },
             'statable_role_functions.h': {
-                'method': self._generate_role_functions_header,
                 'description': 'ロール関数宣言',
                 'guard_name': 'STATABLE_ROLE_FUNCTIONS_H',
             },
             'statable_role_functions.c': {
-                'method': self._generate_role_functions_source,
                 'description': 'ロール関数実装',
                 'guard_name': None,
             },
             'statable_init.c': {
-                'method': self._generate_init_source,
                 'description': '初期化処理',
                 'guard_name': None,
             },
             'statable_event_queue.c': {
-                'method': self._generate_event_queue_source,
                 'description': 'イベントキュー実装',
                 'guard_name': None,
             },
             'statable_interrupt.c': {
-                'method': self._generate_interrupt_source,
                 'description': '割り込み処理ISR',
                 'guard_name': None,
             },
             'statable_timer.c': {
-                'method': self._generate_timer_source,
                 'description': 'タイマ処理',
                 'guard_name': None,
             },
             'osal.h': {
-                'method': self._generate_osal_header,
                 'description': 'OSALヘッダ',
                 'guard_name': 'OSAL_H',
             },
             'osal.c': {
-                'method': self._generate_osal_source,
                 'description': 'OSALソース',
                 'guard_name': None,
             },
         }
-        
-        # ===== インクルードファイル定義辞書 =====
+
+        # ===== インクルード定義 =====
         self.include_headers: Dict[str, List[str]] = {
-            'types': ['#include <stdint.h>', '#include <stdbool.h>', '#include <string.h>'],
-            'transitions_h': ['#include "statable_types.h"'],
-            'transitions_c': ['#include "statable_transitions.h"', '#include "statable_role_functions.h"'],
-            'role_functions_h': ['#include "statable_types.h"'],
-            'role_functions_c': ['#include "statable_role_functions.h"'],
+            'types': [
+                '#include <stdint.h>',
+                '#include <stdbool.h>',
+                '#include <string.h>',
+            ],
+            'transitions_h': [
+                '#include "statable_types.h"',
+            ],
+            'transitions_c': [
+                '#include "statable_transitions.h"',
+                '#include "statable_role_functions.h"',
+            ],
+            'role_functions_h': [
+                '#include "statable_types.h"',
+            ],
+            'role_functions_c': [
+                '#include "statable_role_functions.h"',
+            ],
             'init_c': ['#include "statable_types.h"'],
             'event_queue_c': ['#include "statable_types.h"'],
             'interrupt_c': ['#include "statable_types.h"'],
             'timer_c': ['#include "statable_types.h"'],
         }
-    
+
+        # ===== ステップ実行辞書（FunctionDictionary） =====
+        self.step_executors: Dict[str, Callable] = {
+            # 共通
+            'file_header':        self._step_file_header,
+            'blank':              self._step_blank,
+            'guard_start':        self._step_guard_start,
+            'guard_end':          self._step_guard_end,
+            'include_section':    self._step_include_section,
+            'section_header':     self._step_section_header,
+            # 型定義
+            'enums':              self._step_enums,
+            'custom_types':       self._step_custom_types,
+            'struct':             self._step_struct,
+            'var_macros':         self._step_var_macros,
+            # 遷移
+            'state_machine_decl': self._step_state_machine_decl,
+            'transition_table':   self._step_transition_table,
+            'process_func':       self._step_process_func,
+            # ロール
+            'role_decls':         self._step_role_decls,
+            'role_impls':         self._step_role_impls,
+            # 初期化
+            'init_func':          self._step_init_func,
+            # イベントキュー / 割り込み
+            'event_queues':       self._step_event_queues,
+            'interrupts':         self._step_interrupts,
+            # タイマ
+            'timer_struct':       self._step_timer_struct,
+            'timer_init':         self._step_timer_init,
+            'timer_update':       self._step_timer_update,
+            # OSAL
+            'osal_header':        self._step_osal_header,
+            'osal_source':        self._step_osal_source,
+        }
+
+    # ================================================================
+    # ログ
+    # ================================================================
     def _log_debug(self, message, level='debug'):
         log_func = getattr(logger, level, logger.debug)
         log_func(message)
-    
-    # ===== 設定関連メソッド =====
+
+    # ================================================================
+    # 設定関連
+    # ================================================================
     def get_config(self) -> CodeGenerationConfig:
-        """現在の設定を取得"""
         return self.config
-    
+
     def set_config(self, config: CodeGenerationConfig):
-        """設定を更新"""
         self.config_manager.set_config(config)
         self.config = self.config_manager.get_config()
         self._log_debug("Config updated")
-    
+
     def update_config(self, **kwargs):
-        """設定を部分的に更新"""
         self.config_manager.update(**kwargs)
         self.config = self.config_manager.get_config()
         self._log_debug(f"Config updated: {kwargs}")
-    
+
     def reset_config(self):
-        """設定をリセット"""
         self.config_manager.reset()
         self.config = self.config_manager.get_config()
         self._log_debug("Config reset")
-    
-    # ===== ヘルパーメソッド =====
+
+    # ================================================================
+    # ヘルパー
+    # ================================================================
     def _get_states_list(self, state_machine):
         return list(state_machine.states.values())
-    
+
     def _get_events_list(self, state_machine):
         return list(state_machine.events.values())
-    
+
     def _get_role_functions_list(self, state_machine):
-        return list(state_machine.role_functions.values())
-    
+        """state_machine と共有ライブラリをマージした
+           ロール関数リストを返す"""
+        funcs = dict(state_machine.role_functions)
+        lib = self._current_role_function_library
+        if lib is not None:
+            for rf in lib.list_all():
+                name = getattr(rf, 'name', None)
+                if name and name not in funcs:
+                    funcs[name] = rf
+            self._log_debug(
+                f"_get_role_functions_list: "
+                f"merged {len(funcs)} funcs "
+                f"(state={len(state_machine.role_functions)}, "
+                f"lib={len(lib.list_all())})"
+            )
+        return list(funcs.values())
+
     def _generate_section_header(self, section_key):
         line = self.strings['section_line']
-        title = self.templates.SECTION_HEADERS.get(section_key, '')
+        title = self.templates.SECTION_HEADERS.get(
+            section_key, ''
+        )
         return f"{line}\n *  {title}\n{line}"
-    
+
     def _generate_file_header(self, filename, description=""):
-        return (f"/**\n"
-                f" * @file    {filename}\n"
-                f" * @brief   {description}\n"
-                f" *\n"
-                f" * @note    {self.strings['auto_generated']}\n"
-                f" *          - {self.strings['no_edit']}\n"
-                f" *          - {self.strings['edit_in_statable']}\n"
-                f" *\n"
-                f" * @date    {self.generation_date}\n"
-                f" */")
-    
+        return (
+            f"/**\n"
+            f" * @file    {filename}\n"
+            f" * @brief   {description}\n"
+            f" *\n"
+            f" * @note    {self.strings['auto_generated']}\n"
+            f" *          - {self.strings['no_edit']}\n"
+            f" *          - {self.strings['edit_in_statable']}\n"
+            f" *\n"
+            f" * @date    {self.generation_date}\n"
+            f" */"
+        )
+
     def _generate_include_guard_start(self, guard_name):
         return f"#ifndef {guard_name}\n#define {guard_name}\n"
-    
+
     def _generate_include_guard_end(self, guard_name):
         return f"#endif /* {guard_name} */"
-    
+
     def _generate_include_section(self, include_key):
-        lines = []
-        lines.append(self._generate_section_header('include'))
-        lines.append("")
+        lines = [self._generate_section_header('include'), ""]
         for header in self.include_headers.get(include_key, []):
             lines.append(header)
         lines.append("")
         return '\n'.join(lines)
-    
-    # ===== 型定義ヘッダ生成 =====
-    def _generate_types_header(self, state_machine, global_defs):
-        self._log_debug("Generating types header")
-        lines = []
-        file_config = self.file_generators['statable_types.h']
-        
-        lines.append(self._generate_file_header('statable_types.h', file_config['description']))
-        lines.append("")
-        lines.append(self._generate_include_guard_start(file_config['guard_name']))
-        lines.append(self._generate_include_section('types'))
-        lines.append(self._generate_section_header('type_defs'))
-        lines.append("")
-        lines.append(self.enum_gen.generate_all_enums(
-            self._get_states_list(state_machine),
-            self._get_events_list(state_machine),
-            global_defs.flags
-        ))
-        lines.append("")
-        
-        if global_defs.custom_types:
-            lines.append(self._generate_section_header('custom_types'))
-            lines.append("")
-            for custom_type in global_defs.custom_types:
-                lines.append(self.struct_gen.generate_struct('custom_type', custom_type))
-                lines.append("")
-        
-        lines.append(self._generate_section_header('system_structs'))
-        lines.append("")
-        lines.append(self.struct_gen.generate_struct('system_data', global_defs))
-        lines.append("")
-        lines.append(self.struct_gen.generate_struct('event_flags', global_defs))
-        lines.append("")
-        lines.append(self.struct_gen.generate_struct('system_context', global_defs))
-        lines.append("")
-        lines.append(self._generate_section_header('var_macros'))
-        lines.append("")
-        lines.append(self.variable_gen.generate_all_macros(global_defs))
-        lines.append("")
-        lines.append(self._generate_include_guard_end(file_config['guard_name']))
-        
-        return '\n'.join(lines)
-    
-    # ===== 遷移関数ヘッダ生成 =====
-    def _generate_transitions_header(self, state_machine, global_defs):
-        self._log_debug("Generating transitions header")
-        lines = []
-        file_config = self.file_generators['statable_transitions.h']
-        
-        lines.append(self._generate_file_header('statable_transitions.h', file_config['description']))
-        lines.append("")
-        lines.append(self._generate_include_guard_start(file_config['guard_name']))
-        lines.append(self._generate_include_section('transitions_h'))
-        lines.append(self._generate_section_header('function_decls'))
-        lines.append("")
-        lines.append("/**")
-        lines.append(" * @brief  状態遷移処理")
-        lines.append(" * @param  current_state  現在の状態")
-        lines.append(" * @param  event          発生したイベント")
-        lines.append(" * @param  ctx            システムコンテキストポインタ")
-        lines.append(" * @return 遷移後の状態")
-        lines.append(" */")
-        lines.append("STATE_t StateMachine_Process(")
-        lines.append("    STATE_t current_state,")
-        lines.append("    EVENT_t event,")
-        lines.append("    SystemContext_t *ctx")
-        lines.append(");")
-        lines.append("")
-        lines.append(self._generate_include_guard_end(file_config['guard_name']))
-        
-        return '\n'.join(lines)
-    
-    # ===== 遷移関数ソース生成 =====
-    def _generate_transitions_source(self, state_machine, global_defs):
-        self._log_debug("Generating transitions source")
-        lines = []
-        file_config = self.file_generators['statable_transitions.c']
-        
-        lines.append(self._generate_file_header('statable_transitions.c', file_config['description']))
-        lines.append("")
-        lines.append(self._generate_include_section('transitions_c'))
-        lines.append(self._generate_section_header('transition_table'))
-        lines.append("")
-        
-        # 設定に応じてテーブル方式を選択
-        table_type = self.config.table_type
-        lines.append(self.transition_gen.generate_transition_table(table_type, state_machine))
-        lines.append("")
-        lines.append(self._generate_section_header('transition_func'))
-        lines.append("")
-        
-        # 設定に応じて生成方式を選択
-        generation_style = self.config.generation_style
-        lines.append(self.transition_gen.generate_process_function(generation_style, state_machine))
-        
-        return '\n'.join(lines)
-    
-    # ===== ロール関数ヘッダ生成 =====
-    def _generate_role_functions_header(self, state_machine, global_defs):
-        self._log_debug("Generating role functions header")
-        lines = []
-        file_config = self.file_generators['statable_role_functions.h']
-        
-        lines.append(self._generate_file_header('statable_role_functions.h', file_config['description']))
-        lines.append("")
-        lines.append(self._generate_include_guard_start(file_config['guard_name']))
-        lines.append(self._generate_include_section('role_functions_h'))
-        lines.append(self._generate_section_header('role_functions'))
-        lines.append("")
-        lines.append(self.role_func_gen.generate_all_declarations(
-            self._get_role_functions_list(state_machine)
-        ))
-        lines.append("")
-        lines.append(self._generate_include_guard_end(file_config['guard_name']))
-        
-        return '\n'.join(lines)
-    
-    # ===== ロール関数ソース生成 =====
-    def _generate_role_functions_source(self, state_machine, global_defs):
-        self._log_debug("Generating role functions source")
-        lines = []
-        file_config = self.file_generators['statable_role_functions.c']
-        
-        lines.append(self._generate_file_header('statable_role_functions.c', file_config['description']))
-        lines.append("")
-        lines.append(self._generate_include_section('role_functions_c'))
-        lines.append(self._generate_section_header('role_impl'))
-        lines.append("")
-        lines.append(self.role_func_gen.generate_all_implementations(
-            self._get_role_functions_list(state_machine)
-        ))
-        
-        return '\n'.join(lines)
-    
-    # ===== 初期化ソース生成 =====
-    def _generate_init_source(self, state_machine, global_defs):
-        self._log_debug("Generating init source")
-        lines = []
-        file_config = self.file_generators['statable_init.c']
-        
-        lines.append(self._generate_file_header('statable_init.c', file_config['description']))
-        lines.append("")
-        lines.append(self._generate_include_section('init_c'))
-        lines.append(self._generate_section_header('init_func'))
-        lines.append("")
-        lines.append(self.variable_gen.generate_init_function(global_defs))
-        
-        return '\n'.join(lines)
-    
-    # ===== イベントキューソース生成 =====
-    def _generate_event_queue_source(self, state_machine, global_defs):
-        self._log_debug("Generating event queue source")
-        lines = []
-        file_config = self.file_generators['statable_event_queue.c']
-        
-        lines.append(self._generate_file_header('statable_event_queue.c', file_config['description']))
-        lines.append("")
-        lines.append(self._generate_include_section('event_queue_c'))
-        
-        # イベントキュー構造体
-        queues = getattr(global_defs, 'event_queues', [])
-        if queues:
-            lines.append(self._generate_section_header('type_defs'))
-            lines.append("")
-            for queue in queues:
-                lines.append(self.event_queue_gen.generate_all_code(queue))
-                lines.append("")
-        else:
-            lines.append("/* イベントキュー定義なし */")
-        
-        return '\n'.join(lines)
-    
-    # ===== 割り込みソース生成 =====
-    def _generate_interrupt_source(self, state_machine, global_defs):
-        self._log_debug("Generating interrupt source")
-        lines = []
-        file_config = self.file_generators['statable_interrupt.c']
-        
-        lines.append(self._generate_file_header('statable_interrupt.c', file_config['description']))
-        lines.append("")
-        lines.append(self._generate_include_section('interrupt_c'))
-        
-        # ISR骨格
-        interrupts = getattr(global_defs, 'interrupts', [])
-        if interrupts:
-            lines.append(self._generate_section_header('transition_func'))
-            lines.append("")
-            for handler in interrupts:
-                lines.append(self.interrupt_gen.generate_isr(handler))
-                lines.append("")
-        else:
-            lines.append("/* 割り込み処理定義なし */")
-        
-        return '\n'.join(lines)
-    
-    # ===== タイマソース生成 =====
-    def _generate_timer_source(self, state_machine, global_defs):
-        self._log_debug("Generating timer source")
-        lines = []
-        file_config = self.file_generators['statable_timer.c']
-        
-        lines.append(self._generate_file_header('statable_timer.c', file_config['description']))
-        lines.append("")
-        lines.append(self._generate_include_section('timer_c'))
-        
-        # タイマ変数構造体
-        lines.append(self._generate_section_header('type_defs'))
-        lines.append("")
-        lines.append(self.timer_gen.generate_struct(global_defs))
-        lines.append("")
-        
-        # タイマ初期化関数
-        lines.append(self._generate_section_header('init_func'))
-        lines.append("")
-        lines.append(self.timer_gen.generate_init_function(global_defs))
-        lines.append("")
-        
-        lines.append(self._generate_section_header('transition_func'))
-        lines.append("")
-        lines.append(self.timer_gen.generate_update_function(global_defs))
-        
-        return '\n'.join(lines)
-    
-    # ===== OSALヘッダ生成 =====
-    def _generate_osal_header(self, state_machine, global_defs):
-        """OSALヘッダ生成"""
-        self._log_debug(f"Generating OSAL header for: {self.config.os_type}")
-        return self.osal_gen.generate_header(self.config.os_type)
-    
-    # ===== OSALソース生成 =====
-    def _generate_osal_source(self, state_machine, global_defs):
-        """OSALソース生成"""
-        self._log_debug(f"Generating OSAL source for: {self.config.os_type}")
-        return self.osal_gen.generate_source(self.config.os_type)
-    
-    # ===== 公開メソッド =====
-    def generate_all(self, state_machine, global_defs):
-        """全コード生成（辞書駆動）"""
+
+    # ================================================================
+    # 汎用ステップ実行
+    # ================================================================
+    def _run_steps(self, filename,
+                   state_machine, global_defs) -> str:
+        """ステップテーブルに従って1ファイルを生成"""
+        file_config = self.file_generators[filename]
+        steps = self.FILE_STEPS.get(filename, [])
+        context = {
+            'state_machine': state_machine,
+            'global_defs':   global_defs,
+            'file_config':   file_config,
+            'filename':      filename,
+            'config':        self.config,
+        }
+        parts: List[str] = []
+        for step in steps:
+            when = step.get('when')
+            if when is not None and not when(context):
+                continue
+            action = step.get('action', '')
+            executor = self.step_executors.get(action)
+            if executor is None:
+                self._log_debug(
+                    f"Unknown step action: {action}", 'warning'
+                )
+                continue
+            result = executor(step, context)
+            if result is None:
+                continue
+            if isinstance(result, list):
+                parts.extend(result)
+            else:
+                parts.append(result)
+        return '\n'.join(parts)
+
+    # ================================================================
+    # ステップ実行関数群
+    # ================================================================
+    def _step_file_header(self, step, ctx):
+        filename = step.get('filename', ctx['filename'])
+        desc = ctx['file_config'].get('description', '')
+        return [self._generate_file_header(filename, desc)]
+
+    def _step_blank(self, step, ctx):
+        return [""]
+
+    def _step_guard_start(self, step, ctx):
+        guard = ctx['file_config'].get('guard_name')
+        if not guard:
+            return []
+        return [self._generate_include_guard_start(guard)]
+
+    def _step_guard_end(self, step, ctx):
+        guard = ctx['file_config'].get('guard_name')
+        if not guard:
+            return []
+        return [self._generate_include_guard_end(guard)]
+
+    def _step_include_section(self, step, ctx):
+        return [self._generate_include_section(
+            step.get('key', '')
+        )]
+
+    def _step_section_header(self, step, ctx):
+        return [self._generate_section_header(
+            step.get('key', '')
+        )]
+
+    def _step_enums(self, step, ctx):
+        sm = ctx['state_machine']
+        gd = ctx['global_defs']
+        return [self.enum_gen.generate_all_enums(
+            self._get_states_list(sm),
+            self._get_events_list(sm),
+            gd.flags,
+        )]
+
+    def _step_custom_types(self, step, ctx):
+        gd = ctx['global_defs']
+        result: List[str] = [
+            self._generate_section_header('custom_types'),
+            "",
+        ]
+        for custom_type in gd.custom_types:
+            result.append(self.struct_gen.generate_struct(
+                'custom_type', custom_type
+            ))
+            result.append("")
+        return result
+
+    def _step_struct(self, step, ctx):
+        """struct 種類を辞書引きでディスパッチ"""
+        kind = step.get('kind', '')
+        method_name = self.STRUCT_KIND_DISPATCH.get(kind)
+        if method_name is None:
+            self._log_debug(
+                f"Unknown struct kind: {kind}", 'warning'
+            )
+            return []
+        # struct_gen.generate_struct の第一引数は kind
+        return [self.struct_gen.generate_struct(
+            kind, ctx['global_defs']
+        )]
+
+    def _step_var_macros(self, step, ctx):
+        return [self.variable_gen.generate_all_macros(
+            ctx['global_defs']
+        )]
+
+    def _step_state_machine_decl(self, step, ctx):
+        return [
+            "/**",
+            " * @brief  状態遷移処理",
+            " * @param  current_state  現在の状態",
+            " * @param  event          発生したイベント",
+            " * @param  ctx            システムコンテキストポインタ",
+            " * @return 遷移後の状態",
+            " */",
+            "STATE_t StateMachine_Process(",
+            "    STATE_t current_state,",
+            "    EVENT_t event,",
+            "    SystemContext_t *ctx",
+            ");",
+        ]
+    def _step_transition_table(self, step, ctx):
+        return [self.transition_gen.generate_transition_table(
+            ctx['state_machine'],
+        )]
+    def _step_process_func(self, step, ctx):
+        return [self.transition_gen.generate_process_function(
+            ctx['state_machine'],
+        )]
+
+    def _step_role_decls(self, step, ctx):
+        return [self.role_func_gen.generate_all_declarations(
+            self._get_role_functions_list(ctx['state_machine'])
+        )]
+
+    def _step_role_impls(self, step, ctx):
+        return [self.role_func_gen.generate_all_implementations(
+            self._get_role_functions_list(ctx['state_machine']),
+            state_machine=ctx['state_machine'],
+            global_defs=ctx['global_defs'],
+        )]
+
+    def _step_init_func(self, step, ctx):
+        return [self.variable_gen.generate_init_function(
+            ctx['global_defs']
+        )]
+
+    def _step_event_queues(self, step, ctx):
+        gd = ctx['global_defs']
+        queues = getattr(gd, 'event_queues', [])
+        if not queues:
+            return ["/* イベントキュー定義なし */"]
+        result: List[str] = [
+            self._generate_section_header('type_defs'),
+            "",
+        ]
+        for queue in queues:
+            result.append(
+                self.event_queue_gen.generate_all_code(queue)
+            )
+            result.append("")
+        return result
+
+    def _step_interrupts(self, step, ctx):
+        gd = ctx['global_defs']
+        interrupts = getattr(gd, 'interrupts', [])
+        if not interrupts:
+            return ["/* 割り込み処理定義なし */"]
+        result: List[str] = [
+            self._generate_section_header('transition_func'),
+            "",
+        ]
+        for handler in interrupts:
+            result.append(
+                self.interrupt_gen.generate_isr(handler)
+            )
+            result.append("")
+        return result
+
+    def _step_timer_struct(self, step, ctx):
+        return [self.timer_gen.generate_struct(
+            ctx['global_defs']
+        )]
+
+    def _step_timer_init(self, step, ctx):
+        return [self.timer_gen.generate_init_function(
+            ctx['global_defs']
+        )]
+
+    def _step_timer_update(self, step, ctx):
+        return [self.timer_gen.generate_update_function(
+            ctx['global_defs']
+        )]
+
+    def _step_osal_header(self, step, ctx):
+        return [self.osal_gen.generate_header(
+            self.config.os_type
+        )]
+
+    def _step_osal_source(self, step, ctx):
+        return [self.osal_gen.generate_source(
+            self.config.os_type
+        )]
+
+    # ================================================================
+    # ファイル生成メソッド（すべて _run_steps に委譲）
+    # ================================================================
+    def _generate_types_header(self, sm, gd):
+        return self._run_steps('statable_types.h', sm, gd)
+
+    def _generate_transitions_header(self, sm, gd):
+        return self._run_steps('statable_transitions.h', sm, gd)
+
+    def _generate_transitions_source(self, sm, gd):
+        return self._run_steps('statable_transitions.c', sm, gd)
+
+    def _generate_role_functions_header(self, sm, gd):
+        return self._run_steps('statable_role_functions.h', sm, gd)
+
+    def _generate_role_functions_source(self, sm, gd):
+        return self._run_steps('statable_role_functions.c', sm, gd)
+
+    def _generate_init_source(self, sm, gd):
+        return self._run_steps('statable_init.c', sm, gd)
+
+    def _generate_event_queue_source(self, sm, gd):
+        return self._run_steps('statable_event_queue.c', sm, gd)
+
+    def _generate_interrupt_source(self, sm, gd):
+        return self._run_steps('statable_interrupt.c', sm, gd)
+
+    def _generate_timer_source(self, sm, gd):
+        return self._run_steps('statable_timer.c', sm, gd)
+
+    def _generate_osal_header(self, sm, gd):
+        return self._run_steps('osal.h', sm, gd)
+
+    def _generate_osal_source(self, sm, gd):
+        return self._run_steps('osal.c', sm, gd)
+
+    # ================================================================
+    # 公開メソッド
+    # ================================================================
+    def generate_all(self, state_machine, global_defs,
+                     role_function_library=None):
+        """全コード生成
+
+        Args:
+            state_machine: StateMachine
+            global_defs:   GlobalDefinitions
+            role_function_library: 共有ライブラリ（省略可）
+                - state_machine.role_functions とマージされる
+                - 名前衝突時は state_machine 側を優先
+        """
         self._log_debug("Generating all code")
-        generated_files = {}
-        for filename, config in self.file_generators.items():
-            self._log_debug(f"Generating: {filename}")
-            method = config['method']
-            generated_files[filename] = method(state_machine, global_defs)
-        return generated_files
-    
-    def generate_file(self, filename, state_machine, global_defs):
+
+        prev = self._current_role_function_library
+        self._current_role_function_library = role_function_library
+        try:
+            generated_files = {}
+            for filename in self.file_generators.keys():
+                self._log_debug(f"Generating: {filename}")
+                method_name = self.FILE_DISPATCH.get(filename)
+                if method_name is None:
+                    self._log_debug(
+                        f"No dispatch for {filename}", 'warning'
+                    )
+                    continue
+                method = getattr(self, method_name, None)
+                if method is None:
+                    self._log_debug(
+                        f"No method {method_name}", 'warning'
+                    )
+                    continue
+                generated_files[filename] = method(
+                    state_machine, global_defs
+                )
+            return generated_files
+        finally:
+            self._current_role_function_library = prev
+
+    def generate_file(self, filename, state_machine, global_defs,
+                      role_function_library=None):
         """特定ファイルの生成"""
         self._log_debug(f"Generating file: {filename}")
-        if filename in self.file_generators:
-            method = self.file_generators[filename]['method']
-            return method(state_machine, global_defs)
-        raise ValueError(f"Unknown file: {filename}")
-    
+
+        prev = self._current_role_function_library
+        self._current_role_function_library = role_function_library
+        try:
+            if filename not in self.file_generators:
+                raise ValueError(f"Unknown file: {filename}")
+            return self._run_steps(
+                filename, state_machine, global_defs
+            )
+        finally:
+            self._current_role_function_library = prev
+
     def save_generated_code(self, generated_files, output_dir):
         """生成コードの保存（マージなし）"""
-        self._log_debug(f"Saving generated code to: {output_dir}")
+        self._log_debug(
+            f"Saving generated code to: {output_dir}"
+        )
         saved_files = []
         os.makedirs(output_dir, exist_ok=True)
         for filename, content in generated_files.items():
@@ -482,27 +781,43 @@ class CCodeGenerator:
             saved_files.append(filepath)
             self._log_debug(f"Saved: {filepath}")
         return saved_files
-    
-    def save_generated_code_with_merge(self, generated_files, output_dir):
+
+    def save_generated_code_with_merge(self, generated_files,
+                                       output_dir):
         """ユーザーコードを保持しながら保存（マージあり）"""
         self._log_debug(f"Merging and saving to: {output_dir}")
-        merged_files = self.merger.merge_all_files(generated_files, output_dir)
-        return self.save_generated_code(merged_files, output_dir)
-    
+        merged_files = self.merger.merge_all_files(
+            generated_files, output_dir
+        )
+        return self.save_generated_code(
+            merged_files, output_dir
+        )
+
     def get_merge_summary(self, generated_files, output_dir):
         """マージ結果のサマリーを取得"""
-        self._log_debug(f"Getting merge summary for: {output_dir}")
+        self._log_debug(
+            f"Getting merge summary for: {output_dir}"
+        )
         summary = {}
         for filename, content in generated_files.items():
             existing_path = os.path.join(output_dir, filename)
             if os.path.exists(existing_path):
-                with open(existing_path, 'r', encoding='utf-8') as f:
+                with open(existing_path, 'r',
+                          encoding='utf-8') as f:
                     existing_content = f.read()
-                summary[filename] = self.merger.get_user_code_summary(existing_content)
+                summary[filename] = (
+                    self.merger.get_user_code_summary(
+                        existing_content
+                    )
+                )
             else:
-                summary[filename] = {'file_user_code': 0, 'func_user_codes': 0}
+                summary[filename] = {
+                    'file_user_code': 0,
+                    'func_user_codes': 0,
+                    'file_tail_user_code': 0,
+                }
         return summary
-    
+
     def get_generated_file_list(self):
         """生成ファイル一覧を取得"""
         return list(self.file_generators.keys())
