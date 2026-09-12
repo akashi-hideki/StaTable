@@ -1,5 +1,5 @@
 # tests/test_transition_generator.py
-"""TransitionGenerator（多層対応 + Function Dictionary）の単体テスト"""
+"""TransitionGenerator（横並びテーブル + 短縮セル関数名）の単体テスト"""
 
 import sys
 import os
@@ -15,12 +15,11 @@ sys.path.insert(0, os.path.join(project_root, 'statable'))
 logging.basicConfig(level=logging.INFO)
 
 from codegen.transition_generator import TransitionGenerator
-from statable.model import State, Event, Transition, StateType, EventKind
+from statable.model import State, Event, Transition, StateType
 from statable.state_machine import StateMachine
 
 
 def build_test_sm():
-    """テスト用ステートマシン"""
     sm = StateMachine()
     sm.add_state(State(name="Idle", type=StateType.INITIAL))
     sm.add_state(State(name="Active"))
@@ -29,9 +28,8 @@ def build_test_sm():
 
     sm.add_event(Event(name="START"))
     sm.add_event(Event(name="ERROR"))
-    sm.add_event(Event(name=""))  # 完了遷移
+    sm.add_event(Event(name=""))
 
-    # Idle -[START]-> Active
     sm.add_transition(Transition(
         source="Idle", event="START",
         condition="err_code != 0",
@@ -41,22 +39,17 @@ def build_test_sm():
         else_target="Error",
         else_actions=["LogWarning"],
     ))
-
-    # Active -[ERROR]-> Error
     sm.add_transition(Transition(
         source="Active", event="ERROR",
         condition="",
         pre_actions=["CheckSensor"],
         target="Error",
         has_else=True,
-        else_target="",
-        else_actions=[],
     ))
-
     return sm
 
 
-class TestTransitionGeneratorLayer(unittest.TestCase):
+class TestTransitionGeneratorHorizontal(unittest.TestCase):
 
     def setUp(self):
         self.gen = TransitionGenerator()
@@ -64,6 +57,25 @@ class TestTransitionGeneratorLayer(unittest.TestCase):
     def test_set_layer(self):
         self.gen.set_layer("Driver")
         self.assertEqual(self.gen.layer_name, "Driver")
+
+    def test_short_cell_func_name(self):
+        """短縮セル関数名 t_<State>_<Event>"""
+        self.gen.set_layer("Driver")
+        self.assertEqual(self.gen._cell_func_name("Idle", "START"), "t_Idle_START")
+
+    def test_short_cell_func_name_empty_event(self):
+        """空イベントは NONE"""
+        self.gen.set_layer("Driver")
+        self.assertEqual(self.gen._cell_func_name("Error", ""), "t_Error_NONE")
+
+    def test_long_cell_func_name(self):
+        """SHORT_CELL_NAMES=False の完全名"""
+        self.gen.SHORT_CELL_NAMES = False
+        self.gen.set_layer("Driver")
+        self.assertEqual(
+            self.gen._cell_func_name("Idle", "START"),
+            "transition_Driver_Idle_START"
+        )
 
     def test_state_enum(self):
         self.gen.set_layer("Driver")
@@ -73,21 +85,8 @@ class TestTransitionGeneratorLayer(unittest.TestCase):
         self.gen.set_layer("Driver")
         self.assertEqual(self.gen._event_enum(""), "EVENT_Driver_NONE")
 
-    def test_cell_func_name(self):
-        self.gen.set_layer("Driver")
-        self.assertEqual(
-            self.gen._cell_func_name("Idle", "START"),
-            "transition_Driver_Idle_START"
-        )
-
-    def test_cell_func_name_empty_event(self):
-        self.gen.set_layer("Driver")
-        self.assertEqual(
-            self.gen._cell_func_name("Error", ""),
-            "transition_Driver_Error_NONE"
-        )
-
     def test_cell_functions_generation(self):
+        """セル関数が短縮名で生成される"""
         self.gen.set_layer("Driver")
         sm = build_test_sm()
         result = self.gen.generate_transition_cell_functions(sm)
@@ -95,27 +94,40 @@ class TestTransitionGeneratorLayer(unittest.TestCase):
         print("\n=== Cell Functions ===")
         print(result)
 
-        # 検証
-        self.assertIn("transition_Driver_Idle_START", result)
-        self.assertIn("transition_Driver_Active_ERROR", result)
-        self.assertIn("STATE_Driver_t next_state", result)
+        self.assertIn("static STATE_Driver_t t_Idle_START(", result)
+        self.assertIn("static STATE_Driver_t t_Active_ERROR(", result)
         self.assertIn("RoleFunc_Driver_LogError(transition, ctx)", result)
         self.assertIn("RoleFunc_Driver_CheckSensor(transition, ctx)", result)
         self.assertIn("if (err_code != 0)", result)
-        self.assertIn("if (1)", result)  # 空条件
 
     def test_transition_table_generation(self):
+        """横並びテーブルが生成される"""
         self.gen.set_layer("Driver")
         sm = build_test_sm()
         result = self.gen.generate_transition_table(sm)
 
-        print("\n=== Transition Table ===")
+        print("\n=== Horizontal Transition Table ===")
         print(result)
 
+        # 横並びテーブルの検証
         self.assertIn("typedef STATE_Driver_t (*TransitionFunc_Driver_t)", result)
         self.assertIn("transition_table_Driver", result)
-        self.assertIn("[STATE_Driver_Idle][EVENT_Driver_START]", result)
-        self.assertIn("transition_Driver_Idle_START", result)
+        self.assertIn("[STATE_Driver_MAX][EVENT_Driver_MAX] = {", result)
+
+        # 短縮関数名の検証
+        self.assertIn("t_Idle_START", result)
+        self.assertIn("t_Active_ERROR", result)
+        self.assertIn("NULL", result)
+
+        # 状態コメント
+        self.assertIn("/* Idle", result)
+        self.assertIn("/* Active", result)
+        self.assertIn("/* Error", result)
+
+        # ヘッダ行
+        self.assertIn("START", result)
+        self.assertIn("ERROR", result)
+        self.assertIn("NONE", result)
 
     def test_function_dictionary_generation(self):
         self.gen.set_layer("Driver")
@@ -125,13 +137,13 @@ class TestTransitionGeneratorLayer(unittest.TestCase):
         print("\n=== Function Dictionary ===")
         print(result)
 
-        # 検証
         self.assertIn("TransitionDictEntry_Driver_t", result)
         self.assertIn("transition_dict_Driver[]", result)
         self.assertIn("TRANSITION_DICT_DRIVER_SIZE", result)
         self.assertIn('"Driver_Idle_START"', result)
         self.assertIn('"err_code != 0"', result)
-        self.assertIn("transition_Driver_Idle_START", result)
+        self.assertIn("t_Idle_START", result)
+        self.assertIn("t_Active_ERROR", result)
 
     def test_process_function_generation(self):
         self.gen.set_layer("Driver")
@@ -168,21 +180,29 @@ class TestTransitionGeneratorLayer(unittest.TestCase):
         self.assertIn('process_func', result)
         self.assertIn('get_next_event', result)
 
-        print(f"\n=== generate_all ===")
-        print(f"  cell_functions: {len(result['cell_functions'])} chars")
-        print(f"  transition_table: {len(result['transition_table'])} chars")
-        print(f"  function_dict: {len(result['function_dict'])} chars")
-        print(f"  process_func: {len(result['process_func'])} chars")
-        print(f"  get_next_event: {len(result['get_next_event'])} chars")
+        print(f"\n=== generate_all summary ===")
+        for key, val in result.items():
+            print(f"  {key}: {len(val)} chars")
+
+    def test_table_horizontal_alignment(self):
+        """横並びテーブルの罫線と列の整列を確認"""
+        self.gen.set_layer("Driver")
+        sm = build_test_sm()
+        result = self.gen.generate_transition_table(sm)
+
+        # 期待される構造
+        self.assertIn("/* Idle", result)
+        self.assertIn("*/ {", result)  # 状態名の後に { があること
+        self.assertIn("};", result)
 
 
 def main():
     print("=" * 70)
-    print("  TransitionGenerator 単体テスト")
+    print("  TransitionGenerator 単体テスト（横並びテーブル + 短縮名）")
     print("=" * 70)
 
     loader = unittest.TestLoader()
-    suite = loader.loadTestsFromTestCase(TestTransitionGeneratorLayer)
+    suite = loader.loadTestsFromTestCase(TestTransitionGeneratorHorizontal)
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
 

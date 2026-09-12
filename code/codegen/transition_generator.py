@@ -3,23 +3,23 @@
 状態遷移関数生成モジュール（多層ステートマシン対応版）
 
 生成物:
-  1. セル単位の遷移関数（static）
-  2. 2次元配列の遷移テーブル（高速ディスパッチ用）
+  1. セル単位の遷移関数（static、短縮名 t_<State>_<Event>）
+  2. 遷移テーブル（グローバル const、extern 宣言付き）
   3. 関数ディクショナリ（デバッグ・リフレクション用）
   4. StateMachine_Process_<Layer>() 関数
   5. StateMachine_GetNextEvent_<Layer>() 関数
 
 設計方針:
-  - コード生成のテンプレートは「データテーブル」としてクラス先頭に集約
-  - テンプレートは string.Template（$placeholder 形式）で記述
-  - メソッドは組み立てロジックのみを担当
+  - 遷移テーブルは外部から参照可能（グローバル）
+  - セル関数は static（内部実装詳細）
+  - テーブルは行=状態、列=イベントの横並び仕様書形式
 """
 
 import sys
 import os
 import logging
 from string import Template
-from typing import Dict, Callable, List, Any, Optional
+from typing import Dict, List
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 # ======================================================================
-# ヘルパー: 文字列/リスト正規化
+# ヘルパー
 # ======================================================================
 def ensure_list(value) -> List[str]:
     """文字列/None/リストを List[str] に正規化"""
@@ -56,8 +56,14 @@ def ensure_list(value) -> List[str]:
 class TransitionGenerator:
     """状態遷移関数生成クラス（多層ステートマシン対応）"""
 
+    # セル関数の短縮名を使うか（static のため推奨 True）
+    SHORT_CELL_NAMES = True
+
+    # 遷移テーブルの最小列幅
+    TABLE_MIN_COL_WIDTH = 14
+
     # ==================================================================
-    # 【データテーブル①】セル単位の遷移関数テンプレート
+    # 【データテーブル①】セル単位の遷移関数
     # ==================================================================
     CELL_TEMPLATES = {
         # --- ヘッダーコメント ---
@@ -138,7 +144,7 @@ class TransitionGenerator:
     }
 
     # ==================================================================
-    # 【データテーブル②】遷移テーブル（2次元配列）
+    # 【データテーブル②】遷移テーブル（グローバル + 横並び）
     # ==================================================================
     TABLE_TEMPLATES = {
         # --- 関数ポインタ型 ---
@@ -150,75 +156,122 @@ class TransitionGenerator:
             '    const $context_type *, SystemContext_t *);\n'
         ),
 
-        # --- 遷移テーブル本体 ---
-        'table_comment': (
+        # --- テーブル説明コメント ---
+        'table_comment': Template(
             '\n'
-            '/* 状態遷移テーブル（2次元配列） */\n'
+            '/* ============================================================== */\n'
+            '/*  状態遷移テーブル: 行=$row_desc, 列=$col_desc                  */\n'
+            '/*  グローバル変数（外部から参照可能）                            */\n'
+            '/* ============================================================== */\n'
         ),
+
+        # --- テーブル本体（static なし = グローバル） ---
         'table_open': Template(
-            'static const $func_type $table_name\n'
+            'const $func_type $table_name\n'
             '    [$state_max][$event_max] = {\n'
         ),
-        'table_entry': Template(
-            '    [$state_enum][$event_enum] =\n'
-            '        $func_name,\n'
-        ),
-        'table_entry_null': Template(
-            '    /* [$state_enum][$event_enum] = NULL (遷移なし) */\n'
-        ),
+
+        # --- テーブル終了 ---
         'table_close': (
             '};\n'
         ),
     }
 
     # ==================================================================
-    # 【データテーブル③】関数ディクショナリ
+    # 【データテーブル③】ヘッダ用の extern 宣言
+    # ==================================================================
+    TABLE_HEADER_TEMPLATES = {
+        # --- ヘッダコメント ---
+        'header_comment': Template(
+            '/**\n'
+            ' * @brief  遷移テーブル（$layer層）\n'
+            ' * @note   行=$row_desc, 列=$col_desc\n'
+            ' */\n'
+        ),
+
+        # --- 関数ポインタ型 ---
+        'func_ptr_typedef': Template(
+            'typedef $state_type (*$func_type)(\n'
+            '    const $context_type *, SystemContext_t *);\n'
+        ),
+
+        # --- extern 宣言 ---
+        'extern_decl': Template(
+            'extern const $func_type $table_name\n'
+            '    [$state_max][$event_max];\n'
+        ),
+    }
+
+    # ==================================================================
+    # 【データテーブル④】関数ディクショナリ
     # ==================================================================
     DICT_TEMPLATES = {
-        # --- エントリ構造体 ---
+        # --- エントリ構造体コメント ---
         'struct_comment': (
             '/* 遷移関数ディクショナリ用エントリ */\n'
             '/* デバッグ・ログ出力・動的ディスパッチに使用 */\n'
         ),
+
+        # --- エントリ構造体開始 ---
         'struct_open': (
             'typedef struct {\n'
             '    const char *name;                    /* 遷移名 */\n'
         ),
+
+        # --- メンバ: 遷移元状態 ---
         'struct_field_from': Template(
-            '    $state_type from_state;             /* 遷移元状態 */\n'
+            '    $state_type from_state;              /* 遷移元状態 */\n'
         ),
+
+        # --- メンバ: 発生イベント ---
         'struct_field_event': Template(
-            '    $event_type event;                  /* 発生イベント */\n'
+            '    $event_type event;                   /* 発生イベント */\n'
         ),
+
+        # --- メンバ: 代表遷移先 ---
         'struct_field_target': Template(
-            '    $state_type default_target;         /* 代表遷移先 */\n'
+            '    $state_type default_target;          /* 代表遷移先 */\n'
         ),
+
+        # --- メンバ: 条件式 ---
         'struct_field_condition': (
             '    const char *condition;               /* 条件式（文字列） */\n'
         ),
+
+        # --- メンバ: 遷移関数ポインタ ---
         'struct_field_func': Template(
-            '    $func_type func;                    /* 遷移関数ポインタ */\n'
+            '    $func_type func;                     /* 遷移関数ポインタ */\n'
         ),
+
+        # --- エントリ構造体終了 ---
         'struct_close': Template(
             '}} $dict_type;\n'
         ),
 
-        # --- ディクショナリ本体 ---
+        # --- ディクショナリコメント ---
         'dict_comment': (
             '\n'
             '/* 遷移関数ディクショナリ */\n'
         ),
+
+        # --- ディクショナリ開始 ---
         'dict_open': Template(
             'static const $dict_type $dict_name[] = {\n'
         ),
+
+        # --- ディクショナリエントリ ---
         'dict_entry': Template(
             '    { "$trans_name",\n'
             '      $state_enum, $event_enum, $target_enum,\n'
             '      "$condition", $func_name },\n'
         ),
+
+        # --- ディクショナリ終了 ---
         'dict_close': (
             '};\n'
         ),
+
+        # --- サイズマクロ ---
         'dict_size': Template(
             '\n'
             '#define $size_macro \\\n'
@@ -227,9 +280,10 @@ class TransitionGenerator:
     }
 
     # ==================================================================
-    # 【データテーブル④】StateMachine_Process_<Layer> 関数
+    # 【データテーブル⑤】StateMachine_Process_<Layer>
     # ==================================================================
     PROCESS_TEMPLATES = {
+        # --- コメント ---
         'comment': Template(
             '/**\n'
             ' * @brief  $layer層の状態遷移処理\n'
@@ -239,6 +293,8 @@ class TransitionGenerator:
             ' * @return 遷移後の状態\n'
             ' */\n'
         ),
+
+        # --- シグネチャ ---
         'signature': Template(
             '$state_type $func_name(\n'
             '    $state_type current_state,\n'
@@ -246,6 +302,8 @@ class TransitionGenerator:
             '    SystemContext_t *ctx\n'
             ')\n'
         ),
+
+        # --- 本体 ---
         'body': Template(
             '{\n'
             '    $context_type transition = {\n'
@@ -262,9 +320,10 @@ class TransitionGenerator:
     }
 
     # ==================================================================
-    # 【データテーブル⑤】StateMachine_GetNextEvent_<Layer> 関数
+    # 【データテーブル⑥】StateMachine_GetNextEvent_<Layer>
     # ==================================================================
     GET_NEXT_TEMPLATES = {
+        # --- コメント ---
         'comment': Template(
             '/**\n'
             ' * @brief  $layer層の次のイベントを取得\n'
@@ -273,9 +332,13 @@ class TransitionGenerator:
             ' * @return 次のイベント（保留なしの場合は $event_none）\n'
             ' */\n'
         ),
+
+        # --- シグネチャ ---
         'signature': Template(
             '$event_type $func_name(SystemContext_t *ctx)\n'
         ),
+
+        # --- 本体 ---
         'body': Template(
             '{\n'
             '    static uint8_t consecutive_count = 0;\n'
@@ -319,7 +382,7 @@ class TransitionGenerator:
         log_func(message)
 
     # ==================================================================
-    # 名前生成ヘルパー
+    # 名前生成
     # ==================================================================
     def _state_enum(self, state_name: str) -> str:
         """STATE_<Layer>_<Name>"""
@@ -340,10 +403,24 @@ class TransitionGenerator:
     def _context_type(self) -> str:
         return f"TransitionContext_{self.layer_name}_t" if self.layer_name else "TransitionContext_t"
 
+    def _func_type(self) -> str:
+        return f"TransitionFunc_{self.layer_name}_t" if self.layer_name else "TransitionFunc_t"
+
+    def _table_name(self) -> str:
+        return f"transition_table_{self.layer_name}" if self.layer_name else "transition_matrix"
+
+    def _state_max(self) -> str:
+        return f"STATE_{self.layer_name}_MAX" if self.layer_name else "STATE_MAX"
+
+    def _event_max(self) -> str:
+        return f"EVENT_{self.layer_name}_MAX" if self.layer_name else "EVENT_MAX"
+
     def _cell_func_name(self, state_name: str, event_name: str) -> str:
         """transition_<Layer>_<State>_<Event>"""
         s = self.naming.to_pascal_case(state_name) if state_name else "Unknown"
         e = self.naming.to_upper_snake(event_name) if event_name else "NONE"
+        if self.SHORT_CELL_NAMES:
+            return f"t_{s}_{e}"
         return f"transition_{self.layer_name}_{s}_{e}" if self.layer_name \
             else f"transition_{s}_{e}"
 
@@ -358,7 +435,7 @@ class TransitionGenerator:
         return f"{full}(transition, ctx)"
 
     # ==================================================================
-    # 1. セル単位の遷移関数生成
+    # 1. セル単位の遷移関数
     # ==================================================================
     def generate_transition_cell_functions(self, state_machine: StateMachine) -> str:
         """全セルの遷移関数を生成"""
@@ -371,13 +448,7 @@ class TransitionGenerator:
                 transitions = state_machine.get_transitions_for_cell(state.name, event.name)
                 if not transitions:
                     continue
-
-                event_disp = event.name if event.name else "(完了)"
-                self._log_debug(f"  Cell {state.name} x {event_disp}: "
-                                f"{len(transitions)} transition(s)")
-
-                cell_code = self._build_cell_function(state, event, transitions)
-                cell_blocks.append(cell_code)
+                cell_blocks.append(self._build_cell_function(state, event, transitions))
 
         result = '\n'.join(cell_blocks)
         self._log_debug(f"=== generate_transition_cell_functions END: "
@@ -403,9 +474,7 @@ class TransitionGenerator:
             func_name=self._cell_func_name(state.name, event.name),
             context_type=self._context_type(),
         ))
-        parts.append(T['body_open'].substitute(
-            state_type=self._state_type(),
-        ))
+        parts.append(T['body_open'].substitute(state_type=self._state_type()))
 
         # --- 各遷移ブロック ---
         for idx, trans in enumerate(transitions):
@@ -437,20 +506,15 @@ class TransitionGenerator:
 
         # 条件の有無でテンプレートを切り替え
         if condition:
-            block = T['cond_block'].substitute(
-                idx=idx,
-                condition=condition,
+            return T['cond_block'].substitute(
+                idx=idx, condition=condition,
                 pre_actions=pre_actions_code,
                 target_enum=self._state_enum(target) if target else "next_state",
             )
-        else:
-            block = T['cond_block_empty'].substitute(
-                idx=idx,
-                pre_actions=pre_actions_code,
-                target_enum=self._state_enum(target) if target else "next_state",
-            )
-
-        return block
+        return T['cond_block_empty'].substitute(
+            idx=idx, pre_actions=pre_actions_code,
+            target_enum=self._state_enum(target) if target else "next_state",
+        )
 
     def _build_else_block(self, trans: Transition) -> str:
         """else 節を文字列として組み立て"""
@@ -461,79 +525,144 @@ class TransitionGenerator:
         # else_actions も else_target も無ければ出力しない
         if not else_actions and not else_target:
             return ''
-
         parts = [T['else_header']]
-
         for ea in else_actions:
             parts.append(T['else_action_line'].substitute(
                 call=self._role_func_call(ea)
             ))
-
         if else_target:
             parts.append(T['else_target'].substitute(
                 target_enum=self._state_enum(else_target)
             ))
         else:
             parts.append(T['else_target_unset'])
-
         return ''.join(parts)
 
     # ==================================================================
-    # 2. 遷移テーブル（2次元配列）生成
+    # 2. 遷移テーブル（グローバル + 横並び）
     # ==================================================================
     def generate_transition_table(self, state_machine: StateMachine) -> str:
         """2次元配列の遷移テーブルを生成"""
-        self._log_debug("=== generate_transition_table START ===")
+        self._log_debug("=== generate_transition_table START (global, horizontal) ===")
         T = self.TABLE_TEMPLATES
         parts = []
 
         # 名前の準備
-        state_type = self._state_type()
-        context_type = self._context_type()
-        table_name = f"transition_table_{self.layer_name}" if self.layer_name else "transition_matrix"
-        func_type = f"TransitionFunc_{self.layer_name}_t" if self.layer_name else "TransitionFunc_t"
-        state_max = f"STATE_{self.layer_name}_MAX" if self.layer_name else "STATE_MAX"
-        event_max = f"EVENT_{self.layer_name}_MAX" if self.layer_name else "EVENT_MAX"
+        states = list(state_machine.states.values())
+        events = list(state_machine.events.values())
+
+        func_type = self._func_type()
+        table_name = self._table_name()
+
+        # --- セル値を事前計算 ---
+        cell_values = []
+        for state in states:
+            row = []
+            for event in events:
+                transitions = state_machine.get_transitions_for_cell(state.name, event.name)
+                row.append(self._cell_func_name(state.name, event.name)
+                           if transitions else "NULL")
+            cell_values.append(row)
+
+        # --- 列幅を計算 ---
+        state_col_width = max((len(s.name) for s in states), default=5)
+
+        event_headers = []
+        col_widths = []
+        for event_idx, event in enumerate(events):
+            event_disp = event.name if event.name else "NONE"
+            event_headers.append(event_disp)
+            w = max(len(event_disp), self.TABLE_MIN_COL_WIDTH)
+            for state_idx in range(len(states)):
+                w = max(w, len(cell_values[state_idx][event_idx]))
+            col_widths.append(w)
 
         # --- 関数ポインタ型 ---
         parts.append(T['func_ptr_comment'])
         parts.append(T['func_ptr_typedef'].substitute(
-            state_type=state_type,
+            state_type=self._state_type(),
             func_type=func_type,
-            context_type=context_type,
+            context_type=self._context_type(),
         ))
 
-        # --- テーブル本体 ---
-        parts.append(T['table_comment'])
+        # --- テーブル説明 ---
+        parts.append(T['table_comment'].substitute(
+            row_desc="状態", col_desc="イベント",
+        ))
+
+        # --- テーブル開始 ---
         parts.append(T['table_open'].substitute(
             func_type=func_type,
             table_name=table_name,
-            state_max=state_max,
-            event_max=event_max,
+            state_max=self._state_max(),
+            event_max=self._event_max(),
         ))
 
-        for state in state_machine.states.values():
-            for event in state_machine.events.values():
-                transitions = state_machine.get_transitions_for_cell(state.name, event.name)
-                if transitions:
-                    parts.append(T['table_entry'].substitute(
-                        state_enum=self._state_enum(state.name),
-                        event_enum=self._event_enum(event.name),
-                        func_name=self._cell_func_name(state.name, event.name),
-                    ))
-                else:
-                    parts.append(T['table_entry_null'].substitute(
-                        state_enum=self._state_enum(state.name),
-                        event_enum=self._event_enum(event.name),
-                    ))
+        # --- ヘッダ行 ---
+        header_state_pad = " " * (state_col_width + 2)
+        header_cells = [event_headers[i].ljust(col_widths[i])
+                        for i in range(len(events))]
+        header_line = "    /*" + " " + header_state_pad + " | " \
+                      + " | ".join(header_cells) + " */"
+        parts.append(header_line + "\n")
 
+        # --- 罫線 ---
+        sep = "    /* " + "-" * (state_col_width + 2) + "+"
+        for w in col_widths:
+            sep += "-" * w + "+"
+        sep = sep[:-1] + "*/"
+        parts.append(sep + "\n")
+
+        # --- データ行 ---
+        for state_idx, state in enumerate(states):
+            state_padded = state.name.ljust(state_col_width + 2)
+            cells = []
+            for event_idx in range(len(events)):
+                cell_content = cell_values[state_idx][event_idx].ljust(col_widths[event_idx])
+                cells.append(cell_content)
+
+            row = f"    /* {state_padded}*/ {{ "
+            row += ", ".join(cells)
+            row += " },"
+            parts.append(row + "\n")
+
+        # --- テーブル終了 ---
         parts.append(T['table_close'])
 
         self._log_debug("=== generate_transition_table END ===")
         return ''.join(parts)
 
     # ==================================================================
-    # 3. 関数ディクショナリ生成
+    # 2b. ヘッダ用 extern 宣言
+    # ==================================================================
+    def generate_transition_table_header(self, state_machine: StateMachine) -> str:
+        self._log_debug("=== generate_transition_table_header START ===")
+        T = self.TABLE_HEADER_TEMPLATES
+
+        parts = []
+        parts.append(T['header_comment'].substitute(
+            layer=self.layer_name or "システム",
+            row_desc="状態",
+            col_desc="イベント",
+        ))
+        parts.append(T['func_ptr_typedef'].substitute(
+            state_type=self._state_type(),
+            func_type=self._func_type(),
+            context_type=self._context_type(),
+        ))
+        parts.append("")
+        parts.append(T['extern_decl'].substitute(
+            func_type=self._func_type(),
+            table_name=self._table_name(),
+            state_max=self._state_max(),
+            event_max=self._event_max(),
+        ))
+
+        self._log_debug("=== generate_transition_table_header END ===")
+        return ''.join(parts)
+
+    # ==================================================================
+    # 3. 関数ディクショナリ
     # ==================================================================
     def generate_function_dictionary(self, state_machine: StateMachine) -> str:
         """名前ベースの関数ディクショナリを生成"""
@@ -542,9 +671,9 @@ class TransitionGenerator:
         parts = []
 
         # 名前の準備
+        func_type = self._func_type()
         state_type = self._state_type()
         event_type = self._event_type()
-        func_type = f"TransitionFunc_{self.layer_name}_t" if self.layer_name else "TransitionFunc_t"
         dict_type = f"TransitionDictEntry_{self.layer_name}_t" if self.layer_name else "TransitionDictEntry_t"
         dict_name = f"transition_dict_{self.layer_name}" if self.layer_name else "transition_dict"
         size_macro = f"TRANSITION_DICT_{self.layer_name.upper()}_SIZE" if self.layer_name else "TRANSITION_DICT_SIZE"
@@ -562,8 +691,7 @@ class TransitionGenerator:
         # --- ディクショナリ本体 ---
         parts.append(T['dict_comment'])
         parts.append(T['dict_open'].substitute(
-            dict_type=dict_type,
-            dict_name=dict_name,
+            dict_type=dict_type, dict_name=dict_name,
         ))
 
         entry_count = 0
@@ -595,28 +723,21 @@ class TransitionGenerator:
 
         parts.append(T['dict_close'])
         parts.append(T['dict_size'].substitute(
-            size_macro=size_macro,
-            dict_name=dict_name,
+            size_macro=size_macro, dict_name=dict_name,
         ))
 
-        self._log_debug(f"=== generate_function_dictionary END: "
-                        f"{entry_count} entries ===")
+        self._log_debug(f"=== generate_function_dictionary END: {entry_count} entries ===")
         return ''.join(parts)
 
     # ==================================================================
-    # 4. StateMachine_Process_<Layer> 関数生成
+    # 4. StateMachine_Process_<Layer>
     # ==================================================================
     def generate_process_function(self, state_machine: StateMachine) -> str:
         """メインの状態遷移関数を生成"""
         self._log_debug("=== generate_process_function START ===")
         T = self.PROCESS_TEMPLATES
-
         func_name = f"StateMachine_Process_{self.layer_name}" if self.layer_name \
             else "StateMachine_Process"
-        table_name = f"transition_table_{self.layer_name}" if self.layer_name \
-            else "transition_matrix"
-        func_type = f"TransitionFunc_{self.layer_name}_t" if self.layer_name \
-            else "TransitionFunc_t"
 
         parts = []
         parts.append(T['comment'].substitute(layer=self.layer_name or "システム"))
@@ -627,15 +748,15 @@ class TransitionGenerator:
         ))
         parts.append(T['body'].substitute(
             context_type=self._context_type(),
-            func_type=func_type,
-            table_name=table_name,
+            func_type=self._func_type(),
+            table_name=self._table_name(),
         ))
 
         self._log_debug("=== generate_process_function END ===")
         return ''.join(parts)
 
     # ==================================================================
-    # 5. StateMachine_GetNextEvent_<Layer> 関数生成
+    # 5. StateMachine_GetNextEvent_<Layer>
     # ==================================================================
     def generate_get_next_event_function(self, state_machine: StateMachine) -> str:
         """保留イベントを取得する関数を生成"""
@@ -672,6 +793,7 @@ class TransitionGenerator:
         result = {
             'cell_functions': self.generate_transition_cell_functions(state_machine),
             'transition_table': self.generate_transition_table(state_machine),
+            'transition_table_header': self.generate_transition_table_header(state_machine),
             'function_dict': self.generate_function_dictionary(state_machine),
             'process_func': self.generate_process_function(state_machine),
             'get_next_event': self.generate_get_next_event_function(state_machine),
