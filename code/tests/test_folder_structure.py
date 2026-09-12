@@ -23,6 +23,10 @@ from c_code_generator import CCodeGenerator
 from config import CodeGenerationConfig
 
 
+# 期待ファイル数（スーパーインクルード含む）
+EXPECTED_FILE_COUNT = 12
+
+
 def make_sample():
     return SampleDataGenerator().get_sample_data()
 
@@ -83,6 +87,15 @@ class TestResolveOutputPath(unittest.TestCase):
         self.assertEqual(
             gen._resolve_output_path('osal.c'),
             os.path.join('common', 'osal.c'),
+        )
+
+    def test_by_type_super_include(self):
+        """statable_all.h は common/ に配置"""
+        cfg = CodeGenerationConfig(folder_structure='by_type')
+        gen = CCodeGenerator(config=cfg)
+        self.assertEqual(
+            gen._resolve_output_path('statable_all.h'),
+            os.path.join('common', 'statable_all.h'),
         )
 
     def test_by_type_custom_dir_names(self):
@@ -151,10 +164,10 @@ class TestSaveGeneratedCode(unittest.TestCase):
         files = gen.generate_all(self.sm, self.gd)
         saved = gen.save_generated_code(files, self.tmpdir)
 
-        self.assertEqual(len(saved), 11)
+        # ★ 12 に変更（statable_all.h 含む）
+        self.assertEqual(len(saved), EXPECTED_FILE_COUNT)
         for path in saved:
             self.assertTrue(os.path.isfile(path))
-            # 全て直下
             self.assertEqual(
                 os.path.dirname(path), self.tmpdir
             )
@@ -165,7 +178,6 @@ class TestSaveGeneratedCode(unittest.TestCase):
         files = gen.generate_all(self.sm, self.gd)
         gen.save_generated_code(files, self.tmpdir)
 
-        # 期待フォルダ
         for d in ['include', 'src', 'common']:
             self.assertTrue(
                 os.path.isdir(
@@ -209,24 +221,24 @@ class TestSaveGeneratedCode(unittest.TestCase):
         files = gen.generate_all(self.sm, self.gd)
         gen.save_generated_code(files, self.tmpdir)
 
-        for name in ['osal.h', 'osal.c']:
+        for name in ['osal.h', 'osal.c', 'statable_all.h']:
             path = os.path.join(self.tmpdir, 'common', name)
             self.assertTrue(os.path.isfile(path),
                             f"missing: {path}")
 
-    def test_by_type_total_11_files(self):
+    def test_by_type_total_12_files(self):
+        """★ 11 → 12 に変更"""
         cfg = CodeGenerationConfig(folder_structure='by_type')
         gen = CCodeGenerator(config=cfg)
         files = gen.generate_all(self.sm, self.gd)
         saved = gen.save_generated_code(files, self.tmpdir)
 
-        self.assertEqual(len(saved), 11)
+        self.assertEqual(len(saved), EXPECTED_FILE_COUNT)
 
-        # 実ファイル数カウント
         count = 0
         for root, _, filenames in os.walk(self.tmpdir):
             count += len(filenames)
-        self.assertEqual(count, 11)
+        self.assertEqual(count, EXPECTED_FILE_COUNT)
 
     def test_by_type_content_preserved(self):
         cfg = CodeGenerationConfig(folder_structure='by_type')
@@ -234,7 +246,6 @@ class TestSaveGeneratedCode(unittest.TestCase):
         files = gen.generate_all(self.sm, self.gd)
         gen.save_generated_code(files, self.tmpdir)
 
-        # 内容が一致するか
         with open(os.path.join(
             self.tmpdir, 'include', 'statable_types.h'
         ), 'r', encoding='utf-8') as f:
@@ -256,6 +267,7 @@ class TestSaveWithMerge(unittest.TestCase):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_merge_by_type(self):
+        """★ 11 → 12 に変更"""
         cfg = CodeGenerationConfig(
             folder_structure='by_type',
             save_with_merge=True,
@@ -266,8 +278,7 @@ class TestSaveWithMerge(unittest.TestCase):
             files, self.tmpdir
         )
 
-        self.assertEqual(len(saved), 11)
-        # 各ファイル存在
+        self.assertEqual(len(saved), EXPECTED_FILE_COUNT)
         for path in saved:
             self.assertTrue(os.path.isfile(path))
 
@@ -277,17 +288,14 @@ class TestSaveWithMerge(unittest.TestCase):
         gen = CCodeGenerator(config=cfg)
         files = gen.generate_all(self.sm, self.gd)
 
-        # 初回保存
         gen.save_generated_code_with_merge(files, self.tmpdir)
 
-        # ユーザーが編集（include 側の statable_types.h）
         types_path = os.path.join(
             self.tmpdir, 'include', 'statable_types.h'
         )
         with open(types_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        # ユーザーコードを擬似挿入
         content = content.replace(
             '#include <stdint.h>',
             '#include <stdint.h>\n'
@@ -298,18 +306,16 @@ class TestSaveWithMerge(unittest.TestCase):
         with open(types_path, 'w', encoding='utf-8') as f:
             f.write(content)
 
-        # 再生成 + マージ
         files2 = gen.generate_all(self.sm, self.gd)
         gen.save_generated_code_with_merge(files2, self.tmpdir)
 
-        # ユーザーコード保持確認
         with open(types_path, 'r', encoding='utf-8') as f:
             result = f.read()
         self.assertIn('#define USER_DEFINE 42', result)
 
 
 # ============================================================
-# 4. 統合テスト（既存テストと組み合わせ）
+# 4. 統合テスト
 # ============================================================
 class TestIntegrationWithExisting(unittest.TestCase):
 
@@ -321,10 +327,11 @@ class TestIntegrationWithExisting(unittest.TestCase):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_generate_all_still_works(self):
-        """generate_all 自体は変更なし"""
+        """generate_all が 12ファイル生成する"""
         gen = CCodeGenerator()
         files = gen.generate_all(self.sm, self.gd)
-        self.assertEqual(len(files), 11)
+        # ★ 11 → 12 に変更
+        self.assertEqual(len(files), EXPECTED_FILE_COUNT)
 
     def test_backward_compatible_flat(self):
         """デフォルト config + flat 相当の動作互換"""
@@ -333,9 +340,9 @@ class TestIntegrationWithExisting(unittest.TestCase):
         files = gen.generate_all(self.sm, self.gd)
         saved = gen.save_generated_code(files, self.tmpdir)
 
-        # 直下に11ファイル
+        # ★ 11 → 12 に変更
         top_level = os.listdir(self.tmpdir)
-        self.assertEqual(len(top_level), 11)
+        self.assertEqual(len(top_level), EXPECTED_FILE_COUNT)
 
 
 # ============================================================

@@ -1,7 +1,7 @@
 # codegen/c_code_generator.py
 """
 Cコード生成メインクラス
-（ステップテーブル駆動版・11ファイル対応・設定対応）
+（ステップテーブル駆動版・12ファイル対応・設定対応）
 
 設計方針:
   - ファイルごとの生成手順は FILE_STEPS テーブルで宣言
@@ -10,6 +10,7 @@ Cコード生成メインクラス
   - 条件付きステップは 'when' 述語で宣言的に表現
   - ファイル間ディスパッチは FILE_DISPATCH 辞書で管理
   - フォルダ構成は FOLDER_STRUCTURE_RESOLVERS で解決
+  - スーパーインクルード statable_all.h は条件付きで生成
 """
 
 import sys
@@ -61,7 +62,7 @@ logger = logging.getLogger(__name__)
 
 class CCodeGenerator:
     """Cコード生成メインクラス
-       （ステップテーブル駆動・11ファイル対応・設定対応）"""
+       （ステップテーブル駆動・12ファイル対応・設定対応）"""
 
     # ================================================================
     # 【テーブル①】ファイル別ステップ定義
@@ -107,7 +108,6 @@ class CCodeGenerator:
             {'action': 'blank'},
             {'action': 'guard_end'},
         ],
-        # ★ 修正: セル関数の前方宣言と本体を追加
         'statable_transitions.c': [
             {'action': 'file_header',
              'filename': 'statable_transitions.c'},
@@ -201,6 +201,31 @@ class CCodeGenerator:
         'osal.c': [
             {'action': 'osal_source'},
         ],
+        # ★ スーパーインクルード
+        'statable_all.h': [
+            {'action': 'super_include_header'},
+            {'action': 'blank'},
+            {'action': 'super_include_guard_start'},
+            {'action': 'blank'},
+            {'action': 'super_include_common'},
+            {'action': 'blank'},
+            {'action': 'super_include_layer'},
+            {'action': 'blank'},
+            {'action': 'super_include_project'},
+            {'action': 'super_include_external',
+             'when': lambda c: (
+                 c['config'].external_includes_in_super
+                 and bool(c['config'].external_includes)
+             )},
+            {'action': 'blank',
+             'when': lambda c: (
+                 c['config'].external_includes_in_super
+                 and bool(c['config'].external_includes)
+             )},
+            {'action': 'super_include_user'},
+            {'action': 'blank'},
+            {'action': 'super_include_guard_end'},
+        ],
     }
 
     # ================================================================
@@ -238,6 +263,8 @@ class CCodeGenerator:
             '_generate_osal_header',
         'osal.c':
             '_generate_osal_source',
+        'statable_all.h':
+            '_generate_super_include',
     }
 
     # ================================================================
@@ -255,6 +282,7 @@ class CCodeGenerator:
         'statable_timer.c':          'src',
         'osal.h':                    'common',
         'osal.c':                    'common',
+        # statable_all.h は特別扱い（_resolve_super_include_path）
     }
 
     # ================================================================
@@ -346,6 +374,10 @@ class CCodeGenerator:
                 'description': 'OSALソース',
                 'guard_name': None,
             },
+            'statable_all.h': {
+                'description': 'StaTable 一括インクルード',
+                'guard_name': 'STATABLE_ALL_H',
+            },
         }
 
         # ===== インクルード定義 =====
@@ -409,6 +441,15 @@ class CCodeGenerator:
             # OSAL
             'osal_header':        self._step_osal_header,
             'osal_source':        self._step_osal_source,
+            # ★ スーパーインクルード
+            'super_include_header':      self._step_super_include_header,
+            'super_include_guard_start': self._step_super_include_guard_start,
+            'super_include_common':      self._step_super_include_common,
+            'super_include_layer':       self._step_super_include_layer,
+            'super_include_project':     self._step_super_include_project,
+            'super_include_external':    self._step_super_include_external,
+            'super_include_user':        self._step_super_include_user,
+            'super_include_guard_end':   self._step_super_include_guard_end,
         }
 
     # ================================================================
@@ -508,13 +549,12 @@ class CCodeGenerator:
         """
         ファイル名から保存先の相対パスを返す
 
-        Args:
-            filename:   生成ファイル名
-            layer_name: 層名（by_layer 用、省略時は ''）
-
-        Returns:
-            相対パス（例: 'include/statable_types.h'）
+        スーパーインクルード statable_all.h は特別扱い
         """
+        # ★ スーパーインクルードの特別扱い
+        if filename == 'statable_all.h':
+            return self._resolve_super_include_path(layer_name)
+
         structure = self.config.folder_structure
         resolver_name = self.FOLDER_STRUCTURE_RESOLVERS.get(
             structure, '_resolve_path_flat'
@@ -522,6 +562,23 @@ class CCodeGenerator:
         resolver = getattr(self, resolver_name,
                            self._resolve_path_flat)
         return resolver(filename, layer_name)
+
+    def _resolve_super_include_path(self, layer_name: str = '') -> str:
+        """スーパーインクルードの保存パスを解決"""
+        fname = self.config.super_include_file
+        structure = self.config.folder_structure
+
+        if structure == 'flat':
+            return fname
+        elif structure == 'by_type':
+            return os.path.join(
+                self.config.super_include_dir, fname
+            )
+        elif structure == 'by_layer':
+            if layer_name:
+                return os.path.join(layer_name, fname)
+            return fname
+        return fname
 
     def _resolve_path_flat(self, filename: str,
                            layer_name: str = '') -> str:
@@ -796,6 +853,66 @@ class CCodeGenerator:
         )]
 
     # ================================================================
+    # ★ スーパーインクルード ステップ実行関数群
+    # ================================================================
+    def _step_super_include_header(self, step, ctx):
+        T = self.templates.SUPER_INCLUDE_TEMPLATES
+        fname = self.config.super_include_file
+        return [T['file_comment'].format(filename=fname)]
+
+    def _step_super_include_guard_start(self, step, ctx):
+        T = self.templates.SUPER_INCLUDE_TEMPLATES
+        return [T['guard_start'].rstrip('\n')]
+
+    def _step_super_include_guard_end(self, step, ctx):
+        T = self.templates.SUPER_INCLUDE_TEMPLATES
+        return [T['guard_end']]
+
+    def _step_super_include_common(self, step, ctx):
+        T = self.templates.SUPER_INCLUDE_TEMPLATES
+        return [
+            T['common_section'],
+            '#include "statable_types.h"',
+        ]
+
+    def _step_super_include_layer(self, step, ctx):
+        T = self.templates.SUPER_INCLUDE_TEMPLATES
+        return [
+            T['layer_section'],
+            '#include "statable_transitions.h"',
+            '#include "statable_role_functions.h"',
+        ]
+
+    def _step_super_include_project(self, step, ctx):
+        T = self.templates.SUPER_INCLUDE_TEMPLATES
+        return [
+            T['project_section'],
+            '#include "osal.h"',
+        ]
+
+    def _step_super_include_external(self, step, ctx):
+        T = self.templates.SUPER_INCLUDE_TEMPLATES
+        result = [T['external_section']]
+        for inc in self.config.external_includes:
+            inc = inc.strip()
+            if not inc:
+                continue
+            # 既に #include 形式なら、そのまま
+            if inc.startswith('#include'):
+                result.append(inc)
+            else:
+                result.append(f'#include "{inc}"')
+        return result
+
+    def _step_super_include_user(self, step, ctx):
+        T = self.templates.SUPER_INCLUDE_TEMPLATES
+        return [
+            T['user_section'],
+            T['user_marker_start'],
+            T['user_marker_end'],
+        ]
+
+    # ================================================================
     # ファイル生成メソッド（すべて _run_steps に委譲）
     # ================================================================
     def _generate_types_header(self, sm, gd):
@@ -831,6 +948,10 @@ class CCodeGenerator:
     def _generate_osal_source(self, sm, gd):
         return self._run_steps('osal.c', sm, gd)
 
+    # ★ スーパーインクルード
+    def _generate_super_include(self, sm, gd):
+        return self._run_steps('statable_all.h', sm, gd)
+
     # ================================================================
     # 公開メソッド
     # ================================================================
@@ -852,6 +973,15 @@ class CCodeGenerator:
         try:
             generated_files = {}
             for filename in self.file_generators.keys():
+                # ★ スーパーインクルードのスキップ判定
+                if (filename == 'statable_all.h'
+                        and not self.config.generate_super_include):
+                    self._log_debug(
+                        "Skipping statable_all.h "
+                        "(generate_super_include=False)"
+                    )
+                    continue
+
                 self._log_debug(f"Generating: {filename}")
                 method_name = self.FILE_DISPATCH.get(filename)
                 if method_name is None:
