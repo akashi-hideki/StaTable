@@ -23,6 +23,9 @@ class CodeMerger:
         'func_user_end': '/* [[STABLE_USER_CODE_END:{func_name}]] */',
         'auto_start': '/* [[STABLE_AUTO_GENERATED_START]] */',
         'auto_end': '/* [[STABLE_AUTO_GENERATED_END]] */',
+        # ★ ファイル末尾ユーザー領域
+        'file_tail_user_start': '/* [[STABLE_USER_CODE_TAIL_START]] */',
+        'file_tail_user_end':   '/* [[STABLE_USER_CODE_TAIL_END]] */',
     }
     
     def __init__(self):
@@ -44,8 +47,6 @@ class CodeMerger:
         if match:
             self._log_debug("ファイルユーザーコードを抽出しました")
             return match.group(1)
-        
-        self._log_debug("ファイルユーザーコードが見つかりません")
         return ""
     
     def extract_func_user_code(self, existing_content: str, func_name: str) -> str:
@@ -59,8 +60,6 @@ class CodeMerger:
         if match:
             self._log_debug(f"関数 {func_name} のユーザーコードを抽出しました")
             return match.group(1)
-        
-        self._log_debug(f"関数 {func_name} のユーザーコードが見つかりません")
         return ""
     
     def extract_all_func_user_codes(self, existing_content: str) -> Dict[str, str]:
@@ -69,14 +68,32 @@ class CodeMerger:
         
         # 関数名を抽出
         func_pattern = r'RoleFunc_(\w+)\s*\('
+        seen = set()
         for match in re.finditer(func_pattern, existing_content):
             func_name = match.group(1)
+            if func_name in seen:
+                continue
+            seen.add(func_name)
             user_code = self.extract_func_user_code(existing_content, func_name)
             if user_code:
                 func_user_codes[func_name] = user_code
         
         return func_user_codes
-    
+
+    # ★ ファイル末尾ユーザーコード抽出
+    def extract_file_tail_user_code(self, existing_content: str) -> str:
+        """ファイル末尾のユーザーコードを抽出"""
+        start = self.markers['file_tail_user_start']
+        end = self.markers['file_tail_user_end']
+
+        pattern = rf'{re.escape(start)}\s*\n(.*?)\n\s*{re.escape(end)}'
+        match = re.search(pattern, existing_content, re.DOTALL)
+
+        if match:
+            self._log_debug("末尾ユーザーコードを抽出しました")
+            return match.group(1)
+        return ""
+
     # ===== 注入処理 =====
     def inject_file_user_code(self, generated_content: str, user_code: str) -> str:
         """生成コードにファイル全体のユーザーコードを注入"""
@@ -112,75 +129,75 @@ class CodeMerger:
             result_lines.insert(0, injection.rstrip('\n'))
         
         return '\n'.join(result_lines)
-    
-    def inject_func_user_code(self, generated_content: str, func_name: str, user_code: str) -> str:
-        """生成コードに関数単位のユーザーコードを注入"""
+
+    # ★ 関数ユーザーコード注入: 既存マーカーブロックを置換
+    def inject_func_user_code(self, generated_content: str, func_name: str,
+                              user_code: str) -> str:
+        """
+        生成コード内の既存マーカーブロックを user_code で置換
+
+        - 生成コード側に既にマーカーがある前提で、その間の内容を置換する
+        - マーカーが存在しない場合は何もしない（新規挿入はしない）
+        """
         if not user_code:
             return generated_content
         
         start = self.markers['func_user_start'].format(func_name=func_name)
         end = self.markers['func_user_end'].format(func_name=func_name)
-        
-        injection = f"    {start}\n{user_code}\n    {end}"
-        
-        # 関数を検索
-        func_pattern = rf'(?:void|bool|int|uint\d+_t|int\d+_t|float|double)\s+RoleFunc_{re.escape(func_name)}\s*\('
-        match = re.search(func_pattern, generated_content)
-        
-        if not match:
-            self._log_debug(f"関数 RoleFunc_{func_name} が見つかりません", 'warning')
-            return generated_content
-        
-        # 関数ボディの開始位置
-        body_start = generated_content.find('{', match.end())
-        if body_start == -1:
-            return generated_content
-        
-        # TODO コメントを検索
-        todo_pattern = r'/\*\s*TODO[^*]*\*/'
-        todo_match = re.search(todo_pattern, generated_content[body_start:])
-        
-        if todo_match:
-            # TODO コメントの後に注入
-            todo_end = body_start + todo_match.end()
-            line_end = generated_content.find('\n', todo_end)
-            if line_end == -1:
-                line_end = todo_end
-            inject_pos = line_end + 1
+
+        pattern = rf'({re.escape(start)}\s*\n).*?(\n\s*{re.escape(end)})'
+        replacement = rf'\g<1>{user_code}\n\g<2>'
+
+        result, count = re.subn(
+            pattern, replacement, generated_content,
+            count=1, flags=re.DOTALL,
+        )
+        if count:
+            self._log_debug(f"関数 {func_name} のユーザーコードを注入しました")
         else:
-            # ボディ開始直後
-            inject_pos = body_start + 1
-        
-        # インデントを揃える
-        indented_user_code = user_code.replace('\n', '\n    ')
-        
-        injection = (
-            f"    {start}\n"
-            f"    {indented_user_code}\n"
-            f"    {end}\n"
+            self._log_debug(f"関数 {func_name} のマーカーが見つかりません", 'warning')
+        return result
+
+    # ★ ファイル末尾ユーザーコード注入
+    def inject_file_tail_user_code(self, generated_content: str,
+                                   user_code: str) -> str:
+        """生成コード末尾のマーカー内にユーザーコードを注入（置換）"""
+        if not user_code:
+            return generated_content
+
+        start = self.markers['file_tail_user_start']
+        end = self.markers['file_tail_user_end']
+
+        pattern = rf'({re.escape(start)}\s*\n).*?(\n\s*{re.escape(end)})'
+        replacement = rf'\g<1>{user_code}\n\g<2>'
+
+        result, count = re.subn(
+            pattern, replacement, generated_content,
+            count=1, flags=re.DOTALL,
         )
-        
-        return (
-            generated_content[:inject_pos] +
-            injection +
-            generated_content[inject_pos:]
-        )
-    
+        if count:
+            self._log_debug("末尾ユーザーコードを注入しました")
+        else:
+            self._log_debug("末尾マーカーが見つかりません", 'warning')
+        return result
+
     # ===== マージ処理 =====
-    def merge_file(self, generated_content: str, existing_content: Optional[str]) -> str:
+    def merge_file(self, generated_content: str,
+                   existing_content: Optional[str]) -> str:
         """生成コードと既存コードをマージ"""
         if existing_content is None or not existing_content.strip():
             self._log_debug("既存コードなし、生成コードをそのまま使用")
             return generated_content
         
         self._log_debug("マージ処理を開始")
-        
-        # ファイル全体のユーザーコードを抽出
+
+        # 各種ユーザーコード抽出
         file_user_code = self.extract_file_user_code(existing_content)
         
         # 関数単位のユーザーコードを抽出
         func_user_codes = self.extract_all_func_user_codes(existing_content)
-        
+        tail_user_code = self.extract_file_tail_user_code(existing_content)
+
         self._log_debug(f"ファイルユーザーコード: {len(file_user_code)}文字")
         self._log_debug(f"関数ユーザーコード: {len(func_user_codes)}個")
         
@@ -193,11 +210,13 @@ class CodeMerger:
         # 関数単位のユーザーコードを注入
         for func_name, user_code in func_user_codes.items():
             result = self.inject_func_user_code(result, func_name, user_code)
-        
+
+        result = self.inject_file_tail_user_code(result, tail_user_code)
+
         return result
-    
-    def merge_all_files(self, generated_files: Dict[str, str], 
-                       existing_dir: str) -> Dict[str, str]:
+
+    def merge_all_files(self, generated_files: Dict[str, str],
+                        existing_dir: str) -> Dict[str, str]:
         """全ファイルをマージ"""
         self._log_debug(f"全ファイルマージ開始: {existing_dir}")
         merged_files = {}
@@ -212,16 +231,18 @@ class CodeMerger:
             else:
                 self._log_debug(f"既存ファイルなし: {filename}")
                 existing_content = None
-            
-            merged_files[filename] = self.merge_file(generated_content, existing_content)
-        
+
+            merged_files[filename] = self.merge_file(
+                generated_content, existing_content,
+            )
+
         return merged_files
-    
+
     # ===== マーカー存在確認 =====
     def has_user_code(self, content: str) -> bool:
         """ユーザーコードが含まれているか"""
         return self.markers['file_user_start'] in content
-    
+
     def has_func_user_code(self, content: str, func_name: str) -> bool:
         """特定の関数にユーザーコードが含まれているか"""
         start = self.markers['func_user_start'].format(func_name=func_name)
@@ -232,6 +253,7 @@ class CodeMerger:
         summary = {
             'file_user_code': 0,
             'func_user_codes': 0,
+            'file_tail_user_code': 0,
         }
         
         if self.has_user_code(content):
@@ -240,5 +262,8 @@ class CodeMerger:
         
         func_codes = self.extract_all_func_user_codes(content)
         summary['func_user_codes'] = len(func_codes)
-        
+
+        tail_code = self.extract_file_tail_user_code(content)
+        summary['file_tail_user_code'] = len(tail_code)
+
         return summary

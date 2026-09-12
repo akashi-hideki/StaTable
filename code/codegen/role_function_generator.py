@@ -226,7 +226,8 @@ class RoleFunctionGenerator:
             '    const $entry_type *table,\n'
             '    uint16_t table_size);\n'
         ),
-        'definition_comment': Template(
+        # ★ Template を外してプレーン文字列に
+        'definition_comment': (
             '\n\n'
             '/* ============================================================== */\n'
             '/*  Transition ID 変換（ファイル末尾）                            */\n'
@@ -275,8 +276,9 @@ class RoleFunctionGenerator:
         'table_open': Template(
             'static const $struct_type $table_name[] = {\n'
         ),
+        # ★ 固定空白を削除（整列は呼び出し側で行う）
         'entry': Template(
-            '    { $from_state, $event },\n'
+            '    { $from_state,$event },\n'
         ),
         'table_close': '};\n',
         'count_macro': Template(
@@ -545,6 +547,7 @@ class RoleFunctionGenerator:
     # ================================================================
     def generate_transition_id_function(self) -> str:
         T = self.TRANSITION_ID_FUNC_TEMPLATES
+        # definition_comment は str、definition は Template
         return (
             T['definition_comment'] +
             T['definition'].substitute(
@@ -564,6 +567,23 @@ class RoleFunctionGenerator:
         table_name = f"call_sites_{short}"
         count_macro = f"CALL_SITES_{short}_COUNT"
 
+        # 重複除去（from_state, event）
+        unique_entries = []
+        seen = set()
+        for cs in call_sites:
+            k = cs.key()
+            if k in seen:
+                continue
+            seen.add(k)
+            unique_entries.append(cs)
+
+        if not unique_entries:
+            return ""
+
+        # ★ 列幅を計算（from_state の最大長）
+        from_strs = [self._state_enum(cs.from_state) for cs in unique_entries]
+        from_width = max(len(s) for s in from_strs)
+
         T = self.CALL_SITE_TABLE_TEMPLATES
         parts = [
             T['table_header'].substitute(func_name=short),
@@ -573,15 +593,14 @@ class RoleFunctionGenerator:
             ),
         ]
 
-        seen = set()
-        for cs in call_sites:
-            k = cs.key()
-            if k in seen:
-                continue
-            seen.add(k)
+        for cs in unique_entries:
+            from_str = self._state_enum(cs.from_state)
+            event_str = self._event_enum(cs.event)
+            # ★ カンマ後の整列: 最大幅 - 現幅 の空白を event の前に挿入
+            pad = ' ' * (from_width - len(from_str))
             parts.append(T['entry'].substitute(
-                from_state=self._state_enum(cs.from_state),
-                event=self._event_enum(cs.event),
+                from_state=from_str,
+                event=pad + event_str,
             ))
 
         parts.append(T['table_close'])
