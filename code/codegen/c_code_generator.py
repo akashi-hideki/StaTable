@@ -8,7 +8,7 @@ Cコード生成メインクラス
   - 各ステップは step_executors 辞書で実行関数に紐付け
   - _run_steps() がステップ列を順に実行
   - 条件付きステップは 'when' 述語で宣言的に表現
-  - ファイル間ディスパッチは DISPATCH 辞書で管理
+  - ファイル間ディスパッチは FILE_DISPATCH 辞書で管理
 """
 
 import sys
@@ -106,6 +106,7 @@ class CCodeGenerator:
             {'action': 'blank'},
             {'action': 'guard_end'},
         ],
+        # ★ 修正: セル関数の前方宣言と本体を追加
         'statable_transitions.c': [
             {'action': 'file_header',
              'filename': 'statable_transitions.c'},
@@ -115,7 +116,11 @@ class CCodeGenerator:
             {'action': 'section_header',
              'key': 'transition_table'},
             {'action': 'blank'},
+            {'action': 'cell_prototypes'},
+            {'action': 'blank'},
             {'action': 'transition_table'},
+            {'action': 'blank'},
+            {'action': 'cell_functions'},
             {'action': 'blank'},
             {'action': 'section_header',
              'key': 'transition_func'},
@@ -358,7 +363,9 @@ class CCodeGenerator:
             'var_macros':         self._step_var_macros,
             # 遷移
             'state_machine_decl': self._step_state_machine_decl,
+            'cell_prototypes':    self._step_cell_prototypes,
             'transition_table':   self._step_transition_table,
+            'cell_functions':     self._step_cell_functions,
             'process_func':       self._step_process_func,
             # ロール
             'role_decls':         self._step_role_decls,
@@ -591,10 +598,28 @@ class CCodeGenerator:
             "    SystemContext_t *ctx",
             ");",
         ]
+
+    # ★ 追加: セル関数の前方宣言
+    def _step_cell_prototypes(self, step, ctx):
+        return [self.transition_gen
+                .generate_transition_cell_prototypes(
+                    ctx['state_machine']
+                )]
+
+    # ★ 修正: config 引数を削除
     def _step_transition_table(self, step, ctx):
         return [self.transition_gen.generate_transition_table(
             ctx['state_machine'],
         )]
+
+    # ★ 追加: セル関数の本体
+    def _step_cell_functions(self, step, ctx):
+        return [self.transition_gen
+                .generate_transition_cell_functions(
+                    ctx['state_machine']
+                )]
+
+    # ★ 修正: config 引数を削除
     def _step_process_func(self, step, ctx):
         return [self.transition_gen.generate_process_function(
             ctx['state_machine'],

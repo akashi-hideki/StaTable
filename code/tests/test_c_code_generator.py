@@ -153,15 +153,25 @@ class TestSingleFileGeneration(unittest.TestCase):
         self.assertIn(
             'STATE_t StateMachine_Process(', code
         )
-
     def test_generate_transitions_source(self):
         code = self.gen._generate_transitions_source(
             self.sm, self.gd
         )
-        # テーブル or switch のいずれか
-        self.assertTrue(
-            'transition' in code.lower(),
-            "transitions.c has no transition",
+        self.assertIn(
+            'static STATE_t t_', code,
+            "cell prototypes missing"
+        )
+        self.assertIn(
+            'transition_matrix', code,
+        )
+        self.assertIn(
+            'StateMachine_Process', code,
+        )
+        count = code.count('static STATE_t t_')
+        self.assertGreaterEqual(
+            count, 8,
+            f"expected >= 8 cell func lines, "
+            f"got {count}",
         )
 
     def test_generate_role_functions_header(self):
