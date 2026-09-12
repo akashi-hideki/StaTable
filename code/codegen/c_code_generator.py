@@ -217,11 +217,8 @@ class CCodeGenerator:
                  c['config'].external_includes_in_super
                  and bool(c['config'].external_includes)
              )},
-            {'action': 'blank',
-             'when': lambda c: (
-                 c['config'].external_includes_in_super
-                 and bool(c['config'].external_includes)
-             )},
+            # ★ when 条件を削除（常に空行を出力）
+            {'action': 'blank'},
             {'action': 'super_include_user'},
             {'action': 'blank'},
             {'action': 'super_include_guard_end'},
