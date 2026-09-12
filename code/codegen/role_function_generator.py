@@ -226,7 +226,7 @@ class RoleFunctionGenerator:
             '    const $entry_type *table,\n'
             '    uint16_t table_size);\n'
         ),
-        # ★ Template を外してプレーン文字列に
+        # Template を外してプレーン文字列に
         'definition_comment': (
             '\n\n'
             '/* ============================================================== */\n'
@@ -276,7 +276,7 @@ class RoleFunctionGenerator:
         'table_open': Template(
             'static const $struct_type $table_name[] = {\n'
         ),
-        # ★ 固定空白を削除（整列は呼び出し側で行う）
+        # 固定空白を削除（整列は呼び出し側で行う）
         'entry': Template(
             '    { $from_state,$event },\n'
         ),
@@ -580,7 +580,7 @@ class RoleFunctionGenerator:
         if not unique_entries:
             return ""
 
-        # ★ 列幅を計算（from_state の最大長）
+        # 列幅を計算（from_state の最大長）
         from_strs = [self._state_enum(cs.from_state) for cs in unique_entries]
         from_width = max(len(s) for s in from_strs)
 
@@ -596,8 +596,8 @@ class RoleFunctionGenerator:
         for cs in unique_entries:
             from_str = self._state_enum(cs.from_state)
             event_str = self._event_enum(cs.event)
-            # ★ カンマ後の整列: 最大幅 - 現幅 の空白を event の前に挿入
-            pad = ' ' * (from_width - len(from_str))
+            # カンマ後の整列: 最大幅 - 現幅 + 1（最低1スペース）
+            pad = ' ' * (from_width - len(from_str) + 1)
             parts.append(T['entry'].substitute(
                 from_state=from_str,
                 event=pad + event_str,

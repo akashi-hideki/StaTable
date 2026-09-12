@@ -8,12 +8,12 @@ RoleFunctionGenerator の全機能テスト
     または
     python tests/test_role_function_generator.py
 
-実行するとテスト終了後に tests/_generated/ に生成コードが出力されます。
+実行するとテスト終了後に tests/_generated/ に生成コードが出力され、
+コンソールにも全文が表示されます。
 """
 
 import sys
 import os
-from typing import Optional          # ★ 追加
 
 # ============================================================
 # sys.path セットアップ
@@ -29,6 +29,7 @@ for _p in (_CODEGEN_DIR, _CODE_DIR):
 import re
 import unittest
 from pathlib import Path
+from typing import Optional
 
 # ============================================================
 # モデルのインポート（statable が無い環境ではフォールバック）
@@ -410,7 +411,6 @@ class TestAllImplementations(unittest.TestCase):
 
     def test_empty(self):
         result = self.gen.generate_all_implementations([])
-        # 空でも末尾のユーザー追加領域は出力される
         self.assertIn("STABLE_USER_CODE_TAIL_START", result)
 
     def test_markers(self):
@@ -680,12 +680,21 @@ class TestCallSitesTable(unittest.TestCase):
             "static const RoleFuncCallSiteEntry_Driver_t call_sites_CheckSensor[]",
             code,
         )
-        # 整列後の形式（カンマ + 可変空白 + event）
         self.assertIn("STATE_Driver_Idle", code)
         self.assertIn("EVENT_Driver_START", code)
         self.assertIn("STATE_Driver_Active", code)
         self.assertIn("EVENT_Driver_ERROR", code)
         self.assertIn("#define CALL_SITES_CheckSensor_COUNT", code)
+
+    def test_comma_followed_by_space(self):
+        """カンマの後に必ずスペースがあること（整列バグの再発防止）"""
+        func = make_func("Foo")
+        cs = [
+            RoleFuncCallSite("Foo", "condition", "Idle", "START", "Running"),
+        ]
+        code = self.gen.generate_call_sites_table(func, cs)
+        # ", EVENT" の形（カンマ直後に空白）
+        self.assertRegex(code, r",\s+EVENT_")
 
     def test_dedup_same_state_event(self):
         func = make_func("Multi")
@@ -766,7 +775,6 @@ class TestTransitionIdInImplementation(unittest.TestCase):
 
     def test_without_call_sites(self):
         impl = self.gen.generate_implementation(make_func("Foo"), call_sites=[])
-        # 複数行に分かれるため、部分一致で確認
         self.assertIn("Transition_GetId(", impl)
         self.assertIn("transition, NULL, 0", impl)
 
@@ -807,7 +815,6 @@ class TestTailUserSection(unittest.TestCase):
 
     def test_generated(self):
         code = self.gen.generate_tail_user_section()
-        # 空白数を問わない部分一致
         self.assertIn("ユーザー追加領域", code)
         self.assertIn("/* [[STABLE_USER_CODE_TAIL_START]] */", code)
         self.assertIn("/* [[STABLE_USER_CODE_TAIL_END]] */", code)
@@ -901,7 +908,6 @@ class TestFullPipeline(unittest.TestCase):
         funcs = [make_func("CheckSensor"), make_func("InitSensor")]
         generated = gen.generate_all_implementations(funcs)
 
-        # ユーザーが CheckSensor のマーカー内にコードを書いた状態を擬似
         user_edited = generated.replace(
             "    /* ユーザー実装コードをここに記述 */\n"
             "    /* [[STABLE_USER_CODE_END:Driver_CheckSensor]] */",
@@ -1011,14 +1017,14 @@ class TestIntegratedOutput(unittest.TestCase):
 # ============================================================
 # 生成コードのダンプ（目視確認用）
 # ============================================================
-def dump_generated_code(output_dir: Optional[str] = None) -> str:
+def dump_generated_code(output_dir: Optional[str] = None,
+                        full_preview: bool = True) -> str:
     """
-    生成コードをファイルに出力して目視確認できるようにする
+    生成コードをファイルに出力し、内容をコンソールにも表示する
 
-    Output:
-        <tests>/_generated/role_functions.h
-        <tests>/_generated/role_functions.c
-        <tests>/_generated/role_functions_no_sm.c
+    Args:
+        output_dir:   出力先ディレクトリ（省略時は tests/_generated）
+        full_preview: True なら全文プレビュー、False なら先頭60行のみ
     """
     if output_dir is None:
         output_dir = os.path.join(_THIS_DIR, '_generated')
@@ -1062,19 +1068,44 @@ def dump_generated_code(output_dir: Optional[str] = None) -> str:
     with open(c_no_sm_path, 'w', encoding='utf-8') as f:
         f.write(impl_no_sm)
 
-    # --- コンソールにもプレビュー出力 ---
-    print("\n" + "=" * 70)
+    # ==========================================================
+    # コンソール出力
+    # ==========================================================
+    sep = "=" * 70
+
+    # --- 出力先通知 ---
+    print(f"\n{sep}")
     print(f"  生成コードを出力しました: {output_dir}")
-    print("=" * 70)
+    print(sep)
     print(f"  - role_functions.h        ({len(decl)} bytes)")
     print(f"  - role_functions.c        ({len(impl)} bytes)")
     print(f"  - role_functions_no_sm.c  ({len(impl_no_sm)} bytes)")
 
-    print("\n" + "-" * 70)
-    print("  role_functions.c の先頭 60 行プレビュー")
-    print("-" * 70)
-    for line in impl.split('\n')[:60]:
-        print(f"  {line}")
+    # --- role_functions.h 全文 ---
+    print(f"\n{sep}")
+    print("  role_functions.h （全文）")
+    print(sep)
+    print(decl)
+
+    # --- role_functions.c 全文 ---
+    print(f"\n{sep}")
+    if full_preview:
+        print("  role_functions.c （全文）")
+    else:
+        print("  role_functions.c （先頭 60 行）")
+    print(sep)
+    if full_preview:
+        print(impl)
+    else:
+        for line in impl.split('\n')[:60]:
+            print(line)
+
+    # --- role_functions_no_sm.c 全文 ---
+    print(f"\n{sep}")
+    print("  role_functions_no_sm.c （全文）")
+    print(sep)
+    print(impl_no_sm)
+    print(sep)
 
     return output_dir
 
@@ -1082,7 +1113,7 @@ def dump_generated_code(output_dir: Optional[str] = None) -> str:
 # ============================================================
 # テスト実行
 # ============================================================
-def run_tests(dump: bool = True):
+def run_tests(dump: bool = True, full_preview: bool = True):
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
 
@@ -1115,7 +1146,7 @@ def run_tests(dump: bool = True):
 
     if dump:
         try:
-            dump_generated_code()
+            dump_generated_code(full_preview=full_preview)
         except Exception as e:
             print(f"\n[ダンプ失敗] {e}")
 
