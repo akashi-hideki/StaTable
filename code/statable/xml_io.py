@@ -1,11 +1,11 @@
 # statable/xml_io.py
 """
-XML入出力（プロジェクト設定・レイヤ優先度対応版）
+XML入出力（プロジェクト設定・レイヤ優先度・層名対応版）
 - プロジェクト保存/読込で共有ライブラリ（ロール関数・遷移条件・リテラル）を保存
 - Transitionのpre_actions/else_actions/has_else/else_targetも保存
 - 文字列→リスト正規化、1文字分解の自動結合
 - libcntrl.RoleFunction の引数互換対応
-- レイヤ優先度・プロジェクト名の保存/復元
+- レイヤ優先度・説明・層名（layer_name）・プロジェクト名の保存/復元
 - 各段階でデバッグログを出力
 """
 
@@ -85,8 +85,10 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
     # ★ レイヤ設定
     root.set("layer_priority", str(getattr(sm, 'layer_priority', 5)))
     root.set("layer_description", getattr(sm, 'layer_description', ''))
+    root.set("layer_name", getattr(sm, 'layer_name', ''))    # ★ 追加
     logger.debug(f"  layer_priority={getattr(sm, 'layer_priority', 5)}, "
-                 f"layer_description='{getattr(sm, 'layer_description', '')}'")
+                 f"layer_description='{getattr(sm, 'layer_description', '')}', "
+                 f"layer_name='{getattr(sm, 'layer_name', '')}'")
 
     states_elem = ET.SubElement(root, "States")
     for state in sm.states.values():
@@ -179,8 +181,10 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
     except ValueError:
         sm.layer_priority = 5
     sm.layer_description = elem.get("layer_description", "")
+    sm.layer_name = elem.get("layer_name", "")    # ★ 追加
     logger.debug(f"  layer_priority={sm.layer_priority}, "
-                 f"layer_description='{sm.layer_description}'")
+                 f"layer_description='{sm.layer_description}', "
+                 f"layer_name='{sm.layer_name}'")
 
     states_elem = elem.find("States")
     if states_elem is None:
@@ -780,7 +784,8 @@ def project_to_xml(
     logger.debug(f"  tabs={len(tabs)}")
     for name, sm in tabs:
         logger.debug(f"    tab '{name}': states={len(sm.states)}, transitions={len(sm.transitions)}, "
-                     f"layer_priority={getattr(sm, 'layer_priority', 5)}")
+                     f"layer_priority={getattr(sm, 'layer_priority', 5)}, "
+                     f"layer_name='{getattr(sm, 'layer_name', '')}'")
     logger.debug(f"  global_defs: vars={len(global_defs.variables)}, flags={len(global_defs.flags)}")
     logger.debug(f"  role_function_library={role_function_library is not None}")
     logger.debug(f"  condition_library={condition_library is not None}")

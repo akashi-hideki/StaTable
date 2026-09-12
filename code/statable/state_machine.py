@@ -11,9 +11,10 @@ class StateMachine:
         self.role_functions: Dict[str, RoleFunction] = {}
         self.initial_state: Optional[str] = None
 
-        # ★ レイヤ設定（Phase 1 追加）
+        # ★ レイヤ設定
         self.layer_priority: int = 5          # 実行優先度（1〜9）
         self.layer_description: str = ""      # 層の説明（任意）
+        self.layer_name: str = ""             # ★ 層名（例: "Driver"）
 
     def add_state(self, state: State):
         if state.name in self.states:
@@ -58,7 +59,8 @@ class StateMachine:
             del self.role_functions[name]
 
     def get_transitions_for_cell(self, source: str, event: str) -> List[Transition]:
-        return [t for t in self.transitions if t.source == source and t.event == event]
+        return [t for t in self.transitions
+                if t.source == source and t.event == event]
 
     def get_transitions_for_event(self, event: str) -> List[Transition]:
         return [t for t in self.transitions if t.event == event]

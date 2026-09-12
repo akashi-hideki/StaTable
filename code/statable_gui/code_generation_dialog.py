@@ -1,6 +1,6 @@
 # statable_gui/code_generation_dialog.py
 """
-Cコード生成ダイアログ（PySide6対応）
+Cコード生成ダイアログ（PySide6対応・複数層対応版）
 """
 
 import os
@@ -64,7 +64,7 @@ DEFAULT_SETTINGS_FILE = os.path.join(
 
 
 # ============================================================
-# ★ 警告収集クラス（共有ユーティリティ）
+# 警告収集クラス
 # ============================================================
 class WarningCollector(logging.Handler):
     """
@@ -100,7 +100,7 @@ class WarningCollector(logging.Handler):
 # CodeGenerationDialog
 # ============================================================
 class CodeGenerationDialog(QDialog):
-    """Cコード生成ダイアログ"""
+    """Cコード生成ダイアログ（複数層対応）"""
 
     def __init__(self, state_machine=None,
                  global_defs=None,
@@ -116,6 +116,8 @@ class CodeGenerationDialog(QDialog):
             settings_file or DEFAULT_SETTINGS_FILE
         )
         self.role_function_library = role_function_library
+        # ★ 複数層リスト（外部から設定）
+        self.all_layers = None
 
         self._load_saved_settings()
 
@@ -225,32 +227,32 @@ class CodeGenerationDialog(QDialog):
         
         # アクションボタン
         button_layout = QHBoxLayout()
-        
+
         self.generate_btn = QPushButton("コード生成")
         self.generate_btn.clicked.connect(
             self._generate_code)
         button_layout.addWidget(self.generate_btn)
-        
+
         self.save_btn = QPushButton("保存")
         self.save_btn.setEnabled(False)
         self.save_btn.clicked.connect(self._save_code)
         button_layout.addWidget(self.save_btn)
-        
+
         self.close_btn = QPushButton("閉じる")
         self.close_btn.clicked.connect(self._on_close)
         button_layout.addWidget(self.close_btn)
-        
+
         main_layout.addLayout(button_layout)
         
         # プレビューエリア
         preview_label = QLabel("生成コードプレビュー:")
         main_layout.addWidget(preview_label)
-        
+
         self.preview_tabs = QComboBox()
         self.preview_tabs.currentIndexChanged.connect(
             self._update_preview)
         main_layout.addWidget(self.preview_tabs)
-        
+
         self.preview_text = QTextEdit()
         self.preview_text.setReadOnly(True)
         self.preview_text.setFont(QFont("Consolas", 10))
@@ -331,12 +333,7 @@ class CodeGenerationDialog(QDialog):
             self._load_config_to_ui()
             self._save_settings()
 
-    # ---- ★ 警告収集 + 生成 ----
-    def _collect_warnings(self):
-        """root logger にアタッチする
-           コンテキスト用コレクタを返す"""
-        return WarningCollector()
-
+    # ---- 警告表示 ----
     def _show_warnings(self, records):
         if not records:
             return
@@ -391,12 +388,28 @@ class CodeGenerationDialog(QDialog):
         root_logger.addHandler(collector)
         try:
             generator = CCodeGenerator(config=config)
-            # ★ 共有ライブラリも渡す
-            self.generated_files = generator.generate_all(
-                self.state_machine,
-                self.global_defs,
-                role_function_library=self.role_function_library,
-            )
+            # ★ 複数層 / 単層 自動判定
+            if self.all_layers and len(self.all_layers) > 0:
+                logger.info(
+                    f"Multi-layer generation: "
+                    f"{len(self.all_layers)} layers"
+                )
+                self.generated_files = (
+                    generator.generate_all_layers(
+                        self.all_layers,
+                        self.global_defs,
+                        role_function_library=(
+                            self.role_function_library),
+                    )
+                )
+            else:
+                logger.info("Single-layer generation")
+                self.generated_files = generator.generate_all(
+                    self.state_machine,
+                    self.global_defs,
+                    role_function_library=(
+                        self.role_function_library),
+                )
         except Exception as e:
             self.generate_btn.setEnabled(True)
             self.progress_bar.setVisible(False)
@@ -418,7 +431,7 @@ class CodeGenerationDialog(QDialog):
         self.progress_bar.setVisible(False)
         self._save_settings()
 
-        # ★ 完了メッセージ
+        # 完了メッセージ
         QMessageBox.information(
             self, "完了",
             f"{len(self.generated_files)}ファイルを"
@@ -450,7 +463,7 @@ class CodeGenerationDialog(QDialog):
                 self, "警告",
                 "出力先ディレクトリを設定してください。")
             return
-        
+
         try:
             os.makedirs(output_dir, exist_ok=True)
             config = self.config_manager.get_config()

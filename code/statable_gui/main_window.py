@@ -2,6 +2,7 @@
 """
 StaTable メインウィンドウ
 コード生成機能・検証AI連携機能・共有ライブラリ管理を統合
+（複数層対応版）
 """
 
 import sys
@@ -132,8 +133,7 @@ class MainWindow(QMainWindow):
                 lib_rf = RoleFunction(
                     name=rf.name,
                     title=rf.title,
-                    description=getattr(
-                        rf, 'description', ''),
+                    description=getattr(rf, 'description', ''),
                 )
                 self.role_function_library.add(lib_rf)
                 StaTableLogger.debug(
@@ -186,12 +186,6 @@ class MainWindow(QMainWindow):
             f"conditions={len(self.condition_library.list_all())}, "
             f"literals={len(self.literal_library.list_all())}"
         )
-        for rf in self.role_function_library.list_all():
-            StaTableLogger.debug(f"  role: {rf.name}")
-        for ct in self.condition_library.list_all():
-            StaTableLogger.debug(f"  condition: {ct.name}")
-        for lit in self.literal_library.list_all():
-            StaTableLogger.debug(f"  literal: {lit.name}")
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
@@ -471,7 +465,7 @@ class MainWindow(QMainWindow):
                 StaTableLogger.debug(
                     f"  layer[{index}]: name='{name}', "
                     f"priority={getattr(tab.sm, 'layer_priority', 5)}, "
-                    f"description='{getattr(tab.sm, 'layer_description', '')}'"
+                    f"layer_name='{getattr(tab.sm, 'layer_name', '')}'"
                 )
 
         if not layers:
@@ -491,6 +485,7 @@ class MainWindow(QMainWindow):
                 StaTableLogger.debug(
                     f"  after apply: '{name}' -> "
                     f"priority={sm.layer_priority}, "
+                    f"layer_name='{sm.layer_name}', "
                     f"description='{sm.layer_description}'"
                 )
         else:
@@ -692,9 +687,6 @@ class MainWindow(QMainWindow):
 
             StaTableLogger.debug(
                 f"Loaded: tabs={len(tabs)}, "
-                f"role_lib={len(role_lib.list_all()) if role_lib else 0}, "
-                f"cond_lib={len(cond_lib.list_all()) if cond_lib else 0}, "
-                f"lit_lib={len(lit_lib.list_all()) if lit_lib else 0}, "
                 f"project_settings={project_settings}"
             )
 
@@ -801,11 +793,14 @@ class MainWindow(QMainWindow):
                               sm: StateMachine):
         StaTableLogger.debug(
             f"add_state_machine_tab: name={name}, "
+            f"layer_name='{getattr(sm, 'layer_name', '')}', "
             f"layer_priority={getattr(sm, 'layer_priority', 5)}, "
-            f"roles={len(self.role_function_library.list_all())}, "
-            f"conditions={len(self.condition_library.list_all())}, "
-            f"literals={len(self.literal_library.list_all())}"
+            f"roles={len(self.role_function_library.list_all())}"
         )
+
+        # 層名未設定ならタブ名をデフォルト層名に
+        if not getattr(sm, 'layer_name', ''):
+            sm.layer_name = name
 
         tab = StateMachineTab(
             sm,
@@ -816,7 +811,8 @@ class MainWindow(QMainWindow):
         idx = self.tab_widget.addTab(tab, name)
         self.tab_widget.setCurrentIndex(idx)
         self.logger.debug(
-            f"Tab '{name}' added at index {idx}")
+            f"Tab '{name}' added at index {idx} "
+            f"(layer_name='{sm.layer_name}')")
 
     def close_tab(self, index: int):
         if self.tab_widget.count() <= 1:
@@ -856,6 +852,20 @@ class MainWindow(QMainWindow):
         sample_gen = SampleDataGenerator()
         return sample_gen.get_sample_data()
 
+    # ★ 複数層対応ヘルパー
+    def _get_all_layers(self):
+        """全タブの (name, sm) リストを優先度昇順で返す"""
+        layers = []
+        for index in range(self.tab_widget.count()):
+            tab = self.tab_widget.widget(index)
+            if hasattr(tab, 'sm'):
+                name = self.tab_widget.tabText(index)
+                layers.append((name, tab.sm))
+        layers.sort(
+            key=lambda x: getattr(x[1], 'layer_priority', 5)
+        )
+        return layers
+
     def open_validation_dialog(self):
         StaTableLogger.debug(
             "MainWindow.open_validation_dialog called")
@@ -868,14 +878,27 @@ class MainWindow(QMainWindow):
     def open_code_generation_dialog(self):
         StaTableLogger.debug(
             "MainWindow.open_code_generation_dialog called")
-        state_machine, global_defs = self._get_current_data()
+
+        # ★ 全タブを層として収集
+        layers = self._get_all_layers()
+        if layers:
+            primary_sm = layers[0][1]
+            gd = self.global_defs
+        else:
+            sample_gen = SampleDataGenerator()
+            primary_sm, gd = sample_gen.get_sample_data()
+            layers = [(getattr(primary_sm, 'layer_name', ''),
+                       primary_sm)]
+
         dialog = CodeGenerationDialog(
-            state_machine=state_machine,
-            global_defs=global_defs,
+            state_machine=primary_sm,
+            global_defs=gd,
             parent=self,
             role_function_library=(
                 self.role_function_library),
         )
+        # ★ 全層を渡す
+        dialog.all_layers = layers
         dialog.config_manager = self.config_manager
         dialog._load_config_to_ui()
         dialog.exec()
@@ -893,12 +916,11 @@ class MainWindow(QMainWindow):
             "CodeGenerationSettingsDialog closed")
 
     # ------------------------------------------------------------------
-    # 生成コード直接保存（警告収集対応）
+    # 生成コード直接保存（複数層 + 警告収集対応）
     # ------------------------------------------------------------------
     def save_generated_code_direct(self):
         StaTableLogger.debug(
             "MainWindow.save_generated_code_direct called")
-        state_machine, global_defs = self._get_current_data()
         config = self.config_manager.get_config()
         output_dir = config.output_directory
 
@@ -914,7 +936,18 @@ class MainWindow(QMainWindow):
             if not output_dir:
                 return
 
-        # ★ 警告収集ハンドラ
+        # ★ 全タブを層として収集
+        layers = self._get_all_layers()
+        if not layers:
+            QMessageBox.warning(
+                self, "警告", "タブがありません。")
+            return
+
+        global_defs = self.global_defs
+        if global_defs is None:
+            sample_gen = SampleDataGenerator()
+            _, global_defs = sample_gen.get_sample_data()
+
         collector = WarningCollector()
         root_logger = logging.getLogger()
         root_logger.addHandler(collector)
@@ -922,8 +955,9 @@ class MainWindow(QMainWindow):
         saved_files = []
         try:
             generator = CCodeGenerator(config=config)
-            generated_files = generator.generate_all(
-                state_machine,
+            # ★ 複数層生成
+            generated_files = generator.generate_all_layers(
+                layers,
                 global_defs,
                 role_function_library=(
                     self.role_function_library),
@@ -942,7 +976,7 @@ class MainWindow(QMainWindow):
 
             StaTableLogger.info(
                 f"{len(saved_files)} files saved to "
-                f"{output_dir}")
+                f"{output_dir} ({len(layers)} layers)")
 
         except Exception as e:
             QMessageBox.critical(
@@ -954,14 +988,12 @@ class MainWindow(QMainWindow):
         finally:
             root_logger.removeHandler(collector)
 
-        # ★ 完了メッセージ
         QMessageBox.information(
             self, "保存完了",
-            f"{len(saved_files)}ファイルを"
-            f"保存しました。\n\n"
+            f"{len(saved_files)}ファイルを保存しました。\n"
+            f"層数: {len(layers)}\n\n"
             f"出力先: {output_dir}")
 
-        # ★ 警告表示（重複除去）
         if collector.records:
             seen = set()
             unique = []
@@ -970,7 +1002,6 @@ class MainWindow(QMainWindow):
                     seen.add(r)
                     unique.append(r)
             QMessageBox.warning(
-                self,
-                "生成時の警告",
+                self, "生成時の警告",
                 "以下の警告が発生しました:\n\n"
                 + "\n".join(f"・{m}" for m in unique))
