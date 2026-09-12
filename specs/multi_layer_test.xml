@@ -53,7 +53,8 @@
                 <State name="Active" type="normal" parent="" entry="" exit="" do="" description="動作中" />
             </States>
             <Events>
-                <Event name="START" id="1" kind="signal" params="" priority="0" description="起動" delivery_type="direct" source_layer="application" data_type="" data_name="" title="起動" />
+                <!-- ★ 修正: source_layer="application" → "middleware" -->
+                <Event name="START" id="1" kind="signal" params="" priority="0" description="起動" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="起動" />
             </Events>
             <RoleFunctions />
             <Transitions>
