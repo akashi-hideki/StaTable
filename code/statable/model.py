@@ -66,6 +66,14 @@ class Event:
 
 @dataclass
 class Transition:
+    """
+    状態遷移定義
+
+    【注意】本クラスは kw_only 化していません。
+    sample_data.py の `Transition("Idle", "START", "", "init()", "Active", ...)`
+    という位置引数バグ（v1.4 §9.6 #67）が残っているため、kw_only 化すると
+    起動時に TypeError になります。sample_data.py の修正後に kw_only 化予定。
+    """
     source: str
     event: str
     condition: str = ""                # 条件式（シンボル名で保持）
@@ -83,9 +91,17 @@ class Transition:
             self.title = "(無題遷移)"
 
 
-@dataclass
+@dataclass(kw_only=True)
 class RoleFunction:
-    """ロール関数（状態遷移条件・動作をまとめて実装する関数）
+    """
+    ロール関数（状態遷移条件・動作をまとめて実装する関数）
+
+    【v1.5 変更】kw_only=True 化
+      位置引数によるフィールド順序ずれ事故（v1.4 §9.6 #76）を
+      構造的に防止するため、kw_only 引数のみ受け付ける。
+
+    旧: RoleFunction(name, desc, ret, ...)  ← 位置引数（危険）
+    新: RoleFunction(name=..., description=..., return_type=...)  ← kwarg のみ
 
     namespace: 層名や機能グループ名（例: "Driver"）
       - `Driver.Init` のように参照可能

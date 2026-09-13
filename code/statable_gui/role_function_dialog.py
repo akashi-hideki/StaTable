@@ -25,6 +25,19 @@ class RoleFunctionDialog(QDialog):
         self.name_edit.setText(role_function.name if role_function else "")
         layout.addRow("関数名", self.name_edit)
 
+        # ★ v1.5 新規: 名前空間（namespace）入力欄
+        self.namespace_edit = QLineEdit()
+        self.namespace_edit.setText(
+            role_function.namespace if role_function else ""
+        )
+        self.namespace_edit.setPlaceholderText("例: Driver（空なら層なし）")
+        self.namespace_edit.setToolTip(
+            "名前空間（層名・機能グループ名）。\n"
+            "指定すると 'Driver.Init' の形式で参照できます。\n"
+            "空の場合は層なし扱い（'Init'）となります。"
+        )
+        layout.addRow("名前空間", self.namespace_edit)
+
         self.desc_edit = QLineEdit()
         self.desc_edit.setText(role_function.description if role_function else "")
         layout.addRow("説明", self.desc_edit)
@@ -63,8 +76,15 @@ class RoleFunctionDialog(QDialog):
         self.accept()
 
     def get_role_function(self) -> RoleFunction:
+        """
+        【v1.5 変更】namespace を設定、および全引数を kwarg で指定
+          - model.py の RoleFunction が kw_only=True 化されたため、
+            位置引数では構築できません。
+          - namespace 欄の値も反映します。
+        """
         return RoleFunction(
             name=self.name_edit.text().strip(),
+            namespace=self.namespace_edit.text().strip(),   # ★ 新規追加
             description=self.desc_edit.text().strip(),
             return_type=self.return_type_edit.text().strip(),
             arg1_type=self.arg1_type_edit.text().strip(),

@@ -17,10 +17,18 @@
   7. ファイル末尾のユーザー追加領域
 
 state_machine 未指定時:
-  - 5. のみ（transition_id なし）+ 7.版: 3.0（2026-09-13 / Stage 4: 遷移側 Namespace.Name 対応）
+  - 5. のみ（transition_id なし）+ 7.
+
+版: 3.0（2026-09-13 / Stage 4: 遷移側 Namespace.Name 対応）
   - _normalize_func_ref が qualified_name を保持
   - _extract_func_names_from_condition が 'Driver.Init' 形式を検出
   - _get_call_sites_for_func で qualified / bare 両対応の検索
+
+【v1.5 追加】
+  - _VALID_C_IDENTIFIER ガードを _normalize_func_ref に追加
+    → 'retry_count++' 等の C 演算子混入参照を弾く
+    → 不正な RoleFunc_retry_count++ の生成を防止
+  - generate_all_implementations に未定義参照の警告ログを追加
 """
 
 import sys
@@ -46,6 +54,16 @@ except ImportError:
     from code_merger import CodeMerger
 
 logger = logging.getLogger(__name__)
+
+
+# ======================================================================
+# 【v1.5 追加】C 識別子検証用正規表現
+# ======================================================================
+# 「有効な C 識別子」または「Namespace.Name 形式（各パートが有効な C 識別子）」
+_VALID_C_IDENTIFIER = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+_VALID_QUALIFIED = re.compile(
+    r'^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$'
+)
 
 
 # ======================================================================
@@ -465,15 +483,16 @@ class RoleFunctionGenerator:
 
     # ================================================================
     # ★ Stage 4: 参照文字列の正規化（qualified_name 保持）
+    # ★ v1.5: 不正識別子ガード追加
     # ================================================================
     def _normalize_func_ref(self, ref: str) -> str:
         """
         遷移の参照文字列を正規化し、RoleFunction の qualified_name を返す。
 
-        Stage 4 変更点:
-          - 'Driver.Init' 形式（ドット）を namespace 情報ごと保持
-          - 'RoleFunc_Driver_Init' → 'Driver.Init'（layer_name が一致する場合）
-          - 引数 '(...)' を除去
+        【v1.5 変更】
+          - _VALID_QUALIFIED による識別子検証を追加
+          - 'retry_count++' のような C 演算子混入参照を弾く
+          - 不正な参照は空文字を返し、呼び出し側で警告ログ出力
 
         入力例 → 出力:
           'Driver.Init'              → 'Driver.Init'
@@ -484,6 +503,9 @@ class RoleFunctionGenerator:
           'RoleFunc_Driver_Init'     → 'Driver.Init' (layer_name='Driver' 時)
           'RoleFunc_Init'            → 'Init'
           'Sensor_Init'              → 'Sensor_Init'
+          'retry_count++'            → ''（不正識別子）
+          'g_system_tick++'          → ''（不正識別子）
+          'a + b'                    → ''（不正識別子）
         """
         if not ref:
             return ""
@@ -498,14 +520,40 @@ class RoleFunctionGenerator:
         # 2. RoleFunc_ プレフィックスを処理
         if name.startswith("RoleFunc_"):
             rest = name[len("RoleFunc_"):]
-            # layer_name と一致するプレフィックスなら namespace に変換
+            # 層名プレフィックスを namespace に変換
             if self.layer_name:
                 prefix = f"{self.layer_name}_"
                 if rest.startswith(prefix):
-                    return f"{self.layer_name}.{rest[len(prefix):]}"
-            return rest
+                    candidate = f"{self.layer_name}.{rest[len(prefix):]}"
+                    if _VALID_QUALIFIED.match(candidate):
+                        return candidate
+                    self._log_debug(
+                        f"_normalize_func_ref: reject invalid RoleFunc_ ref: "
+                        f"{ref!r} (candidate={candidate!r})",
+                        'warning',
+                    )
+                    return ""
+            # 層名なし RoleFunc_xxx
+            if _VALID_C_IDENTIFIER.match(rest):
+                return rest
+            self._log_debug(
+                f"_normalize_func_ref: reject invalid RoleFunc_ ref: "
+                f"{ref!r} (rest={rest!r})",
+                'warning',
+            )
+            return ""
 
-        # 3. ドット形式はそのまま（namespace 保持）
+        # 3. ★ v1.5 追加: 識別子検証
+        #    'Namespace.Name' または 'Name' の形式のみ許可
+        if not _VALID_QUALIFIED.match(name):
+            self._log_debug(
+                f"_normalize_func_ref: reject invalid identifier: "
+                f"{ref!r} (name={name!r})",
+                'warning',
+            )
+            return ""
+
+        # 4. ドット形式・単純名はそのまま（namespace 保持）
         return name
 
     # ================================================================
@@ -559,6 +607,7 @@ class RoleFunctionGenerator:
             if n not in _C_KEYWORDS:
                 names.add(n)
 
+        # ★ v1.5: _normalize_func_ref で不正識別子が弾かれる
         return [self._normalize_func_ref(n) for n in names if n]
 
     # ================================================================
@@ -942,7 +991,7 @@ class RoleFunctionGenerator:
         ))
         parts.append(T['body_open'])
 
-        # ★ NULL ガード付き transition メンバー展開
+        # NULL ガード付き transition メンバー展開
         parts.append(self._generate_local_transition_members())
 
         if include_transition_id:
@@ -1010,6 +1059,9 @@ class RoleFunctionGenerator:
         """
         全ロール関数の実装を生成
 
+        【v1.5 変更】
+          - call_map に登録されたが role_functions に存在しない参照を
+            警告ログに出力（デバッグ支援）
         生成順（state_machine 指定時）:
           1. TRANSITION_ID_NONE 定数
           2. 呼び出し元テーブル用 共通構造体
@@ -1024,6 +1076,22 @@ class RoleFunctionGenerator:
         call_map = self._collect_call_sites(state_machine) \
             if include_transition_id else {}
 
+        # ★ v1.5 追加: 未定義参照の検出
+        if call_map:
+            defined_keys = set()
+            for f in unique_funcs:
+                qn = getattr(f, 'qualified_name', None) \
+                    or getattr(f, 'name', '')
+                if qn:
+                    defined_keys.add(qn)
+            for ref in call_map.keys():
+                if ref and ref not in defined_keys:
+                    self._log_debug(
+                        f"Undefined role function reference in "
+                        f"transitions: '{ref}' (not in role_functions)",
+                        'warning',
+                    )
+
         parts = []
 
         if include_transition_id:
@@ -1034,7 +1102,7 @@ class RoleFunctionGenerator:
             parts.append(self.generate_transition_id_prototype())
             parts.append('\n')
 
-            # ★ Stage 4: qualified_name 優先で call_sites を検索
+            # Stage 4: qualified_name 優先で call_sites を検索
             for func in unique_funcs:
                 call_sites = self._get_call_sites_for_func(func, call_map)
                 table_code = self.generate_call_sites_table(
@@ -1046,7 +1114,7 @@ class RoleFunctionGenerator:
 
             parts.append('\n')
 
-        # ★ Stage 4: 同様に qualified_name 優先で検索
+        # Stage 4: 同様に qualified_name 優先で検索
         for func in unique_funcs:
             call_sites = self._get_call_sites_for_func(func, call_map)
             parts.append(self.generate_implementation(

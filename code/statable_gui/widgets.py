@@ -160,9 +160,11 @@ class SettingsPanel(QWidget):
 
         role_tab = QWidget()
         role_layout = QVBoxLayout(role_tab)
-        self.role_table = QTableWidget(0, 8)
+        # ★ v1.5 変更: 8列 → 9列（名前空間列を挿入）
+        self.role_table = QTableWidget(0, 9)
         self.role_table.setHorizontalHeaderLabels([
-            "タイトル", "関数名", "説明", "戻り値型", "引数1型", "引数1名", "引数2型", "引数2名"
+            "タイトル", "関数名", "名前空間", "説明", "戻り値型",
+            "引数1型", "引数1名", "引数2型", "引数2名"
         ])
         self.role_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.role_table.setFont(QFont("Consolas", 10))
@@ -218,17 +220,31 @@ class SettingsPanel(QWidget):
         StaTableLogger.debug(f"Settings populated: {len(states)} states, {len(self.sm.role_functions)} roles")
 
     def populate_role_table(self):
+        """
+        ★ v1.5 変更: 名前空間列 (index 2) を追加
+          旧 8 列 → 新 9 列
+            0: タイトル
+            1: 関数名
+            2: 名前空間   ★ 新規
+            3: 説明
+            4: 戻り値型
+            5: 引数1型
+            6: 引数1名
+            7: 引数2型
+            8: 引数2名
+        """
         roles = list(self.sm.role_functions.values())
         self.role_table.setRowCount(len(roles))
         for row, rf in enumerate(roles):
             self.role_table.setItem(row, 0, QTableWidgetItem(rf.title))
             self.role_table.setItem(row, 1, QTableWidgetItem(rf.name))
-            self.role_table.setItem(row, 2, QTableWidgetItem(rf.description))
-            self.role_table.setItem(row, 3, QTableWidgetItem(rf.return_type))
-            self.role_table.setItem(row, 4, QTableWidgetItem(rf.arg1_type))
-            self.role_table.setItem(row, 5, QTableWidgetItem(rf.arg1_name))
-            self.role_table.setItem(row, 6, QTableWidgetItem(rf.arg2_type))
-            self.role_table.setItem(row, 7, QTableWidgetItem(rf.arg2_name))
+            self.role_table.setItem(row, 2, QTableWidgetItem(rf.namespace))   # ★ 新規
+            self.role_table.setItem(row, 3, QTableWidgetItem(rf.description))
+            self.role_table.setItem(row, 4, QTableWidgetItem(rf.return_type))
+            self.role_table.setItem(row, 5, QTableWidgetItem(rf.arg1_type))
+            self.role_table.setItem(row, 6, QTableWidgetItem(rf.arg1_name))
+            self.role_table.setItem(row, 7, QTableWidgetItem(rf.arg2_type))
+            self.role_table.setItem(row, 8, QTableWidgetItem(rf.arg2_name))
 
     def on_state_table_cell_double_clicked(self, row, col):
         StaTableLogger.debug(f"SettingsPanel.on_state_table_cell_double_clicked: row={row}, col={col}")
@@ -296,6 +312,7 @@ class SettingsPanel(QWidget):
     def delete_role_function(self):
         row = self.role_table.currentRow()
         if row >= 0:
+            # ★ v1.5: 関数名は列 1（変更なし）
             name = self.role_table.item(row, 1).text().strip() if self.role_table.item(row, 1) else ""
             if name and name in self.sm.role_functions:
                 self.sm.remove_role_function(name)
@@ -312,6 +329,18 @@ class SettingsPanel(QWidget):
         self._debounce_timer.start()
 
     def apply_changes(self):
+        """
+        ★ v1.5 変更: RoleFunction を kwarg で構築し、namespace を保持
+
+        旧コード（v1.4 まで）:
+            RoleFunction(name, desc, ret, a1t, a1n, a2t, a2n, title)  ← 位置引数
+              → model.py の namespace 挿入により全フィールドが 1 つずつずれ、
+                 namespace に description が混入するバグ（v1.4 §9.6 #76）
+
+        新コード（v1.5）:
+            RoleFunction(name=..., namespace=..., description=..., ...)  ← kwarg
+        """
+        # === 状態テーブルの反映 ===
         for row in range(self.state_table.rowCount()):
             name = self.state_table.item(row, 0).text().strip() if self.state_table.item(row, 0) else ""
             desc = self.state_table.item(row, 1).text().strip() if self.state_table.item(row, 1) else ""
@@ -331,18 +360,34 @@ class SettingsPanel(QWidget):
                     self.sm.add_state(State(name, type=StateType(type_str), description=desc,
                                              entry=entry, exit=exit_, do=do))
 
+        # === ロール関数テーブルの反映 ===
         self.sm.role_functions.clear()
         for row in range(self.role_table.rowCount()):
-            title = self.role_table.item(row, 0).text().strip() if self.role_table.item(row, 0) else ""
-            name = self.role_table.item(row, 1).text().strip() if self.role_table.item(row, 1) else ""
+            # ★ 新列順: 0=タイトル, 1=関数名, 2=名前空間, 3=説明,
+            #          4=戻り値型, 5=引数1型, 6=引数1名, 7=引数2型, 8=引数2名
+            title     = self.role_table.item(row, 0).text().strip() if self.role_table.item(row, 0) else ""
+            name      = self.role_table.item(row, 1).text().strip() if self.role_table.item(row, 1) else ""
             if name:
-                desc = self.role_table.item(row, 2).text().strip() if self.role_table.item(row, 2) else ""
-                ret = self.role_table.item(row, 3).text().strip() if self.role_table.item(row, 3) else "int"
-                a1t = self.role_table.item(row, 4).text().strip() if self.role_table.item(row, 4) else "int"
-                a1n = self.role_table.item(row, 5).text().strip() if self.role_table.item(row, 5) else "arg1"
-                a2t = self.role_table.item(row, 6).text().strip() if self.role_table.item(row, 6) else "int"
-                a2n = self.role_table.item(row, 7).text().strip() if self.role_table.item(row, 7) else "arg2"
-                self.sm.add_role_function(RoleFunction(name, desc, ret, a1t, a1n, a2t, a2n, title))
+                namespace = self.role_table.item(row, 2).text().strip() if self.role_table.item(row, 2) else ""
+                desc      = self.role_table.item(row, 3).text().strip() if self.role_table.item(row, 3) else ""
+                ret       = self.role_table.item(row, 4).text().strip() if self.role_table.item(row, 4) else "int"
+                a1t       = self.role_table.item(row, 5).text().strip() if self.role_table.item(row, 5) else "int"
+                a1n       = self.role_table.item(row, 6).text().strip() if self.role_table.item(row, 6) else "arg1"
+                a2t       = self.role_table.item(row, 7).text().strip() if self.role_table.item(row, 7) else "int"
+                a2n       = self.role_table.item(row, 8).text().strip() if self.role_table.item(row, 8) else "arg2"
+
+                # ★ 全 kwarg で構築（kw_only=True 対応 + namespace 保持）
+                self.sm.add_role_function(RoleFunction(
+                    name=name,
+                    namespace=namespace,
+                    description=desc,
+                    return_type=ret,
+                    arg1_type=a1t,
+                    arg1_name=a1n,
+                    arg2_type=a2t,
+                    arg2_name=a2n,
+                    title=title,
+                ))
         StaTableLogger.debug("Settings changes applied")
 
 

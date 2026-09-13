@@ -45,21 +45,90 @@ def create_sample_state_machine() -> StateMachine:
 
     sm.set_initial("Idle")
 
-    sm.add_transition(Transition("Idle", "START", "", "init()", "Active", title="起動"))
-    sm.add_transition(Transition("Active", "STOP", "", "stop()", "Idle", title="停止"))
-    sm.add_transition(Transition("Active", "ERROR", "err_code != 0", "log()", "Error", title="エラーへ"))
-    sm.add_transition(Transition("Error", "", "retry_count < 3", "retry_count++", "Active", title="リトライ"))
-    sm.add_transition(Transition("Error", "", "retry_count >= 3", "", "Halt", title="停止へ"))
-    sm.add_transition(Transition("Active", "ERROR", "err_code == 0", "ignore()", "Active", title="無視"))
+    # ==================================================================
+    # 【v1.5 修正】Transition 位置引数バグの根本修正（v1.4 §9.6 #67）
+    #
+    # 旧コード（v1.4 まで）:
+    #   Transition("Idle", "START", "", "init()", "Active", title="起動")
+    #     → 4 番目の "init()" が pre_actions（List[str]）に文字列で渡され、
+    #       XML 保存時に 1 文字ずつ分解されるバグの原因。
+    #
+    # 新コード（v1.5）:
+    #   全 kwarg + pre_actions を List[str] で明示。
+    #   model.py の Transition は将来 kw_only 化予定のため、
+    #   ここで kwarg 化しておくことで移行が安全になる。
+    # ==================================================================
+    sm.add_transition(Transition(
+        source="Idle",
+        event="START",
+        condition="",
+        pre_actions=["init()"],
+        target="Active",
+        title="起動",
+    ))
+    sm.add_transition(Transition(
+        source="Active",
+        event="STOP",
+        condition="",
+        pre_actions=["stop()"],
+        target="Idle",
+        title="停止",
+    ))
+    sm.add_transition(Transition(
+        source="Active",
+        event="ERROR",
+        condition="err_code != 0",
+        pre_actions=["log()"],
+        target="Error",
+        title="エラーへ",
+    ))
+    sm.add_transition(Transition(
+        source="Error",
+        event="",
+        condition="retry_count < 3",
+        pre_actions=["retry_count++"],
+        target="Active",
+        title="リトライ",
+    ))
+    sm.add_transition(Transition(
+        source="Error",
+        event="",
+        condition="retry_count >= 3",
+        pre_actions=[],
+        target="Halt",
+        title="停止へ",
+    ))
+    sm.add_transition(Transition(
+        source="Active",
+        event="ERROR",
+        condition="err_code == 0",
+        pre_actions=["ignore()"],
+        target="Active",
+        title="無視",
+    ))
 
-    sm.add_role_function(RoleFunction(name="Sensor_Init", description="センサ初期化",
-                                      return_type="int", arg1_type="uint8_t", arg1_name="channel",
-                                      arg2_type="uint32_t", arg2_name="timeout_ms",
-                                      title="センサ初期化"))
-    sm.add_role_function(RoleFunction(name="Error_Log", description="エラーログ出力",
-                                      return_type="void", arg1_type="int", arg1_name="err_code",
-                                      arg2_type="int", arg2_name="level",
-                                      title="エラーログ出力"))
+    sm.add_role_function(RoleFunction(
+        name="Sensor_Init",
+        namespace="",                       # ★ 明示（kw_only 対応）
+        description="センサ初期化",
+        return_type="int",
+        arg1_type="uint8_t",
+        arg1_name="channel",
+        arg2_type="uint32_t",
+        arg2_name="timeout_ms",
+        title="センサ初期化",
+    ))
+    sm.add_role_function(RoleFunction(
+        name="Error_Log",
+        namespace="",
+        description="エラーログ出力",
+        return_type="void",
+        arg1_type="int",
+        arg1_name="err_code",
+        arg2_type="int",
+        arg2_name="level",
+        title="エラーログ出力",
+    ))
 
     return sm
 
