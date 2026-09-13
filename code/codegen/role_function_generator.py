@@ -17,7 +17,10 @@
   7. ファイル末尾のユーザー追加領域
 
 state_machine 未指定時:
-  - 5. のみ（transition_id なし）+ 7.
+  - 5. のみ（transition_id なし）+ 7.版: 3.0（2026-09-13 / Stage 4: 遷移側 Namespace.Name 対応）
+  - _normalize_func_ref が qualified_name を保持
+  - _extract_func_names_from_condition が 'Driver.Init' 形式を検出
+  - _get_call_sites_for_func で qualified / bare 両対応の検索
 """
 
 import sys
@@ -461,39 +464,89 @@ class RoleFunctionGenerator:
         return qualified
 
     # ================================================================
-    # 呼び出しサイト収集
+    # ★ Stage 4: 参照文字列の正規化（qualified_name 保持）
     # ================================================================
     def _normalize_func_ref(self, ref: str) -> str:
-        """RoleFunc_<NS>_<Name> / <NS>.<Name> / <NS>_<Name> → <Name>"""
+        """
+        遷移の参照文字列を正規化し、RoleFunction の qualified_name を返す。
+
+        Stage 4 変更点:
+          - 'Driver.Init' 形式（ドット）を namespace 情報ごと保持
+          - 'RoleFunc_Driver_Init' → 'Driver.Init'（layer_name が一致する場合）
+          - 引数 '(...)' を除去
+
+        入力例 → 出力:
+          'Driver.Init'              → 'Driver.Init'
+          'Driver.Init()'            → 'Driver.Init'
+          'Driver.Init(arg1, arg2)'  → 'Driver.Init'
+          'Init'                     → 'Init'
+          'Init(arg1, arg2)'         → 'Init'
+          'RoleFunc_Driver_Init'     → 'Driver.Init' (layer_name='Driver' 時)
+          'RoleFunc_Init'            → 'Init'
+          'Sensor_Init'              → 'Sensor_Init'
+        """
         if not ref:
             return ""
-        name = ref
+        name = ref.strip()
+        if not name:
+            return ""
+
+        # 1. 引数部分を除去
+        if '(' in name:
+            name = name.split('(', 1)[0].strip()
+
+        # 2. RoleFunc_ プレフィックスを処理
         if name.startswith("RoleFunc_"):
-            name = name[len("RoleFunc_"):]
-        # namespace.separator 形式
-        if '.' in name:
-            name = name.split('.', 1)[1]
-        # namespace プレフィックス除去
-        if self.layer_name and name.startswith(f"{self.layer_name}_"):
-            name = name[len(self.layer_name) + 1:]
+            rest = name[len("RoleFunc_"):]
+            # layer_name と一致するプレフィックスなら namespace に変換
+            if self.layer_name:
+                prefix = f"{self.layer_name}_"
+                if rest.startswith(prefix):
+                    return f"{self.layer_name}.{rest[len(prefix):]}"
+            return rest
+
+        # 3. ドット形式はそのまま（namespace 保持）
         return name
 
+    # ================================================================
+    # ★ Stage 4: 条件式からの関数抽出（ドット形式対応）
+    # ================================================================
     def _extract_func_names_from_condition(self, condition: str) -> List[str]:
+        """
+        条件式から関数参照を抽出し、正規化した qualified_name リストを返す。
+
+        Stage 4 変更点:
+          - 'Namespace.Name' 形式（ドット）を検出
+        """
         if not condition:
             return []
         names = set()
+
+        # 1. RoleFunc_XXX 形式
         for m in re.finditer(r'\bRoleFunc_\w+', condition):
             names.add(m.group(0))
+
+        # 2. Namespace.Name 形式（★ Stage 4 追加）
+        for m in re.finditer(r'\b([A-Z]\w*)\.([A-Za-z_]\w*)\b', condition):
+            names.add(f"{m.group(1)}.{m.group(2)}")
+
+        # 3. function_name(...) 形式
         for m in re.finditer(r'\b([A-Za-z_][A-Za-z0-9_]*)\s*\(', condition):
             n = m.group(1)
             if n not in _C_KEYWORDS:
                 names.add(n)
+
+        # 4. bare identifier のみ
         stripped = condition.strip()
         if re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', stripped):
             if stripped not in _C_KEYWORDS:
                 names.add(stripped)
+
         return [self._normalize_func_ref(n) for n in names if n]
 
+    # ================================================================
+    # 呼び出しサイト収集
+    # ================================================================
     def _collect_call_sites(self, state_machine
                             ) -> Dict[str, List[RoleFuncCallSite]]:
         if state_machine is None:
@@ -552,6 +605,29 @@ class RoleFunctionGenerator:
             f"{sum(len(v) for v in call_map.values())} call sites"
         )
         return call_map
+
+    # ================================================================
+    # ★ Stage 4: call_sites 検索ヘルパー
+    # ================================================================
+    def _get_call_sites_for_func(
+        self, func, call_map: Dict[str, List[RoleFuncCallSite]],
+    ) -> List[RoleFuncCallSite]:
+        """
+        func に対応する call_sites を検索（Stage 4: qualified 優先）
+
+        検索順:
+          1. func.qualified_name （'Driver.Init'）
+          2. func.name          （'Init'、後方互換）
+        """
+        qualified = getattr(func, 'qualified_name', None) or ''
+        if qualified:
+            cs = call_map.get(qualified, [])
+            if cs:
+                return cs
+        bare = getattr(func, 'name', '')
+        if bare:
+            return call_map.get(bare, [])
+        return []
 
     def _format_call_sites_comment(self, call_sites) -> str:
         T = self.CALL_SITES_COMMENT_TEMPLATES
@@ -941,9 +1017,9 @@ class RoleFunctionGenerator:
             parts.append(self.generate_transition_id_prototype())
             parts.append('\n')
 
+            # ★ Stage 4: qualified_name 優先で call_sites を検索
             for func in unique_funcs:
-                func_name = getattr(func, 'name', '')
-                call_sites = call_map.get(func_name, [])
+                call_sites = self._get_call_sites_for_func(func, call_map)
                 table_code = self.generate_call_sites_table(
                     func, call_sites
                 )
@@ -953,9 +1029,9 @@ class RoleFunctionGenerator:
 
             parts.append('\n')
 
+        # ★ Stage 4: 同様に qualified_name 優先で検索
         for func in unique_funcs:
-            func_name = getattr(func, 'name', '')
-            call_sites = call_map.get(func_name, [])
+            call_sites = self._get_call_sites_for_func(func, call_map)
             parts.append(self.generate_implementation(
                 func, global_defs, call_sites, include_transition_id,
             ))

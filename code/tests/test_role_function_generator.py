@@ -600,12 +600,12 @@ class TestCallSiteCollection(unittest.TestCase):
     def test_extract_call(self):
         self.assertIn("StartOk",
                       self.gen._extract_func_names_from_condition("StartOk()"))
-
     def test_extract_rolefunc(self):
         names = self.gen._extract_func_names_from_condition(
             "RoleFunc_Driver_StartOk(transition, ctx)"
         )
-        self.assertIn("StartOk", names)
+        # Stage 4: qualified_name で返る
+        self.assertIn("Driver.StartOk", names)
 
     def test_extract_expression(self):
         names = self.gen._extract_func_names_from_condition("CheckA() && CheckB()")
