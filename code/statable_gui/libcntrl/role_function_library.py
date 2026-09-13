@@ -4,26 +4,40 @@
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 
 @dataclass
 class RoleFunction:
-    """共有ロール関数定義"""
-    name: str                       # 一意な関数名
+    """共有ロール関数定義
+
+    namespace: 層名・機能グループ名（例: "Driver"）
+      - `Driver.Init` のように参照可能
+      - 空文字の場合は層なし扱い
+    """
+    name: str                       # 純粋名（例: "Init"）
+    namespace: str = ""             # 名前空間（例: "Driver"）
     description: str = ""
-    title: str = ""                 # 表示名
-    used_global_vars: List[str] = field(default_factory=list)  # 使用グローバル変数
-    used_events: List[str] = field(default_factory=list)       # 使用イベント
-    used_literals: List[str] = field(default_factory=list)     # 使用リテラル
+    title: str = ""
+    used_global_vars: List[str] = field(default_factory=list)
+    used_events: List[str] = field(default_factory=list)
+    used_literals: List[str] = field(default_factory=list)
 
     def __post_init__(self):
         if not self.title:
-            self.title = self.name
+            self.title = self.qualified_name
+
+    @property
+    def qualified_name(self) -> str:
+        """GUI 表示用: 'Driver.Init' または 'Init'"""
+        if self.namespace:
+            return f"{self.namespace}.{self.name}"
+        return self.name
 
     def to_dict(self) -> dict:
         return {
             'name': self.name,
+            'namespace': self.namespace,
             'description': self.description,
             'title': self.title,
             'used_global_vars': list(self.used_global_vars),
@@ -35,6 +49,7 @@ class RoleFunction:
     def from_dict(cls, data: dict) -> 'RoleFunction':
         return cls(
             name=data.get('name', ''),
+            namespace=data.get('namespace', ''),
             description=data.get('description', ''),
             title=data.get('title', ''),
             used_global_vars=list(data.get('used_global_vars', [])),
@@ -49,17 +64,35 @@ class RoleFunctionLibrary:
     def __init__(self):
         self.role_functions: Dict[str, RoleFunction] = {}
 
+    def _key(self, rf: RoleFunction) -> str:
+        """ライブラリ内での一意キー: 'Driver.Init'"""
+        return rf.qualified_name
+
     def add(self, rf: RoleFunction):
-        if rf.name in self.role_functions:
-            raise ValueError(f"Role function '{rf.name}' already exists")
-        self.role_functions[rf.name] = rf
+        key = self._key(rf)
+        if key in self.role_functions:
+            raise ValueError(f"Role function '{key}' already exists")
+        self.role_functions[key] = rf
 
     def remove(self, name: str):
+        """name は qualified_name でも純粋名でもOK"""
         if name in self.role_functions:
             del self.role_functions[name]
+            return
+        # 純粋名での検索
+        for key, rf in list(self.role_functions.items()):
+            if rf.name == name:
+                del self.role_functions[key]
+                return
 
-    def get(self, name: str) -> RoleFunction:
-        return self.role_functions.get(name)
+    def get(self, name: str) -> Optional[RoleFunction]:
+        """name は qualified_name でも純粋名でもOK"""
+        if name in self.role_functions:
+            return self.role_functions[name]
+        for rf in self.role_functions.values():
+            if rf.name == name:
+                return rf
+        return None
 
     def list_all(self) -> List[RoleFunction]:
         return list(self.role_functions.values())
@@ -74,5 +107,8 @@ class RoleFunctionLibrary:
         lib = cls()
         for item in data.get('role_functions', []):
             rf = RoleFunction.from_dict(item)
-            lib.add(rf)
+            try:
+                lib.add(rf)
+            except ValueError:
+                pass  # 重複は無視
         return lib

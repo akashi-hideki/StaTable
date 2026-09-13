@@ -87,13 +87,25 @@ class InterruptAction:
 
 @dataclass
 class InterruptHandlerDef:
-    """割り込み処理定義"""
+    """割り込み処理定義
+
+    used_role_functions: 使用ロール関数の qualified_name リスト（自動抽出）
+      - 例: ["Driver.Init", "Application.HandleTick"]
+      - ISR の action 保存時に更新
+      - 生成コードのコメントにも使用
+
+    used_variables: 使用グローバル変数名のリスト（自動抽出）
+      - 例: ["counter", "g_system_tick"]
+    """
     name: str
     description: str = ""
     event_names: List[str] = field(default_factory=list)
     is_timer: bool = False
     actions: List[InterruptAction] = field(default_factory=list)
     title: str = ""
+    # ★ 追加: 使用記録
+    used_role_functions: List[str] = field(default_factory=list)
+    used_variables: List[str] = field(default_factory=list)
 
     def __post_init__(self):
         if not self.title:

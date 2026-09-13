@@ -69,7 +69,7 @@ class Transition:
     source: str
     event: str
     condition: str = ""                # 条件式（シンボル名で保持）
-    pre_actions: List[str] = field(default_factory=list)  # 遷移直前処理（ロール関数名リスト）
+    pre_actions: List[str] = field(default_factory=list)  # 遷移直前処理
     target: str = ""
     has_else: bool = True
     else_target: str = ""
@@ -85,10 +85,16 @@ class Transition:
 
 @dataclass
 class RoleFunction:
-    """ロール関数（状態遷移条件・動作をまとめて実装する関数）"""
-    name: str
+    """ロール関数（状態遷移条件・動作をまとめて実装する関数）
+
+    namespace: 層名や機能グループ名（例: "Driver"）
+      - `Driver.Init` のように参照可能
+      - 空文字の場合は層なし扱い
+    """
+    name: str                               # 純粋名（例: "Init"）
+    namespace: str = ""                     # 名前空間（例: "Driver"）
     description: str = ""
-    return_type: str = "void"          # 新方式では固定
+    return_type: str = "void"
     arg1_type: str = ""
     arg1_name: str = ""
     arg2_type: str = ""
@@ -97,4 +103,28 @@ class RoleFunction:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"ロール関数: {self.name}"
+            self.title = f"ロール関数: {self.qualified_name}"
+
+    @property
+    def qualified_name(self) -> str:
+        """GUI 表示・ISR 参照用: 'Driver.Init' または 'Init'"""
+        if self.namespace:
+            return f"{self.namespace}.{self.name}"
+        return self.name
+
+    @classmethod
+    def from_legacy_name(cls, legacy_name: str,
+                         layer_names: Optional[List[str]] = None) -> 'RoleFunction':
+        """
+        旧形式 'Driver_Init' → namespace='Driver', name='Init'
+        レイヤ名リストに該当がなければ namespace=''
+        """
+        if not legacy_name:
+            return cls(name="")
+        if layer_names:
+            for layer in layer_names:
+                prefix = f"{layer}_"
+                if legacy_name.startswith(prefix):
+                    return cls(name=legacy_name[len(prefix):],
+                               namespace=layer)
+        return cls(name=legacy_name, namespace="")

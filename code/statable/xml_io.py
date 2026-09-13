@@ -1,12 +1,13 @@
 # statable/xml_io.py
 """
-XML入出力（プロジェクト設定・レイヤ優先度・層名対応版）
-- プロジェクト保存/読込で共有ライブラリ（ロール関数・遷移条件・リテラル）を保存
+XML入出力（プロジェクト設定・レイヤ優先度・層名・名前空間対応版）
+- プロジェクト保存/読込で共有ライブラリを保存
 - Transitionのpre_actions/else_actions/has_else/else_targetも保存
 - 文字列→リスト正規化、1文字分解の自動結合
-- libcntrl.RoleFunction の引数互換対応
 - レイヤ優先度・説明・層名（layer_name）・プロジェクト名の保存/復元
-- 各段階でデバッグログを出力
+- RoleFunction の namespace 保存/復元
+- InterruptHandlerDef の used_role_functions / used_variables 保存/復元
+- レガシー XML（namespace 無し）の自動移行
 """
 
 import xml.etree.ElementTree as ET
@@ -82,10 +83,10 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
     if sm.initial_state:
         root.set("initial", sm.initial_state)
 
-    # ★ レイヤ設定
+    # レイヤ設定
     root.set("layer_priority", str(getattr(sm, 'layer_priority', 5)))
     root.set("layer_description", getattr(sm, 'layer_description', ''))
-    root.set("layer_name", getattr(sm, 'layer_name', ''))    # ★ 追加
+    root.set("layer_name", getattr(sm, 'layer_name', ''))
     logger.debug(f"  layer_priority={getattr(sm, 'layer_priority', 5)}, "
                  f"layer_description='{getattr(sm, 'layer_description', '')}', "
                  f"layer_name='{getattr(sm, 'layer_name', '')}'")
@@ -120,10 +121,12 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
         }
         ET.SubElement(events_elem, "Event", **attrs)
 
+    # ★ RoleFunctions に namespace 属性を追加
     roles_elem = ET.SubElement(root, "RoleFunctions")
     for rf in sm.role_functions.values():
         attrs = {
             "name": rf.name,
+            "namespace": getattr(rf, 'namespace', ''),
             "description": rf.description,
             "return_type": rf.return_type,
             "arg1_type": rf.arg1_type,
@@ -141,10 +144,6 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
         else_actions = _normalize_actions(getattr(t, 'else_actions', []))
         has_else = getattr(t, 'has_else', True)
         else_target = getattr(t, 'else_target', '')
-
-        logger.debug(f"  transition[{idx}]: source={t.source}, event={t.event}, target={t.target}, "
-                     f"pre_actions={pre_actions}, else_actions={else_actions}, "
-                     f"has_else={has_else}, else_target={else_target}")
 
         attrs = {
             "source": t.source,
@@ -173,25 +172,21 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
 
     sm = StateMachine()
     initial_state_name = elem.get("initial")
-    logger.debug(f"  initial_state_name={initial_state_name}")
 
-    # ★ レイヤ設定
+    # レイヤ設定
     try:
         sm.layer_priority = int(elem.get("layer_priority", "5"))
     except ValueError:
         sm.layer_priority = 5
     sm.layer_description = elem.get("layer_description", "")
-    sm.layer_name = elem.get("layer_name", "")    # ★ 追加
-    logger.debug(f"  layer_priority={sm.layer_priority}, "
-                 f"layer_description='{sm.layer_description}', "
-                 f"layer_name='{sm.layer_name}'")
+    sm.layer_name = elem.get("layer_name", "")
+    logger.debug(f"  layer_name='{sm.layer_name}'")
 
     states_elem = elem.find("States")
     if states_elem is None:
         logger.error("  <States> element not found!")
         return sm
     for state_elem in states_elem:
-        logger.debug(f"  state: name={state_elem.get('name')}, type={state_elem.get('type')}")
         try:
             sm.add_state(State(
                 name=state_elem.get("name", ""),
@@ -206,14 +201,10 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             logger.error(f"  Failed to load state: {e}", exc_info=True)
 
     events_elem = elem.find("Events")
-    if events_elem is None:
-        logger.error("  <Events> element not found!")
-    else:
+    if events_elem is not None:
         for event_elem in events_elem:
             params_str = event_elem.get("params", "")
             params = [p.strip() for p in params_str.split(",") if p.strip()] if params_str else []
-            logger.debug(f"  event: name='{event_elem.get('name')}', kind={event_elem.get('kind')}, "
-                         f"delivery={event_elem.get('delivery_type')}, params={params}")
             try:
                 sm.add_event(Event(
                     name=event_elem.get("name", ""),
@@ -231,15 +222,29 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             except Exception as e:
                 logger.error(f"  Failed to load event: {e}", exc_info=True)
 
+    # ★ RoleFunctions: namespace 読込 + レガシー移行
     roles_elem = elem.find("RoleFunctions")
-    if roles_elem is None:
-        logger.debug("  <RoleFunctions> element not found (optional)")
-    else:
+    if roles_elem is not None:
         for rf_elem in roles_elem:
-            logger.debug(f"  role_function: name={rf_elem.get('name')}")
+            raw_name = rf_elem.get("name", "")
+            namespace = rf_elem.get("namespace", "")
+
+            # レガシー移行: namespace 未設定 + name が層名プレフィックス付き
+            if not namespace and sm.layer_name:
+                legacy_prefix = f"{sm.layer_name}_"
+                if raw_name.startswith(legacy_prefix):
+                    logger.warning(
+                        f"  Migrating legacy role function: "
+                        f"'{raw_name}' -> namespace='{sm.layer_name}', "
+                        f"name='{raw_name[len(legacy_prefix):]}'"
+                    )
+                    namespace = sm.layer_name
+                    raw_name = raw_name[len(legacy_prefix):]
+
             try:
                 sm.add_role_function(RoleFunction(
-                    name=rf_elem.get("name", ""),
+                    name=raw_name,
+                    namespace=namespace,
                     description=rf_elem.get("description", ""),
                     return_type=rf_elem.get("return_type", "int"),
                     arg1_type=rf_elem.get("arg1_type", "int"),
@@ -252,9 +257,7 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
                 logger.error(f"  Failed to load role_function: {e}", exc_info=True)
 
     trans_elem = elem.find("Transitions")
-    if trans_elem is None:
-        logger.error("  <Transitions> element not found!")
-    else:
+    if trans_elem is not None:
         for trans_elem_child in trans_elem:
             # ★ 生のリストを取得
             pre_actions_raw = [p.get("action", "") for p in trans_elem_child.findall("PreAction")]
@@ -267,13 +270,6 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             has_else_str = trans_elem_child.get("has_else", "true")
             has_else = has_else_str.lower() == "true"
             else_target = trans_elem_child.get("else_target", "")
-
-            logger.debug(f"  transition: source={trans_elem_child.get('source')}, "
-                         f"event='{trans_elem_child.get('event')}', "
-                         f"target={trans_elem_child.get('target')}, "
-                         f"pre_actions(raw={pre_actions_raw})->normalized={pre_actions}, "
-                         f"else_actions(raw={else_actions_raw})->normalized={else_actions}, "
-                         f"has_else={has_else}(from '{has_else_str}'), else_target='{else_target}'")
 
             try:
                 sm.add_transition(Transition(
@@ -295,8 +291,9 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
     if initial_state_name:
         sm.set_initial(initial_state_name)
 
-    logger.debug(f"state_machine_from_element: loaded states={len(sm.states)}, events={len(sm.events)}, "
-                 f"roles={len(sm.role_functions)}, transitions={len(sm.transitions)}")
+    logger.debug(f"state_machine_from_element: loaded states={len(sm.states)}, "
+                 f"events={len(sm.events)}, roles={len(sm.role_functions)}, "
+                 f"transitions={len(sm.transitions)}")
 
     return sm
 
@@ -347,9 +344,8 @@ def _timer_from_element(elem: ET.Element) -> TimerBaseDef:
 
 
 def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
-    logger.debug(f"global_defs_to_element: vars={len(defs.variables)}, flags={len(defs.flags)}, "
-                 f"custom_types={len(defs.custom_types)}, interrupts={len(defs.interrupts)}, "
-                 f"placeholders={len(defs.placeholders)}, queues={len(defs.event_queues)}")
+    logger.debug(f"global_defs_to_element: vars={len(defs.variables)}, "
+                 f"flags={len(defs.flags)}, interrupts={len(defs.interrupts)}")
     root = ET.Element("GlobalDefinitions")
 
     if defs.custom_types:
@@ -383,6 +379,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
             "description": flag.description, "title": flag.title,
         })
 
+    # ★ Interrupts: used_role_functions / used_variables 対応
     if defs.interrupts:
         intrs_elem = ET.SubElement(root, "Interrupts")
         for intr in defs.interrupts:
@@ -396,6 +393,11 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
                 ET.SubElement(intr_child, "Action", **{
                     "condition": act.condition, "action": act.action,
                 })
+            # ★ 使用ロール関数・変数を記録
+            for ref in getattr(intr, 'used_role_functions', []):
+                ET.SubElement(intr_child, "UsedRoleFunction", ref=ref)
+            for var in getattr(intr, 'used_variables', []):
+                ET.SubElement(intr_child, "UsedVariable", name=var)
 
     if defs.placeholders:
         ph_elem = ET.SubElement(root, "DevicePlaceholders")
@@ -464,8 +466,10 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 arr = 0
             defs.variables.append(SystemVariable(
                 name=var_elem.get("name", ""), type=var_elem.get("type", ""),
-                unit=var_elem.get("unit", ""), default_value=var_elem.get("default_value", ""),
-                group=var_elem.get("group", ""), description=var_elem.get("description", ""),
+                unit=var_elem.get("unit", ""),
+                default_value=var_elem.get("default_value", ""),
+                group=var_elem.get("group", ""),
+                description=var_elem.get("description", ""),
                 title=var_elem.get("title", ""), array_size=arr,
             ))
 
@@ -478,11 +482,13 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
             except ValueError:
                 min_val, max_val = 0, 0
             defs.flags.append(EventFlag(
-                name=flag_elem.get("name", ""), min_value=min_val, max_value=max_val,
-                group=flag_elem.get("group", ""), description=flag_elem.get("description", ""),
+                name=flag_elem.get("name", ""), min_value=min_val,
+                max_value=max_val, group=flag_elem.get("group", ""),
+                description=flag_elem.get("description", ""),
                 title=flag_elem.get("title", ""),
             ))
 
+    # ★ Interrupts: used_role_functions / used_variables 復元
     intrs_elem = elem.find("Interrupts")
     if intrs_elem is not None:
         for intr_elem in intrs_elem:
@@ -492,12 +498,23 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                     condition=act_elem.get("condition", ""),
                     action=act_elem.get("action", ""),
                 ))
+            # ★ 使用ロール関数・変数を復元
+            used_rfs = [r.get("ref", "")
+                        for r in intr_elem.findall("UsedRoleFunction")
+                        if r.get("ref")]
+            used_vars = [v.get("name", "")
+                         for v in intr_elem.findall("UsedVariable")
+                         if v.get("name")]
             es = intr_elem.get("event_names", "")
             defs.interrupts.append(InterruptHandlerDef(
-                name=intr_elem.get("name", ""), description=intr_elem.get("description", ""),
+                name=intr_elem.get("name", ""),
+                description=intr_elem.get("description", ""),
                 event_names=[e.strip() for e in es.split(",") if e.strip()] if es else [],
                 is_timer=intr_elem.get("is_timer", "false").lower() == "true",
-                actions=actions, title=intr_elem.get("title", ""),
+                actions=actions,
+                title=intr_elem.get("title", ""),
+                used_role_functions=used_rfs,
+                used_variables=used_vars,
             ))
 
     ph_elem = elem.find("DevicePlaceholders")
@@ -534,14 +551,14 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 priority_enabled=q_elem.get("priority_enabled", "false").lower() == "true",
                 interrupt_safe=q_elem.get("interrupt_safe", "true").lower() == "true",
                 rtos_enabled=q_elem.get("rtos_enabled", "false").lower() == "true",
-                description=q_elem.get("description", ""), title=q_elem.get("title", ""),
+                description=q_elem.get("description", ""),
+                title=q_elem.get("title", ""),
             ))
 
     defs.add_timer_variables()
 
-    logger.debug(f"global_defs_from_element: loaded vars={len(defs.variables)}, flags={len(defs.flags)}, "
-                 f"custom_types={len(defs.custom_types)}, interrupts={len(defs.interrupts)}, "
-                 f"placeholders={len(defs.placeholders)}, queues={len(defs.event_queues)}")
+    logger.debug(f"global_defs_from_element: loaded vars={len(defs.variables)}, "
+                 f"flags={len(defs.flags)}, interrupts={len(defs.interrupts)}")
     return defs
 
 
@@ -550,7 +567,6 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
 # ======================================================================
 def role_function_library_to_element(lib) -> Optional[ET.Element]:
     if lib is None:
-        logger.debug("role_function_library_to_element: lib is None")
         return None
     root = ET.Element("RoleFunctionLibrary")
     items = lib.list_all()
@@ -558,6 +574,7 @@ def role_function_library_to_element(lib) -> Optional[ET.Element]:
     for rf in items:
         ET.SubElement(root, "RoleFunction", **{
             "name": rf.name,
+            "namespace": getattr(rf, 'namespace', ''),
             "title": getattr(rf, 'title', ''),
             "description": getattr(rf, 'description', ''),
             "return_type": getattr(rf, 'return_type', ''),
@@ -575,29 +592,42 @@ def role_function_library_from_element(elem: Optional[ET.Element]):
     それ以外の属性は hasattr で確認してから setattr する。
     """
     if elem is None:
-        logger.debug("role_function_library_from_element: elem is None")
         return RoleFunctionLibrary() if RoleFunctionLibrary else None
     lib = RoleFunctionLibrary()
     count = 0
     for rf_elem in elem.findall("RoleFunction"):
         name = rf_elem.get("name", "")
+        namespace = rf_elem.get("namespace", "")
         try:
-            # ★ libcntrl.RoleFunction が受け付ける引数のみで生成
-            rf = LibRoleFunction(
-                name=name,
-                title=rf_elem.get("title", ""),
-                description=rf_elem.get("description", ""),
-            )
+            # libcntrl.RoleFunction が受け付ける引数のみで生成
+            # namespace は keyword 引数として追加
+            try:
+                rf = LibRoleFunction(
+                    name=name,
+                    namespace=namespace,
+                    title=rf_elem.get("title", ""),
+                    description=rf_elem.get("description", ""),
+                )
+            except TypeError:
+                # 旧バージョン互換（namespace 未対応）
+                rf = LibRoleFunction(
+                    name=name,
+                    title=rf_elem.get("title", ""),
+                    description=rf_elem.get("description", ""),
+                )
+                if hasattr(rf, 'namespace'):
+                    rf.namespace = namespace
             # 追加属性は存在する場合のみ設定
-            for attr in ('return_type', 'arg1_type', 'arg1_name', 'arg2_type', 'arg2_name'):
+            for attr in ('return_type', 'arg1_type', 'arg1_name',
+                         'arg2_type', 'arg2_name'):
                 if hasattr(rf, attr):
                     setattr(rf, attr, rf_elem.get(attr, ''))
             lib.add(rf)
             count += 1
-            logger.debug(f"role_function_library_from_element: loaded role '{name}'")
         except Exception as e:
             logger.error(
-                f"role_function_library_from_element: failed to load '{name}': {e}",
+                f"role_function_library_from_element: "
+                f"failed to load '{name}': {e}",
                 exc_info=True
             )
     logger.debug(f"role_function_library_from_element: loaded {count} items")
@@ -608,9 +638,7 @@ def condition_library_to_element(lib) -> Optional[ET.Element]:
     if lib is None:
         return None
     root = ET.Element("ConditionLibrary")
-    items = lib.list_all()
-    logger.debug(f"condition_library_to_element: {len(items)} items")
-    for ct in items:
+    for ct in lib.list_all():
         ET.SubElement(root, "Condition", **{
             "name": ct.name,
             "condition": getattr(ct, 'condition', ''),
@@ -620,10 +648,8 @@ def condition_library_to_element(lib) -> Optional[ET.Element]:
 
 def condition_library_from_element(elem: Optional[ET.Element]):
     if elem is None:
-        logger.debug("condition_library_from_element: elem is None")
         return ConditionLibrary() if ConditionLibrary else None
     lib = ConditionLibrary()
-    count = 0
     for ct_elem in elem.findall("Condition"):
         try:
             ct = ConditionTemplate(
@@ -631,10 +657,8 @@ def condition_library_from_element(elem: Optional[ET.Element]):
                 condition=ct_elem.get("condition", ""),
             )
             lib.add(ct)
-            count += 1
         except Exception as e:
-            logger.error(f"condition_library_from_element: failed to load {ct_elem.get('name')}: {e}", exc_info=True)
-    logger.debug(f"condition_library_from_element: loaded {count} items")
+            logger.error(f"condition_library_from_element: {e}", exc_info=True)
     return lib
 
 
@@ -642,9 +666,7 @@ def literal_library_to_element(lib) -> Optional[ET.Element]:
     if lib is None:
         return None
     root = ET.Element("LiteralLibrary")
-    items = lib.list_all()
-    logger.debug(f"literal_library_to_element: {len(items)} items")
-    for lit in items:
+    for lit in lib.list_all():
         ET.SubElement(root, "Literal", **{
             "name": lit.name,
             "value": getattr(lit, 'value', ''),
@@ -656,10 +678,8 @@ def literal_library_to_element(lib) -> Optional[ET.Element]:
 
 def literal_library_from_element(elem: Optional[ET.Element]):
     if elem is None:
-        logger.debug("literal_library_from_element: elem is None")
         return LiteralLibrary() if LiteralLibrary else None
     lib = LiteralLibrary()
-    count = 0
     for lit_elem in elem.findall("Literal"):
         try:
             lit = LiteralDefinition(
@@ -669,10 +689,8 @@ def literal_library_from_element(elem: Optional[ET.Element]):
                 description=lit_elem.get("description", ""),
             )
             lib.add(lit)
-            count += 1
         except Exception as e:
-            logger.error(f"literal_library_from_element: failed to load {lit_elem.get('name')}: {e}", exc_info=True)
-    logger.debug(f"literal_library_from_element: loaded {count} items")
+            logger.error(f"literal_library_from_element: {e}", exc_info=True)
     return lib
 
 
@@ -697,7 +715,8 @@ def _project_settings_to_element(settings: Optional[dict]) -> ET.Element:
         cg.set("project_dir_name", settings.get('project_dir_name', 'project'))
         cg.set("generate_super_include",
                "true" if settings.get('generate_super_include', True) else "false")
-        cg.set("super_include_file", settings.get('super_include_file', 'statable_all.h'))
+        cg.set("super_include_file",
+               settings.get('super_include_file', 'statable_all.h'))
         cg.set("max_consecutive_pending_events",
                str(settings.get('max_consecutive_pending_events', 16)))
 
@@ -707,7 +726,6 @@ def _project_settings_to_element(settings: Optional[dict]) -> ET.Element:
             ext_elem = ET.SubElement(cg, "ExternalIncludes")
             for inc in ext_includes:
                 ET.SubElement(ext_elem, "Include", name=inc)
-            logger.debug(f"  external_includes: {ext_includes}")
 
         cg.set("external_includes_in_super",
                "true" if settings.get('external_includes_in_super', True) else "false")
@@ -723,15 +741,11 @@ def _project_settings_to_element(settings: Optional[dict]) -> ET.Element:
 
 def _project_settings_from_element(elem: Optional[ET.Element]) -> dict:
     """XML要素からプロジェクト設定を復元"""
-    logger.debug(f"_project_settings_from_element: elem={elem is not None}")
     settings = {}
-
     if elem is None:
         return settings
-
     cg = elem.find("CodeGeneration")
     if cg is None:
-        logger.debug("  <CodeGeneration> element not found")
         return settings
 
     settings['project_name'] = cg.get("project_name", "MyProject")
@@ -746,13 +760,17 @@ def _project_settings_from_element(elem: Optional[ET.Element]) -> dict:
     settings['generate_super_include'] = cg.get("generate_super_include", "true").lower() == "true"
     settings['super_include_file'] = cg.get("super_include_file", "statable_all.h")
     try:
-        settings['max_consecutive_pending_events'] = int(cg.get("max_consecutive_pending_events", "16"))
+        settings['max_consecutive_pending_events'] = int(
+            cg.get("max_consecutive_pending_events", "16")
+        )
     except ValueError:
         settings['max_consecutive_pending_events'] = 16
 
     ext_elem = cg.find("ExternalIncludes")
     if ext_elem is not None:
-        settings['external_includes'] = [inc.get("name", "") for inc in ext_elem.findall("Include")]
+        settings['external_includes'] = [
+            inc.get("name", "") for inc in ext_elem.findall("Include")
+        ]
     else:
         settings['external_includes'] = []
 
@@ -760,9 +778,6 @@ def _project_settings_from_element(elem: Optional[ET.Element]) -> dict:
     settings['external_includes_in_role'] = cg.get("external_includes_in_role", "true").lower() == "true"
     settings['external_includes_in_transitions'] = cg.get("external_includes_in_transitions", "false").lower() == "true"
     settings['external_includes_in_common'] = cg.get("external_includes_in_common", "false").lower() == "true"
-
-    logger.debug(f"  loaded project_settings: project_name='{settings['project_name']}', "
-                 f"external_includes={settings['external_includes']}")
     return settings
 
 
@@ -779,18 +794,7 @@ def project_to_xml(
         project_settings: Optional[dict] = None,
 ) -> None:
     """Save project to XML file（共有ライブラリ + プロジェクト設定含む）"""
-    logger.debug(f"=== project_to_xml START ===")
-    logger.debug(f"  filepath={filepath}")
-    logger.debug(f"  tabs={len(tabs)}")
-    for name, sm in tabs:
-        logger.debug(f"    tab '{name}': states={len(sm.states)}, transitions={len(sm.transitions)}, "
-                     f"layer_priority={getattr(sm, 'layer_priority', 5)}, "
-                     f"layer_name='{getattr(sm, 'layer_name', '')}'")
-    logger.debug(f"  global_defs: vars={len(global_defs.variables)}, flags={len(global_defs.flags)}")
-    logger.debug(f"  role_function_library={role_function_library is not None}")
-    logger.debug(f"  condition_library={condition_library is not None}")
-    logger.debug(f"  literal_library={literal_library is not None}")
-    logger.debug(f"  project_settings={project_settings is not None}")
+    logger.debug(f"=== project_to_xml START: {filepath} ===")
 
     root = ET.Element("Project")
 
@@ -800,18 +804,25 @@ def project_to_xml(
         project_name = project_settings.get('project_name', 'MyProject')
         root.append(_project_settings_to_element(project_settings))
     root.set("name", project_name)
-    logger.debug(f"  project_name='{project_name}'")
 
     root.append(global_defs_to_element(global_defs))
 
-    if role_function_library is not None or condition_library is not None or literal_library is not None:
+    if (role_function_library is not None
+            or condition_library is not None
+            or literal_library is not None):
         libs_elem = ET.SubElement(root, "SharedLibraries")
         if role_function_library is not None:
-            libs_elem.append(role_function_library_to_element(role_function_library))
+            libs_elem.append(
+                role_function_library_to_element(role_function_library)
+            )
         if condition_library is not None:
-            libs_elem.append(condition_library_to_element(condition_library))
+            libs_elem.append(
+                condition_library_to_element(condition_library)
+            )
         if literal_library is not None:
-            libs_elem.append(literal_library_to_element(literal_library))
+            libs_elem.append(
+                literal_library_to_element(literal_library)
+            )
 
     for name, sm in tabs:
         tab_elem = ET.SubElement(root, "Tab")
@@ -830,54 +841,50 @@ def project_from_xml(filepath: str):
     Returns:
         (tabs, global_defs, role_lib, cond_lib, lit_lib, project_settings)
     """
-    logger.debug(f"=== project_from_xml START ===")
-    logger.debug(f"  filepath={filepath}")
+    logger.debug(f"=== project_from_xml START: {filepath} ===")
 
     tree = ET.parse(filepath)
     root = tree.getroot()
-    logger.debug(f"  root tag={root.tag}")
 
     # プロジェクト設定
-    project_settings = _project_settings_from_element(root.find("ProjectSettings"))
+    project_settings = _project_settings_from_element(
+        root.find("ProjectSettings")
+    )
     if 'project_name' not in project_settings and root.get("name"):
         project_settings['project_name'] = root.get("name")
-        logger.debug(f"  project_name from root attr: '{root.get('name')}'")
 
     gd_elem = root.find("GlobalDefinitions")
-    logger.debug(f"  GlobalDefinitions found: {gd_elem is not None}")
-    global_defs = global_defs_from_element(gd_elem) if gd_elem is not None else GlobalDefinitions()
+    global_defs = (global_defs_from_element(gd_elem)
+                   if gd_elem is not None else GlobalDefinitions())
 
     # 共有ライブラリを読込
-    role_function_library = RoleFunctionLibrary() if RoleFunctionLibrary else None
-    condition_library = ConditionLibrary() if ConditionLibrary else None
-    literal_library = LiteralLibrary() if LiteralLibrary else None
+    role_function_library = (RoleFunctionLibrary()
+                             if RoleFunctionLibrary else None)
+    condition_library = (ConditionLibrary()
+                         if ConditionLibrary else None)
+    literal_library = (LiteralLibrary()
+                       if LiteralLibrary else None)
 
     libs_elem = root.find("SharedLibraries")
-    logger.debug(f"  SharedLibraries found: {libs_elem is not None}")
     if libs_elem is not None:
-        rl_elem = libs_elem.find("RoleFunctionLibrary")
-        cl_elem = libs_elem.find("ConditionLibrary")
-        ll_elem = libs_elem.find("LiteralLibrary")
-        logger.debug(f"    RoleFunctionLibrary elem: {rl_elem is not None}")
-        logger.debug(f"    ConditionLibrary elem: {cl_elem is not None}")
-        logger.debug(f"    LiteralLibrary elem: {ll_elem is not None}")
-        role_function_library = role_function_library_from_element(rl_elem)
-        condition_library = condition_library_from_element(cl_elem)
-        literal_library = literal_library_from_element(ll_elem)
+        role_function_library = role_function_library_from_element(
+            libs_elem.find("RoleFunctionLibrary")
+        )
+        condition_library = condition_library_from_element(
+            libs_elem.find("ConditionLibrary")
+        )
+        literal_library = literal_library_from_element(
+            libs_elem.find("LiteralLibrary")
+        )
 
     tabs = []
     for tab_elem in root.findall("Tab"):
         name = tab_elem.get("name", "Untitled")
-        logger.debug(f"  Tab: name='{name}'")
         sm_elem = tab_elem.find("StateMachine")
-        sm = state_machine_from_element(sm_elem) if sm_elem is not None else StateMachine()
+        sm = (state_machine_from_element(sm_elem)
+              if sm_elem is not None else StateMachine())
         tabs.append((name, sm))
 
-    logger.debug(f"  Loaded tabs: {len(tabs)}")
-    logger.debug(f"  role_function_library: {len(role_function_library.list_all()) if role_function_library else 0}")
-    logger.debug(f"  condition_library: {len(condition_library.list_all()) if condition_library else 0}")
-    logger.debug(f"  literal_library: {len(literal_library.list_all()) if literal_library else 0}")
-    logger.debug(f"  project_settings keys: {list(project_settings.keys())}")
-    logger.debug(f"=== project_from_xml END ===")
-
-    return tabs, global_defs, role_function_library, condition_library, literal_library, project_settings
+    logger.debug(f"=== project_from_xml END: tabs={len(tabs)} ===")
+    return (tabs, global_defs, role_function_library,
+            condition_library, literal_library, project_settings)
