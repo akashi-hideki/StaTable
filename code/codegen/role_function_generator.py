@@ -517,6 +517,16 @@ class RoleFunctionGenerator:
 
         Stage 4 変更点:
           - 'Namespace.Name' 形式（ドット）を検出
+          - 式中の bare identifier（PascalCase のみ）を検出
+
+        検出パターン:
+          1. RoleFunc_XXX
+          2. Namespace.Name
+          3. function_name(...)
+          4. 文字列全体が bare identifier
+          5. 式中の bare identifier（[A-Z] で始まり、'.' に隣接しない）
+             ※ PascalCase の RoleFunc 名を想定。
+               C 変数（snake_case）との誤認を避けるための規約。
         """
         if not condition:
             return []
@@ -526,7 +536,7 @@ class RoleFunctionGenerator:
         for m in re.finditer(r'\bRoleFunc_\w+', condition):
             names.add(m.group(0))
 
-        # 2. Namespace.Name 形式（★ Stage 4 追加）
+        # 2. Namespace.Name 形式
         for m in re.finditer(r'\b([A-Z]\w*)\.([A-Za-z_]\w*)\b', condition):
             names.add(f"{m.group(1)}.{m.group(2)}")
 
@@ -536,11 +546,18 @@ class RoleFunctionGenerator:
             if n not in _C_KEYWORDS:
                 names.add(n)
 
-        # 4. bare identifier のみ
+        # 4. 文字列全体が bare identifier
         stripped = condition.strip()
         if re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', stripped):
             if stripped not in _C_KEYWORDS:
                 names.add(stripped)
+
+        # 5. 式中の bare identifier（PascalCase のみ）
+        #    '.' に隣接する部分は Namespace.Name の断片なので除外
+        for m in re.finditer(r'(?<![.\w])([A-Z]\w*)(?![.\w])', condition):
+            n = m.group(1)
+            if n not in _C_KEYWORDS:
+                names.add(n)
 
         return [self._normalize_func_ref(n) for n in names if n]
 

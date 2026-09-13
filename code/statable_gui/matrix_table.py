@@ -206,17 +206,38 @@ class MatrixTableWidget(QTableWidget):
             StaTableLogger.debug(f"  converted flow_item: {fi}")
             draft.flow_items.append(fi)
 
-        role_func_names = [rf.name for rf in self.role_function_library.list_all()]
+        # ★ 共有ライブラリ + 現在の SM のロール関数をマージ
+        #    （共有ライブラリが空でも SM のローカル関数を選べるようにする）
+        #    Stage 1/4 以降、ロール関数は qualified_name（'Driver.Init' 等）で扱う
+        role_func_names = []
+        _seen = set()
+
+        # 1. 共有ライブラリから
+        for rf in self.role_function_library.list_all():
+            qn = getattr(rf, 'qualified_name', None) or rf.name
+            if qn and qn not in _seen:
+                _seen.add(qn)
+                role_func_names.append(qn)
+
+        # 2. 現在の SM のロール関数から
+        for rf in self.sm.role_functions.values():
+            qn = getattr(rf, 'qualified_name', None) or rf.name
+            if qn and qn not in _seen:
+                _seen.add(qn)
+                role_func_names.append(qn)
+
         states = list(self.sm.states.keys())
 
-        # ★ デバッグログ: ActionEditorDialog に渡す共有ライブラリ内容
+        # ★ デバッグログ: ActionEditorDialog に渡す内容
         StaTableLogger.debug(
-            f"open_transition_dialog: roles={len(self.role_function_library.list_all())}, "
+            f"open_transition_dialog: merged roles={len(role_func_names)} "
+            f"(library={len(self.role_function_library.list_all())}, "
+            f"sm={len(self.sm.role_functions)}), "
             f"conditions={len(self.condition_library.list_all())}, "
             f"literals={len(self.literal_library.list_all())}"
         )
-        for rf in self.role_function_library.list_all():
-            StaTableLogger.debug(f"  role to dialog: {rf.name}")
+        for qn in role_func_names:
+            StaTableLogger.debug(f"  role to dialog: {qn}")
         for ct in self.condition_library.list_all():
             StaTableLogger.debug(f"  condition to dialog: {ct.name}")
 
