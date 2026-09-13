@@ -705,6 +705,48 @@ class MainWindow(QMainWindow):
             if lit_lib is not None:
                 self.literal_library = lit_lib
 
+            # ★ XML の SharedLibraries が空でもパレットに候補が出るよう、
+            #    各タブの SM に登録されているロール関数を
+            #    共有ライブラリへ自動登録する
+            try:
+                from libcntrl.role_function_library import (
+                    RoleFunction as LibRoleFunction)
+            except ImportError:
+                from statable_gui.libcntrl.role_function_library import (
+                    RoleFunction as LibRoleFunction)
+
+            registered_count = 0
+            for _tab_name, _sm in tabs:
+                for _rf in _sm.role_functions.values():
+                    _qn = (getattr(_rf, 'qualified_name', None)
+                           or getattr(_rf, 'name', ''))
+                    if not _qn:
+                        continue
+                    # 既にライブラリに存在すればスキップ
+                    if self.role_function_library.get(_qn) is not None:
+                        continue
+                    try:
+                        self.role_function_library.add(LibRoleFunction(
+                            name=getattr(_rf, 'name', '') or '',
+                            namespace=getattr(_rf, 'namespace', '') or '',
+                            title=getattr(_rf, 'title', '') or '',
+                            description=getattr(_rf, 'description', '') or '',
+                        ))
+                        registered_count += 1
+                    except ValueError:
+                        # 重複は無視
+                        pass
+                    except Exception as e:
+                        StaTableLogger.warning(
+                            f"Failed to register {_qn}: {e}")
+
+            if registered_count:
+                StaTableLogger.info(
+                    f"Registered {registered_count} role functions "
+                    f"from tabs to shared library "
+                    f"(total={len(self.role_function_library.list_all())})"
+                )
+
             # ★ プロジェクト設定を反映
             if project_settings:
                 config = self.config_manager.get_config()
@@ -734,6 +776,12 @@ class MainWindow(QMainWindow):
                         self.condition_library
                     tab.table.literal_library = \
                         self.literal_library
+                    # ★ パレット表示更新のため、MatrixTable 側を再描画
+                    if hasattr(tab.table, 'populate'):
+                        try:
+                            tab.table.populate()
+                        except Exception:
+                            pass
 
             self.prefs.last_project_dir = str(
                 Path(filepath).parent)
