@@ -1,6 +1,13 @@
 # statable_gui/transition_editor_direct/palette_widget.py
 """
-カテゴリ別折りたたみパレット（共有ライブラリ対応・ダブルクリック編集対応・ドラッグ開始対応）
+カテゴリ別折りたたみパレット
+（共有ライブラリ対応・ダブルクリック編集対応・ドラッグ開始対応）
+
+【v1.5 修正】
+  - refresh_lists: rf.name → rf.qualified_name（バグ #88）
+    Driver.Init と App.Init が同じ "Init" で表示され、
+    編集対象が誤る問題を解消
+  - _generate_unique_name: namespace 衝突チェックを追加
 """
 
 import json
@@ -10,7 +17,7 @@ from PySide6.QtCore import Qt, QMimeData, Signal
 from PySide6.QtGui import QDrag
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
-    QAbstractItemView, QPushButton, QLabel, QGroupBox
+    QAbstractItemView, QPushButton, QLabel, QGroupBox,
 )
 
 logger = logging.getLogger("transition_editor_direct.palette")
@@ -36,7 +43,10 @@ class PaletteListWidget(QListWidget):
             }
             mime.setData(self.MIME_TYPE, json.dumps(data).encode("utf-8"))
             mime.setText(items[0].text())
-            logger.debug(f"PaletteListWidget.mimeData: type={self.item_type}, name='{items[0].text()}'")
+            logger.debug(
+                f"PaletteListWidget.mimeData: type={self.item_type}, "
+                f"name='{items[0].text()}'"
+            )
         return mime
 
     def startDrag(self, supported_actions):
@@ -46,7 +56,10 @@ class PaletteListWidget(QListWidget):
             logger.debug("PaletteListWidget.startDrag: no current item")
             return
 
-        logger.debug(f"PaletteListWidget.startDrag: type={self.item_type}, name='{item.text()}'")
+        logger.debug(
+            f"PaletteListWidget.startDrag: type={self.item_type}, "
+            f"name='{item.text()}'"
+        )
 
         mime_data = QMimeData()
         data = {
@@ -62,7 +75,10 @@ class PaletteListWidget(QListWidget):
         logger.debug(f"PaletteListWidget.startDrag: drag result={result}")
 
     def mouseDoubleClickEvent(self, event):
-        logger.debug(f"PaletteListWidget.mouseDoubleClickEvent called: type={self.item_type}")
+        logger.debug(
+            f"PaletteListWidget.mouseDoubleClickEvent called: "
+            f"type={self.item_type}"
+        )
         item = self.itemAt(event.position().toPoint())
         if item:
             text = item.text()
@@ -81,7 +97,8 @@ class PaletteWidget(QWidget):
     edit_function_requested = Signal(str)
     edit_transition_requested = Signal(str)
 
-    def __init__(self, role_function_library=None, condition_library=None, parent=None):
+    def __init__(self, role_function_library=None,
+                 condition_library=None, parent=None):
         super().__init__(parent)
         self.role_function_library = role_function_library
         self.condition_library = condition_library
@@ -106,7 +123,9 @@ class PaletteWidget(QWidget):
         v1.setSpacing(2)
 
         self.function_list = PaletteListWidget("function")
-        self.function_list.item_edit_requested.connect(self._on_function_item_edit_requested)
+        self.function_list.item_edit_requested.connect(
+            self._on_function_item_edit_requested
+        )
         v1.addWidget(self.function_list)
 
         add_func_btn = QPushButton("+ ロール関数追加")
@@ -120,7 +139,9 @@ class PaletteWidget(QWidget):
         v2.setSpacing(2)
 
         self.transition_list = PaletteListWidget("transition")
-        self.transition_list.item_edit_requested.connect(self._on_transition_item_edit_requested)
+        self.transition_list.item_edit_requested.connect(
+            self._on_transition_item_edit_requested
+        )
         v2.addWidget(self.transition_list)
 
         add_transition_btn = QPushButton("+ 遷移条件追加")
@@ -132,26 +153,44 @@ class PaletteWidget(QWidget):
         layout.addStretch()
 
     def _generate_unique_name(self, base_name: str, library) -> str:
+        """
+        一意名を生成
+
+        【v1.5 改善】
+          RoleFunctionLibrary.role_functions は qualified_name で
+          キー管理されているため、既存キーとの衝突チェックは
+          base_name（純粋名）と qualified_name の両方で行う。
+        """
         existing_names = set()
         if hasattr(library, 'role_functions'):
             existing_names = set(library.role_functions.keys())
         elif hasattr(library, 'condition_templates'):
             existing_names = set(library.condition_templates.keys())
 
-        if base_name not in existing_names:
+        def _collides(name: str) -> bool:
+            if name in existing_names:
+                return True
+            # 'Namespace.Name' の末尾一致も検出
+            return any(k.endswith('.' + name) for k in existing_names)
+
+        if not _collides(base_name):
             return base_name
 
         index = 2
-        while f"{base_name}_{index}" in existing_names:
+        while _collides(f"{base_name}_{index}"):
             index += 1
         return f"{base_name}_{index}"
 
     def _add_function(self):
         from libcntrl.role_function_library import RoleFunction
         base_name = "NewFunction"
-        name = self._generate_unique_name(base_name, self.role_function_library)
+        name = self._generate_unique_name(
+            base_name, self.role_function_library
+        )
         try:
-            self.role_function_library.add(RoleFunction(name=name, title=name))
+            self.role_function_library.add(
+                RoleFunction(name=name, title=name)
+            )
             logger.debug(f"Added new role function to library: {name}")
         except ValueError as e:
             logger.warning(f"Failed to add role function: {e}")
@@ -160,32 +199,65 @@ class PaletteWidget(QWidget):
     def _add_transition(self):
         from libcntrl.condition_library import ConditionTemplate
         base_name = "NewEvent"
-        name = self._generate_unique_name(base_name, self.condition_library)
+        name = self._generate_unique_name(
+            base_name, self.condition_library
+        )
         try:
-            self.condition_library.add(ConditionTemplate(name=name, condition=""))
+            self.condition_library.add(
+                ConditionTemplate(name=name, condition="")
+            )
             logger.debug(f"Added new condition template to library: {name}")
         except ValueError as e:
             logger.warning(f"Failed to add condition template: {e}")
         self.refresh_lists()
 
     def _on_function_item_edit_requested(self, name: str):
-        logger.debug(f"PaletteWidget._on_function_item_edit_requested: name='{name}'")
+        """
+        ロール関数の編集要求
+
+        【v1.5 修正】
+          name は qualified_name ('Driver.Init') または
+          純粋名 ('Init')。後段の ActionEditorDialog は
+          RoleFunctionLibrary.get(name) で解決するため、
+          どちらでも正しく動作する。
+        """
+        logger.debug(
+            f"PaletteWidget._on_function_item_edit_requested: "
+            f"name='{name}'"
+        )
         self.edit_function_requested.emit(name)
 
     def _on_transition_item_edit_requested(self, name: str):
-        logger.debug(f"PaletteWidget._on_transition_item_edit_requested: name='{name}'")
+        logger.debug(
+            f"PaletteWidget._on_transition_item_edit_requested: "
+            f"name='{name}'"
+        )
         self.edit_transition_requested.emit(name)
 
     def refresh_lists(self):
+        """
+        ロール関数・遷移条件リストを再構築
+
+        【v1.5 修正】
+          ロール関数は qualified_name ('Driver.Init') で表示。
+          純粋名のみだと namespace 衝突で編集対象が誤るため。
+        """
         logger.debug("PaletteWidget.refresh_lists called")
         if self.role_function_library:
             self.function_list.clear()
             for rf in self.role_function_library.list_all():
-                self.function_list.addItem(rf.name)
-            logger.debug(f"Function list refreshed: {self.function_list.count()} items")
+                display_name = getattr(rf, 'qualified_name', None) or rf.name
+                self.function_list.addItem(display_name)
+            logger.debug(
+                f"Function list refreshed: "
+                f"{self.function_list.count()} items"
+            )
 
         if self.condition_library:
             self.transition_list.clear()
             for ct in self.condition_library.list_all():
                 self.transition_list.addItem(ct.name)
-            logger.debug(f"Transition list refreshed: {self.transition_list.count()} items")
+            logger.debug(
+                f"Transition list refreshed: "
+                f"{self.transition_list.count()} items"
+            )

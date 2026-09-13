@@ -69,10 +69,11 @@ class Transition:
     """
     状態遷移定義
 
-    【注意】本クラスは kw_only 化していません。
-    sample_data.py の `Transition("Idle", "START", "", "init()", "Active", ...)`
-    という位置引数バグ（v1.4 §9.6 #67）が残っているため、kw_only 化すると
-    起動時に TypeError になります。sample_data.py の修正後に kw_only 化予定。
+    【v1.5 注意】
+      本クラスは kw_only 化していません。
+      sample_data.py の `Transition("Idle", "START", "", "init()", "Active", ...)`
+      という位置引数バグ（v1.4 §9.6 #67）が残っているため、kw_only 化すると
+      起動時に TypeError になります。sample_data.py の修正後に kw_only 化予定（v1.6）。
     """
     source: str
     event: str

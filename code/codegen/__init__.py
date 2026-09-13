@@ -1,26 +1,37 @@
-# codegen/__init__.py
+# codegen package
 """
-Cコード生成パッケージ
-"""
+StaTable コード生成層
 
-from .code_templates import CodeTemplates
-from .type_mapper import CTypeMapper
-from .naming_convention import CNamingConvention
-from .struct_generator import CStructGenerator
-from .enum_generator import CEnumGenerator
-from .transition_generator import TransitionGenerator
-from .role_function_generator import RoleFunctionGenerator
-from .variable_generator import VariableGenerator
-from .c_code_generator import CCodeGenerator
+【v1.5 追加】
+  - 再エクスポートは最小限に留める
+  - CCodeGenerator は生成時に多数のサブモジュールを読み込むため、
+    トップレベルで再エクスポートしない（起動時間短縮のため）
+"""
 
 __all__ = [
-    'CodeTemplates',
-    'CTypeMapper',
-    'CNamingConvention',
-    'CStructGenerator',
-    'CEnumGenerator',
-    'TransitionGenerator',
-    'RoleFunctionGenerator',
-    'VariableGenerator',
     'CCodeGenerator',
+    'CodeGenerationConfig',
+    'ConfigManager',
 ]
+
+
+def __getattr__(name):
+    """
+    PEP 562 遅延インポート
+
+    `from codegen import CCodeGenerator` のように使われた時のみ、
+    実際のモジュールをロードする。
+    起動時間を抑えつつ、利便性を確保する。
+    """
+    if name == 'CCodeGenerator':
+        from .c_code_generator import CCodeGenerator
+        return CCodeGenerator
+    if name == 'CodeGenerationConfig':
+        from .config import CodeGenerationConfig
+        return CodeGenerationConfig
+    if name == 'ConfigManager':
+        from .config import ConfigManager
+        return ConfigManager
+    raise AttributeError(
+        f"module 'codegen' has no attribute {name!r}"
+    )

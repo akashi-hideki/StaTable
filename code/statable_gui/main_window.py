@@ -3,6 +3,9 @@
 StaTable メインウィンドウ
 コード生成機能・検証AI連携機能・共有ライブラリ管理を統合
 （複数層対応版）
+
+【v1.5 修正】
+  - __init__ の RoleFunction 登録で namespace を渡す（バグ #86）
 """
 
 import sys
@@ -39,7 +42,7 @@ from .event_delivery_settings_dialog import (
 from .common_widgets import TypeManagerDialog
 from .layer_settings_dialog import LayerSettingsDialog
 
-# 共有ライブラリ
+# 共有ライブラリ（v1.5: statable_gui/libcntrl に統合済）
 try:
     from libcntrl.role_function_library import (
         RoleFunctionLibrary, RoleFunction)
@@ -123,22 +126,27 @@ class MainWindow(QMainWindow):
         # サンプルステートマシンから共有ライブラリへデータ登録
         sample_sm = create_sample_state_machine()
 
-        # ロール関数を共有ライブラリへ登録
+        # ==========================================================
+        # 【v1.5 修正】ロール関数を共有ライブラリへ登録
+        #   namespace も渡す（v1.4 §9.6 #69 / v1.5 #86）
+        # ==========================================================
         for rf in sample_sm.role_functions.values():
             StaTableLogger.debug(
                 f"Attempting to register role function: "
-                f"name={rf.name}, title={rf.title}")
+                f"name={rf.name}, "
+                f"namespace={getattr(rf, 'namespace', '')}, "
+                f"title={rf.title}")
             try:
-                # RoleFunctionLibrary.add が受け付ける形式に合わせて生成
                 lib_rf = RoleFunction(
                     name=rf.name,
+                    namespace=getattr(rf, 'namespace', '') or '',   # ★ v1.5 追加
                     title=rf.title,
                     description=getattr(rf, 'description', ''),
                 )
                 self.role_function_library.add(lib_rf)
                 StaTableLogger.debug(
                     f"Registered role function to "
-                    f"shared library: {rf.name}")
+                    f"shared library: {lib_rf.qualified_name}")
             except Exception as e:
                 StaTableLogger.error(
                     f"Failed to register role function "
@@ -749,8 +757,6 @@ class MainWindow(QMainWindow):
 
             # ============================================================
             # ★ 自動補完 2: 各遷移の条件式を ConditionLibrary へ登録
-            #   空でない condition のみを対象に、テンプレート化する
-            #   同じ条件式が既に登録済みならスキップ
             # ============================================================
             try:
                 from libcntrl.condition_library import (
@@ -759,7 +765,6 @@ class MainWindow(QMainWindow):
                 from statable_gui.libcntrl.condition_library import (
                     ConditionTemplate)
 
-            # 既存テンプレートの condition 文字列セット（重複判定用）
             existing_cond_exprs = set()
             for _ct in self.condition_library.list_all():
                 _c = (getattr(_ct, 'condition', '') or '').strip()
@@ -775,11 +780,9 @@ class MainWindow(QMainWindow):
                     _cond = (getattr(_trans, 'condition', '') or '').strip()
                     if not _cond:
                         continue
-                    # 同じ条件式が既にあればスキップ
                     if _cond in existing_cond_exprs:
                         continue
 
-                    # name 生成: 条件式の先頭 40 文字を基に一意化
                     _base = _cond[:40]
                     _name = _base
                     _idx = 2
@@ -797,7 +800,7 @@ class MainWindow(QMainWindow):
                         existing_cond_names.add(_name)
                         registered_conds += 1
                     except ValueError:
-                        pass  # 重複は無視
+                        pass
                     except Exception as e:
                         StaTableLogger.warning(
                             f"Failed to register condition '{_name}': {e}")
@@ -842,7 +845,6 @@ class MainWindow(QMainWindow):
                         self.condition_library
                     tab.table.literal_library = \
                         self.literal_library
-                    # ★ パレット表示更新のため、MatrixTable 側を再描画
                     if hasattr(tab.table, 'populate'):
                         try:
                             tab.table.populate()

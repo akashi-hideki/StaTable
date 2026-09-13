@@ -47,16 +47,6 @@ def create_sample_state_machine() -> StateMachine:
 
     # ==================================================================
     # 【v1.5 修正】Transition 位置引数バグの根本修正（v1.4 §9.6 #67）
-    #
-    # 旧コード（v1.4 まで）:
-    #   Transition("Idle", "START", "", "init()", "Active", title="起動")
-    #     → 4 番目の "init()" が pre_actions（List[str]）に文字列で渡され、
-    #       XML 保存時に 1 文字ずつ分解されるバグの原因。
-    #
-    # 新コード（v1.5）:
-    #   全 kwarg + pre_actions を List[str] で明示。
-    #   model.py の Transition は将来 kw_only 化予定のため、
-    #   ここで kwarg 化しておくことで移行が安全になる。
     # ==================================================================
     sm.add_transition(Transition(
         source="Idle",
@@ -109,7 +99,7 @@ def create_sample_state_machine() -> StateMachine:
 
     sm.add_role_function(RoleFunction(
         name="Sensor_Init",
-        namespace="",                       # ★ 明示（kw_only 対応）
+        namespace="",
         description="センサ初期化",
         return_type="int",
         arg1_type="uint8_t",

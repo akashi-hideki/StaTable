@@ -30,7 +30,6 @@ def _to_pascal_case(name: str) -> str:
     """snake_case / camelCase → PascalCase"""
     if not name:
         return ""
-    # アンダースコアで分割
     parts = re.split(r'[_\s]+', name)
     result = ""
     for part in parts:
@@ -105,7 +104,7 @@ class CodeWidget(QPlainTextEdit):
           'Driver.Init'           → 'RoleFunc_Driver_Init'
           'HandleError'           → 'RoleFunc_HandleError'
           'RoleFunc_Xxx'          → 'RoleFunc_Xxx'（既にプレフィックス付き）
-          'retry_count++'         → None（不正な識別子）
+          'retry_count++'         → ''（不正な識別子）
         """
         if not ref:
             return ""
@@ -120,7 +119,6 @@ class CodeWidget(QPlainTextEdit):
         # 既に RoleFunc_ で始まる場合はそのまま
         if name.startswith("RoleFunc_"):
             rest = name[len("RoleFunc_"):]
-            # ドットを含んでいたら _ に置換
             rest = rest.replace('.', '_')
             if _VALID_C_IDENTIFIER.match(rest):
                 return f"RoleFunc_{rest}"
@@ -178,9 +176,6 @@ class CodeWidget(QPlainTextEdit):
 
         if proto_names:
             # ★ 実ファイル生成と一致する形式で出力
-            #   int RoleFunc_<NS>_<Name>(
-            #       const TransitionContext_<Layer>_t *transition,
-            #       SystemContext_t *ctx);
             for ref in sorted(proto_names):
                 func_name = self._role_func_name(ref)
                 if not func_name:

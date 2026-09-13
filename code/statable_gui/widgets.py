@@ -160,7 +160,7 @@ class SettingsPanel(QWidget):
 
         role_tab = QWidget()
         role_layout = QVBoxLayout(role_tab)
-        # ★ v1.5 変更: 8列 → 9列（名前空間列を挿入）
+        # ★ v1.5 変更: 8 列 → 9 列（名前空間列を挿入）
         self.role_table = QTableWidget(0, 9)
         self.role_table.setHorizontalHeaderLabels([
             "タイトル", "関数名", "名前空間", "説明", "戻り値型",
@@ -405,7 +405,6 @@ class StateMachineTab(QWidget):
         self.condition_library = condition_library if condition_library else ConditionLibrary()
         self.literal_library = literal_library if literal_library else LiteralLibrary()
 
-        # ★ デバッグログ: StateMachineTab 初期化時の共有ライブラリ内容
         StaTableLogger.debug(
             f"StateMachineTab.__init__: global_defs id={id(self.global_defs)}, "
             f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"

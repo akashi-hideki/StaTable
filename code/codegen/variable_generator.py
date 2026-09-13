@@ -2,12 +2,9 @@
 """
 変数・フラグ生成モジュール（多層ステートマシン対応版）
 
-生成するもの:
-  1. 変数アクセスマクロ (DATA_<VAR> / FLAG_<FLAG>)
-  2. SystemContext_Init() 関数
-     - グローバル変数の初期化
-     - イベントフラグの初期化
-     - ★ 保留イベントの初期化 (pending_event / pending_event_valid)
+【v1.5 修正】
+  - _generate_normal_init でカスタム構造体変数を memset で初期化
+    （v1.4 までは `ctx->data.system_status = 0;` でコンパイルエラー）
 """
 
 import sys
@@ -16,18 +13,12 @@ import logging
 from string import Template
 from typing import Dict, Callable, List, Any, Optional
 
-# ======================================================================
-# パス設定（どこから実行されても動作するように）
-# ======================================================================
-_this_dir = os.path.dirname(os.path.abspath(__file__))         # codegen/
-_parent_dir = os.path.dirname(_this_dir)                       # code/
+_this_dir = os.path.dirname(os.path.abspath(__file__))
+_parent_dir = os.path.dirname(_this_dir)
 for _p in (_this_dir, _parent_dir):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-# ======================================================================
-# インポート
-# ======================================================================
 from statable.global_defs import SystemVariable, EventFlag, GlobalDefinitions
 
 try:
@@ -45,29 +36,17 @@ logger = logging.getLogger(__name__)
 class VariableGenerator:
     """変数・フラグ生成クラス（多層ステートマシン対応）"""
 
-    # ==================================================================
-    # 【データテーブル①】初期化関数テンプレート
-    # ==================================================================
     INIT_TEMPLATES = {
-        # --- 関数コメント ---
         'comment': (
             '/**\n'
             ' * @brief  システムコンテキスト初期化\n'
             ' * @param  ctx  システムコンテキストポインタ\n'
             ' */\n'
         ),
-
-        # --- 関数シグネチャ ---
         'signature': Template(
             'void $func_name(SystemContext_t *ctx)\n'
         ),
-
-        # --- 関数開始 ---
-        'function_open': (
-            '{\n'
-        ),
-
-        # --- NULL チェック ---
+        'function_open': '{\n',
         'null_check': Template(
             '    /* NULLチェック */\n'
             '    if (ctx == NULL) {\n'
@@ -75,47 +54,28 @@ class VariableGenerator:
             '        return;\n'
             '    }\n'
         ),
-
-        # --- エントリログ ---
         'entry_log': Template(
             '    $log_debug("Enter $func_name");\n'
         ),
-
-        # --- 変数初期化セクションコメント ---
         'variables_comment': (
             '    /* グローバル変数の初期化 */\n'
         ),
-
-        # --- フラグ初期化セクションコメント ---
         'flags_comment': (
             '    /* イベントフラグの初期化 */\n'
         ),
-
-        # --- ★ 保留イベント初期化セクションコメント ---
         'pending_event_comment': (
             '    /* 保留イベントの初期化 */\n'
         ),
-
-        # --- ★ 保留イベント初期化 ---
         'pending_event_init': (
             '    ctx->pending_event = 0;\n'
             '    ctx->pending_event_valid = false;\n'
         ),
-
-        # --- エグジットログ ---
         'exit_log': Template(
             '    $log_debug("Exit $func_name");\n'
         ),
-
-        # --- 関数終了 ---
-        'function_close': (
-            '}\n'
-        ),
+        'function_close': '}\n',
     }
 
-    # ==================================================================
-    # 【データテーブル②】初期化関数のステップ
-    # ==================================================================
     INIT_FUNCTION_STEPS = [
         {'action': 'template', 'key': 'comment'},
         {'action': 'template', 'key': 'signature',
@@ -133,7 +93,6 @@ class VariableGenerator:
         {'action': 'template', 'key': 'flags_comment'},
         {'action': 'loop', 'source': 'flags', 'generator': 'init'},
         {'action': 'blank'},
-        # ★ 保留イベントの初期化
         {'action': 'template', 'key': 'pending_event_comment'},
         {'action': 'template', 'key': 'pending_event_init'},
         {'action': 'blank'},
@@ -142,9 +101,6 @@ class VariableGenerator:
         {'action': 'template', 'key': 'function_close'},
     ]
 
-    # ==================================================================
-    # 【データテーブル③】初期値マッピング
-    # ==================================================================
     DEFAULT_INIT_VALUES = {
         'int': '0', 'int8': '0', 'int16': '0', 'int32': '0', 'int64': '0',
         'uint': '0', 'uint8': '0', 'uint16': '0', 'uint32': '0', 'uint64': '0',
@@ -152,9 +108,6 @@ class VariableGenerator:
         'char': '0', 'string': 'NULL',
     }
 
-    # ==================================================================
-    # 【データテーブル④】変数アクセスマクロテンプレート
-    # ==================================================================
     MACRO_TEMPLATES = {
         'data_macro': Template(
             '#define DATA_$var_name(ctx)    ((ctx)->data.$var_name)\n'
@@ -164,12 +117,13 @@ class VariableGenerator:
         ),
     }
 
-    # ==================================================================
-    # 【データテーブル⑤】初期化コードテンプレート
-    # ==================================================================
     INIT_CODE_TEMPLATES = {
         'array_init': Template(
             '    memset(ctx->data.$var_name, 0, sizeof(ctx->data.$var_name));\n'
+        ),
+        # ★ v1.5 追加: カスタム型構造体の初期化
+        'struct_init': Template(
+            '    memset(&ctx->data.$var_name, 0, sizeof(ctx->data.$var_name));\n'
         ),
         'normal_init': Template(
             '    ctx->data.$var_name = $init_value;\n'
@@ -179,17 +133,11 @@ class VariableGenerator:
         ),
     }
 
-    # ==================================================================
-    # 【データテーブル⑥】変数種別検出
-    # ==================================================================
     VARIABLE_TYPE_DETECTORS = {
         'array': lambda v: getattr(v, 'array_size', 0) > 0,
         'normal': lambda v: True,
     }
 
-    # ==================================================================
-    # コンストラクタ
-    # ==================================================================
     def __init__(self):
         self.mapper = CTypeMapper()
         self.naming = CNamingConvention()
@@ -207,9 +155,6 @@ class VariableGenerator:
         log_func = getattr(logger, level, logger.debug)
         log_func(message)
 
-    # ==================================================================
-    # ヘルパー
-    # ==================================================================
     def _detect_variable_type(self, var) -> str:
         for var_type, detector in self.VARIABLE_TYPE_DETECTORS.items():
             if detector(var):
@@ -237,9 +182,6 @@ class VariableGenerator:
             return str(context.get(key, value))
         return str(value)
 
-    # ==================================================================
-    # ステップ実行関数
-    # ==================================================================
     def _execute_template_step(self, step: dict, context: dict) -> List[str]:
         template_key = step.get('key', '')
         template = self.INIT_TEMPLATES.get(template_key, '')
@@ -271,9 +213,6 @@ class VariableGenerator:
                 results.append(self._generate_access_macro(item))
         return [r for r in results if r]
 
-    # ==================================================================
-    # 変数アクセスマクロ生成
-    # ==================================================================
     def _generate_data_macro(self, var) -> str:
         var_name = self.naming.to_upper_snake(getattr(var, 'name', 'unnamed'))
         return self.MACRO_TEMPLATES['data_macro'].substitute(var_name=var_name).rstrip('\n')
@@ -290,9 +229,6 @@ class VariableGenerator:
             return self._generate_flag_macro(item)
         return ""
 
-    # ==================================================================
-    # 初期化コード生成
-    # ==================================================================
     def _generate_array_init(self, var) -> str:
         var_name = self.naming.sanitize_identifier(getattr(var, 'name', 'unnamed'))
         return self.INIT_CODE_TEMPLATES['array_init'].substitute(
@@ -300,9 +236,26 @@ class VariableGenerator:
         ).rstrip('\n')
 
     def _generate_normal_init(self, var) -> str:
+        """
+        【v1.5 修正】
+          - カスタム型（DEFAULT_INIT_VALUES に無い型）は memset を使う
+          - プリミティブ型は従来通り = 0 などの数値代入
+        """
         var_name = self.naming.sanitize_identifier(getattr(var, 'name', 'unnamed'))
+        var_type = getattr(var, 'type', 'void')
+
+        # ★ v1.5: カスタム型判定 → memset
+        if var_type not in self.DEFAULT_INIT_VALUES:
+            self._log_debug(
+                f"_generate_normal_init: '{var_name}' (type='{var_type}') "
+                f"is a custom type → using memset"
+            )
+            return self.INIT_CODE_TEMPLATES['struct_init'].substitute(
+                var_name=var_name
+            ).rstrip('\n')
+
         init_value = getattr(var, 'default_value', '') or \
-            self.DEFAULT_INIT_VALUES.get(getattr(var, 'type', 'void'), '0')
+            self.DEFAULT_INIT_VALUES.get(var_type, '0')
         return self.INIT_CODE_TEMPLATES['normal_init'].substitute(
             var_name=var_name, init_value=init_value
         ).rstrip('\n')
@@ -325,9 +278,6 @@ class VariableGenerator:
             return self._generate_flag_init(item)
         return ""
 
-    # ==================================================================
-    # 公開メソッド
-    # ==================================================================
     def generate_init_function(self, global_defs: GlobalDefinitions) -> str:
         self._log_debug("=== generate_init_function START ===")
         lines = []

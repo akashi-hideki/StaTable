@@ -2,23 +2,6 @@
 """
 ロール関数生成モジュール（多層ステートマシン対応・ISR 対応版）
 
-生成するもの（state_machine 指定時）:
-  1. TRANSITION_ID_NONE 定数
-  2. 呼び出し元テーブル用 共通構造体 RoleFuncCallSiteEntry_<Layer>_t
-  3. Transition_GetId プロトタイプ宣言（static）
-  4. ロール関数ごとの呼び出し元テーブル call_sites_<Short>[]
-  5. 各ロール関数の実装
-     - transition のメンバー展開（NULL ガード付き）
-     - transition_id ローカル変数（Transition_GetId 呼び出し）
-     - ctx->data の各メンバーへのローカルポインタ展開
-     - 戻り値用ローカル変数 (int ret = 0;)
-     - ユーザーコードマーカー
-  6. Transition_GetId 本体定義（ファイル末尾、static）
-  7. ファイル末尾のユーザー追加領域
-
-state_machine 未指定時:
-  - 5. のみ（transition_id なし）+ 7.
-
 版: 3.0（2026-09-13 / Stage 4: 遷移側 Namespace.Name 対応）
   - _normalize_func_ref が qualified_name を保持
   - _extract_func_names_from_condition が 'Driver.Init' 形式を検出
@@ -27,7 +10,6 @@ state_machine 未指定時:
 【v1.5 追加】
   - _VALID_C_IDENTIFIER ガードを _normalize_func_ref に追加
     → 'retry_count++' 等の C 演算子混入参照を弾く
-    → 不正な RoleFunc_retry_count++ の生成を防止
   - generate_all_implementations に未定義参照の警告ログを追加
 """
 
@@ -59,7 +41,6 @@ logger = logging.getLogger(__name__)
 # ======================================================================
 # 【v1.5 追加】C 識別子検証用正規表現
 # ======================================================================
-# 「有効な C 識別子」または「Namespace.Name 形式（各パートが有効な C 識別子）」
 _VALID_C_IDENTIFIER = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
 _VALID_QUALIFIED = re.compile(
     r'^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$'
@@ -166,7 +147,6 @@ class RoleFunctionGenerator:
         ),
         'body_open': ')\n{\n',
 
-        # ★ NULL transition ガード（transition が NULL でも安全）
         'null_guard_header': (
             '    /* ===== transition NULL ガード（ISR からの呼び出し対応） ===== */\n'
         ),
@@ -189,7 +169,6 @@ class RoleFunctionGenerator:
         'unused_ctx': '    (void)ctx;         /* 未使用引数の警告抑制 */\n',
         'blank': '\n',
 
-        # transition 関連
         'local_transition_id_header': (
             '    /* ===== transition ID（call_sites 内のインデックス） ===== */\n'
         ),
@@ -198,7 +177,6 @@ class RoleFunctionGenerator:
             '        transition, $table_arg, $count_arg);\n'
         ),
 
-        # ctx->data ポインタ
         'local_data_header': '    /* ===== ctx->data へのローカルポインタ ===== */\n',
         'local_data_pointer': Template(
             '    $c_type *const $var_name = &ctx->data.$var_name;'
@@ -209,11 +187,9 @@ class RoleFunctionGenerator:
             '  /* $comment */\n'
         ),
 
-        # 戻り値
         'local_ret_header': '    /* ===== 戻り値 ===== */\n',
         'local_ret_decl': '    int ret = 0;   /* ユーザーコード内で書き換え可 */\n',
 
-        # TODO / マーカー
         'todo_comment': Template('    /* $todo */\n'),
         'user_marker_start': Template(
             '    /* [[STABLE_USER_CODE_START:$marker_name]] */\n'
@@ -223,7 +199,6 @@ class RoleFunctionGenerator:
             '    /* [[STABLE_USER_CODE_END:$marker_name]] */\n'
         ),
 
-        # 戻り値 / 終了
         'return_default': '    return ret;\n',
         'body_close': '}\n',
     }
@@ -274,7 +249,6 @@ class RoleFunctionGenerator:
             '    const $entry_type *table,\n'
             '    uint16_t table_size);\n'
         ),
-        # Template を外してプレーン文字列に
         'definition_comment': (
             '\n\n'
             '/* ============================================================== */\n'
@@ -325,7 +299,6 @@ class RoleFunctionGenerator:
         'table_open': Template(
             'static const $struct_type $table_name[] = {\n'
         ),
-        # 固定空白を削除（整列は呼び出し側で行う）
         'entry': Template(
             '    { $from_state,$event },\n'
         ),
@@ -387,12 +360,6 @@ class RoleFunctionGenerator:
     # 名前生成（namespace 対応）
     # ================================================================
     def _resolve_name_and_namespace(self, func) -> tuple:
-        """
-        関数オブジェクトから (name, namespace) を取得
-
-        - func.namespace が設定されていればそれを優先
-        - 未設定なら layer_name にフォールバック
-        """
         name = getattr(func, 'name', 'unnamed')
         namespace = getattr(func, 'namespace', '') or ''
         if not namespace and self.layer_name:
@@ -408,7 +375,6 @@ class RoleFunctionGenerator:
         return f"RoleFunc_{pascal}"
 
     def _get_marker_name(self, func) -> str:
-        """マーカー用の名前: <Namespace>_<PascalName>"""
         name, namespace = self._resolve_name_and_namespace(func)
         pascal = self.naming.to_pascal_case(name)
         if namespace:
@@ -448,7 +414,7 @@ class RoleFunctionGenerator:
                 if self.layer_name else "RoleFuncCallSiteEntry_t")
 
     # ================================================================
-    # 重複除去（namespace.name で一意化）
+    # 重複除去
     # ================================================================
     def _dedupe_by_name(self, funcs: Iterable) -> List:
         seen = set()
@@ -482,31 +448,9 @@ class RoleFunctionGenerator:
         return qualified
 
     # ================================================================
-    # ★ Stage 4: 参照文字列の正規化（qualified_name 保持）
-    # ★ v1.5: 不正識別子ガード追加
+    # ★ v1.5: 参照文字列の正規化（識別子検証付き）
     # ================================================================
     def _normalize_func_ref(self, ref: str) -> str:
-        """
-        遷移の参照文字列を正規化し、RoleFunction の qualified_name を返す。
-
-        【v1.5 変更】
-          - _VALID_QUALIFIED による識別子検証を追加
-          - 'retry_count++' のような C 演算子混入参照を弾く
-          - 不正な参照は空文字を返し、呼び出し側で警告ログ出力
-
-        入力例 → 出力:
-          'Driver.Init'              → 'Driver.Init'
-          'Driver.Init()'            → 'Driver.Init'
-          'Driver.Init(arg1, arg2)'  → 'Driver.Init'
-          'Init'                     → 'Init'
-          'Init(arg1, arg2)'         → 'Init'
-          'RoleFunc_Driver_Init'     → 'Driver.Init' (layer_name='Driver' 時)
-          'RoleFunc_Init'            → 'Init'
-          'Sensor_Init'              → 'Sensor_Init'
-          'retry_count++'            → ''（不正識別子）
-          'g_system_tick++'          → ''（不正識別子）
-          'a + b'                    → ''（不正識別子）
-        """
         if not ref:
             return ""
         name = ref.strip()
@@ -520,7 +464,6 @@ class RoleFunctionGenerator:
         # 2. RoleFunc_ プレフィックスを処理
         if name.startswith("RoleFunc_"):
             rest = name[len("RoleFunc_"):]
-            # 層名プレフィックスを namespace に変換
             if self.layer_name:
                 prefix = f"{self.layer_name}_"
                 if rest.startswith(prefix):
@@ -533,7 +476,6 @@ class RoleFunctionGenerator:
                         'warning',
                     )
                     return ""
-            # 層名なし RoleFunc_xxx
             if _VALID_C_IDENTIFIER.match(rest):
                 return rest
             self._log_debug(
@@ -544,7 +486,6 @@ class RoleFunctionGenerator:
             return ""
 
         # 3. ★ v1.5 追加: 識別子検証
-        #    'Namespace.Name' または 'Name' の形式のみ許可
         if not _VALID_QUALIFIED.match(name):
             self._log_debug(
                 f"_normalize_func_ref: reject invalid identifier: "
@@ -553,29 +494,12 @@ class RoleFunctionGenerator:
             )
             return ""
 
-        # 4. ドット形式・単純名はそのまま（namespace 保持）
         return name
 
     # ================================================================
-    # ★ Stage 4: 条件式からの関数抽出（ドット形式対応）
+    # 条件式からの関数抽出
     # ================================================================
     def _extract_func_names_from_condition(self, condition: str) -> List[str]:
-        """
-        条件式から関数参照を抽出し、正規化した qualified_name リストを返す。
-
-        Stage 4 変更点:
-          - 'Namespace.Name' 形式（ドット）を検出
-          - 式中の bare identifier（PascalCase のみ）を検出
-
-        検出パターン:
-          1. RoleFunc_XXX
-          2. Namespace.Name
-          3. function_name(...)
-          4. 文字列全体が bare identifier
-          5. 式中の bare identifier（[A-Z] で始まり、'.' に隣接しない）
-             ※ PascalCase の RoleFunc 名を想定。
-               C 変数（snake_case）との誤認を避けるための規約。
-        """
         if not condition:
             return []
         names = set()
@@ -601,13 +525,11 @@ class RoleFunctionGenerator:
                 names.add(stripped)
 
         # 5. 式中の bare identifier（PascalCase のみ）
-        #    '.' に隣接する部分は Namespace.Name の断片なので除外
         for m in re.finditer(r'(?<![.\w])([A-Z]\w*)(?![.\w])', condition):
             n = m.group(1)
             if n not in _C_KEYWORDS:
                 names.add(n)
 
-        # ★ v1.5: _normalize_func_ref で不正識別子が弾かれる
         return [self._normalize_func_ref(n) for n in names if n]
 
     # ================================================================
@@ -672,19 +594,9 @@ class RoleFunctionGenerator:
         )
         return call_map
 
-    # ================================================================
-    # ★ Stage 4: call_sites 検索ヘルパー
-    # ================================================================
     def _get_call_sites_for_func(
         self, func, call_map: Dict[str, List[RoleFuncCallSite]],
     ) -> List[RoleFuncCallSite]:
-        """
-        func に対応する call_sites を検索（Stage 4: qualified 優先）
-
-        検索順:
-          1. func.qualified_name （'Driver.Init'）
-          2. func.name          （'Init'、後方互換）
-        """
         qualified = getattr(func, 'qualified_name', None) or ''
         if qualified:
             cs = call_map.get(qualified, [])
@@ -723,15 +635,12 @@ class RoleFunctionGenerator:
         return ''.join(parts)
 
     # ================================================================
-    # TRANSITION_ID_NONE 定数
+    # 生成メソッド群
     # ================================================================
     def generate_none_define(self) -> str:
         T = self.NONE_DEFINE_TEMPLATES
         return T['section_comment'] + T['define']
 
-    # ================================================================
-    # 共通構造体
-    # ================================================================
     def generate_entry_struct(self) -> str:
         T = self.ENTRY_STRUCT_TEMPLATES
         return (
@@ -743,9 +652,6 @@ class RoleFunctionGenerator:
             )
         )
 
-    # ================================================================
-    # Transition_GetId プロトタイプ
-    # ================================================================
     def generate_transition_id_prototype(self) -> str:
         T = self.TRANSITION_ID_FUNC_TEMPLATES
         return (
@@ -756,12 +662,8 @@ class RoleFunctionGenerator:
             )
         )
 
-    # ================================================================
-    # Transition_GetId 本体
-    # ================================================================
     def generate_transition_id_function(self) -> str:
         T = self.TRANSITION_ID_FUNC_TEMPLATES
-        # definition_comment は str、definition は Template
         return (
             T['definition_comment'] +
             T['definition'].substitute(
@@ -770,9 +672,6 @@ class RoleFunctionGenerator:
             )
         )
 
-    # ================================================================
-    # 各関数の call_sites テーブル
-    # ================================================================
     def generate_call_sites_table(self, func, call_sites) -> str:
         if not call_sites:
             return ""
@@ -781,7 +680,6 @@ class RoleFunctionGenerator:
         table_name = f"call_sites_{short}"
         count_macro = f"CALL_SITES_{short}_COUNT"
 
-        # 重複除去（from_state, event）
         unique_entries = []
         seen = set()
         for cs in call_sites:
@@ -794,7 +692,6 @@ class RoleFunctionGenerator:
         if not unique_entries:
             return ""
 
-        # 列幅を計算（from_state の最大長）
         from_strs = [self._state_enum(cs.from_state)
                      for cs in unique_entries]
         from_width = max(len(s) for s in from_strs)
@@ -811,7 +708,6 @@ class RoleFunctionGenerator:
         for cs in unique_entries:
             from_str = self._state_enum(cs.from_state)
             event_str = self._event_enum(cs.event)
-            # カンマ後の整列: 最大幅 - 現幅 + 1（最低1スペース）
             pad = ' ' * (from_width - len(from_str) + 1)
             parts.append(T['entry'].substitute(
                 from_state=from_str,
@@ -825,9 +721,6 @@ class RoleFunctionGenerator:
         ))
         return ''.join(parts)
 
-    # ================================================================
-    # ファイル末尾ユーザー領域
-    # ================================================================
     def generate_tail_user_section(self) -> str:
         T = self.TAIL_USER_SECTION_TEMPLATES
         return ''.join([
@@ -837,9 +730,6 @@ class RoleFunctionGenerator:
             T['marker_end'],
         ])
 
-    # ================================================================
-    # ローカル変数展開
-    # ================================================================
     def _format_var_comment(self, var) -> str:
         description = getattr(var, 'description', '') or ''
         unit = getattr(var, 'unit', '') or ''
@@ -847,7 +737,6 @@ class RoleFunctionGenerator:
             return f"{description} [{unit}]"
         return description or unit or ""
 
-    # ★ NULL ガード付き transition メンバー展開
     def _generate_local_transition_members(self) -> str:
         T = self.IMPLEMENTATION_TEMPLATES
         parts = [
@@ -935,9 +824,6 @@ class RoleFunctionGenerator:
             T['blank'],
         ])
 
-    # ================================================================
-    # 宣言生成
-    # ================================================================
     def generate_declaration(self, func) -> str:
         T = self.DECLARATION_TEMPLATES
         parts = []
@@ -958,9 +844,6 @@ class RoleFunctionGenerator:
         parts.append(T['declaration_close'])
         return ''.join(parts)
 
-    # ================================================================
-    # 実装生成
-    # ================================================================
     def generate_implementation(self, func, global_defs=None,
                                 call_sites=None,
                                 include_transition_id: bool = True) -> str:
@@ -991,7 +874,6 @@ class RoleFunctionGenerator:
         ))
         parts.append(T['body_open'])
 
-        # NULL ガード付き transition メンバー展開
         parts.append(self._generate_local_transition_members())
 
         if include_transition_id:
@@ -1024,9 +906,6 @@ class RoleFunctionGenerator:
         parts.append(T['body_close'])
         return ''.join(parts)
 
-    # ================================================================
-    # 呼び出し生成
-    # ================================================================
     def generate_call(self, func_name: str) -> str:
         if func_name.startswith("RoleFunc_"):
             full_name = func_name
@@ -1042,9 +921,6 @@ class RoleFunctionGenerator:
                          f"{self.naming.to_pascal_case(func_name)}")
         return f"{full_name}(transition, ctx)"
 
-    # ================================================================
-    # 一括生成
-    # ================================================================
     def generate_all_declarations(self, role_functions: List) -> str:
         unique_funcs = self._dedupe_by_name(role_functions)
         parts = []
@@ -1056,21 +932,6 @@ class RoleFunctionGenerator:
     def generate_all_implementations(self, role_functions: List,
                                      state_machine=None,
                                      global_defs=None) -> str:
-        """
-        全ロール関数の実装を生成
-
-        【v1.5 変更】
-          - call_map に登録されたが role_functions に存在しない参照を
-            警告ログに出力（デバッグ支援）
-        生成順（state_machine 指定時）:
-          1. TRANSITION_ID_NONE 定数
-          2. 呼び出し元テーブル用 共通構造体
-          3. Transition_GetId プロトタイプ宣言
-          4. 各関数の call_sites テーブル（name 順）
-          5. 各ロール関数の実装（name 順）
-          6. Transition_GetId 本体定義（ファイル末尾、static）
-          7. ファイル末尾のユーザー追加領域
-        """
         unique_funcs = self._dedupe_by_name(role_functions)
         include_transition_id = state_machine is not None
         call_map = self._collect_call_sites(state_machine) \
@@ -1102,7 +963,6 @@ class RoleFunctionGenerator:
             parts.append(self.generate_transition_id_prototype())
             parts.append('\n')
 
-            # Stage 4: qualified_name 優先で call_sites を検索
             for func in unique_funcs:
                 call_sites = self._get_call_sites_for_func(func, call_map)
                 table_code = self.generate_call_sites_table(
@@ -1114,7 +974,6 @@ class RoleFunctionGenerator:
 
             parts.append('\n')
 
-        # Stage 4: 同様に qualified_name 優先で検索
         for func in unique_funcs:
             call_sites = self._get_call_sites_for_func(func, call_map)
             parts.append(self.generate_implementation(
@@ -1129,9 +988,6 @@ class RoleFunctionGenerator:
 
         return ''.join(parts)
 
-    # ================================================================
-    # 後方互換
-    # ================================================================
     def _collect_args(self, func) -> List[tuple]:
         return [
             (

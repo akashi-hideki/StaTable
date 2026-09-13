@@ -77,10 +77,10 @@ class RoleFunctionDialog(QDialog):
 
     def get_role_function(self) -> RoleFunction:
         """
-        【v1.5 変更】namespace を設定、および全引数を kwarg で指定
+        【v1.5 変更】
+          - namespace を設定、および全引数を kwarg で指定
           - model.py の RoleFunction が kw_only=True 化されたため、
             位置引数では構築できません。
-          - namespace 欄の値も反映します。
         """
         return RoleFunction(
             name=self.name_edit.text().strip(),
