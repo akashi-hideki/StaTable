@@ -1,23 +1,14 @@
 # tests/test_role_function_generator.py
 """
-RoleFunctionGenerator の全機能テスト
+RoleFunctionGenerator の全機能テスト（H1 Stage 2 対応版）
 
-実行方法:
-    cd code
-    python -m tests.test_role_function_generator
-    または
-    python tests/test_role_function_generator.py
-
-実行するとテスト終了後に tests/_generated/ に生成コードが出力され、
-コンソールにも全文が表示されます。
+NULL ガード追加に伴い、transition メンバー展開と
+Transition_GetId の期待値を更新。
 """
 
 import sys
 import os
 
-# ============================================================
-# sys.path セットアップ
-# ============================================================
 _THIS_DIR    = os.path.dirname(os.path.abspath(__file__))
 _CODE_DIR    = os.path.dirname(_THIS_DIR)
 _CODEGEN_DIR = os.path.join(_CODE_DIR, 'codegen')
@@ -31,16 +22,19 @@ import unittest
 from pathlib import Path
 from typing import Optional
 
+
 # ============================================================
-# モデルのインポート（statable が無い環境ではフォールバック）
+# モデルのインポート
 # ============================================================
 try:
     from statable.model import RoleFunction, Transition, State, Event
     from statable.state_machine import StateMachine
 except ImportError:
     class RoleFunction:
-        def __init__(self, name, return_type='void', description='', title=''):
+        def __init__(self, name, return_type='void', description='', title='',
+                     namespace=''):
             self.name = name
+            self.namespace = namespace
             self.return_type = return_type
             self.description = description
             self.title = title
@@ -92,10 +86,13 @@ from role_function_generator import (
 
 
 # ============================================================
-# テスト用ヘルパー
+# ヘルパー
 # ============================================================
-def make_func(name, description='', title=''):
-    return RoleFunction(name=name, description=description, title=title)
+def make_func(name, description='', title='', namespace=''):
+    return RoleFunction(
+        name=name, description=description, title=title,
+        namespace=namespace,
+    )
 
 
 class DummyVar:
@@ -113,14 +110,6 @@ class DummyGlobalDefs:
 
 
 def make_state_machine():
-    """
-    テスト用ステートマシン
-
-      Idle   -[START]-> Running  (condition: StartOk)
-      Active -[STOP]->  Idle     (pre_actions: LogStop)
-      Active -[ERROR]-> Error    (pre_actions: LogError,
-                                  else_actions: Fallback, else_target: Idle)
-    """
     sm = StateMachine()
     for n in ("Idle", "Active", "Running", "Error"):
         sm.add_state(State(n))
@@ -392,7 +381,7 @@ class TestAllDeclarations(unittest.TestCase):
 
 
 # ============================================================
-# 7. 一括実装生成（基本）
+# 7. 一括実装生成
 # ============================================================
 class TestAllImplementations(unittest.TestCase):
     def setUp(self):
@@ -445,33 +434,49 @@ class TestRoundTrip(unittest.TestCase):
 
 
 # ============================================================
-# 9. ローカル変数展開
+# 9. ローカル変数展開（★ NULL ガード対応）
 # ============================================================
 class TestLocalVariableExpansion(unittest.TestCase):
     def setUp(self):
         self.gen = RoleFunctionGenerator()
         self.gen.set_layer("Driver")
 
+    # ★ NULL ガード導入により期待値変更
     def test_transition_members_with_layer(self):
+        """transition メンバー展開（NULL ガード付き）"""
         impl = self.gen.generate_implementation(make_func("CheckSensor"))
+        # NULL ガード用のデフォルト値宣言
         self.assertIn(
-            "const STATE_Driver_t from_state = transition->from_state;", impl
+            "STATE_Driver_t from_state = STATE_Driver_MAX;", impl
         )
         self.assertIn(
-            "const EVENT_Driver_t event = transition->event;", impl
+            "EVENT_Driver_t event = EVENT_Driver_NONE;", impl
         )
+        # NULL チェック
+        self.assertIn("if (transition != NULL) {", impl)
+        # 代入
+        self.assertIn(
+            "from_state = transition->from_state;", impl
+        )
+        self.assertIn(
+            "event = transition->event;", impl
+        )
+        # 警告抑制
+        self.assertIn("(void)from_state;", impl)
+        self.assertIn("(void)event;", impl)
 
     def test_transition_members_without_layer(self):
+        """層名なし transition メンバー展開"""
         gen = RoleFunctionGenerator()
         impl = gen.generate_implementation(make_func("CheckSensor"))
-        self.assertIn(
-            "const STATE_t from_state = transition->from_state;", impl
-        )
-        self.assertIn(
-            "const EVENT_t event = transition->event;", impl
-        )
+        self.assertIn("STATE_t from_state = STATE_MAX;", impl)
+        self.assertIn("EVENT_t event = EVENT_NONE;", impl)
+        self.assertIn("if (transition != NULL) {", impl)
+        self.assertIn("from_state = transition->from_state;", impl)
+        self.assertIn("event = transition->event;", impl)
 
     def test_no_void_transition(self):
+        """transition は常に使用される（NULL ガードで参照）"""
         impl = self.gen.generate_implementation(make_func("CheckSensor"))
         self.assertNotIn("(void)transition;", impl)
 
@@ -687,13 +692,11 @@ class TestCallSitesTable(unittest.TestCase):
         self.assertIn("#define CALL_SITES_CheckSensor_COUNT", code)
 
     def test_comma_followed_by_space(self):
-        """カンマの後に必ずスペースがあること（整列バグの再発防止）"""
         func = make_func("Foo")
         cs = [
             RoleFuncCallSite("Foo", "condition", "Idle", "START", "Running"),
         ]
         code = self.gen.generate_call_sites_table(func, cs)
-        # ", EVENT" の形（カンマ直後に空白）
         self.assertRegex(code, r",\s+EVENT_")
 
     def test_dedup_same_state_event(self):
@@ -725,7 +728,7 @@ class TestCallSitesTable(unittest.TestCase):
 
 
 # ============================================================
-# 14. Transition_GetId プロトタイプ / 本体
+# 14. Transition_GetId
 # ============================================================
 class TestTransitionIdFunction(unittest.TestCase):
     def setUp(self):
@@ -739,10 +742,13 @@ class TestTransitionIdFunction(unittest.TestCase):
         self.assertIn("const RoleFuncCallSiteEntry_Driver_t *table,", code)
         self.assertIn("uint16_t table_size);", code)
 
+    # ★ NULL チェックの期待値変更
     def test_definition(self):
+        """Transition_GetId 本体（NULL チェック）"""
         code = self.gen.generate_transition_id_function()
         self.assertIn("static uint16_t Transition_GetId(", code)
-        self.assertIn("if (table == NULL)", code)
+        # ★ transition と table の両方 NULL チェック
+        self.assertIn("if (transition == NULL || table == NULL)", code)
         self.assertIn("return TRANSITION_ID_NONE;", code)
         self.assertIn("for (i = 0; i < table_size; i++)", code)
         self.assertIn("table[i].from_state == transition->from_state", code)
@@ -785,11 +791,14 @@ class TestTransitionIdInImplementation(unittest.TestCase):
         self.assertNotIn("transition_id", impl)
         self.assertNotIn("Transition_GetId", impl)
 
+    # ★ NULL ガード後の順序確認（event の宣言位置を変更）
     def test_order_after_members(self):
+        """transition_id が NULL ガードより後にあること"""
         func = make_func("Foo")
         cs = [RoleFuncCallSite("Foo", "condition", "Idle", "START", "Running")]
         impl = self.gen.generate_implementation(func, call_sites=cs)
-        pos_m = impl.index("const EVENT_Driver_t event")
+        # ★ event の宣言は NULL ガード内にある
+        pos_m = impl.index("EVENT_Driver_t event = EVENT_Driver_NONE;")
         pos_id = impl.index("transition_id =")
         self.assertGreater(pos_id, pos_m)
 
@@ -894,11 +903,10 @@ class TestAllImplementationsOrder(unittest.TestCase):
 
 
 # ============================================================
-# 18. 完全パイプライン（生成 → マージ）
+# 18. 完全パイプライン
 # ============================================================
 class TestFullPipeline(unittest.TestCase):
     def test_generate_and_merge_round_trip(self):
-        """生成 → マージ後もユーザーコード（関数単位）が保持される"""
         from code_merger import CodeMerger
         merger = CodeMerger()
 
@@ -921,7 +929,6 @@ class TestFullPipeline(unittest.TestCase):
         self.assertIn("ret = 1;", merged)
 
     def test_tail_user_code_preserved(self):
-        """末尾ユーザー領域が再生成後も保持される"""
         from code_merger import CodeMerger
         merger = CodeMerger()
 
@@ -947,7 +954,6 @@ class TestFullPipeline(unittest.TestCase):
 # ============================================================
 class TestIntegratedOutput(unittest.TestCase):
     def test_full_output_contains_all_elements(self):
-        """全機能を有効にしたときの出力に、必要な要素が全て含まれること"""
         gen = RoleFunctionGenerator()
         gen.set_layer("Driver")
 
@@ -979,11 +985,12 @@ class TestIntegratedOutput(unittest.TestCase):
         self.assertIn("call_sites_LogStop[]", out)
         self.assertIn("call_sites_LogError[]", out)
         self.assertIn("call_sites_Fallback[]", out)
-        # 5. 各関数の transition メンバー展開
-        self.assertIn(
-            "const STATE_Driver_t from_state = transition->from_state;", out
-        )
-        self.assertIn("const EVENT_Driver_t event = transition->event;", out)
+        # 5. NULL ガード付き transition メンバー展開（★ 期待値変更）
+        self.assertIn("STATE_Driver_t from_state = STATE_Driver_MAX;", out)
+        self.assertIn("EVENT_Driver_t event = EVENT_Driver_NONE;", out)
+        self.assertIn("if (transition != NULL) {", out)
+        self.assertIn("from_state = transition->from_state;", out)
+        self.assertIn("event = transition->event;", out)
         # 6. transition_id
         self.assertEqual(
             out.count("const uint16_t transition_id = Transition_GetId("), 4,
@@ -1005,8 +1012,8 @@ class TestIntegratedOutput(unittest.TestCase):
         # 9. ユーザーコードマーカー
         self.assertIn("[[STABLE_USER_CODE_START:Driver_StartOk]]", out)
         self.assertIn("[[STABLE_USER_CODE_END:Driver_StartOk]]", out)
-        # 10. Transition_GetId 本体（末尾）
-        self.assertIn("if (table == NULL)", out)
+        # 10. Transition_GetId 本体
+        self.assertIn("if (transition == NULL || table == NULL)", out)
         # 11. 末尾ユーザー領域
         self.assertIn("STABLE_USER_CODE_TAIL_START", out)
         self.assertIn("STABLE_USER_CODE_TAIL_END", out)
@@ -1015,17 +1022,10 @@ class TestIntegratedOutput(unittest.TestCase):
 
 
 # ============================================================
-# 生成コードのダンプ（目視確認用）
+# ダンプ（目視確認用）
 # ============================================================
 def dump_generated_code(output_dir: Optional[str] = None,
                         full_preview: bool = True) -> str:
-    """
-    生成コードをファイルに出力し、内容をコンソールにも表示する
-
-    Args:
-        output_dir:   出力先ディレクトリ（省略時は tests/_generated）
-        full_preview: True なら全文プレビュー、False なら先頭60行のみ
-    """
     if output_dir is None:
         output_dir = os.path.join(_THIS_DIR, '_generated')
     Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -1048,13 +1048,11 @@ def dump_generated_code(output_dir: Optional[str] = None,
         make_func("Fallback",  description="フォールバック処理"),
     ]
 
-    # --- 宣言ヘッダ ---
     decl = gen.generate_all_declarations(funcs)
     h_path = os.path.join(output_dir, 'role_functions.h')
     with open(h_path, 'w', encoding='utf-8') as f:
         f.write(decl)
 
-    # --- 実装ソース（全機能有効） ---
     impl = gen.generate_all_implementations(
         funcs, state_machine=sm, global_defs=gd,
     )
@@ -1062,18 +1060,12 @@ def dump_generated_code(output_dir: Optional[str] = None,
     with open(c_path, 'w', encoding='utf-8') as f:
         f.write(impl)
 
-    # --- 実装ソース（state_machine 未指定） ---
     impl_no_sm = gen.generate_all_implementations(funcs)
     c_no_sm_path = os.path.join(output_dir, 'role_functions_no_sm.c')
     with open(c_no_sm_path, 'w', encoding='utf-8') as f:
         f.write(impl_no_sm)
 
-    # ==========================================================
-    # コンソール出力
-    # ==========================================================
     sep = "=" * 70
-
-    # --- 出力先通知 ---
     print(f"\n{sep}")
     print(f"  生成コードを出力しました: {output_dir}")
     print(sep)
@@ -1081,39 +1073,13 @@ def dump_generated_code(output_dir: Optional[str] = None,
     print(f"  - role_functions.c        ({len(impl)} bytes)")
     print(f"  - role_functions_no_sm.c  ({len(impl_no_sm)} bytes)")
 
-    # --- role_functions.h 全文 ---
-    print(f"\n{sep}")
-    print("  role_functions.h （全文）")
-    print(sep)
-    print(decl)
-
-    # --- role_functions.c 全文 ---
-    print(f"\n{sep}")
-    if full_preview:
-        print("  role_functions.c （全文）")
-    else:
-        print("  role_functions.c （先頭 60 行）")
-    print(sep)
-    if full_preview:
-        print(impl)
-    else:
-        for line in impl.split('\n')[:60]:
-            print(line)
-
-    # --- role_functions_no_sm.c 全文 ---
-    print(f"\n{sep}")
-    print("  role_functions_no_sm.c （全文）")
-    print(sep)
-    print(impl_no_sm)
-    print(sep)
-
     return output_dir
 
 
 # ============================================================
-# テスト実行
+# 実行
 # ============================================================
-def run_tests(dump: bool = True, full_preview: bool = True):
+def run_tests(dump: bool = True):
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
 
@@ -1146,7 +1112,7 @@ def run_tests(dump: bool = True, full_preview: bool = True):
 
     if dump:
         try:
-            dump_generated_code(full_preview=full_preview)
+            dump_generated_code()
         except Exception as e:
             print(f"\n[ダンプ失敗] {e}")
 

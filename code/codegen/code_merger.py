@@ -2,6 +2,13 @@
 """
 生成コードと既存コードのマージ処理
 ユーザー編集部分を保持しながら自動生成コードを更新する
+
+対応マーカー:
+  - ファイル全体ユーザー領域: [[STABLE_USER_CODE_START/END]]
+  - 関数単位ユーザー領域: [[STABLE_USER_CODE_START:<name>/END:<name>]]
+    - RoleFunc_XXX の <name> は "Driver_Init" 形式（層名込み）
+    - ISR_XXX の <name> は "TIMER0" 形式（層名なし）
+  - ファイル末尾ユーザー領域: [[STABLE_USER_CODE_TAIL_START/END]]
 """
 
 import re
@@ -28,6 +35,12 @@ class CodeMerger:
         'file_tail_user_end':   '/* [[STABLE_USER_CODE_TAIL_END]] */',
     }
 
+    # ★ 関数名抽出パターン（RoleFunc_ / ISR_ 両対応）
+    FUNC_NAME_PATTERNS = [
+        r'RoleFunc_(\w+)\s*\(',   # RoleFunc_Driver_Init(
+        r'ISR_(\w+)\s*\(',        # ISR_TIMER0(
+    ]
+
     def __init__(self):
         self.markers = self.MARKERS
 
@@ -49,7 +62,8 @@ class CodeMerger:
             return match.group(1)
         return ""
 
-    def extract_func_user_code(self, existing_content: str, func_name: str) -> str:
+    def extract_func_user_code(self, existing_content: str,
+                               func_name: str) -> str:
         """関数単位のユーザーコードを抽出"""
         start = self.markers['func_user_start'].format(func_name=func_name)
         end = self.markers['func_user_end'].format(func_name=func_name)
@@ -62,21 +76,33 @@ class CodeMerger:
             return match.group(1)
         return ""
 
-    def extract_all_func_user_codes(self, existing_content: str) -> Dict[str, str]:
-        """全関数のユーザーコードを抽出"""
+    def extract_all_func_user_codes(self, existing_content: str
+                                    ) -> Dict[str, str]:
+        """
+        全関数のユーザーコードを抽出
+
+        RoleFunc_XXX と ISR_XXX の両方に対応
+        - RoleFunc_Driver_Init → キー "Driver_Init"
+        - ISR_TIMER0           → キー "TIMER0"
+        """
         func_user_codes = {}
-        
-        # 関数名を抽出
-        func_pattern = r'RoleFunc_(\w+)\s*\('
         seen = set()
-        for match in re.finditer(func_pattern, existing_content):
-            func_name = match.group(1)
-            if func_name in seen:
-                continue
-            seen.add(func_name)
-            user_code = self.extract_func_user_code(existing_content, func_name)
-            if user_code:
-                func_user_codes[func_name] = user_code
+
+        for pattern in self.FUNC_NAME_PATTERNS:
+            for match in re.finditer(pattern, existing_content):
+                func_name = match.group(1)
+                if func_name in seen:
+                    continue
+                seen.add(func_name)
+                user_code = self.extract_func_user_code(
+                    existing_content, func_name
+                )
+                if user_code:
+                    func_user_codes[func_name] = user_code
+
+        self._log_debug(
+            f"extract_all_func_user_codes: {len(func_user_codes)} funcs"
+        )
         return func_user_codes
 
     # ファイル末尾ユーザーコード抽出
@@ -94,7 +120,8 @@ class CodeMerger:
         return ""
 
     # ===== 注入処理 =====
-    def inject_file_user_code(self, generated_content: str, user_code: str) -> str:
+    def inject_file_user_code(self, generated_content: str,
+                              user_code: str) -> str:
         """生成コードにファイル全体のユーザーコードを注入"""
         if not user_code:
             return generated_content
@@ -129,8 +156,8 @@ class CodeMerger:
         return '\n'.join(result_lines)
 
     # ★ 関数ユーザーコード注入: 既存マーカーブロックを置換
-    def inject_func_user_code(self, generated_content: str, func_name: str,
-                              user_code: str) -> str:
+    def inject_func_user_code(self, generated_content: str,
+                              func_name: str, user_code: str) -> str:
         """
         生成コード内の既存マーカーブロックを user_code で置換
 
@@ -153,7 +180,9 @@ class CodeMerger:
         if count:
             self._log_debug(f"関数 {func_name} のユーザーコードを注入しました")
         else:
-            self._log_debug(f"関数 {func_name} のマーカーが見つかりません", 'warning')
+            self._log_debug(
+                f"関数 {func_name} のマーカーが見つかりません", 'warning'
+            )
         return result
 
     # ★ ファイル末尾ユーザーコード注入
@@ -207,7 +236,9 @@ class CodeMerger:
         
         # 関数単位のユーザーコードを注入
         for func_name, user_code in func_user_codes.items():
-            result = self.inject_func_user_code(result, func_name, user_code)
+            result = self.inject_func_user_code(
+                result, func_name, user_code
+            )
 
         result = self.inject_file_tail_user_code(result, tail_user_code)
 

@@ -1,6 +1,6 @@
 # codegen/role_function_generator.py
 """
-ロール関数生成モジュール（多層ステートマシン対応版・完全版）
+ロール関数生成モジュール（多層ステートマシン対応・ISR 対応版）
 
 生成するもの（state_machine 指定時）:
   1. TRANSITION_ID_NONE 定数
@@ -8,7 +8,7 @@
   3. Transition_GetId プロトタイプ宣言（static）
   4. ロール関数ごとの呼び出し元テーブル call_sites_<Short>[]
   5. 各ロール関数の実装
-     - transition のメンバー展開 (from_state, event)
+     - transition のメンバー展開（NULL ガード付き）
      - transition_id ローカル変数（Transition_GetId 呼び出し）
      - ctx->data の各メンバーへのローカルポインタ展開
      - 戻り値用ローカル変数 (int ret = 0;)
@@ -90,7 +90,7 @@ class RoleFuncCallSite:
 
 
 class RoleFunctionGenerator:
-    """ロール関数生成クラス（多層ステートマシン対応）"""
+    """ロール関数生成クラス（多層ステートマシン対応・ISR 対応）"""
 
     # ================================================================
     # 【テーブル①】宣言用テンプレート
@@ -100,7 +100,7 @@ class RoleFunctionGenerator:
             '/**\n'
             ' * @brief  ロール関数: $title\n'
             ' * @note   $description\n'
-            ' * @param  transition  遷移コンテキスト（セル情報）\n'
+            ' * @param  transition  遷移コンテキスト（NULL 可: ISR から呼ばれる場合）\n'
             ' * @param  ctx         システムコンテキストポインタ\n'
             ' * @return 0: 成功, 0以外: エラー（条件判定にも使用可）\n'
             ' */\n'
@@ -108,7 +108,7 @@ class RoleFunctionGenerator:
         'comment_no_desc': Template(
             '/**\n'
             ' * @brief  ロール関数: $title\n'
-            ' * @param  transition  遷移コンテキスト（セル情報）\n'
+            ' * @param  transition  遷移コンテキスト（NULL 可: ISR から呼ばれる場合）\n'
             ' * @param  ctx         システムコンテキストポインタ\n'
             ' * @return 0: 成功, 0以外: エラー（条件判定にも使用可）\n'
             ' */\n'
@@ -122,7 +122,7 @@ class RoleFunctionGenerator:
     }
 
     # ================================================================
-    # 【テーブル②】実装用テンプレート
+    # 【テーブル②】実装用テンプレート（NULL ガード付き）
     # ================================================================
     IMPLEMENTATION_TEMPLATES = {
         'comment_with_desc': Template(
@@ -144,12 +144,31 @@ class RoleFunctionGenerator:
             '    SystemContext_t *ctx\n'
         ),
         'body_open': ')\n{\n',
+
+        # ★ NULL transition ガード（transition が NULL でも安全）
+        'null_guard_header': (
+            '    /* ===== transition NULL ガード（ISR からの呼び出し対応） ===== */\n'
+        ),
+        'null_guard_decl': Template(
+            '    $c_type $member_name = $max_value;\n'
+        ),
+        'null_guard_check': (
+            '    if (transition != NULL) {\n'
+        ),
+        'null_guard_assign': Template(
+            '        $member_name = transition->$member_name;\n'
+        ),
+        'null_guard_close': (
+            '    }\n'
+        ),
+        'null_guard_suppress': Template(
+            '    (void)$member_name;   /* 未使用警告抑制 */\n'
+        ),
+
         'unused_ctx': '    (void)ctx;         /* 未使用引数の警告抑制 */\n',
         'blank': '\n',
-        'local_transition_header': '    /* ===== transition のメンバー展開 ===== */\n',
-        'local_transition_member': Template(
-            '    const $c_type $member_name = transition->$member_name;\n'
-        ),
+
+        # transition 関連
         'local_transition_id_header': (
             '    /* ===== transition ID（call_sites 内のインデックス） ===== */\n'
         ),
@@ -157,6 +176,8 @@ class RoleFunctionGenerator:
             '    const uint16_t transition_id = Transition_GetId(\n'
             '        transition, $table_arg, $count_arg);\n'
         ),
+
+        # ctx->data ポインタ
         'local_data_header': '    /* ===== ctx->data へのローカルポインタ ===== */\n',
         'local_data_pointer': Template(
             '    $c_type *const $var_name = &ctx->data.$var_name;'
@@ -166,8 +187,12 @@ class RoleFunctionGenerator:
             '    $c_type *const $var_name = ctx->data.$var_name;'
             '  /* $comment */\n'
         ),
+
+        # 戻り値
         'local_ret_header': '    /* ===== 戻り値 ===== */\n',
         'local_ret_decl': '    int ret = 0;   /* ユーザーコード内で書き換え可 */\n',
+
+        # TODO / マーカー
         'todo_comment': Template('    /* $todo */\n'),
         'user_marker_start': Template(
             '    /* [[STABLE_USER_CODE_START:$marker_name]] */\n'
@@ -176,6 +201,8 @@ class RoleFunctionGenerator:
         'user_marker_end': Template(
             '    /* [[STABLE_USER_CODE_END:$marker_name]] */\n'
         ),
+
+        # 戻り値 / 終了
         'return_default': '    return ret;\n',
         'body_close': '}\n',
     }
@@ -233,11 +260,12 @@ class RoleFunctionGenerator:
             '/*  Transition ID 変換（ファイル末尾）                            */\n'
             '/*  ロール関数ごとの call_sites テーブルを線形探索し、             */\n'
             '/*  一致したエントリのインデックスを返す。                        */\n'
-            '/*  一致なし / table==NULL の場合は TRANSITION_ID_NONE を返す。   */\n'
+            '/*  一致なし / transition==NULL の場合は TRANSITION_ID_NONE を    */\n'
+            '/*  返す。                                                        */\n'
             '/* ============================================================== */\n'
             '/**\n'
             ' * @brief  transition 情報を一意な ID に変換する\n'
-            ' * @param  transition  遷移コンテキスト\n'
+            ' * @param  transition  遷移コンテキスト（NULL 可）\n'
             ' * @param  table       呼び出し元テーブル（NULL 可）\n'
             ' * @param  table_size  テーブルの要素数\n'
             ' * @return テーブル内のインデックス（一致なしは TRANSITION_ID_NONE）\n'
@@ -251,7 +279,7 @@ class RoleFunctionGenerator:
             '{\n'
             '    uint16_t i;\n'
             '\n'
-            '    if (table == NULL) {\n'
+            '    if (transition == NULL || table == NULL) {\n'
             '        return TRANSITION_ID_NONE;\n'
             '    }\n'
             '\n'
@@ -335,20 +363,35 @@ class RoleFunctionGenerator:
         log_func(message)
 
     # ================================================================
-    # 名前生成
+    # 名前生成（namespace 対応）
     # ================================================================
-    def _generate_function_name(self, func) -> str:
+    def _resolve_name_and_namespace(self, func) -> tuple:
+        """
+        関数オブジェクトから (name, namespace) を取得
+
+        - func.namespace が設定されていればそれを優先
+        - 未設定なら layer_name にフォールバック
+        """
         name = getattr(func, 'name', 'unnamed')
+        namespace = getattr(func, 'namespace', '') or ''
+        if not namespace and self.layer_name:
+            namespace = self.layer_name
+        return name, namespace
+
+    def _generate_function_name(self, func) -> str:
+        """RoleFunc_<Namespace>_<PascalName>"""
+        name, namespace = self._resolve_name_and_namespace(func)
         pascal = self.naming.to_pascal_case(name)
-        if self.layer_name:
-            return f"RoleFunc_{self.layer_name}_{pascal}"
+        if namespace:
+            return f"RoleFunc_{namespace}_{pascal}"
         return f"RoleFunc_{pascal}"
 
     def _get_marker_name(self, func) -> str:
-        name = getattr(func, 'name', 'unnamed')
+        """マーカー用の名前: <Namespace>_<PascalName>"""
+        name, namespace = self._resolve_name_and_namespace(func)
         pascal = self.naming.to_pascal_case(name)
-        if self.layer_name:
-            return f"{self.layer_name}_{pascal}"
+        if namespace:
+            return f"{namespace}_{pascal}"
         return pascal
 
     def _get_short_name(self, func) -> str:
@@ -373,46 +416,64 @@ class RoleFunctionGenerator:
         e = self.naming.to_upper_snake(event_name) if event_name else "NONE"
         return f"EVENT_{self.layer_name}_{e}" if self.layer_name else f"EVENT_{e}"
 
+    def _state_max(self) -> str:
+        return f"STATE_{self.layer_name}_MAX" if self.layer_name else "STATE_MAX"
+
+    def _event_none(self) -> str:
+        return f"EVENT_{self.layer_name}_NONE" if self.layer_name else "EVENT_NONE"
+
     def _entry_struct_type(self) -> str:
-        return f"RoleFuncCallSiteEntry_{self.layer_name}_t" if self.layer_name \
-            else "RoleFuncCallSiteEntry_t"
+        return (f"RoleFuncCallSiteEntry_{self.layer_name}_t"
+                if self.layer_name else "RoleFuncCallSiteEntry_t")
 
     # ================================================================
-    # 重複除去
+    # 重複除去（namespace.name で一意化）
     # ================================================================
     def _dedupe_by_name(self, funcs: Iterable) -> List:
         seen = set()
         result = []
         for func in funcs:
             name = getattr(func, 'name', None)
+            namespace = getattr(func, 'namespace', '') or ''
             if not name:
                 self._log_debug(
-                    f"_dedupe_by_name: skip (no name): {func!r}", 'warning'
+                    f"_dedupe_by_name: skip (no name): {func!r}",
+                    'warning'
                 )
                 continue
-            if name in seen:
-                self._log_debug(f"_dedupe_by_name: duplicate skipped: {name}")
+            key = f"{namespace}.{name}" if namespace else name
+            if key in seen:
+                self._log_debug(
+                    f"_dedupe_by_name: duplicate skipped: {key}"
+                )
                 continue
-            seen.add(name)
+            seen.add(key)
             result.append(func)
         return result
 
     def _resolve_comment_title(self, func) -> str:
         title = getattr(func, 'title', '')
         name = getattr(func, 'name', 'unnamed')
-        if title and title != f"ロール関数: {name}":
+        qualified = getattr(func, 'qualified_name', name)
+        if title and title != f"ロール関数: {name}" \
+                and title != f"ロール関数: {qualified}":
             return title
-        return name
+        return qualified
 
     # ================================================================
     # 呼び出しサイト収集
     # ================================================================
     def _normalize_func_ref(self, ref: str) -> str:
+        """RoleFunc_<NS>_<Name> / <NS>.<Name> / <NS>_<Name> → <Name>"""
         if not ref:
             return ""
         name = ref
         if name.startswith("RoleFunc_"):
             name = name[len("RoleFunc_"):]
+        # namespace.separator 形式
+        if '.' in name:
+            name = name.split('.', 1)[1]
+        # namespace プレフィックス除去
         if self.layer_name and name.startswith(f"{self.layer_name}_"):
             name = name[len(self.layer_name) + 1:]
         return name
@@ -433,7 +494,8 @@ class RoleFunctionGenerator:
                 names.add(stripped)
         return [self._normalize_func_ref(n) for n in names if n]
 
-    def _collect_call_sites(self, state_machine) -> Dict[str, List[RoleFuncCallSite]]:
+    def _collect_call_sites(self, state_machine
+                            ) -> Dict[str, List[RoleFuncCallSite]]:
         if state_machine is None:
             return {}
         call_map: Dict[str, List[RoleFuncCallSite]] = {}
@@ -453,9 +515,11 @@ class RoleFunctionGenerator:
                             continue
                         seen.add(key)
                         call_map.setdefault(fname, []).append(RoleFuncCallSite(
-                            fname, 'condition', state.name, event.name, target,
+                            fname, 'condition',
+                            state.name, event.name, target,
                         ))
-                    for action in ensure_list(getattr(trans, 'pre_actions', [])):
+                    for action in ensure_list(
+                            getattr(trans, 'pre_actions', [])):
                         norm = self._normalize_func_ref(action)
                         if not norm:
                             continue
@@ -464,10 +528,12 @@ class RoleFunctionGenerator:
                             continue
                         seen.add(key)
                         call_map.setdefault(norm, []).append(RoleFuncCallSite(
-                            norm, 'pre_action', state.name, event.name, target,
+                            norm, 'pre_action',
+                            state.name, event.name, target,
                         ))
                     else_target = getattr(trans, 'else_target', '') or ''
-                    for action in ensure_list(getattr(trans, 'else_actions', [])):
+                    for action in ensure_list(
+                            getattr(trans, 'else_actions', [])):
                         norm = self._normalize_func_ref(action)
                         if not norm:
                             continue
@@ -476,7 +542,8 @@ class RoleFunctionGenerator:
                             continue
                         seen.add(key)
                         call_map.setdefault(norm, []).append(RoleFuncCallSite(
-                            norm, 'else_action', state.name, event.name,
+                            norm, 'else_action',
+                            state.name, event.name,
                             else_target or target,
                         ))
 
@@ -491,13 +558,18 @@ class RoleFunctionGenerator:
         if not call_sites:
             return T['none']
         kind_width = max(len(cs.kind) for cs in call_sites)
-        from_width = max(len(self._state_enum(cs.from_state)) for cs in call_sites)
-        event_width = max(len(self._event_enum(cs.event)) for cs in call_sites)
+        from_width = max(
+            len(self._state_enum(cs.from_state)) for cs in call_sites
+        )
+        event_width = max(
+            len(self._event_enum(cs.event)) for cs in call_sites
+        )
         parts = [T['header']]
         for cs in call_sites:
             from_str = self._state_enum(cs.from_state)
             event_str = self._event_enum(cs.event)
-            target_str = self._state_enum(cs.target) if cs.target else '(未設定)'
+            target_str = (self._state_enum(cs.target)
+                          if cs.target else '(未設定)')
             parts.append(T['line'].substitute(
                 kind=cs.kind,
                 kind_pad=' ' * (kind_width - len(cs.kind)),
@@ -581,7 +653,8 @@ class RoleFunctionGenerator:
             return ""
 
         # 列幅を計算（from_state の最大長）
-        from_strs = [self._state_enum(cs.from_state) for cs in unique_entries]
+        from_strs = [self._state_enum(cs.from_state)
+                     for cs in unique_entries]
         from_width = max(len(s) for s in from_strs)
 
         T = self.CALL_SITE_TABLE_TEMPLATES
@@ -632,20 +705,33 @@ class RoleFunctionGenerator:
             return f"{description} [{unit}]"
         return description or unit or ""
 
+    # ★ NULL ガード付き transition メンバー展開
     def _generate_local_transition_members(self) -> str:
         T = self.IMPLEMENTATION_TEMPLATES
-        return ''.join([
-            T['local_transition_header'],
-            T['local_transition_member'].substitute(
-                c_type=self._state_type(), member_name='from_state',
+        parts = [
+            T['null_guard_header'],
+            T['null_guard_decl'].substitute(
+                c_type=self._state_type(),
+                member_name='from_state',
+                max_value=self._state_max(),
             ),
-            T['local_transition_member'].substitute(
-                c_type=self._event_type(), member_name='event',
+            T['null_guard_decl'].substitute(
+                c_type=self._event_type(),
+                member_name='event',
+                max_value=self._event_none(),
             ),
+            T['null_guard_check'],
+            T['null_guard_assign'].substitute(member_name='from_state'),
+            T['null_guard_assign'].substitute(member_name='event'),
+            T['null_guard_close'],
+            T['null_guard_suppress'].substitute(member_name='from_state'),
+            T['null_guard_suppress'].substitute(member_name='event'),
             T['blank'],
-        ])
+        ]
+        return ''.join(parts)
 
-    def _generate_local_transition_id(self, func, has_call_sites: bool) -> str:
+    def _generate_local_transition_id(self, func,
+                                      has_call_sites: bool) -> str:
         T = self.IMPLEMENTATION_TEMPLATES
         if has_call_sites:
             short = self._get_short_name(func)
@@ -676,16 +762,20 @@ class RoleFunctionGenerator:
             var_name = self.naming.sanitize_identifier(
                 getattr(var, 'name', 'unnamed')
             )
-            c_type = self.mapper.map_type(getattr(var, 'type', 'void'))
+            c_type = self.mapper.map_type(
+                getattr(var, 'type', 'void')
+            )
             comment = self._format_var_comment(var)
             array_size = getattr(var, 'array_size', 0)
             if array_size > 0:
                 parts.append(T['local_data_array'].substitute(
-                    c_type=c_type, var_name=var_name, comment=comment,
+                    c_type=c_type, var_name=var_name,
+                    comment=comment,
                 ))
             else:
                 parts.append(T['local_data_pointer'].substitute(
-                    c_type=c_type, var_name=var_name, comment=comment,
+                    c_type=c_type, var_name=var_name,
+                    comment=comment,
                 ))
         parts.append(T['blank'])
         return ''.join(parts)
@@ -737,7 +827,9 @@ class RoleFunctionGenerator:
 
         title = self._resolve_comment_title(func)
         description = getattr(func, 'description', '')
-        call_sites_comment = self._format_call_sites_comment(call_sites or [])
+        call_sites_comment = self._format_call_sites_comment(
+            call_sites or []
+        )
 
         if description:
             parts.append(T['comment_with_desc'].substitute(
@@ -757,6 +849,7 @@ class RoleFunctionGenerator:
         ))
         parts.append(T['body_open'])
 
+        # ★ NULL ガード付き transition メンバー展開
         parts.append(self._generate_local_transition_members())
 
         if include_transition_id:
@@ -770,13 +863,19 @@ class RoleFunctionGenerator:
 
         parts.append(self._generate_local_retvar())
 
-        parts.append(T['todo_comment'].substitute(todo=self.strings['todo']))
+        parts.append(T['todo_comment'].substitute(
+            todo=self.strings['todo']
+        ))
         parts.append(T['blank'])
 
         marker_name = self._get_marker_name(func)
-        parts.append(T['user_marker_start'].substitute(marker_name=marker_name))
+        parts.append(T['user_marker_start'].substitute(
+            marker_name=marker_name
+        ))
         parts.append(T['user_marker_hint'])
-        parts.append(T['user_marker_end'].substitute(marker_name=marker_name))
+        parts.append(T['user_marker_end'].substitute(
+            marker_name=marker_name
+        ))
         parts.append(T['blank'])
 
         parts.append(T['return_default'])
@@ -789,11 +888,16 @@ class RoleFunctionGenerator:
     def generate_call(self, func_name: str) -> str:
         if func_name.startswith("RoleFunc_"):
             full_name = func_name
+        elif '.' in func_name:
+            ns, name = func_name.split('.', 1)
+            full_name = (f"RoleFunc_{ns}_"
+                         f"{self.naming.to_pascal_case(name)}")
         elif self.layer_name:
             full_name = (f"RoleFunc_{self.layer_name}_"
                          f"{self.naming.to_pascal_case(func_name)}")
         else:
-            full_name = f"RoleFunc_{self.naming.to_pascal_case(func_name)}"
+            full_name = (f"RoleFunc_"
+                         f"{self.naming.to_pascal_case(func_name)}")
         return f"{full_name}(transition, ctx)"
 
     # ================================================================
@@ -840,7 +944,9 @@ class RoleFunctionGenerator:
             for func in unique_funcs:
                 func_name = getattr(func, 'name', '')
                 call_sites = call_map.get(func_name, [])
-                table_code = self.generate_call_sites_table(func, call_sites)
+                table_code = self.generate_call_sites_table(
+                    func, call_sites
+                )
                 if table_code:
                     parts.append(table_code)
                     parts.append('\n')
