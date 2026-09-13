@@ -1,0 +1,273 @@
+# tools/write_isr_test_xml.py
+"""
+isr_namespace_test.xml (v2) を specs/ に書き出すスクリプト
+
+使い方:
+    cd C:\\Users\\user\\OneDrive\\ドキュメント\\GitHub\\StaTable\\code
+    python tools\\write_isr_test_xml.py
+"""
+
+import os
+import sys
+from pathlib import Path
+
+# 出力先（code/specs/ と 1つ上の specs/ の両方に書く）
+CODE_DIR = Path(__file__).resolve().parent.parent
+TARGETS = [
+    CODE_DIR / "specs" / "isr_namespace_test.xml",
+    CODE_DIR.parent / "specs" / "isr_namespace_test.xml",
+]
+
+XML_CONTENT = '''<?xml version='1.0' encoding='utf-8'?>
+<Project name="IsrNamespaceTest">
+    <ProjectSettings>
+        <CodeGeneration
+            project_name="IsrNamespaceTest"
+            table_type="array"
+            generation_style="table_driven"
+            os_type="non_rtos"
+            folder_structure="by_layer"
+            include_dir_name="include"
+            source_dir_name="src"
+            common_dir_name="common"
+            project_dir_name="project"
+            generate_super_include="true"
+            super_include_file="statable_all.h"
+            max_consecutive_pending_events="16"
+            external_includes_in_super="true"
+            external_includes_in_role="true"
+            external_includes_in_transitions="false"
+            external_includes_in_common="false" />
+    </ProjectSettings>
+
+    <GlobalDefinitions>
+        <SystemVariables>
+            <Variable name="counter"       type="uint32_t"          unit=""    default_value="0"     group="System" description="汎用カウンタ"    title="カウンタ"      array_size="0" />
+            <Variable name="error_code"    type="uint8_t"           unit=""    default_value="0"     group="System" description="エラーコード"    title="エラーコード"  array_size="0" />
+            <Variable name="retry_count"   type="uint8_t"           unit=""    default_value="0"     group="System" description="リトライ回数"    title="リトライ回数"  array_size="0" />
+            <Variable name="rx_ready"      type="bool"              unit=""    default_value="false" group="System" description="RX 準備完了"     title="RX準備"        array_size="0" />
+            <Variable name="rx_data"       type="uint8_t"           unit=""    default_value="0"     group="System" description="RX 受信データ"   title="RXデータ"      array_size="0" />
+            <Variable name="g_system_tick" type="volatile uint32_t" unit="1ms" default_value="0"     group="Timer"  description="タイマ基準"      title="システムタイマ" array_size="0" />
+            <Variable name="g_tick_10ms"   type="uint8_t"           unit="10ms" default_value="0"    group="Timer"  description="派生タイマ"      title="10msタイマ"    array_size="0" />
+        </SystemVariables>
+
+        <EventFlags>
+            <Flag name="EVT_INIT_DONE" min_value="0" max_value="1" group="System" description="初期化完了" title="初期化完了" />
+            <Flag name="EVT_ERROR"     min_value="0" max_value="1" group="System" description="エラー発生" title="エラー" />
+        </EventFlags>
+
+        <Interrupts>
+            <Interrupt name="TIMER0" description="1ms周期タイマ" event_names="" is_timer="true" title="タイマ0割り込み">
+                <Action condition="" action="ctx-&gt;data.g_system_tick++" />
+                <UsedVariable name="g_system_tick" />
+            </Interrupt>
+            <Interrupt name="TIMER1" description="10ms周期タイマ" event_names="" is_timer="true" title="タイマ1割り込み">
+                <Action condition="" action="ctx-&gt;data.g_tick_10ms++" />
+                <Action condition="" action="Application.HandleTick" />
+                <UsedRoleFunction ref="Application.HandleTick" />
+                <UsedVariable name="g_tick_10ms" />
+            </Interrupt>
+            <Interrupt name="UART_RX" description="UART受信割り込み" event_names="INIT" is_timer="false" title="UART受信割り込み">
+                <Action condition="" action="ctx-&gt;data.rx_ready = true" />
+                <Action condition="ctx-&gt;data.rx_ready" action="Application.HandleRx" />
+                <UsedRoleFunction ref="Application.HandleRx" />
+                <UsedVariable name="rx_ready" />
+            </Interrupt>
+            <Interrupt name="GPIO_INT" description="GPIO割り込み" event_names="FAIL" is_timer="false" title="GPIO割り込み">
+                <Action condition="ctx-&gt;data.error_code != 0" action="Application.HandleError" />
+                <UsedRoleFunction ref="Application.HandleError" />
+                <UsedVariable name="error_code" />
+            </Interrupt>
+            <Interrupt name="DRIVER_INT" description="ドライバ補助割り込み" event_names="" is_timer="false" title="ドライバ補助割り込み">
+                <Action condition="" action="Driver.CheckRx" />
+                <Action condition="" action="ctx-&gt;data.counter++" />
+                <UsedRoleFunction ref="Driver.CheckRx" />
+                <UsedVariable name="counter" />
+            </Interrupt>
+        </Interrupts>
+
+        <TimerBase>
+            <Timer variable_name="g_system_tick" unit="1ms" data_type="volatile uint32_t" title="システムタイマ基準" interrupt_name="TIMER0">
+                <Derived period_name="10ms" multiplier="10" variable_name="g_tick_10ms" data_type="uint8_t" title="10msタイマ" />
+            </Timer>
+        </TimerBase>
+    </GlobalDefinitions>
+
+    <SharedLibraries>
+        <RoleFunctionLibrary />
+        <ConditionLibrary />
+        <LiteralLibrary />
+    </SharedLibraries>
+
+    <Tab name="Driver">
+        <StateMachine initial="Idle" layer_priority="1" layer_description="ドライバ層" layer_name="Driver">
+            <States>
+                <State name="Idle"         type="initial" parent="" entry="" exit="" do="" description="待機" />
+                <State name="Initializing" type="normal"  parent="" entry="" exit="" do="" description="初期化中" />
+                <State name="Ready"        type="normal"  parent="" entry="" exit="" do="" description="準備完了" />
+                <State name="Error"        type="normal"  parent="" entry="" exit="" do="" description="エラー" />
+            </States>
+            <Events>
+                <Event name="INIT"  id="1" kind="signal" params="" priority="0" description="初期化要求" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="初期化" />
+                <Event name="READY" id="2" kind="signal" params="" priority="0" description="準備完了"   delivery_type="direct" source_layer="driver" data_type="" data_name="" title="準備完了" />
+                <Event name="FAIL"  id="3" kind="signal" params="" priority="1" description="失敗通知"   delivery_type="queue"  source_layer="driver" data_type="uint8_t" data_name="err_code" title="失敗" />
+                <Event name="RESET" id="4" kind="signal" params="" priority="0" description="リセット"   delivery_type="direct" source_layer="driver" data_type="" data_name="" title="リセット" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="Init"      namespace="Driver" description="ドライバ初期化" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="ドライバ初期化" />
+                <RoleFunction name="LogError"  namespace="Driver" description="エラーログ"     return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="エラーログ" />
+                <RoleFunction name="Reset"     namespace="Driver" description="リセット処理"   return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="リセット処理" />
+                <RoleFunction name="CheckRx"   namespace="Driver" description="RX確認処理"     return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="RX確認（ISR用）" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="Idle" event="INIT" condition="" action="" target="Initializing" transition_type="external" title="初期化開始" has_else="true" else_target="">
+                    <PreAction action="Driver.Init" />
+                </Transition>
+                <Transition source="Initializing" event="READY" condition="error_code == 0" action="" target="Ready" transition_type="external" title="正常準備完了" has_else="true" else_target="Error" />
+                <Transition source="Initializing" event="READY" condition="error_code != 0" action="" target="Error" transition_type="external" title="異常準備完了" has_else="true" else_target="">
+                    <PreAction action="Driver.LogError" />
+                </Transition>
+                <Transition source="Initializing" event="FAIL" condition="" action="" target="Error" transition_type="external" title="初期化失敗" has_else="true" else_target="">
+                    <PreAction action="Driver.LogError" />
+                </Transition>
+                <Transition source="Ready" event="FAIL" condition="" action="" target="Error" transition_type="external" title="実行時エラー" has_else="true" else_target="">
+                    <PreAction action="Driver.LogError" />
+                </Transition>
+                <Transition source="Error" event="RESET" condition="" action="" target="Idle" transition_type="external" title="リセット" has_else="true" else_target="">
+                    <PreAction action="Driver.Reset" />
+                </Transition>
+            </Transitions>
+        </StateMachine>
+    </Tab>
+
+    <Tab name="Middleware">
+        <StateMachine initial="Idle" layer_priority="3" layer_description="ミドルウェア層" layer_name="Middleware">
+            <States>
+                <State name="Idle"       type="initial" parent="" entry="" exit="" do="" description="待機" />
+                <State name="Connecting" type="normal"  parent="" entry="" exit="" do="" description="接続中" />
+                <State name="Connected"  type="normal"  parent="" entry="" exit="" do="" description="接続済" />
+                <State name="Error"      type="normal"  parent="" entry="" exit="" do="" description="エラー" />
+            </States>
+            <Events>
+                <Event name="CONNECT"   id="1" kind="signal" params="" priority="0" description="接続要求" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="接続" />
+                <Event name="CONNECTED" id="2" kind="signal" params="" priority="0" description="接続完了" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="接続完了" />
+                <Event name="ERROR"     id="3" kind="signal" params="" priority="2" description="エラー通知" delivery_type="queue" source_layer="middleware" data_type="uint8_t" data_name="err_code" title="エラー" />
+                <Event name="RETRY"     id="4" kind="signal" params="" priority="0" description="再試行" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="再試行" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="Connect"   namespace="Middleware" description="接続処理"   return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="接続処理" />
+                <RoleFunction name="HandleErr" namespace="Middleware" description="エラー処理" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="エラー処理" />
+                <RoleFunction name="Retry"     namespace="Middleware" description="再試行処理" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="再試行処理" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="Idle" event="CONNECT" condition="" action="" target="Connecting" transition_type="external" title="接続開始" has_else="true" else_target="">
+                    <PreAction action="Middleware.Connect" />
+                </Transition>
+                <Transition source="Connecting" event="CONNECTED" condition="retry_count &lt; 3" action="" target="Connected" transition_type="external" title="接続成功（リトライ少）" has_else="true" else_target="Error" />
+                <Transition source="Connecting" event="CONNECTED" condition="retry_count &gt;= 3" action="" target="Error" transition_type="external" title="接続失敗（リトライ超過）" has_else="true" else_target="">
+                    <PreAction action="Middleware.HandleErr" />
+                </Transition>
+                <Transition source="Connecting" event="ERROR" condition="" action="" target="Error" transition_type="external" title="接続エラー" has_else="true" else_target="">
+                    <PreAction action="Middleware.HandleErr" />
+                </Transition>
+                <Transition source="Connected" event="ERROR" condition="" action="" target="Error" transition_type="external" title="切断エラー" has_else="true" else_target="">
+                    <PreAction action="Middleware.HandleErr" />
+                </Transition>
+                <Transition source="Error" event="RETRY" condition="" action="" target="Idle" transition_type="external" title="再試行" has_else="true" else_target="">
+                    <PreAction action="Middleware.Retry" />
+                </Transition>
+            </Transitions>
+        </StateMachine>
+    </Tab>
+
+    <Tab name="Application">
+        <StateMachine initial="Boot" layer_priority="5" layer_description="アプリ層" layer_name="Application">
+            <States>
+                <State name="Boot"    type="initial" parent="" entry="" exit="" do="" description="起動" />
+                <State name="Init"    type="normal"  parent="" entry="" exit="" do="" description="初期化" />
+                <State name="Running" type="normal"  parent="" entry="" exit="" do="" description="実行中" />
+                <State name="Paused"  type="normal"  parent="" entry="" exit="" do="" description="一時停止" />
+                <State name="Stopped" type="final"   parent="" entry="" exit="" do="" description="停止" />
+            </States>
+            <Events>
+                <Event name="BOOT"   id="1" kind="signal" params="" priority="0" description="起動"     delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="起動" />
+                <Event name="START"  id="2" kind="signal" params="" priority="0" description="開始"     delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="開始" />
+                <Event name="PAUSE"  id="3" kind="signal" params="" priority="0" description="一時停止" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="一時停止" />
+                <Event name="RESUME" id="4" kind="signal" params="" priority="0" description="再開"     delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="再開" />
+                <Event name="STOP"   id="5" kind="signal" params="" priority="1" description="停止"     delivery_type="queue"  source_layer="middleware" data_type="" data_name="" title="停止" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="Boot"        namespace="Application" description="アプリ起動"     return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="アプリ起動" />
+                <RoleFunction name="Start"       namespace="Application" description="アプリ開始"     return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="アプリ開始" />
+                <RoleFunction name="Pause"       namespace="Application" description="一時停止処理"   return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="一時停止処理" />
+                <RoleFunction name="Resume"      namespace="Application" description="再開処理"       return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="再開処理" />
+                <RoleFunction name="HandleTick"  namespace="Application" description="周期処理（ISR用）" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="周期処理（ISR用）" />
+                <RoleFunction name="HandleRx"    namespace="Application" description="RX処理（ISR用）"   return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="RX処理（ISR用）" />
+                <RoleFunction name="HandleError" namespace="Application" description="エラー処理（ISR用）" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="エラー処理（ISR用）" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="Boot" event="BOOT" condition="" action="" target="Init" transition_type="external" title="起動" has_else="true" else_target="">
+                    <PreAction action="Application.Boot" />
+                </Transition>
+                <Transition source="Init" event="START" condition="" action="" target="Running" transition_type="external" title="開始" has_else="true" else_target="">
+                    <PreAction action="Application.Start" />
+                </Transition>
+                <Transition source="Running" event="PAUSE" condition="counter &gt; 0" action="" target="Paused" transition_type="external" title="カウンタ&gt;0で一時停止" has_else="true" else_target="" />
+                <Transition source="Running" event="PAUSE" condition="counter == 0" action="" target="Running" transition_type="external" title="カウンタ==0は無視" has_else="true" else_target="" />
+                <Transition source="Paused" event="RESUME" condition="" action="" target="Running" transition_type="external" title="再開" has_else="true" else_target="">
+                    <PreAction action="Application.Resume" />
+                </Transition>
+                <Transition source="Running" event="STOP" condition="g_system_tick &gt; 100" action="" target="Stopped" transition_type="external" title="タイマ閾値超過で停止" has_else="true" else_target="">
+                    <PreAction action="Application.Pause" />
+                </Transition>
+                <Transition source="Paused" event="STOP" condition="" action="" target="Stopped" transition_type="external" title="強制停止" has_else="true" else_target="" />
+            </Transitions>
+        </StateMachine>
+    </Tab>
+</Project>
+'''
+
+
+def main():
+    print("=" * 72)
+    print("  isr_namespace_test.xml (v2) 書き出し")
+    print("=" * 72)
+    print(f"  コンテンツ長: {len(XML_CONTENT)} bytes")
+    print(f"  条件付き遷移チェック:")
+    checks = [
+        'condition="error_code == 0"',
+        'condition="error_code != 0"',
+        'condition="retry_count &lt; 3"',
+        'condition="retry_count &gt;= 3"',
+        'condition="counter &gt; 0"',
+        'condition="counter == 0"',
+        'condition="g_system_tick &gt; 100"',
+    ]
+    for c in checks:
+        found = "✓" if c in XML_CONTENT else "✗"
+        print(f"    {found} {c}")
+
+    written = []
+    for target in TARGETS:
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with open(target, 'w', encoding='utf-8') as f:
+                f.write(XML_CONTENT)
+            size = target.stat().st_size
+            written.append((target, size))
+            print(f"\n  [OK] 書き込み成功: {target}  ({size} bytes)")
+        except Exception as e:
+            print(f"\n  [NG] 書き込み失敗: {target}: {e}")
+
+    if not written:
+        print("\n  書き込み先が 1 つも成功しませんでした。")
+        return 1
+
+    print("\n" + "=" * 72)
+    print("  完了。GUI を再起動して XML を読み込んでください。")
+    print("=" * 72)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
