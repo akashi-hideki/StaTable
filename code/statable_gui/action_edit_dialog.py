@@ -15,9 +15,10 @@ from .logger import StaTableLogger
 
 
 class ActionEditDialog(QDialog):
-    """遷移の動作を編集するダイアログ"""
+    """遷移の動作を編集するダイアログ（H3: qualified_name 挿入対応）"""
 
-    def __init__(self, parent=None, action_text="", title="", role_functions=None, global_defs=None):
+    def __init__(self, parent=None, action_text="", title="",
+                 role_functions=None, global_defs=None):
         super().__init__(parent)
         self.setWindowTitle("動作編集")
         self.setMinimumSize(900, 650)
@@ -27,16 +28,15 @@ class ActionEditDialog(QDialog):
         StaTableLogger.debug(
             f"ActionEditDialog.__init__: action_text_len={len(action_text)}, "
             f"title='{title}', roles={len(self.role_functions)}, "
-            f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
+            f"vars={len(self.global_defs.variables)}, "
+            f"flags={len(self.global_defs.flags)}"
         )
 
         main_layout = QVBoxLayout(self)
 
-        # タイトル入力ウィジェット
         self.title_widget = TitleEditWidget(self, title=title)
         main_layout.addWidget(self.title_widget)
 
-        # ロール関数選択・挿入バー
         role_bar = QHBoxLayout()
         role_bar.addWidget(QLabel("ロール関数:"))
         self.role_combo = QComboBox()
@@ -101,12 +101,26 @@ class ActionEditDialog(QDialog):
         if func_name:
             rf = self.role_functions.get(func_name)
             if rf:
-                sig = f"{rf.return_type} {rf.name}({rf.arg1_type} {rf.arg1_name}, {rf.arg2_type} {rf.arg2_name})"
+                # ★ qualified_name を優先表示
+                display = getattr(rf, 'qualified_name', rf.name)
+                arg1 = getattr(rf, 'arg1_type', '') or ''
+                arg1n = getattr(rf, 'arg1_name', '') or ''
+                arg2 = getattr(rf, 'arg2_type', '') or ''
+                arg2n = getattr(rf, 'arg2_name', '') or ''
+                ret = getattr(rf, 'return_type', 'void') or 'void'
+                sig = f"{ret} {display}({arg1} {arg1n}, {arg2} {arg2n})"
                 self.signature_label.setText(sig)
                 return
         self.signature_label.setText("")
 
+    # ★ 変更: qualified_name を使用
     def insert_role_function(self):
+        """
+        ロール関数を動作欄に挿入
+
+        - namespace あり: "Driver.Init" の参照形式（引数なし）
+        - namespace なし: 旧形式 "Sensor_Init(arg1, arg2);" を維持
+        """
         func_name = self.role_combo.currentText()
         StaTableLogger.debug(f"insert_role_function: '{func_name}'")
         if not func_name:
@@ -114,7 +128,18 @@ class ActionEditDialog(QDialog):
         rf = self.role_functions.get(func_name)
         if not rf:
             return
-        call = f"{func_name}({rf.arg1_name}, {rf.arg2_name});"
+
+        qualified = getattr(rf, 'qualified_name', func_name)
+
+        if '.' in qualified:
+            # ★ Namespace.Name 形式: 参照のみ挿入
+            call = qualified
+        else:
+            # ★ 旧形式: 引数付き呼び出しを維持
+            arg1 = getattr(rf, 'arg1_name', '') or ''
+            arg2 = getattr(rf, 'arg2_name', '') or ''
+            call = f"{qualified}({arg1}, {arg2});"
+
         self.action_edit.insertPlainText(call + "\n")
 
     def add_new_role_function(self):

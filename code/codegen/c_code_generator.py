@@ -1,7 +1,7 @@
 # codegen/c_code_generator.py
 """
 Cコード生成メインクラス
-（ステップテーブル駆動版・13ファイル対応・複数層対応・by_layer対応）
+（ステップテーブル駆動版・13ファイル対応・複数層対応・by_layer対応・ISR対応）
 
 設計方針:
   - ファイルごとの生成手順は FILE_STEPS テーブルで宣言
@@ -13,6 +13,10 @@ Cコード生成メインクラス
   - スーパーインクルード / スーパーループは常に生成
   - 複数層は generate_all_layers() で一括生成
   - by_layer では層固有ファイルを層フォルダに分離
+
+版: 2.1（2026-09-13 / Stage 3: ISR コンテキスト対応）
+  - interrupt_c に statable_all.h を追加（g_ctx / RoleFunc_* 宣言取得）
+  - _step_interrupts で used_role_functions / used_variables を再計算
 """
 
 import sys
@@ -462,7 +466,12 @@ class CCodeGenerator:
             ],
             'init_c': ['#include "statable_types.h"'],
             'event_queue_c': ['#include "statable_types.h"'],
-            'interrupt_c': ['#include "statable_types.h"'],
+            # ★ Stage 3: ISR から g_ctx / RoleFunc_* を参照するため
+            #   statable_all.h を追加
+            'interrupt_c': [
+                '#include "statable_types.h"',
+                '#include "statable_all.h"',
+            ],
             'timer_c': ['#include "statable_types.h"'],
         }
 
@@ -662,6 +671,7 @@ class CCodeGenerator:
             ('transition_gen', self.transition_gen),
             ('role_func_gen',  self.role_func_gen),
             ('struct_gen',     self.struct_gen),
+            ('interrupt_gen',  self.interrupt_gen),   # ★ Stage 3
         ]:
             if hasattr(gen, 'set_layer'):
                 gen.set_layer(layer_name)
@@ -692,6 +702,7 @@ class CCodeGenerator:
         resolver = getattr(self, resolver_name,
                            self._resolve_path_flat)
         return resolver(filename, layer_name)
+
     def _resolve_super_include_path(self, layer_name: str = '') -> str:
         """スーパーインクルードの保存パスを解決"""
         fname = self.config.super_include_file
@@ -1017,6 +1028,7 @@ class CCodeGenerator:
             result.append("")
         return result
 
+    # ★ Stage 3: used_role_functions / used_variables を再計算
     def _step_interrupts(self, step, ctx):
         gd = ctx['global_defs']
         interrupts = getattr(gd, 'interrupts', [])
@@ -1027,6 +1039,15 @@ class CCodeGenerator:
             "",
         ]
         for handler in interrupts:
+            # ★ 使用ロール関数・変数を自動抽出して書き戻す
+            try:
+                self.interrupt_gen.update_handler_symbols(handler)
+            except Exception as e:
+                self._log_debug(
+                    f"update_handler_symbols failed for "
+                    f"'{getattr(handler, 'name', '?')}': {e}",
+                    'warning',
+                )
             result.append(
                 self.interrupt_gen.generate_isr(handler)
             )

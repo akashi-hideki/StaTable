@@ -1,4 +1,4 @@
-"""割り込み処理・デバイスリソース・タイマ設定の管理ダイアログ（複数タイマ対応版）"""
+"""割り込み処理・デバイスリソース・タイマ設定の管理ダイアログ（複数タイマ対応版・ISR 対応）"""
 
 from typing import Optional, List
 
@@ -206,6 +206,7 @@ class InterruptEditDialog(QDialog):
             StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
         self.accept()
 
+    # ★ Stage 3: used_role_functions / used_variables を自動抽出
     def get_interrupt(self) -> InterruptHandlerDef:
         actions = []
         for row in range(self.action_table.rowCount()):
@@ -223,7 +224,7 @@ class InterruptEditDialog(QDialog):
         if self.event_combo.currentText().strip():
             event_names.append(self.event_combo.currentText().strip())
 
-        return InterruptHandlerDef(
+        handler = InterruptHandlerDef(
             name=self.name_edit.text().strip(),
             description=self.desc_edit.text().strip(),
             event_names=event_names,
@@ -231,6 +232,24 @@ class InterruptEditDialog(QDialog):
             actions=actions,
             title=self.title_edit.text().strip(),
         )
+
+        # ★ 使用ロール関数・変数を自動抽出
+        try:
+            from codegen.interrupt_generator import InterruptGenerator
+            gen = InterruptGenerator()
+            gen.update_handler_symbols(handler)
+            StaTableLogger.debug(
+                f"InterruptEditDialog.get_interrupt: "
+                f"used_rfs={handler.used_role_functions}, "
+                f"used_vars={handler.used_variables}"
+            )
+        except Exception as e:
+            StaTableLogger.debug(
+                f"InterruptEditDialog.get_interrupt: "
+                f"symbol extraction skipped: {e}"
+            )
+
+        return handler
 
 
 class DevicePlaceholderEditDialog(QDialog):

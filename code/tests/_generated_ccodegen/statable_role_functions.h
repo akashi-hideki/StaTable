@@ -6,7 +6,7 @@
  *          - 手動での編集は推奨しない
  *          - 変更する場合はStaTableで行うこと
  *
- * @date    2026-09-13 11:55:41
+ * @date    2026-09-13 12:37:52
  */
 
 #ifndef STATABLE_ROLE_FUNCTIONS_H

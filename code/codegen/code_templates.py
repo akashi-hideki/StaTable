@@ -1,7 +1,11 @@
 # codegen/code_templates.py
 """
-コード生成用テンプレート定義（多層ステートマシン対応版）
+コード生成用テンプレート定義（多層ステートマシン対応・ISR 対応版）
 すべての固定文字列を一元管理する
+
+版: 2.1（2026-09-13）
+  - ISR_TEMPLATES 追加（Stage 3 / H3）
+  - 既存テンプレートは変更なし
 """
 
 class CodeTemplates:
@@ -300,7 +304,7 @@ class CodeTemplates:
 }''',
     }
     
-        # スーパーインクルード用テンプレート
+    # スーパーインクルード用テンプレート
     SUPER_INCLUDE_TEMPLATES = {
         'file_comment': '''/**
  * @file    {filename}
@@ -371,6 +375,38 @@ class CodeTemplates:
         'run_func_close': '}',
     }
     
+    # ===== ★ ISR 生成用テンプレート（Stage 3 / H3） =====
+    # interrupt_generator.py が直接文字列を組み立てる場合の予備。
+    # 値は interrupt_generator.py の実装と同期させること。
+    ISR_TEMPLATES = {
+        # セクションコメント
+        'context_section':    '    /* ===== コンテキスト参照（自動生成） ===== */',
+        'enter_log_section':  '    /* ===== 入場ログ ===== */',
+        'action_section':     '    /* ===== アクション（自動生成） ===== */',
+        'user_section':       '    /* ===== ユーザー追加領域 ===== */',
+        'exit_log_section':   '    /* ===== 退場ログ ===== */',
+
+        # コンテキスト
+        'context_decl':       '    SystemContext_t *ctx = &g_ctx;',
+        'context_void':       '    (void)ctx;',
+
+        # ログ
+        'enter_log':          '    LOG_DEBUG("Enter ISR: {name}");',
+        'exit_log':           '    LOG_DEBUG("Exit ISR: {name}");',
+
+        # ユーザーマーカー
+        'user_marker_start':  '    /* [[STABLE_USER_CODE_START:{marker}]] */',
+        'user_hint':          '    /* ユーザー追加コードをここに記述 */',
+        'user_marker_end':    '    /* [[STABLE_USER_CODE_END:{marker}]] */',
+
+        # コメント（@note 用）
+        'used_rf_header':     ' * @note   使用ロール関数:',
+        'used_rf_line':       ' *         - {ref}',
+
+        # 空アクション時のプレースホルダ
+        'no_action_hint':     '    /* （アクション未定義） */',
+    }
+
     # ===== デバッグログメッセージ定義 =====
     DEBUG_MESSAGES = {
         'function_entry': 'Enter {func_name}: state={state}, event={event}',
