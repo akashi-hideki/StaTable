@@ -705,9 +705,10 @@ class MainWindow(QMainWindow):
             if lit_lib is not None:
                 self.literal_library = lit_lib
 
-            # ★ XML の SharedLibraries が空でもパレットに候補が出るよう、
-            #    各タブの SM に登録されているロール関数を
-            #    共有ライブラリへ自動登録する
+            # ============================================================
+            # ★ 自動補完 1: 各タブの SM のロール関数を共有ライブラリへ登録
+            #   XML の <SharedLibraries> が空でもパレットに候補を出すため
+            # ============================================================
             try:
                 from libcntrl.role_function_library import (
                     RoleFunction as LibRoleFunction)
@@ -715,7 +716,7 @@ class MainWindow(QMainWindow):
                 from statable_gui.libcntrl.role_function_library import (
                     RoleFunction as LibRoleFunction)
 
-            registered_count = 0
+            registered_rfs = 0
             for _tab_name, _sm in tabs:
                 for _rf in _sm.role_functions.values():
                     _qn = (getattr(_rf, 'qualified_name', None)
@@ -732,22 +733,85 @@ class MainWindow(QMainWindow):
                             title=getattr(_rf, 'title', '') or '',
                             description=getattr(_rf, 'description', '') or '',
                         ))
-                        registered_count += 1
+                        registered_rfs += 1
                     except ValueError:
-                        # 重複は無視
-                        pass
+                        pass  # 重複は無視
                     except Exception as e:
                         StaTableLogger.warning(
-                            f"Failed to register {_qn}: {e}")
+                            f"Failed to register role function {_qn}: {e}")
 
-            if registered_count:
+            if registered_rfs:
                 StaTableLogger.info(
-                    f"Registered {registered_count} role functions "
+                    f"Registered {registered_rfs} role functions "
                     f"from tabs to shared library "
                     f"(total={len(self.role_function_library.list_all())})"
                 )
 
+            # ============================================================
+            # ★ 自動補完 2: 各遷移の条件式を ConditionLibrary へ登録
+            #   空でない condition のみを対象に、テンプレート化する
+            #   同じ条件式が既に登録済みならスキップ
+            # ============================================================
+            try:
+                from libcntrl.condition_library import (
+                    ConditionTemplate)
+            except ImportError:
+                from statable_gui.libcntrl.condition_library import (
+                    ConditionTemplate)
+
+            # 既存テンプレートの condition 文字列セット（重複判定用）
+            existing_cond_exprs = set()
+            for _ct in self.condition_library.list_all():
+                _c = (getattr(_ct, 'condition', '') or '').strip()
+                if _c:
+                    existing_cond_exprs.add(_c)
+            existing_cond_names = {
+                ct.name for ct in self.condition_library.list_all()
+            }
+
+            registered_conds = 0
+            for _tab_name, _sm in tabs:
+                for _trans in _sm.transitions:
+                    _cond = (getattr(_trans, 'condition', '') or '').strip()
+                    if not _cond:
+                        continue
+                    # 同じ条件式が既にあればスキップ
+                    if _cond in existing_cond_exprs:
+                        continue
+
+                    # name 生成: 条件式の先頭 40 文字を基に一意化
+                    _base = _cond[:40]
+                    _name = _base
+                    _idx = 2
+                    while _name in existing_cond_names:
+                        _name = f"{_base}_{_idx}"
+                        _idx += 1
+
+                    try:
+                        self.condition_library.add(ConditionTemplate(
+                            name=_name,
+                            condition=_cond,
+                            description=f"自動収集 ({_tab_name})",
+                        ))
+                        existing_cond_exprs.add(_cond)
+                        existing_cond_names.add(_name)
+                        registered_conds += 1
+                    except ValueError:
+                        pass  # 重複は無視
+                    except Exception as e:
+                        StaTableLogger.warning(
+                            f"Failed to register condition '{_name}': {e}")
+
+            if registered_conds:
+                StaTableLogger.info(
+                    f"Registered {registered_conds} conditions "
+                    f"from transitions "
+                    f"(total={len(self.condition_library.list_all())})"
+                )
+
+            # ============================================================
             # ★ プロジェクト設定を反映
+            # ============================================================
             if project_settings:
                 config = self.config_manager.get_config()
                 for key, value in project_settings.items():
@@ -757,7 +821,9 @@ class MainWindow(QMainWindow):
                             f"  config.{key} = {value}")
                 self.config_manager.set_config(config)
 
-            # 既存タブのライブラリ参照を更新
+            # ============================================================
+            # ★ 既存タブのライブラリ参照を更新
+            # ============================================================
             for index in range(self.tab_widget.count()):
                 tab = self.tab_widget.widget(index)
                 if hasattr(tab, 'role_function_library'):
