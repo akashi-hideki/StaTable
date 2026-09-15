@@ -21,16 +21,9 @@ from .global_defs import GlobalDefinitions
 from .transition_editor_direct.dialog import ActionEditorDialog
 from .transition_editor_direct.draft import ActionDraft, transition_to_flow_item, flow_item_to_transition
 
-try:
-    from libcntrl.role_function_library import RoleFunctionLibrary
-    from libcntrl.condition_library import ConditionLibrary
-    from libcntrl.literal_library import LiteralLibrary
-except ImportError:
-    from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary
-    from statable_gui.libcntrl.condition_library import ConditionLibrary
-    from statable_gui.libcntrl.literal_library import LiteralLibrary
-
-
+from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary
+from statable_gui.libcntrl.condition_library import ConditionLibrary
+from statable_gui.libcntrl.literal_library import LiteralLibrary
 def _truncate_text(text: str, max_chars: int = 40) -> str:
     if not text:
         return ""

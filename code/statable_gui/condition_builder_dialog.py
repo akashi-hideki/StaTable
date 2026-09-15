@@ -26,12 +26,7 @@ from statable.global_defs import GlobalDefinitions
 from statable.state_machine import StateMachine
 
 # 共有リテラルライブラリ
-try:
-    from libcntrl.literal_library import LiteralLibrary, LiteralDefinition
-except ImportError:
-    from statable_gui.libcntrl.literal_library import LiteralLibrary, LiteralDefinition
-
-
+from statable_gui.libcntrl.literal_library import LiteralLibrary, LiteralDefinition
 class ConditionBuilderDialog(QDialog):
     """遷移条件式をGUIで構築するダイアログ"""
 

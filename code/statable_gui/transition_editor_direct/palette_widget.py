@@ -182,7 +182,7 @@ class PaletteWidget(QWidget):
         return f"{base_name}_{index}"
 
     def _add_function(self):
-        from libcntrl.role_function_library import RoleFunction
+        from statable_gui.libcntrl.role_function_library import RoleFunction
         base_name = "NewFunction"
         name = self._generate_unique_name(
             base_name, self.role_function_library
@@ -197,7 +197,7 @@ class PaletteWidget(QWidget):
         self.refresh_lists()
 
     def _add_transition(self):
-        from libcntrl.condition_library import ConditionTemplate
+        from statable_gui.libcntrl.condition_library import ConditionTemplate
         base_name = "NewEvent"
         name = self._generate_unique_name(
             base_name, self.condition_library

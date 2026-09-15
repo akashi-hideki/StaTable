@@ -43,21 +43,12 @@ from .common_widgets import TypeManagerDialog
 from .layer_settings_dialog import LayerSettingsDialog
 
 # 共有ライブラリ（v1.5: statable_gui/libcntrl に統合済）
-try:
-    from libcntrl.role_function_library import (
-        RoleFunctionLibrary, RoleFunction)
-    from libcntrl.condition_library import (
-        ConditionLibrary, ConditionTemplate)
-    from libcntrl.literal_library import (
-        LiteralLibrary, LiteralDefinition)
-except ImportError:
-    from statable_gui.libcntrl.role_function_library import (
-        RoleFunctionLibrary, RoleFunction)
-    from statable_gui.libcntrl.condition_library import (
-        ConditionLibrary, ConditionTemplate)
-    from statable_gui.libcntrl.literal_library import (
-        LiteralLibrary, LiteralDefinition)
-
+from statable_gui.libcntrl.role_function_library import (
+    RoleFunctionLibrary, RoleFunction)
+from statable_gui.libcntrl.condition_library import (
+    ConditionLibrary, ConditionTemplate)
+from statable_gui.libcntrl.literal_library import (
+    LiteralLibrary, LiteralDefinition)
 # コード生成モジュール
 sys.path.append(
     os.path.dirname(
@@ -717,13 +708,8 @@ class MainWindow(QMainWindow):
             # ★ 自動補完 1: 各タブの SM のロール関数を共有ライブラリへ登録
             #   XML の <SharedLibraries> が空でもパレットに候補を出すため
             # ============================================================
-            try:
-                from libcntrl.role_function_library import (
-                    RoleFunction as LibRoleFunction)
-            except ImportError:
-                from statable_gui.libcntrl.role_function_library import (
-                    RoleFunction as LibRoleFunction)
-
+            from statable_gui.libcntrl.role_function_library import (
+                RoleFunction as LibRoleFunction)
             registered_rfs = 0
             for _tab_name, _sm in tabs:
                 for _rf in _sm.role_functions.values():
@@ -758,13 +744,8 @@ class MainWindow(QMainWindow):
             # ============================================================
             # ★ 自動補完 2: 各遷移の条件式を ConditionLibrary へ登録
             # ============================================================
-            try:
-                from libcntrl.condition_library import (
-                    ConditionTemplate)
-            except ImportError:
-                from statable_gui.libcntrl.condition_library import (
-                    ConditionTemplate)
-
+            from statable_gui.libcntrl.condition_library import (
+                ConditionTemplate)
             existing_cond_exprs = set()
             for _ct in self.condition_library.list_all():
                 _c = (getattr(_ct, 'condition', '') or '').strip()

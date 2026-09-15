@@ -36,16 +36,9 @@ from .action_edit_dialog import ActionEditDialog
 from .global_defs import GlobalDefinitions
 from .event_definition_dialog import EventDefinitionDialog
 
-try:
-    from libcntrl.role_function_library import RoleFunctionLibrary
-    from libcntrl.condition_library import ConditionLibrary
-    from libcntrl.literal_library import LiteralLibrary
-except ImportError:
-    from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary
-    from statable_gui.libcntrl.condition_library import ConditionLibrary
-    from statable_gui.libcntrl.literal_library import LiteralLibrary
-
-
+from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary
+from statable_gui.libcntrl.condition_library import ConditionLibrary
+from statable_gui.libcntrl.literal_library import LiteralLibrary
 class MermaidWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)

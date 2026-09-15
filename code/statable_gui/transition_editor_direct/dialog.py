@@ -26,17 +26,10 @@ from .system_global_dialog import SystemGlobalDialog
 
 from statable_gui.condition_builder_dialog import ConditionBuilderDialog
 
-try:
-    from libcntrl.role_function_library import RoleFunctionLibrary, RoleFunction
-    from libcntrl.condition_library import ConditionLibrary, ConditionTemplate
-    from libcntrl.literal_library import LiteralLibrary
-    from libcntrl.role_function_edit_dialog import RoleFunctionEditDialog
-except ImportError:
-    from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary, RoleFunction
-    from statable_gui.libcntrl.condition_library import ConditionLibrary, ConditionTemplate
-    from statable_gui.libcntrl.literal_library import LiteralLibrary
-    from statable_gui.libcntrl.role_function_edit_dialog import RoleFunctionEditDialog
-
+from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary, RoleFunction
+from statable_gui.libcntrl.condition_library import ConditionLibrary, ConditionTemplate
+from statable_gui.libcntrl.literal_library import LiteralLibrary
+from statable_gui.libcntrl.role_function_edit_dialog import RoleFunctionEditDialog
 logger = logging.getLogger("transition_editor_direct.dialog")
 
 

@@ -1,6 +1,9 @@
 # codegen/validate/prompt_generator.py
 """
 AIプロンプト生成クラス
+
+【v1.8 §11.2 #7】
+  - generate_review_prompt を削除（未使用・呼び出し元なし）
 """
 
 import sys
@@ -18,14 +21,14 @@ from validate.data.action_definitions import format_action_definitions
 
 class AIPromptGenerator:
     """AIプロンプト生成クラス"""
-    
+
     def __init__(self):
         logger.debug("AIPromptGenerator.__init__ started")
         self.templates = PROMPT_TEMPLATES
         self.few_shot_example = FEW_SHOT_EXAMPLE
         self.validation_points = VALIDATION_POINTS
         logger.debug("AIPromptGenerator.__init__ completed")
-    
+
     def _format_data(self, sm, gd) -> str:
         lines = []
         lines.append("### 状態")
@@ -47,7 +50,7 @@ class AIPromptGenerator:
             lines.append("- 遷移なし")
         lines.append(f"\n### 初期状態\n{sm.initial_state or '未設定'}")
         return '\n'.join(lines)
-    
+
     def _format_validation(self, validation_result) -> str:
         if not validation_result or not validation_result.issues:
             return "### 内部検証結果\n問題なし"
@@ -55,7 +58,7 @@ class AIPromptGenerator:
         for issue in validation_result.issues:
             lines.append(f"- [{issue.severity.value.upper()}] {issue.message}")
         return '\n'.join(lines)
-    
+
     def generate_diagnosis_prompt(self, sm, gd, validation_result=None) -> str:
         data = self._format_data(sm, gd)
         validation = self._format_validation(validation_result)
@@ -66,8 +69,3 @@ class AIPromptGenerator:
             action_definitions=format_action_definitions(),
             validation_points=self.validation_points,
         )
-    
-    def generate_review_prompt(self, sm, gd) -> str:
-        data = self._format_data(sm, gd)
-        template = self.templates['review']['template']
-        return template.format(data=data, validation_points=self.validation_points)

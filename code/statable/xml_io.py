@@ -30,19 +30,12 @@ logger = logging.getLogger("statable.xml_io")
 
 # 共有ライブラリ（インポート失敗時はNone）
 try:
-    from libcntrl.role_function_library import RoleFunctionLibrary, RoleFunction as LibRoleFunction
-    from libcntrl.condition_library import ConditionLibrary, ConditionTemplate
-    from libcntrl.literal_library import LiteralLibrary, LiteralDefinition
+    from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary, RoleFunction as LibRoleFunction
+    from statable_gui.libcntrl.condition_library import ConditionLibrary, ConditionTemplate
+    from statable_gui.libcntrl.literal_library import LiteralLibrary, LiteralDefinition
 except ImportError:
-    try:
-        from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary, RoleFunction as LibRoleFunction
-        from statable_gui.libcntrl.condition_library import ConditionLibrary, ConditionTemplate
-        from statable_gui.libcntrl.literal_library import LiteralLibrary, LiteralDefinition
-    except ImportError:
-        RoleFunctionLibrary = ConditionLibrary = LiteralLibrary = None
-        LibRoleFunction = ConditionTemplate = LiteralDefinition = None
-
-
+    RoleFunctionLibrary = ConditionLibrary = LiteralLibrary = None
+    LibRoleFunction = ConditionTemplate = LiteralDefinition = None
 # ======================================================================
 # ヘルパー: 文字列/リストの正規化
 # ======================================================================
