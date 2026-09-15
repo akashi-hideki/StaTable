@@ -11,6 +11,11 @@
   - _VALID_C_IDENTIFIER ガードを _normalize_func_ref に追加
     → 'retry_count++' 等の C 演算子混入参照を弾く
   - generate_all_implementations に未定義参照の警告ログを追加
+
+【v1.6 追加】
+  - _should_emit_implementation を追加（層フィルタ・案 A）
+  - generate_all_implementations で自層の関数と呼び出し元ありの関数のみ
+    実装を出力するようフィルタ（空スタブ削減）
 """
 
 import sys
@@ -635,6 +640,36 @@ class RoleFunctionGenerator:
         return ''.join(parts)
 
     # ================================================================
+    # ★ v1.6 §9.6 #90 案 A: 層フィルタ判定
+    # ================================================================
+    def _should_emit_implementation(self, func, call_map) -> bool:
+        """
+        この層のファイルに関数の実装を出すか判定（v1.6 §9.6 #90 案 A）
+
+        実装を出す条件:
+          1. 自層の関数（namespace == self.layer_name）
+          2. 自層の遷移から呼ばれている関数（call_map にエントリがある）
+
+        それ以外（他層の関数で呼び出し元なし）はスキップする。
+        これにより、他層の空スタブが大量に出力されるのを防ぐ。
+        """
+        namespace = getattr(func, 'namespace', '') or ''
+
+        # 1. 自層の関数
+        if namespace == self.layer_name:
+            return True
+
+        # 2. 自層の遷移から呼ばれている関数
+        qn = getattr(func, 'qualified_name', None) or ''
+        if qn and call_map.get(qn):
+            return True
+        bare = getattr(func, 'name', '') or ''
+        if bare and call_map.get(bare):
+            return True
+
+        return False
+
+    # ================================================================
     # 生成メソッド群
     # ================================================================
     def generate_none_define(self) -> str:
@@ -932,12 +967,22 @@ class RoleFunctionGenerator:
     def generate_all_implementations(self, role_functions: List,
                                      state_machine=None,
                                      global_defs=None) -> str:
+        """
+        この層のファイル用の実装群を生成する。
+
+        【v1.6 §9.6 #90 案 A】
+          - 自層の関数（namespace == self.layer_name）
+          - 自層の遷移から呼ばれている関数
+          のみを実装として出力する。
+          他層の関数で呼び出し元がないものはスキップされ、
+          空スタブが大量に出力されるのを防ぐ。
+        """
         unique_funcs = self._dedupe_by_name(role_functions)
         include_transition_id = state_machine is not None
         call_map = self._collect_call_sites(state_machine) \
             if include_transition_id else {}
 
-        # ★ v1.5 追加: 未定義参照の検出
+        # ★ v1.5 追加: 未定義参照の検出（フィルタ前の全関数で判定）
         if call_map:
             defined_keys = set()
             for f in unique_funcs:
@@ -953,6 +998,21 @@ class RoleFunctionGenerator:
                         'warning',
                     )
 
+        # ★ v1.6 §9.6 #90 案 A: 層フィルタ
+        filtered_funcs = [
+            f for f in unique_funcs
+            if self._should_emit_implementation(f, call_map)
+        ]
+        skipped = len(unique_funcs) - len(filtered_funcs)
+        if skipped:
+            self._log_debug(
+                f"generate_all_implementations: "
+                f"layer='{self.layer_name}', "
+                f"emitted={len(filtered_funcs)}, "
+                f"skipped={skipped} "
+                f"(not self-layer and no caller in this layer)"
+            )
+
         parts = []
 
         if include_transition_id:
@@ -963,7 +1023,7 @@ class RoleFunctionGenerator:
             parts.append(self.generate_transition_id_prototype())
             parts.append('\n')
 
-            for func in unique_funcs:
+            for func in filtered_funcs:
                 call_sites = self._get_call_sites_for_func(func, call_map)
                 table_code = self.generate_call_sites_table(
                     func, call_sites
@@ -974,7 +1034,7 @@ class RoleFunctionGenerator:
 
             parts.append('\n')
 
-        for func in unique_funcs:
+        for func in filtered_funcs:
             call_sites = self._get_call_sites_for_func(func, call_map)
             parts.append(self.generate_implementation(
                 func, global_defs, call_sites, include_transition_id,
