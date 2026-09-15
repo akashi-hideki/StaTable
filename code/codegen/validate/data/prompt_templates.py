@@ -1,6 +1,10 @@
 # codegen/validate/data/prompt_templates.py
 """
 プロンプトテンプレート定義（データのみ）
+
+【v1.8 §11.2 #7】
+  - 未使用の 'review' キーを削除
+    （prompt_generator.generate_review_prompt と共に削除）
 """
 
 PROMPT_TEMPLATES = {
@@ -25,22 +29,6 @@ PROMPT_TEMPLATES = {
 JSON以外は出力しないでください。
 
 {action_definitions}
-
-{validation_points}
-""",
-    },
-    'review': {
-        'template': """あなたは組み込みソフトウェアの状態遷移設計の専門家です。
-
-【タスク】
-以下の状態遷移設計をレビューし、改善点を指摘してください。
-
-【データ】
-{data}
-
-【出力形式】
-各指摘を以下の形式で箇条書きにしてください：
-- 重大度: 問題の説明（対象: 状態名やイベント名）
 
 {validation_points}
 """,
