@@ -64,16 +64,20 @@ class Event:
             self.title = f"イベント: {self.name}" if self.name else "イベント: （完了）"
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Transition:
     """
     状態遷移定義
 
-    【v1.5 注意】
-      本クラスは kw_only 化していません。
-      sample_data.py の `Transition("Idle", "START", "", "init()", "Active", ...)`
-      という位置引数バグ（v1.4 §9.6 #67）が残っているため、kw_only 化すると
-      起動時に TypeError になります。sample_data.py の修正後に kw_only 化予定（v1.6）。
+    【v1.6 変更】kw_only=True 化
+      位置引数によるフィールド順序ずれ事故（v1.4 §9.6 #67）を
+      構造的に防止するため、kw_only 引数のみ受け付ける。
+
+    旧: Transition("Idle", "START", "", ["init()"], "Active")  ← 位置引数（危険）
+    新: Transition(source="Idle", event="START", pre_actions=["init()"], ...)  ← kwarg のみ
+
+    v1.5 で sample_data.py / xml_io.py / dialogs.py / draft.py /
+    change_applier.py の全 14 箇所が kwarg 済みであることを AST 監査で確認済み。
     """
     source: str
     event: str

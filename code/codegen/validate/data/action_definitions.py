@@ -1,6 +1,10 @@
 # codegen/validate/data/action_definitions.py
 """
 アクション定義（データのみ）
+
+【v1.6 変更】
+  - add_state の type 列挙を 7 種類に拡張（StateType と一致）
+  - remove_role_function を追加（ChangeActionType との不一致解消）
 """
 
 ACTION_DEFINITIONS = {
@@ -24,7 +28,20 @@ ACTION_DEFINITIONS = {
         'description': '状態を追加',
         'params': {
             'name': {'type': 'str', 'required': True, 'description': '状態名'},
-            'type': {'type': 'enum', 'required': False, 'values': ['NORMAL', 'INITIAL', 'FINAL'], 'description': '状態タイプ'},
+            'type': {
+                'type': 'enum',
+                'required': False,
+                'values': [
+                    'NORMAL',
+                    'CONCURRENT',
+                    'REGION',
+                    'INITIAL',
+                    'FINAL',
+                    'CHOICE',
+                    'JUNCTION',
+                ],
+                'description': '状態タイプ',
+            },
             'description': {'type': 'str', 'required': False, 'description': '説明'},
         },
     },
@@ -62,6 +79,12 @@ ACTION_DEFINITIONS = {
             'description': {'type': 'str', 'required': False, 'description': '説明'},
         },
     },
+    'remove_role_function': {
+        'description': 'ロール関数を削除',
+        'params': {
+            'name': {'type': 'str', 'required': True, 'description': '関数名（純粋名 or namespace.name）'},
+        },
+    },
     'add_variable': {
         'description': '変数を追加',
         'params': {
@@ -92,8 +115,8 @@ def format_action_definitions() -> str:
         for key, param in params.items():
             required = "必須" if param['required'] else "省略可"
             param_strs.append(f'"{key}": {param["description"]}({required})')
-        
+
         lines.append(f"{i}. {action}: {definition['description']}")
         lines.append(f"   params: {{{', '.join(param_strs)}}}")
-    
+
     return '\n'.join(lines)
