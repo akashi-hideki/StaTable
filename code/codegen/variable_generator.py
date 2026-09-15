@@ -5,6 +5,12 @@
 【v1.5 修正】
   - _generate_normal_init でカスタム構造体変数を memset で初期化
     （v1.4 までは `ctx->data.system_status = 0;` でコンパイルエラー）
+
+【v1.6 §9.8 #92 修正】
+  - アクセスマクロのフィールド名を修正
+    DATA_COUNTER(ctx) ((ctx)->data.COUNTER)  ← バグ
+    DATA_COUNTER(ctx) ((ctx)->data.counter)  ← 修正後
+    マクロ名は大文字（to_upper_snake）、フィールド名は sanitize_identifier を使用。
 """
 
 import sys
@@ -108,12 +114,13 @@ class VariableGenerator:
         'char': '0', 'string': 'NULL',
     }
 
+    # ★ v1.6 §9.8 #92: マクロ名とフィールド名を分離
     MACRO_TEMPLATES = {
         'data_macro': Template(
-            '#define DATA_$var_name(ctx)    ((ctx)->data.$var_name)\n'
+            '#define DATA_$macro_name(ctx)    ((ctx)->data.$field_name)\n'
         ),
         'flag_macro': Template(
-            '#define FLAG_$flag_name(ctx)   ((ctx)->flags.$flag_name)\n'
+            '#define FLAG_$macro_name(ctx)   ((ctx)->flags.$field_name)\n'
         ),
     }
 
@@ -121,7 +128,6 @@ class VariableGenerator:
         'array_init': Template(
             '    memset(ctx->data.$var_name, 0, sizeof(ctx->data.$var_name));\n'
         ),
-        # ★ v1.5 追加: カスタム型構造体の初期化
         'struct_init': Template(
             '    memset(&ctx->data.$var_name, 0, sizeof(ctx->data.$var_name));\n'
         ),
@@ -213,13 +219,39 @@ class VariableGenerator:
                 results.append(self._generate_access_macro(item))
         return [r for r in results if r]
 
+    # ================================================================
+    # ★ v1.6 §9.8 #92: マクロ生成（マクロ名 = 大文字、フィールド名 = 元のまま）
+    # ================================================================
     def _generate_data_macro(self, var) -> str:
-        var_name = self.naming.to_upper_snake(getattr(var, 'name', 'unnamed'))
-        return self.MACRO_TEMPLATES['data_macro'].substitute(var_name=var_name).rstrip('\n')
+        """
+        データアクセスマクロを生成
+
+        【v1.6 修正】
+          旧: DATA_COUNTER(ctx) ((ctx)->data.COUNTER)  ← フィールド名が大文字（バグ）
+          新: DATA_COUNTER(ctx) ((ctx)->data.counter)  ← フィールド名を元のまま
+        """
+        raw_name = getattr(var, 'name', 'unnamed')
+        macro_name = self.naming.to_upper_snake(raw_name)
+        field_name = self.naming.sanitize_identifier(raw_name)
+        return self.MACRO_TEMPLATES['data_macro'].substitute(
+            macro_name=macro_name, field_name=field_name
+        ).rstrip('\n')
 
     def _generate_flag_macro(self, flag) -> str:
-        flag_name = self.naming.to_upper_snake(getattr(flag, 'name', 'unnamed'))
-        return self.MACRO_TEMPLATES['flag_macro'].substitute(flag_name=flag_name).rstrip('\n')
+        """
+        フラグアクセスマクロを生成
+
+        【v1.6 修正】
+          旧: FLAG_EVT_INIT_DONE(ctx) ((ctx)->flags.EVT_INIT_DONE)  ← バグ
+          新: FLAG_EVT_INIT_DONE(ctx) ((ctx)->flags.EVT_INIT_DONE)  ← 一致（元々 OK）
+          ※ フィールド名は struct 側で sanitize_identifier されてない場合あり
+        """
+        raw_name = getattr(flag, 'name', 'unnamed')
+        macro_name = self.naming.to_upper_snake(raw_name)
+        field_name = self.naming.sanitize_identifier(raw_name)
+        return self.MACRO_TEMPLATES['flag_macro'].substitute(
+            macro_name=macro_name, field_name=field_name
+        ).rstrip('\n')
 
     def _generate_access_macro(self, item) -> str:
         item_class = item.__class__.__name__
@@ -229,6 +261,9 @@ class VariableGenerator:
             return self._generate_flag_macro(item)
         return ""
 
+    # ================================================================
+    # 初期化コード生成
+    # ================================================================
     def _generate_array_init(self, var) -> str:
         var_name = self.naming.sanitize_identifier(getattr(var, 'name', 'unnamed'))
         return self.INIT_CODE_TEMPLATES['array_init'].substitute(
@@ -278,6 +313,9 @@ class VariableGenerator:
             return self._generate_flag_init(item)
         return ""
 
+    # ================================================================
+    # 公開 API
+    # ================================================================
     def generate_init_function(self, global_defs: GlobalDefinitions) -> str:
         self._log_debug("=== generate_init_function START ===")
         lines = []
