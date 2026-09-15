@@ -185,9 +185,22 @@ class TransitionListDialog(QDialog):
             self._draft_to_transition(draft, trans)
             self._update_row_from_transition(row, trans)
             StaTableLogger.info(f"D&D editing completed for row {row}")
-
     def _transition_to_draft(self, trans: Transition) -> ActionDraft:
-        draft = ActionDraft(source=trans.source, event=trans.event)
+        """
+        Transition → ActionDraft 変換
+
+        【v1.6 変更】layer_name を渡す（§11.2 #4）
+          code_widget._get_layer_name() がこれを最優先で参照するため、
+          ここで SM の層名を明示的に引き継ぐ。
+        """
+        # ★ v1.6: SM の layer_name を取得（空ならフォールバックに任せる）
+        layer_name = getattr(self.state_machine, 'layer_name', '') or ''
+
+        draft = ActionDraft(
+            source=trans.source,
+            event=trans.event,
+            layer_name=layer_name,   # ★ v1.6 追加
+        )
         flow_item = FlowItem(
             item_type="transition",
             name=trans.event or "完了",

@@ -180,8 +180,14 @@ class MatrixTableWidget(QTableWidget):
             condition_display = _truncate_text(trans.condition, 30)
             parts.append(f"[{condition_display}]")
         return " ".join(parts)
-
     def open_transition_dialog(self, row: int, col: int):
+        """
+        遷移編集ダイアログを開く
+
+        【v1.6 変更】ActionDraft に layer_name を渡す（§11.2 #4）
+          code_widget._get_layer_name() がこれを最優先で参照するため、
+          ここで SM の層名を明示的に引き継ぐ。
+        """
         state = self.horizontalHeaderItem(col).text() if self.horizontalHeaderItem(col) else ""
         raw_event = self.verticalHeaderItem(row).text() if self.verticalHeaderItem(row) else ""
         event_name = raw_event
@@ -200,7 +206,14 @@ class MatrixTableWidget(QTableWidget):
         for i, t in enumerate(existing_list):
             StaTableLogger.debug(f"  existing[{i}]: condition='{t.condition}', pre_actions={t.pre_actions}, target={t.target}, title={t.title}")
 
-        draft = ActionDraft(source=state, event=event_name)
+        # ★ v1.6: SM の layer_name を取得（空なら code_widget 側のフォールバックに任せる）
+        layer_name = getattr(self.sm, 'layer_name', '') or ''
+
+        draft = ActionDraft(
+            source=state,
+            event=event_name,
+            layer_name=layer_name,   # ★ v1.6 追加
+        )
         for trans in existing_list:
             fi = transition_to_flow_item(trans)
             StaTableLogger.debug(f"  converted flow_item: {fi}")

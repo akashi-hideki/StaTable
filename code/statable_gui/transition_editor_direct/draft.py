@@ -1,6 +1,11 @@
 # statable_gui/transition_editor_direct/draft.py
 """
 動作編集用ドラフトモデル（ノード位置保存対応）
+
+【v1.6 変更】
+  - ActionDraft に layer_name 属性を追加（§11.2 #4）
+    code_widget._get_layer_name() がこれを最優先で参照する。
+    従来の「namespace 最頻値推定」はフォールバックとして残る。
 """
 
 import logging
@@ -107,6 +112,11 @@ class ActionDraft:
     source: str = ""
     event: str = ""
 
+    # ★ v1.6 追加: 層名（code_widget._get_layer_name の第一候補）
+    #   - matrix_table.py 等の生成側で sm.layer_name を渡す
+    #   - 空文字の場合は code_widget 側で namespace 最頻値フォールバックが動く
+    layer_name: str = ""
+
     flow_items: List[FlowItem] = field(default_factory=list)
     default_target: str = ""
 
@@ -123,6 +133,8 @@ class ActionDraft:
         self.generated_code = ""
         self.role_func_map = {}
         self.user_code = {}
+        # ★ layer_name は「この draft が属する層」を表すため、
+        #   clear() では保持する（リセットしない）
 
     def get_role_func_name(self, base_name: str, phase: str) -> str:
         key = f"{self.source}|{self.event}|{phase}|{base_name}"
@@ -135,6 +147,7 @@ class ActionDraft:
         return {
             'source': self.source,
             'event': self.event,
+            'layer_name': self.layer_name,   # ★ v1.6 追加
             'flow_items': [i.to_dict() for i in self.flow_items],
             'default_target': self.default_target,
             'system_globals': [g.to_dict() for g in self.system_globals],
@@ -148,6 +161,7 @@ class ActionDraft:
         return cls(
             source=data.get('source', ''),
             event=data.get('event', ''),
+            layer_name=data.get('layer_name', ''),   # ★ v1.6 追加
             flow_items=[FlowItem.from_dict(i) for i in data.get('flow_items', [])],
             default_target=data.get('default_target', ''),
             system_globals=[SystemGlobal.from_dict(g) for g in data.get('system_globals', [])],
