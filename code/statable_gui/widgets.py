@@ -2,7 +2,8 @@
 """
 StaTable メインウィジェット（共有ライブラリ対応版）
 """
-import os
+
+import os                    # ★ A1: STATABLE_DISABLE_MERMAID 判定用
 import tempfile
 from typing import Optional, List
 
@@ -14,12 +15,27 @@ from PySide6.QtWidgets import (
     QTabWidget, QAbstractItemView, QMessageBox, QDialog
 )
 
-try:
-    from PySide6.QtWebEngineWidgets import QWebEngineView
-    from PySide6.QtWebEngineCore import QWebEngineSettings
-    WEBENGINE_AVAILABLE = True
-except ImportError:
+# ============================================================
+# ★ A1: WebEngine import 自体を環境変数で分岐
+#   - STATABLE_DISABLE_MERMAID=1 のとき: import しない
+#     → Qt WebEngine ランタイムが初期化されず、リーク警告が出ない
+#   - 通常時: 従来通り import
+# ============================================================
+_DISABLE_MERMAID = os.environ.get("STATABLE_DISABLE_MERMAID") == "1"
+
+if not _DISABLE_MERMAID:
+    try:
+        from PySide6.QtWebEngineWidgets import QWebEngineView
+        from PySide6.QtWebEngineCore import QWebEngineSettings
+        WEBENGINE_AVAILABLE = True
+    except ImportError:
+        WEBENGINE_AVAILABLE = False
+        QWebEngineView = None
+        QWebEngineSettings = None
+else:
     WEBENGINE_AVAILABLE = False
+    QWebEngineView = None
+    QWebEngineSettings = None
 
 from statable.model import State, Event, Transition, StateType, EventKind, RoleFunction
 from statable.state_machine import StateMachine
@@ -39,21 +55,48 @@ from .event_definition_dialog import EventDefinitionDialog
 from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary
 from statable_gui.libcntrl.condition_library import ConditionLibrary
 from statable_gui.libcntrl.literal_library import LiteralLibrary
+
 class MermaidWidget(QWidget):
+    """
+    Mermaid 図のプレビューウィジェット
+
+    環境変数 STATABLE_DISABLE_MERMAID=1 で WebEngine を無効化できる。
+    （テスト時に Qt の WebEngine リーク警告を避けるため）
+    """
+
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         self.web_view = None
         self.text_view = None
+        self._disabled = (
+            os.environ.get("STATABLE_DISABLE_MERMAID") == "1"
+        )
 
+        # ---- テストモード: WebEngine を生成しない ----
+        if self._disabled:
+            placeholder = QLabel(
+                "Mermaid rendering disabled (test mode)"
+            )
+            placeholder.setAlignment(Qt.AlignCenter)
+            layout.addWidget(placeholder)
+            StaTableLogger.debug(
+                "MermaidWidget: disabled via STATABLE_DISABLE_MERMAID"
+            )
+            return
+
+        # ---- 通常モード ----
         if WEBENGINE_AVAILABLE:
             self.web_view = QWebEngineView()
             settings = self.web_view.settings()
-            settings.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
-            settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+            settings.setAttribute(
+                QWebEngineSettings.LocalContentCanAccessFileUrls, True)
+            settings.setAttribute(
+                QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
             self.web_view.loadFinished.connect(self._on_load_finished)
             layout.addWidget(self.web_view)
-            StaTableLogger.debug("MermaidWidget: WebEngine available + file access enabled")
+            StaTableLogger.debug(
+                "MermaidWidget: WebEngine available + file access enabled")
         else:
             self.text_view = QPlainTextEdit()
             self.text_view.setReadOnly(True)
@@ -63,20 +106,28 @@ class MermaidWidget(QWidget):
                 "PySide6-Addonsをインストールしてください。\n"
                 "pip install PySide6-Addons"
             )
-            StaTableLogger.warning("MermaidWidget: WebEngine NOT available")
+            StaTableLogger.warning(
+                "MermaidWidget: WebEngine NOT available")
 
     def set_mermaid_code(self, code: str):
         StaTableLogger.debug("MermaidWidget.set_mermaid_code called")
         StaTableLogger.debug(f"Mermaid code:\n{code}")
 
+        # ---- テストモード: 何もしない ----
+        if self._disabled:
+            return
+
         if self.web_view:
             mermaid_js_path = get_resource_path("mermaidwin.js")
             if not mermaid_js_path.exists():
-                StaTableLogger.error(f"mermaidwin.js NOT found: {mermaid_js_path}")
+                StaTableLogger.error(
+                    f"mermaidwin.js NOT found: {mermaid_js_path}")
                 return
 
-            js_abs_url = QUrl.fromLocalFile(str(mermaid_js_path)).toString()
-            StaTableLogger.debug(f"mermaidwin.js absolute URL: {js_abs_url}")
+            js_abs_url = QUrl.fromLocalFile(
+                str(mermaid_js_path)).toString()
+            StaTableLogger.debug(
+                f"mermaidwin.js absolute URL: {js_abs_url}")
 
             html = f"""<!DOCTYPE html>
 <html>
@@ -99,20 +150,25 @@ class MermaidWidget(QWidget):
 </html>"""
 
             try:
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
+                with tempfile.NamedTemporaryFile(
+                        mode='w', suffix='.html',
+                        delete=False, encoding='utf-8') as f:
                     f.write(html)
                     temp_path = f.name
-                StaTableLogger.debug(f"Temporary HTML created: {temp_path}")
+                StaTableLogger.debug(
+                    f"Temporary HTML created: {temp_path}")
                 self.web_view.load(QUrl.fromLocalFile(temp_path))
             except Exception as e:
-                StaTableLogger.error(f"Failed to create temporary HTML: {e}")
-        else:
+                StaTableLogger.error(
+                    f"Failed to create temporary HTML: {e}")
+        elif self.text_view:
             self.text_view.setPlainText(code)
 
     def _on_load_finished(self, ok: bool):
         StaTableLogger.debug(f"WebEngine loadFinished: ok={ok}")
         if ok and self.web_view:
-            StaTableLogger.debug("Executing renderMermaid() via JavaScript...")
+            StaTableLogger.debug(
+                "Executing renderMermaid() via JavaScript...")
             self.web_view.page().runJavaScript("renderMermaid();")
 
 

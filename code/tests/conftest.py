@@ -2,26 +2,27 @@
 """
 pytest 共通設定
 
-GUI round-trip テスト終了時に QWebEngine をクリーンアップし、
-「Release of profile requested but WebEnginePage still not deleted」
-警告を抑制する。
+GUI round-trip テスト用:
+  - Qt を offscreen モードで起動
+  - Mermaid (WebEngine) を環境変数で無効化
+    → Qt WebEngine ランタイムをロードさせない
+    → 「Release of profile requested...」警告を根本から抑制
 """
 import os
 
-# Qt を offscreen モードで起動（GUI 表示なし）
+# ★ 環境変数は他の import より前に設定する
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ["STATABLE_DISABLE_MERMAID"] = "1"
 
+import gc
 import pytest
 
 
 @pytest.fixture(scope="session", autouse=True)
 def qt_cleanup():
-    """
-    セッション開始前に QApplication を準備し、
-    終了時に QWebEngine をクリーンアップする。
-    """
-    # ---- セッション開始前 ----
+    """セッション終了時に Qt のウィジェットをクリーンアップ"""
     from PySide6.QtWidgets import QApplication
+
     app = QApplication.instance()
     if app is None:
         app = QApplication([])
@@ -29,19 +30,9 @@ def qt_cleanup():
     yield
 
     # ---- セッション終了後 ----
+    # WebEngine は無効化されているため、トップレベルウィジェットの
+    # 解放とイベントループの処理だけで十分
     try:
-        # QWebEngine のプロファイルを明示的に解放
-        try:
-            from PySide6.QtWebEngineCore import QWebEngineProfile
-            profile = QWebEngineProfile.defaultProfile()
-            if profile is not None:
-                profile.deleteLater()
-                for _ in range(10):
-                    app.processEvents()
-        except ImportError:
-            pass
-
-        # 全トップレベルウィジェットを明示的に閉じる
         for widget in app.topLevelWidgets():
             try:
                 widget.close()
@@ -49,23 +40,18 @@ def qt_cleanup():
             except Exception:
                 pass
 
-        # イベントループを複数回まわして GC を促進
         for _ in range(10):
             app.processEvents()
 
-        # 最後に QApplication を明示的に quit
         app.quit()
         app.processEvents()
     except Exception as e:
-        print(f"[qt_cleanup] cleanup warning: {e}")
+        print(f"[qt_cleanup] {e}")
 
 
 @pytest.fixture(scope="function", autouse=True)
 def gc_between_tests():
-    """
-    各テスト間で GC を実行し、QObject のリークを防ぐ。
-    """
-    import gc
+    """各テスト間で GC を実行し、QObject のリークを防ぐ"""
     gc.collect()
     yield
     gc.collect()

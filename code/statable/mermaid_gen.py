@@ -1,6 +1,58 @@
 from .state_machine import StateMachine
 
 
+# ============================================================
+# Mermaid ラベル用サニタイズ（v2.0 追加）
+# ============================================================
+#
+# Mermaid stateDiagram-v2 のラベルで問題になる文字と代替:
+#
+#   ":"  状態遷移ラベルの区切り文字と誤認される
+#        例: "Halt --> Active : RETRY: battery_voltage >600"
+#        → タイトル内の ":" でパースエラー
+#
+#   "[" "]"
+#        条件ブロック記法と競合する可能性
+#        → 二重の "[ ]" が混ざるとパース失敗
+#
+#   '"'  引用符がラベル全体の終端と誤認される
+#
+#   "\n" ラベルは 1 行のみ有効 → 空白に正規化
+#
+#   "`"  コードブロックと誤認される可能性
+#
+_MERMAID_LABEL_REPLACEMENTS = (
+    (":",  "："),   # コロン → 全角コロン
+    ("[",  "［"),   # 開き角括弧 → 全角
+    ("]",  "］"),   # 閉じ角括弧 → 全角
+    ('"',  "'"),    # ダブルクォート → シングル
+    ("`",  "'"),    # バッククォート → シングル
+    ("\n", " "),    # 改行 → 空白
+    ("\r", " "),
+)
+
+
+def _sanitize_label(text: str) -> str:
+    """
+    Mermaid のラベル文字列を安全化する。
+
+    ユーザー入力のタイトル・イベント名・条件式に
+    Mermaid のメタ文字が含まれていても、パースエラーを
+    起こさないように置換する。
+
+    例:
+      "RETRY: battery_voltage >600"
+        → "RETRY： battery_voltage >600"
+    """
+    if not text:
+        return ""
+    for src, dst in _MERMAID_LABEL_REPLACEMENTS:
+        text = text.replace(src, dst)
+    # 連続空白を単一に正規化
+    text = " ".join(text.split())
+    return text
+
+
 def _truncate_condition(condition: str, max_chars: int = 50) -> str:
     """長い状態遷移条件を省略表示する（改行は先頭行のみ）"""
     if not condition:
@@ -21,6 +73,12 @@ def _truncate_condition(condition: str, max_chars: int = 50) -> str:
 
 
 def generate_mermaid(sm: StateMachine) -> str:
+    """
+    StateMachine から Mermaid stateDiagram-v2 形式の文字列を生成する。
+
+    ラベル（タイトル / イベント名 / 条件式）はすべて
+    _sanitize_label で正規化してパースエラーを防止する。
+    """
     lines = ["stateDiagram-v2", "    direction LR"]
 
     if sm.initial_state:
@@ -29,30 +87,41 @@ def generate_mermaid(sm: StateMachine) -> str:
     for t in sm.transitions:
         label_parts = []
 
-        # タイトルを表示（無題遷移以外）
-        if t.title and t.title != "(無題遷移)":
-            label_parts.append(t.title)
+        # ---- タイトル（無題遷移以外） ----
+        title_raw = t.title or ""
+        title_safe = _sanitize_label(title_raw)
+        if title_safe and title_safe != "(無題遷移)":
+            label_parts.append(title_safe)
         else:
-            # 遷移先を表示
+            # タイトルなし → 遷移先を表示
             if t.target:
-                label_parts.append(t.target)
+                label_parts.append(_sanitize_label(t.target))
             else:
                 label_parts.append("(内部)")
 
-        # イベント名を表示
+        # ---- イベント名 ----
         if t.event:
-            label_parts.append(f"({t.event})")
+            event_safe = _sanitize_label(t.event)
+            if event_safe:
+                label_parts.append(f"({event_safe})")
 
-        # ガード条件は短縮して表示
+        # ---- ガード条件（短縮 + サニタイズ） ----
         if t.condition:
-            label_parts.append(f"[{_truncate_condition(t.condition)}]")
+            cond_text = _sanitize_label(
+                _truncate_condition(t.condition)
+            )
+            if cond_text:
+                label_parts.append(f"[{cond_text}]")
 
-        # アクション（動作）は表示しない
+        # ---- ラベル結合 ----
         label = " ".join(label_parts).strip()
 
+        # ---- 遷移行を出力 ----
         if t.target:
             lines.append(f"    {t.source} --> {t.target} : {label}")
         else:
-            lines.append(f"    note right of {t.source} : internal: {label}")
+            lines.append(
+                f"    note right of {t.source} : internal: {label}"
+            )
 
     return "\n".join(lines)
