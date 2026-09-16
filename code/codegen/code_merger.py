@@ -9,6 +9,11 @@
     - RoleFunc_XXX の <name> は "Driver_Init" 形式（層名込み）
     - ISR_XXX の <name> は "TIMER0" 形式（層名なし）
   - ファイル末尾ユーザー領域: [[STABLE_USER_CODE_TAIL_START/END]]
+
+【v2.0 修正】
+  - inject_file_user_code: 既存 START/END ブロックがあればその中身を
+    置換するよう変更。旧実装は常に include の後に新規挿入していたため、
+    生成コード元のブロックが残骸化し、プレースホルダが残り続けていた。
 """
 
 import re
@@ -122,15 +127,35 @@ class CodeMerger:
     # ===== 注入処理 =====
     def inject_file_user_code(self, generated_content: str,
                               user_code: str) -> str:
-        """生成コードにファイル全体のユーザーコードを注入"""
+        """
+        生成コードにファイル全体のユーザーコードを注入
+
+        【v2.0 修正】
+          既存の START/END ブロックがあれば、その中身を user_code で置換する。
+          ブロックが無い場合のみ、include の後に新規挿入する。
+
+          旧: 常に include の後に新規挿入 → 生成コード元のブロックが残骸化
+          新: 既存ブロックを置換 → 常に 1 つのブロックのみ
+        """
         if not user_code:
             return generated_content
 
         start = self.markers['file_user_start']
         end = self.markers['file_user_end']
+
+        # ---- 1. 既存ブロックがあれば置換 ----
+        pattern = rf'({re.escape(start)}\s*\n).*?(\n\s*{re.escape(end)})'
+        replacement = rf'\g<1>{user_code}\n\g<2>'
+        result, count = re.subn(
+            pattern, replacement, generated_content,
+            count=1, flags=re.DOTALL,
+        )
+        if count:
+            self._log_debug("ファイルユーザーコードを置換しました")
+            return result
+
+        # ---- 2. ブロックが無ければ include の後に新規挿入 ----
         injection = f"{start}\n{user_code}\n{end}\n"
-        
-        # インクルード後に注入
         lines = generated_content.split('\n')
         result_lines = []
         injected = False
@@ -153,6 +178,7 @@ class CodeMerger:
             # インクルードがない場合は先頭に注入
             result_lines.insert(0, injection.rstrip('\n'))
 
+        self._log_debug("ファイルユーザーコードを新規挿入しました")
         return '\n'.join(result_lines)
 
     # ★ 関数ユーザーコード注入: 既存マーカーブロックを置換
@@ -220,20 +246,21 @@ class CodeMerger:
 
         # 各種ユーザーコード抽出
         file_user_code = self.extract_file_user_code(existing_content)
-        
+
         # 関数単位のユーザーコードを抽出
         func_user_codes = self.extract_all_func_user_codes(existing_content)
         tail_user_code = self.extract_file_tail_user_code(existing_content)
 
         self._log_debug(f"ファイルユーザーコード: {len(file_user_code)}文字")
         self._log_debug(f"関数ユーザーコード: {len(func_user_codes)}個")
-        
+        self._log_debug(f"末尾ユーザーコード: {len(tail_user_code)}文字")
+
         # 生成コードにユーザーコードを注入
         result = generated_content
-        
+
         # ファイル全体のユーザーコードを注入
         result = self.inject_file_user_code(result, file_user_code)
-        
+
         # 関数単位のユーザーコードを注入
         for func_name, user_code in func_user_codes.items():
             result = self.inject_func_user_code(
