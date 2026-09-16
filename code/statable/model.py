@@ -78,6 +78,27 @@ class Transition:
 
     v1.5 で sample_data.py / xml_io.py / dialogs.py / draft.py /
     change_applier.py の全 14 箇所が kwarg 済みであることを AST 監査で確認済み。
+
+    【v2.0 既知の制約: transition_type は予約フィールド】
+      - "external": 通常遷移（既定値、実装済み）
+      - "internal": 状態を出ず action のみ実行（**未実装・予約**）
+      - "local":    自己遷移（**未実装・予約**）
+
+      v1.9 時点で internal / local は未実装。生成コード
+      （codegen/transition_generator.py）は transition_type を参照せず、
+      常に external 相当（target へ遷移）として扱う。
+
+      影響:
+        - GUI（matrix_table.py）に遷移種別列は表示されない
+        - 生成コードで entry/exit 呼び分けは行われない
+        - XML 保存/読込では値が保持される（round-trip は維持）
+
+      予約理由:
+        entry/exit 呼び出し制御は state machine runner
+        （c_code_generator.py / テンプレート群）に広く影響するため、
+        v2.0 では仕様を凍結し、v2.x で段階的に実装する。
+
+      参照: v1.9 §9.9 #93（一貫性チェック検出）
     """
     source: str
     event: str
@@ -88,7 +109,7 @@ class Transition:
     else_target: str = ""
     else_actions: List[str] = field(default_factory=list)  # elseアクション
     action: str = ""                   # 旧フィールド（互換用・未使用）
-    transition_type: str = "external"
+    transition_type: str = "external"  # ★ 予約フィールド（上記 docstring 参照）
     title: str = ""
 
     def __post_init__(self):

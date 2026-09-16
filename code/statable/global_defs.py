@@ -185,32 +185,65 @@ class GlobalDefinitions:
         self.custom_types: List[CustomTypeDef] = []
 
     def add_timer_variables(self):
-        """タイマ基準変数・派生タイマ変数をグローバル変数として登録する"""
-        # 既存のタイマ変数を一旦削除（グループ "Timer" として再登録）
-        self.variables = [v for v in self.variables if v.group != "Timer"]
+        """タイマ基準変数・派生タイマ変数をグローバル変数として登録する。
+
+        - 既存変数（XML 読込 or GUI 編集済）は description / title を保持
+        - type / unit のみタイマ定義側と同期
+        - 存在しない変数のみ新規追加
+
+        これにより round-trip で description / title が保存される。
+        """
+        existing_by_name = {v.name: v for v in self.variables}
+
+        def _sync_or_add(name, type_, unit, default, group,
+                         default_desc, default_title):
+            if name in existing_by_name:
+                v = existing_by_name[name]
+                # タイマ定義を正とする（型・単位）
+                v.type = type_
+                v.unit = unit
+                # description / title は既存を尊重、空なら既定値
+                if not v.description:
+                    v.description = default_desc
+                if not v.title:
+                    v.title = default_title
+                # グループが未設定なら補完
+                if not v.group:
+                    v.group = group
+            else:
+                self.variables.append(SystemVariable(
+                    name=name,
+                    type=type_,
+                    unit=unit,
+                    default_value=default,
+                    group=group,
+                    description=default_desc,
+                    title=default_title,
+                ))
 
         all_timers = [self.timer_base] + self.extra_timers
-        # 基準変数
         for timer in all_timers:
-            self.variables.append(SystemVariable(
+            # 基準タイマ変数
+            _sync_or_add(
                 name=timer.variable_name,
-                type=timer.data_type,
+                type_=timer.data_type,
                 unit=timer.unit,
-                default_value="0",
+                default="0",
                 group="Timer",
-                description="タイマ基準変数",
-                title=timer.title,
-            ))
+                default_desc="タイマ基準変数",
+                default_title=timer.title or f"タイマ基準: {timer.variable_name}",
+            )
+            # 派生タイマ変数
             for d in timer.derived:
-                self.variables.append(SystemVariable(
+                _sync_or_add(
                     name=d.variable_name,
-                    type=d.data_type,
+                    type_=d.data_type,
                     unit=d.period_name,
-                    default_value="0",
+                    default="0",
                     group="Timer",
-                    description=f"派生タイマ変数（{d.period_name}）",
-                    title=d.title,
-                ))
+                    default_desc=f"派生タイマ変数（{d.period_name}）",
+                    default_title=d.title or f"タイマ: {d.variable_name}",
+                )
 
     # グループ名の取得
     def variable_groups(self) -> List[str]:
