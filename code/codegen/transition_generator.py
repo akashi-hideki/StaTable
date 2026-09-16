@@ -16,6 +16,12 @@
   - セル関数は static（内部実装詳細）
   - セル関数は前方宣言してから、テーブル・実装を出力（順序非依存）
   - テーブルは行=状態、列=イベントの横並び仕様書形式
+
+【v2.0 修正】
+  - `_role_func_call`: `namespace.name` 形式（例: "App.Init"）を
+    正しく `RoleFunc_<Namespace>_<Name>(transition, ctx)` に変換
+    旧: RoleFunc_App.Init(...)  ← C コンパイルエラー
+    新: RoleFunc_App_Init(...)  ← 正しい
 """
 
 import sys
@@ -70,7 +76,7 @@ class TransitionGenerator:
     DEFAULT_GENERATION_STYLE = 'table_driven'
 
     # ==================================================================
-    # テンプレート群（変更なし）
+    # テンプレート群
     # ==================================================================
     CELL_TEMPLATES = {
         # --- ヘッダーコメント ---
@@ -264,9 +270,9 @@ class TransitionGenerator:
         # --- エントリ構造体終了 ---
         'struct_close': Template('}} $dict_type;\n'),
 
-
-        # --- ディクショナリコメント --
+        # --- ディクショナリコメント ---
         'dict_comment': '\n/* 遷移関数ディクショナリ */\n',
+
         # --- ディクショナリ開始 ---
         'dict_open': Template(
             'static const $dict_type $dict_name[] = {\n'
@@ -383,8 +389,6 @@ class TransitionGenerator:
         self.layer_name: str = ""
 
         # ★ dispatch テーブル（table_type）
-        #   将来 switch / dictionary 実装時は
-        #   該当メソッドの中身を書くだけ
         self.table_generators: Dict[str, callable] = {
             'array':      self._generate_table_array,
             'switch':     self._generate_table_switch,
@@ -449,13 +453,48 @@ class TransitionGenerator:
             else f"transition_{s}_{e}"
 
     def _role_func_call(self, func_name: str) -> str:
-        """RoleFunc_<Layer>_<Name>(transition, ctx)"""
+        """
+        ロール関数呼び出し文を生成する。
+
+        【v2.0 修正】
+          `namespace.name` 形式（例: "App.Init"）を
+          `RoleFunc_<Namespace>_<Name>(transition, ctx)` に正しく変換する。
+
+          role_function_generator.py の _normalize_func_ref と整合:
+            - role_function_generator 側: "App.Init" → "RoleFunc_App_Init"
+            - transition_generator 側（本メソッド）: 同じ変換を適用
+
+          旧バグ:
+            func_name = "App.Init"
+            → to_pascal_case("App.Init") が "." を処理せず "App.Init" のまま
+            → RoleFunc_App.Init(...)  ← C コンパイルエラー
+
+          修正後:
+            func_name = "App.Init"
+            → split(".", 1) で ns="App", name="Init" に分離
+            → RoleFunc_App_Init(...)  ← 正しい
+        """
+        if not func_name:
+            return "/* 空のロール関数参照 */"
+
+        # 既に RoleFunc_ プレフィックス付き
         if func_name.startswith("RoleFunc_"):
-            full = func_name
+            return f"{func_name}(transition, ctx)"
+
+        # ★ namespace.name 形式の処理
+        if "." in func_name:
+            ns, name = func_name.split(".", 1)
+            # 名前空間も Pascal 化（"App" → "App" / "middleware" → "Middleware"）
+            ns_pascal = self.naming.to_pascal_case(ns)
+            name_pascal = self.naming.to_pascal_case(name)
+            return f"RoleFunc_{ns_pascal}_{name_pascal}(transition, ctx)"
+
+        # 名前空間なし
+        pascal = self.naming.to_pascal_case(func_name)
+        if self.layer_name:
+            full = f"RoleFunc_{self.layer_name}_{pascal}"
         else:
-            pascal = self.naming.to_pascal_case(func_name)
-            full = f"RoleFunc_{self.layer_name}_{pascal}" if self.layer_name \
-                else f"RoleFunc_{pascal}"
+            full = f"RoleFunc_{pascal}"
         return f"{full}(transition, ctx)"
 
     # ==================================================================
@@ -877,7 +916,7 @@ class TransitionGenerator:
         return self._generate_process_table_driven(state_machine)
 
     # ==================================================================
-    # GetNextEvent（変更なし）
+    # GetNextEvent
     # ==================================================================
     def generate_get_next_event_function(self, state_machine: StateMachine) -> str:
         """保留イベントを取得する関数を生成"""

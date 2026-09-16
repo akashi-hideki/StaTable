@@ -1,208 +1,251 @@
-# tests/test_variable_generator.py
+# tests/test_struct_generator.py
 """
-variable_generator.VariableGenerator のユニットテスト
+struct_generator.CStructGenerator のユニットテスト
 
 【目的】
-  C コード生成（変数マクロ・初期化関数）の回帰防止:
-    - v1.6 §9.8 #92: DATA_COUNTER(ctx) → data.counter（フィールド名 snake）
-    - カスタム型の memset 初期化（v1.5 修正）
-    - 配列変数の memset 初期化
-    - フラグアクセスマクロ
-    - init 関数の構造
+  C コード生成（struct 部分）の回帰防止:
+    - SystemData_t / EventFlags_t / SystemContext_t の生成
+    - pending_event / pending_event_valid の追加（v1.5）
+    - 共通 TransitionContext_t と層別 TransitionContext_<Layer>_t の分離
+    - pending_event マクロ（FIRE_EVENT / MAX_CONSECUTIVE_PENDING_EVENTS）
+    - カスタム型 / ビットフィールド / 配列メンバー
 
 【対象】
-  codegen/variable_generator.py
+  codegen/struct_generator.py
 """
 import pytest
 
 from statable.global_defs import (
     GlobalDefinitions, SystemVariable, EventFlag,
+    CustomTypeDef, StructMemberDef,
 )
-from codegen.variable_generator import VariableGenerator
+from codegen.struct_generator import CStructGenerator
 
 
 # ============================================================
 # ヘルパー
 # ============================================================
 
-def _make_gd(vars=(), flags=()):
+def _make_gd(vars=(), flags=(), custom_types=()):
     gd = GlobalDefinitions()
     for v in vars:
         gd.variables.append(v)
     for f in flags:
         gd.flags.append(f)
+    for ct in custom_types:
+        gd.custom_types.append(ct)
     return gd
 
 
 # ============================================================
-# データアクセスマクロ（v1.6 修正の回帰防止）
+# SystemData_t
 # ============================================================
 
-class TestDataMacro:
+class TestSystemData:
 
-    def test_macro_name_upper(self):
-        """マクロ名は UPPER_SNAKE"""
-        gen = VariableGenerator()
-        var = SystemVariable(name="counter", type="uint32_t")
-        result = gen._generate_data_macro(var)
-        assert "DATA_COUNTER" in result
-
-    def test_field_name_snake(self):
-        """
-        v1.6 §9.8 #92 修正: フィールド名は snake_case のまま
-          （旧バグ: DATA_COUNTER(ctx) → ((ctx)->data.COUNTER)）
-        """
-        gen = VariableGenerator()
-        var = SystemVariable(name="counter", type="uint32_t")
-        result = gen._generate_data_macro(var)
-        assert "data.counter" in result
-        assert "data.COUNTER" not in result
-
-    def test_camel_case_var(self):
-        """キャメルケースの変数 → マクロ UPPER、フィールドは snake"""
-        gen = VariableGenerator()
-        var = SystemVariable(name="retryCount", type="uint8_t")
-        result = gen._generate_data_macro(var)
-        assert "DATA_RETRY_COUNT" in result
-        # sanitize_identifier の実装次第だが、フィールドは snake 系
-        assert "data." in result
-
-
-class TestFlagMacro:
-
-    def test_flag_macro_name(self):
-        gen = VariableGenerator()
-        flag = EventFlag(name="EVT_INIT_DONE", min_value=0, max_value=1)
-        result = gen._generate_flag_macro(flag)
-        assert "FLAG_EVT_INIT_DONE" in result
-
-    def test_flag_field_name(self):
-        gen = VariableGenerator()
-        flag = EventFlag(name="EVT_INIT_DONE", min_value=0, max_value=1)
-        result = gen._generate_flag_macro(flag)
-        assert "flags.EVT_INIT_DONE" in result
-
-
-# ============================================================
-# generate_all_macros
-# ============================================================
-
-class TestGenerateAllMacros:
-
-    def test_empty(self):
-        gen = VariableGenerator()
+    def test_empty_gd(self):
+        gen = CStructGenerator()
         gd = GlobalDefinitions()
-        assert gen.generate_all_macros(gd) == ""
+        result = gen._generate_system_data(gd)
+        assert "typedef struct" in result
+        assert "} SystemData_t;" in result
 
-    def test_variables_only(self):
-        gen = VariableGenerator()
+    def test_single_variable(self):
+        gen = CStructGenerator()
         gd = _make_gd(vars=[
-            SystemVariable(name="counter", type="uint32_t"),
-            SystemVariable(name="error_code", type="uint8_t"),
+            SystemVariable(name="counter", type="uint32_t", description="カウンタ")
         ])
-        result = gen.generate_all_macros(gd)
-        assert "DATA_COUNTER" in result
-        assert "DATA_ERROR_CODE" in result
+        result = gen._generate_system_data(gd)
+        assert "counter" in result
+        assert "uint32_t" in result
 
-    def test_flags_only(self):
-        gen = VariableGenerator()
+    def test_array_variable(self):
+        gen = CStructGenerator()
+        gd = _make_gd(vars=[
+            SystemVariable(name="buffer", type="uint8_t", array_size=10)
+        ])
+        result = gen._generate_system_data(gd)
+        assert "buffer[10]" in result
+
+    def test_multiple_variables(self):
+        gen = CStructGenerator()
+        gd = _make_gd(vars=[
+            SystemVariable(name="a", type="uint8_t"),
+            SystemVariable(name="b", type="uint16_t"),
+        ])
+        result = gen._generate_system_data(gd)
+        assert "a" in result
+        assert "b" in result
+
+
+# ============================================================
+# EventFlags_t
+# ============================================================
+
+class TestEventFlags:
+
+    def test_empty_flags(self):
+        gen = CStructGenerator()
+        gd = GlobalDefinitions()
+        result = gen._generate_event_flags(gd)
+        assert "} EventFlags_t;" in result
+
+    def test_single_flag(self):
+        gen = CStructGenerator()
         gd = _make_gd(flags=[
-            EventFlag(name="EVT_INIT", min_value=0, max_value=1),
+            EventFlag(name="EVT_INIT", min_value=0, max_value=1)
         ])
-        result = gen.generate_all_macros(gd)
-        assert "FLAG_EVT_INIT" in result
+        result = gen._generate_event_flags(gd)
+        assert "EVT_INIT" in result
+        assert "uint8_t" in result
 
-    def test_mixed(self):
-        gen = VariableGenerator()
+
+# ============================================================
+# SystemContext_t
+# ============================================================
+
+class TestSystemContext:
+
+    def test_pending_event_added(self):
+        """v1.5: pending_event / pending_event_valid が追加される"""
+        gen = CStructGenerator()
+        gd = GlobalDefinitions()
+        result = gen._generate_system_context(gd)
+        assert "SystemContext_t" in result
+        assert "pending_event" in result
+        assert "pending_event_valid" in result
+
+    def test_data_and_flags_members(self):
+        gen = CStructGenerator()
+        gd = GlobalDefinitions()
+        result = gen._generate_system_context(gd)
+        assert "SystemData_t data" in result
+        assert "EventFlags_t flags" in result
+
+
+# ============================================================
+# 共通 TransitionContext_t
+# ============================================================
+
+class TestCommonTransitionContext:
+
+    def test_common_context_generated(self):
+        gen = CStructGenerator()
+        result = gen.generate_common_transition_context()
+        assert "TransitionContext_t" in result
+        assert "from_state" in result
+        assert "event" in result
+        assert "uint16_t" in result
+
+
+# ============================================================
+# 層別 TransitionContext_<Layer>_t
+# ============================================================
+
+class TestLayerTransitionContext:
+
+    def test_no_layer_returns_empty(self):
+        gen = CStructGenerator()
+        result = gen.generate_layer_transition_context("STATE_t", "EVENT_t")
+        assert result == ""
+
+    def test_layer_context_generated(self):
+        gen = CStructGenerator()
+        gen.set_layer("Driver")
+        result = gen.generate_layer_transition_context(
+            "STATE_Driver_t", "EVENT_Driver_t")
+        assert "TransitionContext_Driver_t" in result
+        assert "STATE_Driver_t from_state" in result
+        assert "EVENT_Driver_t event" in result
+
+
+# ============================================================
+# pending_event マクロ
+# ============================================================
+
+class TestPendingEventMacros:
+
+    def test_fire_event_macro(self):
+        gen = CStructGenerator()
+        result = gen.generate_pending_event_macros()
+        assert "#define FIRE_EVENT" in result
+        assert "pending_event" in result
+        assert "pending_event_valid" in result
+
+    def test_max_consecutive_macro(self):
+        gen = CStructGenerator()
+        result = gen.generate_pending_event_macros()
+        assert "MAX_CONSECUTIVE_PENDING_EVENTS" in result
+        assert "#ifndef" in result
+        assert "#endif" in result
+
+
+# ============================================================
+# カスタム型
+# ============================================================
+
+class TestCustomType:
+
+    def test_empty_members(self):
+        gen = CStructGenerator()
+        ct = CustomTypeDef(name="MyType")
+        result = gen._generate_custom_type(ct)
+        assert "typedef struct" in result
+        # create_type_name の実装により MyType_t などになる想定
+
+    def test_normal_member(self):
+        gen = CStructGenerator()
+        ct = CustomTypeDef(name="MyType", members=[
+            StructMemberDef(name="x", data_type="int"),
+        ])
+        result = gen._generate_custom_type(ct)
+        assert "int x;" in result
+
+    def test_bit_field_member(self):
+        gen = CStructGenerator()
+        ct = CustomTypeDef(name="Flags", members=[
+            StructMemberDef(name="f1", data_type="uint8_t", bit_width=1),
+            StructMemberDef(name="f2", data_type="uint8_t", bit_width=3),
+        ])
+        result = gen._generate_custom_type(ct)
+        assert "f1 : 1" in result
+        assert "f2 : 3" in result
+
+    def test_array_member(self):
+        gen = CStructGenerator()
+        ct = CustomTypeDef(name="Buf", members=[
+            StructMemberDef(name="data", data_type="uint8_t", array_size=16),
+        ])
+        result = gen._generate_custom_type(ct)
+        assert "data[16]" in result
+
+
+# ============================================================
+# generate_all_structs
+# ============================================================
+
+class TestGenerateAllStructs:
+
+    def test_basic_output(self):
+        gen = CStructGenerator()
         gd = _make_gd(
             vars=[SystemVariable(name="counter", type="uint32_t")],
             flags=[EventFlag(name="EVT_INIT", min_value=0, max_value=1)],
         )
-        result = gen.generate_all_macros(gd)
-        assert "DATA_COUNTER" in result
-        assert "FLAG_EVT_INIT" in result
+        result = gen.generate_all_structs(gd)
+        assert "SystemData_t" in result
+        assert "EventFlags_t" in result
+        assert "SystemContext_t" in result
 
-
-# ============================================================
-# 初期化コード生成
-# ============================================================
-
-class TestInitCode:
-
-    def test_normal_variable_init(self):
-        gen = VariableGenerator()
-        var = SystemVariable(name="counter", type="uint32_t")
-        result = gen._generate_normal_init(var)
-        assert "ctx->data.counter" in result
-        assert "= 0" in result
-
-    def test_custom_type_uses_memset(self):
-        """v1.5 修正: カスタム型は memset で初期化"""
-        gen = VariableGenerator()
-        var = SystemVariable(name="my_struct", type="MyCustomType")
-        result = gen._generate_normal_init(var)
-        assert "memset" in result
-        assert "ctx->data.my_struct" in result
-
-    def test_array_init_uses_memset(self):
-        gen = VariableGenerator()
-        var = SystemVariable(name="buffer", type="uint8_t", array_size=16)
-        result = gen._generate_array_init(var)
-        assert "memset" in result
-        assert "buffer" in result
-
-    def test_bool_default(self):
-        gen = VariableGenerator()
-        var = SystemVariable(name="flag", type="bool", default_value="false")
-        result = gen._generate_normal_init(var)
-        assert "= false" in result
-
-    def test_flag_init(self):
-        gen = VariableGenerator()
-        flag = EventFlag(name="EVT_INIT", min_value=0, max_value=1)
-        result = gen._generate_flag_init(flag)
-        assert "ctx->flags.EVT_INIT" in result
-        assert "= 0" in result
-
-
-# ============================================================
-# init 関数
-# ============================================================
-
-class TestInitFunction:
-
-    def test_basic_structure(self):
-        gen = VariableGenerator()
-        gd = GlobalDefinitions()
-        result = gen.generate_init_function(gd)
-        # void <name>(SystemContext_t *ctx) が含まれる
-        assert "SystemContext_t *ctx" in result
-        assert "NULL" in result  # NULL チェック
-        assert "pending_event" in result  # pending_event 初期化
-
-    def test_with_variables(self):
-        gen = VariableGenerator()
-        gd = _make_gd(vars=[
-            SystemVariable(name="counter", type="uint32_t"),
+    def test_custom_types_included(self):
+        gen = CStructGenerator()
+        gd = _make_gd(custom_types=[
+            CustomTypeDef(name="MyType", members=[
+                StructMemberDef(name="x", data_type="int"),
+            ]),
         ])
-        result = gen.generate_init_function(gd)
-        assert "ctx->data.counter" in result
-
-    def test_with_flags(self):
-        gen = VariableGenerator()
-        gd = _make_gd(flags=[
-            EventFlag(name="EVT_INIT", min_value=0, max_value=1),
-        ])
-        result = gen.generate_init_function(gd)
-        assert "ctx->flags.EVT_INIT" in result
-
-    def test_pending_event_init(self):
-        """pending_event / pending_event_valid の初期化"""
-        gen = VariableGenerator()
-        gd = GlobalDefinitions()
-        result = gen.generate_init_function(gd)
-        assert "ctx->pending_event = 0" in result
-        assert "ctx->pending_event_valid = false" in result
+        result = gen.generate_all_structs(gd)
+        assert "MyType" in result
 
 
 # ============================================================
@@ -211,45 +254,39 @@ class TestInitFunction:
 
 class TestGenerateAll:
 
-    def test_all_keys(self):
-        gen = VariableGenerator()
+    def test_all_keys_present(self):
+        gen = CStructGenerator()
         gd = GlobalDefinitions()
         result = gen.generate_all(gd)
-        assert "init_function" in result
-        assert "macros" in result
+        expected_keys = {
+            "custom_types", "system_data", "event_flags",
+            "system_context", "common_transition_context",
+            "pending_event_macros",
+        }
+        assert set(result.keys()) == expected_keys
 
-    def test_init_function_key(self):
-        gen = VariableGenerator()
+    def test_system_context_content(self):
+        gen = CStructGenerator()
         gd = GlobalDefinitions()
         result = gen.generate_all(gd)
-        assert "SystemContext_t *ctx" in result["init_function"]
+        assert "SystemContext_t" in result["system_context"]
+        assert "pending_event" in result["system_context"]
 
 
 # ============================================================
-# generate_variable (後方互換 API)
+# 後方互換 API
 # ============================================================
 
 class TestLegacyAPI:
 
-    def test_dispatch_macro(self):
-        gen = VariableGenerator()
-        var = SystemVariable(name="counter", type="uint32_t")
-        result = gen.generate_variable("macro", var)
-        assert "DATA_COUNTER" in result
+    def test_generate_struct_dispatch(self):
+        gen = CStructGenerator()
+        gd = GlobalDefinitions()
+        assert "SystemData_t" in gen.generate_struct("system_data", gd)
+        assert "EventFlags_t" in gen.generate_struct("event_flags", gd)
+        assert "SystemContext_t" in gen.generate_struct("system_context", gd)
 
-    def test_dispatch_init(self):
-        gen = VariableGenerator()
-        var = SystemVariable(name="counter", type="uint32_t")
-        result = gen.generate_variable("init", var)
-        assert "counter" in result
-
-    def test_dispatch_flag(self):
-        gen = VariableGenerator()
-        flag = EventFlag(name="EVT_INIT", min_value=0, max_value=1)
-        result = gen.generate_variable("flag", flag)
-        assert "EVT_INIT" in result
-
-    def test_unknown_raises(self):
-        gen = VariableGenerator()
-        with pytest.raises(ValueError, match="Unknown variable type"):
-            gen.generate_variable("unknown", None)
+    def test_generate_struct_unknown_raises(self):
+        gen = CStructGenerator()
+        with pytest.raises(ValueError, match="Unknown struct type"):
+            gen.generate_struct("unknown", None)

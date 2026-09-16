@@ -8,9 +8,16 @@
 
 【v1.6 §9.8 #92 修正】
   - アクセスマクロのフィールド名を修正
-    DATA_COUNTER(ctx) ((ctx)->data.COUNTER)  ← バグ
-    DATA_COUNTER(ctx) ((ctx)->data.counter)  ← 修正後
-    マクロ名は大文字（to_upper_snake）、フィールド名は sanitize_identifier を使用。
+    DATA_COUNTER(ctx) ((ctx)->data.COUNTER)  → バグ
+    DATA_COUNTER(ctx) ((ctx)->data.counter)  → 修正後
+    マクロ名は大文字（to_upper_snake）、フィールド名は sanitize_identifier を使用
+
+【v2.0 修正】
+  - `_t` サフィックス付き標準型（uint32_t / uint8_t 等）を正しく認識
+    旧: DEFAULT_INIT_VALUES に 'uint32' はあるが 'uint32_t' がない
+        → 標準型がカスタム型扱いされて冗長な memset を生成
+    新: DEFAULT_INIT_VALUES に _t 付き型を追加
+        _normalize_type_for_init で volatile / const 修飾子を除去してから判定
 """
 
 import sys
@@ -107,12 +114,30 @@ class VariableGenerator:
         {'action': 'template', 'key': 'function_close'},
     ]
 
+    # ================================================================
+    # ★ v2.0 修正: _t サフィックス付き標準型を追加
+    #   type_mapper.py の TYPE_MAPPING と整合:
+    #     'uint32' → 'uint32_t' に変換されるため、
+    #     生成コード側でも 'uint32_t' を標準型として扱う必要がある
+    # ================================================================
     DEFAULT_INIT_VALUES = {
+        # ---- 符号付き整数 ----
         'int': '0', 'int8': '0', 'int16': '0', 'int32': '0', 'int64': '0',
+        'int8_t': '0', 'int16_t': '0', 'int32_t': '0', 'int64_t': '0',
+        'short': '0', 'long': '0',
+        # ---- 符号なし整数 ----
         'uint': '0', 'uint8': '0', 'uint16': '0', 'uint32': '0', 'uint64': '0',
-        'float': '0.0f', 'double': '0.0', 'bool': 'false',
+        'uint8_t': '0', 'uint16_t': '0', 'uint32_t': '0', 'uint64_t': '0',
+        'unsigned': '0', 'unsigned int': '0', 'size_t': '0',
+        # ---- 浮動小数 ----
+        'float': '0.0f', 'double': '0.0',
+        # ---- 真偽 / 文字 ----
+        'bool': 'false', '_Bool': 'false',
         'char': '0', 'string': 'NULL',
     }
+
+    # 型修飾子（先頭に付く可能性があるもの）
+    _TYPE_QUALIFIERS = ('volatile', 'const', 'static')
 
     # ★ v1.6 §9.8 #92: マクロ名とフィールド名を分離
     MACRO_TEMPLATES = {
@@ -227,8 +252,8 @@ class VariableGenerator:
         データアクセスマクロを生成
 
         【v1.6 修正】
-          旧: DATA_COUNTER(ctx) ((ctx)->data.COUNTER)  ← フィールド名が大文字（バグ）
-          新: DATA_COUNTER(ctx) ((ctx)->data.counter)  ← フィールド名を元のまま
+          旧: DATA_COUNTER(ctx) ((ctx)->data.COUNTER)   → フィールド名が大文字（バグ）
+          新: DATA_COUNTER(ctx) ((ctx)->data.counter)   → フィールド名を元のまま
         """
         raw_name = getattr(var, 'name', 'unnamed')
         macro_name = self.naming.to_upper_snake(raw_name)
@@ -242,8 +267,8 @@ class VariableGenerator:
         フラグアクセスマクロを生成
 
         【v1.6 修正】
-          旧: FLAG_EVT_INIT_DONE(ctx) ((ctx)->flags.EVT_INIT_DONE)  ← バグ
-          新: FLAG_EVT_INIT_DONE(ctx) ((ctx)->flags.EVT_INIT_DONE)  ← 一致（元々 OK）
+          旧: FLAG_EVT_INIT_DONE(ctx) ((ctx)->flags.EVT_INIT_DONE)   → バグ
+          新: FLAG_EVT_INIT_DONE(ctx) ((ctx)->flags.EVT_INIT_DONE)   → 一致（元々OK）
           ※ フィールド名は struct 側で sanitize_identifier されてない場合あり
         """
         raw_name = getattr(flag, 'name', 'unnamed')
@@ -262,6 +287,30 @@ class VariableGenerator:
         return ""
 
     # ================================================================
+    # ★ v2.0 追加: 型名の正規化
+    # ================================================================
+    def _normalize_type_for_init(self, var_type: str) -> str:
+        """
+        型名を正規化して DEFAULT_INIT_VALUES で引けるようにする。
+
+        例:
+          'volatile uint32_t' → 'uint32_t'
+          'uint32_t'          → 'uint32_t'
+          'const uint8_t'     → 'uint8_t'
+          'MyCustomType'      → 'MyCustomType'（変更なし）
+        """
+        if not var_type:
+            return ''
+        tokens = var_type.strip().split()
+        # 先頭の修飾子を除去
+        while tokens and tokens[0] in self._TYPE_QUALIFIERS:
+            tokens.pop(0)
+        # 符号修飾子は 'unsigned int' などの複合型を保持するため、
+        # 'unsigned' 単独の場合はそのまま、それ以外はそのまま
+        normalized = ' '.join(tokens)
+        return normalized
+
+    # ================================================================
     # 初期化コード生成
     # ================================================================
     def _generate_array_init(self, var) -> str:
@@ -273,24 +322,32 @@ class VariableGenerator:
     def _generate_normal_init(self, var) -> str:
         """
         【v1.5 修正】
-          - カスタム型（DEFAULT_INIT_VALUES に無い型）は memset を使う
-          - プリミティブ型は従来通り = 0 などの数値代入
+          - カスタム型（DEFAULT_INIT_VALUES に無い型）は memset を使用
+          - プリミティブ型は直接代入 = 0 などの数値代入
+
+        【v2.0 修正】
+          - _t サフィックス付き標準型（uint32_t 等）を正しく認識
+          - volatile / const 等の修飾子を除去してから判定
+          - これにより冗長な memset の生成を防ぐ
         """
         var_name = self.naming.sanitize_identifier(getattr(var, 'name', 'unnamed'))
-        var_type = getattr(var, 'type', 'void')
+        raw_type = getattr(var, 'type', 'void')
+        normalized_type = self._normalize_type_for_init(raw_type)
 
-        # ★ v1.5: カスタム型判定 → memset
-        if var_type not in self.DEFAULT_INIT_VALUES:
+        # ★ v2.0: カスタム型判定（正規化後の型名で）
+        if normalized_type not in self.DEFAULT_INIT_VALUES:
             self._log_debug(
-                f"_generate_normal_init: '{var_name}' (type='{var_type}') "
+                f"_generate_normal_init: '{var_name}' "
+                f"(type='{raw_type}' → '{normalized_type}') "
                 f"is a custom type → using memset"
             )
             return self.INIT_CODE_TEMPLATES['struct_init'].substitute(
                 var_name=var_name
             ).rstrip('\n')
 
+        # 標準型: = 0 / = false / = 0.0f など
         init_value = getattr(var, 'default_value', '') or \
-            self.DEFAULT_INIT_VALUES.get(var_type, '0')
+            self.DEFAULT_INIT_VALUES.get(normalized_type, '0')
         return self.INIT_CODE_TEMPLATES['normal_init'].substitute(
             var_name=var_name, init_value=init_value
         ).rstrip('\n')
