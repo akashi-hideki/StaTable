@@ -6,10 +6,14 @@
     <GlobalDefinitions>
         <SystemVariables>
             <Variable name="counter" type="uint32_t" unit="" default_value="0" group="System" description="カウンタ" title="カウンタ" array_size="0" />
+            <Variable name="g_system_tick" type="volatile uint32_t" unit="1ms" default_value="0" group="Timer" description="タイマ基準変数" title="タイマ基準: g_system_tick" array_size="0" />
         </SystemVariables>
         <EventFlags>
             <Flag name="EVT_START" min_value="0" max_value="1" group="Events" description="起動要求" title="起動要求" />
         </EventFlags>
+        <TimerBase>
+            <Timer variable_name="g_system_tick" unit="1ms" data_type="volatile uint32_t" title="タイマ基準: g_system_tick" interrupt_name="" />
+        </TimerBase>
     </GlobalDefinitions>
     <SharedLibraries>
         <RoleFunctionLibrary />
@@ -53,7 +57,6 @@
                 <State name="Active" type="normal" parent="" entry="" exit="" do="" description="動作中" />
             </States>
             <Events>
-                <!-- ★ 修正: source_layer="application" → "middleware" -->
                 <Event name="START" id="1" kind="signal" params="" priority="0" description="起動" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="起動" />
             </Events>
             <RoleFunctions />

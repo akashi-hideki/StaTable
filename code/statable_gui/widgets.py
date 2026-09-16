@@ -2,7 +2,7 @@
 """
 StaTable メインウィジェット（共有ライブラリ対応版）
 """
-
+import os
 import tempfile
 from typing import Optional, List
 

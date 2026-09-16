@@ -4,28 +4,29 @@
         <CodeGeneration project_name="SharedLibTest" table_type="array" generation_style="table_driven" os_type="non_rtos" folder_structure="by_type" include_dir_name="include" source_dir_name="src" common_dir_name="common" project_dir_name="project" generate_super_include="true" super_include_file="statable_all.h" max_consecutive_pending_events="16" external_includes_in_super="true" external_includes_in_role="true" external_includes_in_transitions="false" external_includes_in_common="false" />
     </ProjectSettings>
     <GlobalDefinitions>
-        <CustomTypes />
         <SystemVariables>
             <Variable name="counter" type="uint32_t" unit="" default_value="0" group="System" description="カウンタ" title="カウンタ" array_size="0" />
             <Variable name="error_code" type="uint8_t" unit="" default_value="0" group="System" description="エラーコード" title="エラーコード" array_size="0" />
+            <Variable name="g_system_tick" type="volatile uint32_t" unit="1ms" default_value="0" group="Timer" description="タイマ基準変数" title="タイマ基準: g_system_tick" array_size="0" />
         </SystemVariables>
         <EventFlags>
             <Flag name="EVT_START_REQ" min_value="0" max_value="1" group="Events" description="起動要求" title="起動要求" />
         </EventFlags>
-        <Interrupts />
-        <DevicePlaceholders />
-        <ExtraTimers />
-        <EventQueues />
+        <TimerBase>
+            <Timer variable_name="g_system_tick" unit="1ms" data_type="volatile uint32_t" title="タイマ基準: g_system_tick" interrupt_name="" />
+        </TimerBase>
     </GlobalDefinitions>
     <SharedLibraries>
         <RoleFunctionLibrary>
-            <RoleFunction name="Shared_Helper" title="共有ヘルパー" description="共有ライブラリ専用" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="Shared_Notify" title="共有通知" description="共有ライブラリ専用" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="CustomInit" title="初期化" description="タブと共有" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Shared_Helper" namespace="" title="共有ヘルパー" description="共有ライブラリ専用" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Shared_Notify" namespace="" title="共有通知" description="共有ライブラリ専用" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="CustomInit" namespace="" title="初期化" description="タブと共有" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
         </RoleFunctionLibrary>
+        <ConditionLibrary />
+        <LiteralLibrary />
     </SharedLibraries>
     <Tab name="TestLayer">
-        <StateMachine initial="Idle" layer_priority="5" layer_description="">
+        <StateMachine initial="Idle" layer_priority="5" layer_description="" layer_name="">
             <States>
                 <State name="Idle" type="normal" parent="" entry="" exit="" do="" description="待機" />
                 <State name="Active" type="normal" parent="" entry="" exit="" do="" description="動作中" />
@@ -37,8 +38,8 @@
                 <Event name="ERROR" id="3" kind="signal" params="" priority="0" description="エラー" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="エラー" />
             </Events>
             <RoleFunctions>
-                <RoleFunction name="CustomInit" description="初期化" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="初期化" />
-                <RoleFunction name="CustomLog" description="ログ" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="ログ" />
+                <RoleFunction name="CustomInit" namespace="" description="初期化" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="初期化" />
+                <RoleFunction name="CustomLog" namespace="" description="ログ" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="ログ" />
             </RoleFunctions>
             <Transitions>
                 <Transition source="Idle" event="START" condition="CustomInit" action="" target="Active" transition_type="external" title="起動" has_else="true" else_target="">

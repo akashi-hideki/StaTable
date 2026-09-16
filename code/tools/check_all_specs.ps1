@@ -1,5 +1,5 @@
 # tools/check_all_specs.ps1
-# specs/ 配下の全 XML で一貫性チェックを実行
+# specs/ 配下の全 XML で一貫性チェックを実行（round-trip のみ）
 
 $ErrorActionPreference = "Continue"
 $ProjectRoot = "C:\Users\user\OneDrive\ドキュメント\GitHub\StaTable\code"
@@ -20,14 +20,17 @@ foreach ($xml in $xmls) {
     Write-Host ""
     Write-Host "--- $rel ---" -ForegroundColor Yellow
 
-    # round-trip のみ（高速）
-    python $Tool `
-        --xml $rel `
-        --skip-fields `
-        --skip-enums `
-        --skip-generated-c `
-        --report $report `
-        --quiet
+    # 引数を配列で渡す（-- の誤解釈を回避）
+    $args = @(
+        $Tool,
+        "--xml", $rel,
+        "--skip-fields",
+        "--skip-enums",
+        "--skip-generated-c",
+        "--report", $report,
+        "--quiet"
+    )
+    & python $args
 
     # レポートから round-trip 結果を抽出
     if (Test-Path $report) {
@@ -51,4 +54,5 @@ $summary | Format-Table -AutoSize
 $passCount = ($summary | Where-Object { $_.Status -eq "PASS" }).Count
 $totalCount = $summary.Count
 Write-Host ""
-Write-Host "PASS: $passCount / $totalCount" -ForegroundColor $(if ($passCount -eq $totalCount) { "Green" } else { "Yellow" })
+$color = if ($passCount -eq $totalCount) { "Green" } else { "Yellow" }
+Write-Host "PASS: $passCount / $totalCount" -ForegroundColor $color
