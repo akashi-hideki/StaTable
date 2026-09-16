@@ -10,17 +10,15 @@ StaTable 一貫性チェックツール (consistency_check.py) - CUI 完全版
      - RESERVED フィールドは「予約」として明示（FAIL 扱いしない）
   3. Enum 使用箇所: model.py の Enum メンバーが他ファイルで使われているか
      - RESERVED Enum メンバーは「予約」として明示
-  4. 生成 C コード整合性: include guard / common.h include / 宣言と定義
+  4. 生成 C コード整合性:
+     - include guard の有無
+     - statable_types_{layer}.h が common.h を include しているか
+     - role_functions: 全層横断でプロトタイプの定義が存在するか
+     - role_functions: 所有層（namespace prefix）の .c に定義があるか
 
 使い方:
-  # 全検査
-  python tools/consistency_check.py ^
-    --root . ^
-    --xml specs/isr_namespace_test.xml ^
-    --xml-io statable/xml_io.py ^
-    --model statable/model.py ^
-    --scan-dirs statable statable_gui codegen ^
-    --output-dir output
+  # 全検査（デフォルト引数で動作）
+  python tools/consistency_check.py
 
   # round-trip のみ
   python tools/consistency_check.py --skip-fields --skip-enums --skip-generated-c
@@ -34,6 +32,7 @@ StaTable 一貫性チェックツール (consistency_check.py) - CUI 完全版
 
 変更履歴:
   v1.9.x: project_from_xml/project_to_xml 対応、RESERVED フィールド導入
+  v1.9.y: 生成 C 検査を全層横断方式に修正（v1.6 案 A 対応）
 """
 
 import argparse
@@ -349,6 +348,22 @@ def scan_enums(root, enums, scan_dirs):
 # ============================================================
 
 def check_generated_c(root, output_dir):
+    """
+    生成 C コードの整合性チェック
+
+    v1.6 案 A の設計を前提:
+      - 各層 statable_role_functions_{layer}.h は
+        「その層から呼べる全関数」のプロトタイプを持つ（自層 + 他層）
+      - 各層 statable_role_functions_{layer}.c は
+        「その層が所有する関数」の定義のみを持つ
+      - よって .h と .c は完全一致しない（他層参照分があるため）
+
+    検査方法:
+      4.1  include guard の有無
+      4.2  statable_types_{layer}.h が common.h を include しているか
+      4.3a 全層横断で「プロトタイプはあるが定義がない関数」を検出
+      4.3b 所有層（namespace prefix）の .c に定義があるかを確認
+    """
     out = Path(output_dir)
     if not out.exists():
         return {"status": "SKIP",
@@ -371,23 +386,51 @@ def check_generated_c(root, output_dir):
         if "statable_types_common.h" not in text:
             details.append(f"{h.relative_to(root)}: common.h 未 include")
 
-    # 4.3 role_functions の宣言と定義の対応
+    # 4.3 role_functions の宣言と定義の対応（全層横断）
+    all_protos = set()
+    all_defs = set()
+    layer_sources = {}   # layer_name -> Path
+
     for layer_dir in out.iterdir():
         if not layer_dir.is_dir():
             continue
         header = layer_dir / f"statable_role_functions_{layer_dir.name}.h"
         source = layer_dir / f"statable_role_functions_{layer_dir.name}.c"
-        if not header.exists() or not source.exists():
-            continue
-        h_text = header.read_text(encoding="utf-8", errors="ignore")
-        c_text = source.read_text(encoding="utf-8", errors="ignore")
-        protos = set(re.findall(r"\b(RoleFunc_\w+)\s*\(", h_text))
-        defs = set(re.findall(r"\b(RoleFunc_\w+)\s*\(", c_text))
-        missing = protos - defs
-        if missing:
-            details.append(
-                f"{layer_dir.name}: 定義なしプロトタイプ {sorted(missing)}"
-            )
+        if header.exists():
+            h_text = header.read_text(encoding="utf-8", errors="ignore")
+            protos = set(re.findall(r"\b(RoleFunc_\w+)\s*\(", h_text))
+            all_protos |= protos
+        if source.exists():
+            c_text = source.read_text(encoding="utf-8", errors="ignore")
+            defs = set(re.findall(r"\b(RoleFunc_\w+)\s*\(", c_text))
+            all_defs |= defs
+            layer_sources[layer_dir.name] = source
+
+    # 4.3a: 全層横断で定義が見つからないプロトタイプ
+    missing_anywhere = all_protos - all_defs
+    if missing_anywhere:
+        details.append(
+            f"全層横断で定義が見つからないプロトタイプ: "
+            f"{sorted(missing_anywhere)}"
+        )
+
+    # 4.3b: 所有層（プレフィックス）の .c に定義があるか
+    for fname in sorted(all_protos):
+        owner = None
+        if fname.startswith("RoleFunc_Middleware_"):
+            owner = "Middleware"
+        else:
+            m = re.match(r"RoleFunc_(\w+?)_", fname)
+            if m:
+                owner = m.group(1)
+        if owner and owner in layer_sources:
+            c_text = layer_sources[owner].read_text(
+                encoding="utf-8", errors="ignore")
+            if not re.search(rf"\b{fname}\s*\(", c_text):
+                details.append(
+                    f"{owner}: {fname} は他層でプロトタイプされるが、"
+                    f"所有層 {owner} の .c に定義なし"
+                )
 
     return {"status": "PASS" if not details else "FAIL",
             "summary": f"検出 {len(details)} 件",
@@ -450,7 +493,8 @@ def main():
                 root, fields, [root / d for d in args.scan_dirs])
             report_lines.append("## 2. フィールド出現マトリクス")
             report_lines.append("")
-            report_lines.append("status: OK=参照あり / RESERVED=予約フィールド / MISSING=要確認")
+            report_lines.append(
+                "status: OK=参照あり / RESERVED=予約フィールド / MISSING=要確認")
             report_lines.append("")
             for cls, fs in fields.items():
                 report_lines.append(f"### {cls}")
@@ -482,7 +526,8 @@ def main():
                 root, enums, [root / d for d in args.scan_dirs])
             report_lines.append("## 3. Enum 使用箇所")
             report_lines.append("")
-            report_lines.append("status: OK=参照あり / RESERVED=予約メンバー / MISSING=要確認")
+            report_lines.append(
+                "status: OK=参照あり / RESERVED=予約メンバー / MISSING=要確認")
             report_lines.append("")
             for e, members in enums.items():
                 report_lines.append(f"### {e}")
