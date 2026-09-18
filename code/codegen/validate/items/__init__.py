@@ -1,7 +1,5 @@
 # codegen/validate/items/__init__.py
-"""
-項目別バリデータパッケージ
-"""
+"""\nPer-item validator package\n"""
 
 from .base_validator import BaseValidator
 from .state_validator import StateValidator

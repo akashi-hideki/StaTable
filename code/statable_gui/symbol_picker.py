@@ -23,7 +23,7 @@ class SymbolPickerWidget(QWidget):
         layout = QVBoxLayout(self)
 
         # Title
-        title = QLabel("Global variables・Event flags・戻り値一覧")
+        title = QLabel("Global variables・Event flags・戻りValue一覧")
         title.setFont(QFont("sans-serif", 10, QFont.Bold))
         layout.addWidget(title)
 
@@ -35,24 +35,24 @@ class SymbolPickerWidget(QWidget):
         self.search_edit.textChanged.connect(self.refresh_list)
         layout.addWidget(self.search_edit)
 
-        # 一覧
+        # List
         self.list_widget = QListWidget()
         self.list_widget.itemDoubleClicked.connect(self._on_item_double_clicked)
         layout.addWidget(self.list_widget, stretch=1)
 
-        # 登録ボタン
+        # Register button
         btn_layout = QHBoxLayout()
-        add_var_btn = QPushButton("変数登録...")
+        add_var_btn = QPushButton("Register variable...")
         add_var_btn.clicked.connect(self.register_variable)
         btn_layout.addWidget(add_var_btn)
 
-        add_flag_btn = QPushButton("フラグ登録...")
+        add_flag_btn = QPushButton("Register flag...")
         add_flag_btn.clicked.connect(self.register_flag)
         btn_layout.addWidget(add_flag_btn)
         layout.addLayout(btn_layout)
 
-        # グローバル定義を開く
-        open_defs_btn = QPushButton("グローバル定義を開く...")
+        # Open global definitions
+        open_defs_btn = QPushButton("Open global definitions...")
         open_defs_btn.clicked.connect(self.open_global_definitions)
         layout.addWidget(open_defs_btn)
 
@@ -60,7 +60,7 @@ class SymbolPickerWidget(QWidget):
         StaTableLogger.debug("SymbolPickerWidget initialized")
 
     # ------------------------------------------------------------------
-    # 一覧更新
+    # Refresh list
     # ------------------------------------------------------------------
     def refresh_list(self):
         query = self.search_edit.text().strip().lower() if hasattr(self, 'search_edit') else ""
@@ -102,7 +102,7 @@ class SymbolPickerWidget(QWidget):
                 )
                 self.list_widget.addItem(item)
 
-        # Role function戻り値（一時変数）
+        # Role function戻りValue（一時Variable）
         for func_name in self.role_functions.keys():
             temp_var = f"rv_{func_name}"
             if self._matches(temp_var, func_name, "", query):
@@ -128,7 +128,7 @@ class SymbolPickerWidget(QWidget):
         )
 
     # ------------------------------------------------------------------
-    # ダブルクリック
+    # Double-click
     # ------------------------------------------------------------------
     def _on_item_double_clicked(self, item: QListWidgetItem):
         insertion_text = item.data(Qt.UserRole)
@@ -137,7 +137,7 @@ class SymbolPickerWidget(QWidget):
             self.insert_requested.emit(insertion_text)
 
     # ------------------------------------------------------------------
-    # 登録
+    # Register
     # ------------------------------------------------------------------
     def register_variable(self):
         StaTableLogger.debug("SymbolPickerWidget.register_variable called")

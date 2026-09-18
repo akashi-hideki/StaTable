@@ -41,7 +41,7 @@ class RoleFunctionEditDialog(QDialog):
         self.name_edit = QLineEdit()
         form.addRow("Function name:", self.name_edit)
         self.title_edit = QLineEdit()
-        form.addRow("表示名:", self.title_edit)
+        form.addRow("Display name:", self.title_edit)
         self.desc_edit = QLineEdit()
         form.addRow("Description:", self.desc_edit)
         main_layout.addLayout(form)
@@ -59,8 +59,8 @@ class RoleFunctionEditDialog(QDialog):
         global_layout.addWidget(self.global_list)
         main_layout.addWidget(global_group)
 
-        # 使用イベント
-        event_group = QGroupBox("使用イベント")
+        # Used events
+        event_group = QGroupBox("Used events")
         event_layout = QVBoxLayout(event_group)
         self.event_list = QListWidget()
         self.event_list.setSelectionMode(QListWidget.NoSelection)
@@ -72,8 +72,8 @@ class RoleFunctionEditDialog(QDialog):
         event_layout.addWidget(self.event_list)
         main_layout.addWidget(event_group)
 
-        # 使用リテラル
-        literal_group = QGroupBox("使用リテラル（既存からSelection）")
+        # Used literals
+        literal_group = QGroupBox("使用Literal（既存からSelection）")
         literal_layout = QVBoxLayout(literal_group)
         self.literal_list = QListWidget()
         self.literal_list.setSelectionMode(QListWidget.NoSelection)

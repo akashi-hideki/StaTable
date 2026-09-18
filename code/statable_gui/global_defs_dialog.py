@@ -57,7 +57,7 @@ class InsertableTable(QTableWidget):
 
     def _show_context_menu(self, pos):
         menu = QMenu(self)
-        add_action = menu.addAction("行をAdd")
+        add_action = menu.addAction("RowをAdd")
         add_action.triggered.connect(self.insert_requested.emit)
         menu.exec(self.viewport().mapToGlobal(pos))
 

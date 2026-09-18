@@ -21,14 +21,14 @@ class EventKind(Enum):
 
 
 class EventDeliveryType(Enum):
-    """イベントの配送方法"""
+    """Event delivery method"""
     DIRECT = "direct"
     QUEUE = "queue"
     DOUBLE = "double"
 
 
 class EventSourceLayer(Enum):
-    """イベントのSourceレイヤ"""
+    """EventのSourceレイヤ"""
     DRIVER = "driver"
     MIDDLEWARE = "middleware"
 
@@ -46,7 +46,7 @@ class State:
 
 @dataclass
 class Event:
-    """状態遷移イベント（ドライバ層・ミドル層から通知される）"""
+    """State transition event"""
     name: str
     id: Optional[int] = None
     kind: EventKind = EventKind.SIGNAL
@@ -61,13 +61,13 @@ class Event:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"イベント: {self.name}" if self.name else "イベント: (completion)"
+            self.title = f"イベント: {self.name}" if self.name else "Event: (completion)"
 
 
 @dataclass(kw_only=True)
 class Transition:
     """
-    状態遷移定義
+    StateTransition定義
 
     【v1.6 変更】kw_only=True 化
       位置引数によるフィールド順序ずれ事故（v1.4 §9.6 #67）を
@@ -80,18 +80,18 @@ class Transition:
     change_applier.py の全 14 箇所が kwarg 済みであることを AST 監査でConfirm済み。
 
     【v2.0 既知の制約: transition_type は予約フィールド】
-      - "external": 通常遷移（既定値、実装済み）
-      - "internal": 状態を出ず action のみ実行（**未実装・予約**）
-      - "local":    自己遷移（**未実装・予約**）
+      - "external": 通常Transition（既定Value、実装済み）
+      - "internal": Stateを出ず action のみ実Row（**未実装・予約**）
+      - "local":    自己Transition（**未実装・予約**）
 
-      v1.9 時点で internal / local は未実装。生成コード
+      v1.9 時点で internal / local は未実装。生成Code
       （codegen/transition_generator.py）は transition_type を参照せず、
-      常に external 相当（target へ遷移）として扱う。
+      常に external 相当（target へTransition）として扱う。
 
       影響:
-        - GUI（matrix_table.py）に遷移種別列は表示されない
-        - 生成コードで entry/exit 呼び分けは行われない
-        - XML Save/読込では値が保持される（round-trip は維持）
+        - GUI（matrix_table.py）にTransition種別列は表示されない
+        - 生成Codeで entry/exit 呼び分けはRowわれない
+        - XML Save/読込ではValueが保持される（round-trip は維持）
 
       予約Reason:
         entry/exit 呼び出し制御は state machine runner
@@ -102,14 +102,14 @@ class Transition:
     """
     source: str
     event: str
-    condition: str = ""                # 条件式（シンボル名で保持）
-    pre_actions: List[str] = field(default_factory=list)  # 遷移直前処理
+    condition: str = ""                # Condition expression (symbol names)
+    pre_actions: List[str] = field(default_factory=list)  # Pre-transition processing
     target: str = ""
     has_else: bool = True
     else_target: str = ""
     else_actions: List[str] = field(default_factory=list)  # elseAction
-    action: str = ""                   # 旧フィールド（互換用・未使用）
-    transition_type: str = "external"  # ★ 予約フィールド（上記 docstring 参照）
+    action: str = ""                   # Old field (compatibility)
+    transition_type: str = "external"  # Reserved fields
     title: str = ""
 
     def __post_init__(self):
@@ -120,7 +120,7 @@ class Transition:
 @dataclass(kw_only=True)
 class RoleFunction:
     """
-    Role function（State transition condition・動作をまとめて実装する関数）
+    Role function（State transition condition・Actionをまとめて実装するFunction）
 
     【v1.5 変更】kw_only=True 化
       位置引数によるフィールド順序ずれ事故（v1.4 §9.6 #76）を
@@ -129,7 +129,7 @@ class RoleFunction:
     旧: RoleFunction(name, desc, ret, ...)  ← 位置引数（危険）
     新: RoleFunction(name=..., description=..., return_type=...)  ← kwarg のみ
 
-    namespace: 層名や機能Group名（例: "Driver"）
+    namespace: Layer nameや機能Group名（例: "Driver"）
       - `Driver.Init` のように参照可能
       - 空文字の場合は層None扱い
     """
@@ -149,7 +149,7 @@ class RoleFunction:
 
     @property
     def qualified_name(self) -> str:
-        """GUI 表示・ISR 参照用: 'Driver.Init' または 'Init'"""
+        """For GUI display / ISR reference"""
         if self.namespace:
             return f"{self.namespace}.{self.name}"
         return self.name
@@ -157,10 +157,7 @@ class RoleFunction:
     @classmethod
     def from_legacy_name(cls, legacy_name: str,
                          layer_names: Optional[List[str]] = None) -> 'RoleFunction':
-        """
-        旧形式 'Driver_Init' → namespace='Driver', name='Init'
-        レイヤ名リストに該当がなければ namespace=''
-        """
+        """\n        Old form 'Driver_Init' -> namespace='Driver', name='Init'\n"""
         if not legacy_name:
             return cls(name="")
         if layer_names:

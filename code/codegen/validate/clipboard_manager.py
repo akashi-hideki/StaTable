@@ -1,7 +1,5 @@
 # codegen/validate/clipboard_manager.py
-"""
-クリップボード管理
-"""
+"""\nClipboard management\n"""
 
 import sys
 import os
@@ -12,7 +10,7 @@ from validate.logger import logger
 
 
 class ClipboardManager:
-    """クリップボード管理クラス"""
+    """Clipboard management class"""
     
     @staticmethod
     def copy_to_clipboard(text: str) -> bool:

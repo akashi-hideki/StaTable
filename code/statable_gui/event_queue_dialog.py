@@ -36,7 +36,7 @@ class EventQueueEditDialog(QDialog):
         super().__init__(parent)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.event_names = event_names or []
-        self.setWindowTitle("イベントキューEdit")
+        self.setWindowTitle("EventQueueEdit")
         self.setMinimumWidth(500)
 
         layout = QVBoxLayout(self)
@@ -82,10 +82,10 @@ class EventQueueEditDialog(QDialog):
         self.safe_check.setChecked(queue_def.interrupt_safe if queue_def else True)
         form.addRow("Interrupt protection", self.safe_check)
 
-        # RTOS使用
+        # RTOS usage
         self.rtos_check = QCheckBox()
         self.rtos_check.setChecked(queue_def.rtos_enabled if queue_def else False)
-        form.addRow("RTOS使用", self.rtos_check)
+        form.addRow("RTOS usage", self.rtos_check)
 
         # description
         self.desc_edit = QLineEdit(queue_def.description if queue_def else "")
@@ -143,7 +143,7 @@ class EventQueueDefsDialog(QDialog):
         search_layout.addWidget(self.search_edit)
         layout.addLayout(search_layout)
 
-        # 一覧テーブル（Title列Add・直接Edit可能）
+        # Listテーブル（Title列Add・直接Edit可能）
         self.table = DoubleClickTable(0, 9)
         self.table.setHorizontalHeaderLabels(["Title", "Queue name", "Size", "Element type", "Related events", "Priority", "Interrupt protection", "RTOS", "Description"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -180,7 +180,7 @@ class EventQueueDefsDialog(QDialog):
             self.table.insertRow(row)
 
             title_item = QTableWidgetItem(q.title)
-            title_item.setToolTip("このキューのTitle。直接Editできます。")
+            title_item.setToolTip("このQueueのTitle。直接Editできdoes。")
             self.table.setItem(row, 0, title_item)
 
             self.table.setItem(row, 1, QTableWidgetItem(q.name))
@@ -193,7 +193,7 @@ class EventQueueDefsDialog(QDialog):
             self.table.setItem(row, 8, QTableWidgetItem(q.description))
 
     def _matches(self, q: EventQueueDef, query: str) -> bool:
-        """検索フィルタ（前方一致）"""
+        """Search filter (prefix match)"""
         if not query:
             return True
         return (

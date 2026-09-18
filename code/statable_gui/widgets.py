@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 # A1: branch WebEngine import itself by environment variable
 #   - When STATABLE_DISABLE_MERMAID=1: do not import
 #     -> Qt WebEngine runtime is not initialized, so no leak warning is emitted
-#   - 通常時: 従来通り import
+#- Normal: import as before
 # ============================================================
 _DISABLE_MERMAID = os.environ.get("STATABLE_DISABLE_MERMAID") == "1"
 
@@ -78,7 +78,7 @@ class MermaidWidget(QWidget):
             )
             return
 
-        # ---- 通常モード ----
+        #---- Normal mode ----
         if WEBENGINE_AVAILABLE:
             self.web_view = QWebEngineView()
             settings = self.web_view.settings()
@@ -106,7 +106,7 @@ class MermaidWidget(QWidget):
         StaTableLogger.debug("MermaidWidget.set_mermaid_code called")
         StaTableLogger.debug(f"Mermaid code:\n{code}")
 
-        # ---- テストモード: 何もしない ----
+        #---- Test mode: do nothing ----
         if self._disabled:
             return
 
@@ -186,7 +186,7 @@ class SettingsPanel(QWidget):
         state_tab = QWidget()
         state_layout = QVBoxLayout(state_tab)
         self.state_table = QTableWidget(0, 6)
-        self.state_table.setHorizontalHeaderLabels(["名称", "Description", "entry関数", "exit関数", "do関数", "タイプ"])
+        self.state_table.setHorizontalHeaderLabels(["Name", "Description", "entry function", "exit function", "do function", "Type"])
         self.state_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.state_table.setFont(QFont("Consolas", 10))
         state_layout.addWidget(self.state_table)
@@ -198,7 +198,7 @@ class SettingsPanel(QWidget):
         btn_state.addWidget(add_state_btn)
         btn_state.addWidget(del_state_btn)
         state_layout.addLayout(btn_state)
-        self.tab.addTab(state_tab, "状態一覧")
+        self.tab.addTab(state_tab, "State list")
 
         role_tab = QWidget()
         role_layout = QVBoxLayout(role_tab)
@@ -268,7 +268,7 @@ class SettingsPanel(QWidget):
         for row, rf in enumerate(roles):
             self.role_table.setItem(row, 0, QTableWidgetItem(rf.title))
             self.role_table.setItem(row, 1, QTableWidgetItem(rf.name))
-            self.role_table.setItem(row, 2, QTableWidgetItem(rf.namespace))   # ★ 新規
+            self.role_table.setItem(row, 2, QTableWidgetItem(rf.namespace))   # New
             self.role_table.setItem(row, 3, QTableWidgetItem(rf.description))
             self.role_table.setItem(row, 4, QTableWidgetItem(rf.return_type))
             self.role_table.setItem(row, 5, QTableWidgetItem(rf.arg1_type))
@@ -360,7 +360,7 @@ class SettingsPanel(QWidget):
 
     def apply_changes(self):
         """\n         v1.5 change: construct RoleFunction with kwargs, preserving namespace\n\n        Old code (up to v1.4):\n            RoleFunction(name, desc, ret, a1t, a1n, a2t, a2n, title)  <- positional args\n              -> inserting namespace in model.py shifted all fields by one,\n                 causing description to leak into namespace (v1.4 section 9.6 #76)\n\n        New code (v1.5):\n            RoleFunction(name=..., namespace=..., description=..., ...)  <- kwargs\n        """
-        # === 状態テーブルの反映 ===
+        #=== Reflect state table ===
         for row in range(self.state_table.rowCount()):
             name = self.state_table.item(row, 0).text().strip() if self.state_table.item(row, 0) else ""
             desc = self.state_table.item(row, 1).text().strip() if self.state_table.item(row, 1) else ""

@@ -1,11 +1,11 @@
 # codegen/validate/items/event_validator.py
 """
-イベント検証
+Event検証
 
 【v1.8 §11.2 #6】
   - StateValidator と logger Outputを統一
-  - __init__ / validate の開始・CompletionログをAdd
-  - ルール実行を try/except で囲み、失敗時は logger.error で記録
+  - __init__ / validate のStart・CompletionログをAdd
+  - ルール実Rowを try/except で囲み、失敗時は logger.error で記録
 """
 
 import sys
@@ -21,7 +21,7 @@ from validate.items.base_validator import BaseValidator
 
 
 class EventValidator(BaseValidator):
-    """イベント検証クラス"""
+    """Event validation class"""
 
     category = "event"
 

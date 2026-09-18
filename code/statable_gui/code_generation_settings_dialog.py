@@ -49,20 +49,20 @@ class CodeGenerationSettingsDialog(QDialog):
         self.tab_widget = QTabWidget()
         main_layout.addWidget(self.tab_widget)
         
-        # タブ
+        # Tab
         self.basic_tab = QWidget()
         self._setup_basic_tab()
-        self.tab_widget.addTab(self.basic_tab, "基本設定")
+        self.tab_widget.addTab(self.basic_tab, "Basic settings")
         
         # Log設定タブ
         self.log_tab = QWidget()
         self._setup_log_tab()
-        self.tab_widget.addTab(self.log_tab, "ログ設定")
+        self.tab_widget.addTab(self.log_tab, "Log settings")
         
         # Output settingsタブ
         self.include_tab = QWidget()
         self._setup_include_tab()
-        self.tab_widget.addTab(self.include_tab, "外部インクルード")
+        self.tab_widget.addTab(self.include_tab, "External include")
         
         self.output_tab = QWidget()
         self._setup_output_tab()
@@ -72,7 +72,7 @@ class CodeGenerationSettingsDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         
-        self.reset_btn = QPushButton("リセット")
+        self.reset_btn = QPushButton("Reset")
         self.reset_btn.clicked.connect(self._on_reset)
         button_layout.addWidget(self.reset_btn)
         
@@ -87,33 +87,33 @@ class CodeGenerationSettingsDialog(QDialog):
         main_layout.addLayout(button_layout)
     
     def _setup_basic_tab(self):
-        """基本設定タブ"""
+        """Basic settings tab"""
         layout = QVBoxLayout(self.basic_tab)
         
         # ★ Project name
-        project_group = QGroupBox("プロジェクト設定")
+        project_group = QGroupBox("Project settings")
         project_layout = QFormLayout(project_group)
         
         self.project_name_edit = QLineEdit()
-        self.project_name_edit.setPlaceholderText("例: MyProject")
+        self.project_name_edit.setPlaceholderText("Example: MyProject")
         self.project_name_edit.setToolTip("Used as the generated file name <project_name>_run.c")
-        project_layout.addRow("プロジェクト名:", self.project_name_edit)
+        project_layout.addRow("Project name:", self.project_name_edit)
         
         layout.addWidget(project_group)
         
-        # ★ 生成スタイル（固定表示）
-        style_group = QGroupBox("生成スタイル")
+        # Generation style (fixed display)
+        style_group = QGroupBox("Generation style")
         style_layout = QFormLayout(style_group)
         
-        # 生成方式: 固定
+        # Generation style: fixed
         style_value_label = QLabel("Table-driven style (cell-level function + function table)")
         style_value_label.setStyleSheet("font-weight: bold;")
-        style_layout.addRow("生成方式:", style_value_label)
+        style_layout.addRow("Generation style:", style_value_label)
         
-        # テーブル方式: 固定
+        # Table style: fixed
         table_value_label = QLabel("Array方式（2次元Array + O(1) アクセス）")
         table_value_label.setStyleSheet("font-weight: bold;")
-        style_layout.addRow("テーブル方式:", table_value_label)
+        style_layout.addRow("Table style:", table_value_label)
         
         # description
         note_label = QLabel(
@@ -133,80 +133,80 @@ class CodeGenerationSettingsDialog(QDialog):
         layout.addWidget(style_group)
         
         # Naming convention
-        naming_group = QGroupBox("命名規則")
+        naming_group = QGroupBox("Naming convention")
         naming_layout = QFormLayout(naming_group)
         
         self.naming_prefix_edit = QLineEdit()
         self.naming_prefix_edit.setPlaceholderText("Function nameのプレフィックス（任意）")
-        naming_layout.addRow("プレフィックス:", self.naming_prefix_edit)
+        naming_layout.addRow("Prefix:", self.naming_prefix_edit)
         
         self.state_prefix_edit = QLineEdit()
-        naming_layout.addRow("状態プレフィックス:", self.state_prefix_edit)
+        naming_layout.addRow("State prefix:", self.state_prefix_edit)
         
         self.event_prefix_edit = QLineEdit()
-        naming_layout.addRow("イベントプレフィックス:", self.event_prefix_edit)
+        naming_layout.addRow("Event prefix:", self.event_prefix_edit)
         
         self.flag_prefix_edit = QLineEdit()
-        naming_layout.addRow("フラグプレフィックス:", self.flag_prefix_edit)
+        naming_layout.addRow("Flag prefix:", self.flag_prefix_edit)
         
         layout.addWidget(naming_group)
         
         # comment設定
-        comment_group = QGroupBox("コメント設定")
+        comment_group = QGroupBox("Comment settings")
         comment_layout = QVBoxLayout(comment_group)
         
-        self.enable_comments_check = QCheckBox("コメントを生成する")
+        self.enable_comments_check = QCheckBox("Generate comments")
         comment_layout.addWidget(self.enable_comments_check)
         
-        self.enable_doxygen_check = QCheckBox("Doxygen形式のコメントを生成する")
+        self.enable_doxygen_check = QCheckBox("Generate Doxygen-style comments")
         comment_layout.addWidget(self.enable_doxygen_check)
         
-        self.enable_markers_check = QCheckBox("ユーザーコードマーカーを生成する")
+        self.enable_markers_check = QCheckBox("Generate user code markers")
         comment_layout.addWidget(self.enable_markers_check)
         
         layout.addWidget(comment_group)
         layout.addStretch()
     
     def _setup_log_tab(self):
-        """ログ設定タブ"""
+        """Log settings tab"""
         layout = QVBoxLayout(self.log_tab)
         
-        log_group = QGroupBox("デバッグログ設定")
+        log_group = QGroupBox("Debug log settings")
         log_layout = QVBoxLayout(log_group)
         
-        self.enable_debug_logs_check = QCheckBox("DEBUGログを生成する")
+        self.enable_debug_logs_check = QCheckBox("Generate DEBUG logs")
         log_layout.addWidget(self.enable_debug_logs_check)
         
-        self.enable_info_logs_check = QCheckBox("INFOログを生成する")
+        self.enable_info_logs_check = QCheckBox("Generate INFO logs")
         log_layout.addWidget(self.enable_info_logs_check)
         
-        self.enable_error_logs_check = QCheckBox("ERRORログを生成する")
+        self.enable_error_logs_check = QCheckBox("Generate ERROR logs")
         log_layout.addWidget(self.enable_error_logs_check)
         
         layout.addWidget(log_group)
         
         # Pending event制限
-        pending_group = QGroupBox("保留イベント設定")
+        pending_group = QGroupBox("Pending event settings")
         pending_layout = QFormLayout(pending_group)
         
         self.max_pending_spin = QSpinBox()
         self.max_pending_spin.setRange(1, 255)
         self.max_pending_spin.setValue(16)
         self.max_pending_spin.setToolTip(
-            "保留イベントの連続処理回数の上限。\n"
+            "Upper limit of consecutive pending events.\n"
             "Processing is aborted beyond this count to prevent infinite loops."
         )
-        pending_layout.addRow("最大連続処理回数:", self.max_pending_spin)
+        pending_layout.addRow("Max consecutive processing:", self.max_pending_spin)
         
         layout.addWidget(pending_group)
         layout.addStretch()
     
     def _setup_include_tab(self):
-        """外部インクルード設定タブ"""
+        """External include settings tab"""
         layout = QVBoxLayout(self.include_tab)
         
         # External includeファイル
-        include_group = QGroupBox("外部インクルードファイル")
+        include_group = QGroupBox("External include file")
         include_layout = QVBoxLayout(include_group)
         
         hint_label = QLabel(
@@ -254,10 +254,10 @@ class CodeGenerationSettingsDialog(QDialog):
         self.include_in_role_check = QCheckBox("Role function .c ファイル")
         target_layout.addWidget(self.include_in_role_check)
         
-        self.include_in_transitions_check = QCheckBox("transitions .c ファイル")
+        self.include_in_transitions_check = QCheckBox("transitions .c file")
         target_layout.addWidget(self.include_in_transitions_check)
         
-        self.include_in_common_check = QCheckBox("共通 .c ファイル")
+        self.include_in_common_check = QCheckBox("common .c file")
         target_layout.addWidget(self.include_in_common_check)
         
         layout.addWidget(target_group)
@@ -272,7 +272,7 @@ class CodeGenerationSettingsDialog(QDialog):
         output_layout = QFormLayout(output_group)
         
         self.output_dir_edit = QLineEdit()
-        self.output_dir_edit.setPlaceholderText("出力先ディレクトリ")
+        self.output_dir_edit.setPlaceholderText("Output directory")
         self.output_dir_btn = QPushButton("Browse...")
         self.output_dir_btn.clicked.connect(self._select_output_dir)
         
@@ -285,31 +285,31 @@ class CodeGenerationSettingsDialog(QDialog):
         layout.addWidget(output_group)
         
         # Folder structure
-        folder_group = QGroupBox("フォルダ構成")
+        folder_group = QGroupBox("Folder structure")
         folder_layout = QFormLayout(folder_group)
         
         self.folder_structure_combo = QComboBox()
-        self.folder_structure_combo.addItem("include/src分離（推奨）", "by_type")
+        self.folder_structure_combo.addItem("include/src separation (recommended)", "by_type")
         self.folder_structure_combo.addItem("Per layer", "by_layer")
         self.folder_structure_combo.addItem("Flat", "flat")
-        folder_layout.addRow("構成:", self.folder_structure_combo)
+        folder_layout.addRow("Structure:", self.folder_structure_combo)
         
         self.include_dir_edit = QLineEdit()
-        folder_layout.addRow("includeフォルダ名:", self.include_dir_edit)
+        folder_layout.addRow("include folder name:", self.include_dir_edit)
         
         self.source_dir_edit = QLineEdit()
-        folder_layout.addRow("srcフォルダ名:", self.source_dir_edit)
+        folder_layout.addRow("src folder name:", self.source_dir_edit)
         
         self.common_dir_edit = QLineEdit()
-        folder_layout.addRow("共通フォルダ名:", self.common_dir_edit)
+        folder_layout.addRow("Common folder name:", self.common_dir_edit)
         
         self.project_dir_edit = QLineEdit()
-        folder_layout.addRow("プロジェクトフォルダ名:", self.project_dir_edit)
+        folder_layout.addRow("Project folder name:", self.project_dir_edit)
         
         layout.addWidget(folder_group)
         
         # Super include
-        super_group = QGroupBox("スーパーインクルード")
+        super_group = QGroupBox("Super include")
         super_layout = QVBoxLayout(super_group)
         
         self.generate_super_check = QCheckBox("Generate statable_all.h (for user main.c)")
@@ -317,20 +317,20 @@ class CodeGenerationSettingsDialog(QDialog):
         
         super_form = QFormLayout()
         self.super_include_name_edit = QLineEdit()
-        super_form.addRow("ファイル名:", self.super_include_name_edit)
+        super_form.addRow("File name:", self.super_include_name_edit)
         
         self.super_include_dir_edit = QLineEdit()
-        super_form.addRow("配置フォルダ:", self.super_include_dir_edit)
+        super_form.addRow("Placement folder:", self.super_include_dir_edit)
         
         super_layout.addLayout(super_form)
         
         layout.addWidget(super_group)
         
-        # マージ設定
-        merge_group = QGroupBox("マージ設定")
+        # Merge settings
+        merge_group = QGroupBox("Merge settings")
         merge_layout = QVBoxLayout(merge_group)
         
-        self.save_with_merge_check = QCheckBox("既存ファイルとマージしてSave（ユーザーコード保持）")
+        self.save_with_merge_check = QCheckBox("既存ファイルとマージしてSave（ユーザーCode保持）")
         merge_layout.addWidget(self.save_with_merge_check)
         
         layout.addWidget(merge_group)
@@ -401,7 +401,7 @@ class CodeGenerationSettingsDialog(QDialog):
         # Project name
         self.config.project_name = self.project_name_edit.text().strip() or "MyProject"
         
-        # ★ 生成方式・テーブル方式は固定
+        # Generation style / table style fixed
         self.config.generation_style = "table_driven"
         self.config.table_type = "array"
         
@@ -456,14 +456,14 @@ class CodeGenerationSettingsDialog(QDialog):
         self.config_manager.set_config(self.config)
     
     def _on_ok(self):
-        """OKボタン"""
+        """OK button"""
         self._save_config()
         self.accept()
     
     def _on_reset(self):
-        """リセットボタン"""
+        """Reset button"""
         reply = QMessageBox.question(
-            self, "Confirm", "設定をリセットしますか？",
+            self, "Confirm", "Reset settings?",
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
@@ -483,14 +483,14 @@ class CodeGenerationSettingsDialog(QDialog):
     # ===== External include操作 =====
     def _on_add_include(self):
         files, _ = QFileDialog.getOpenFileNames(
-            self, "外部インクルードファイルをSelection", "",
+            self, "External include fileをSelection", "",
             "Header files (*.h);;All files (*)"
         )
         if files:
             for f in files:
                 # Extract only the file name from the path (consistent with existing registration)
                 name = os.path.basename(f)
-                # 重複チェック
+                # Duplicate check
                 existing = [
                     self.include_list.item(i).text()
                     for i in range(self.include_list.count())
@@ -518,5 +518,5 @@ class CodeGenerationSettingsDialog(QDialog):
             self.include_list.setCurrentRow(row + 1)
     
     def get_config(self) -> CodeGenerationConfig:
-        """設定を取得"""
+        """Get settings"""
         return self.config

@@ -1,7 +1,5 @@
 # codegen/validate/models.py
-"""
-検証データモデル定義
-"""
+"""\nValidation data model definitions\n"""
 
 from dataclasses import dataclass, field
 from enum import Enum
@@ -16,7 +14,7 @@ class ValidationSeverity(Enum):
     
     @classmethod
     def from_string(cls, value: str) -> 'ValidationSeverity':
-        """文字列から変換"""
+        """Convert from string"""
         value_map = {
             'error': cls.ERROR,
             'warning': cls.WARNING,
@@ -33,7 +31,7 @@ class ValidationSeverity(Enum):
 
 @dataclass
 class ValidationIssue:
-    """検証問題"""
+    """Validation issue"""
     category: str
     code: str
     message: str
@@ -43,7 +41,7 @@ class ValidationIssue:
     details: Dict[str, Any] = field(default_factory=dict)
     
     def to_dict(self) -> Dict:
-        """辞書に変換"""
+        """Convert to dictionary"""
         return {
             'category': self.category,
             'code': self.code,
@@ -56,7 +54,7 @@ class ValidationIssue:
     
     @classmethod
     def from_dict(cls, data: Dict) -> 'ValidationIssue':
-        """辞書から復元"""
+        """Restore from dictionary"""
         return cls(
             category=data.get('category', ''),
             code=data.get('code', ''),
@@ -73,7 +71,7 @@ class ValidationIssue:
 
 @dataclass
 class ValidationResult:
-    """検証結果"""
+    """Validation result"""
     issues: List[ValidationIssue] = field(default_factory=list)
     
     @property
@@ -126,7 +124,7 @@ class ValidationResult:
 
 @dataclass
 class ValidationContext:
-    """検証コンテキスト"""
+    """Validation context"""
     state_machine: Any = None
     global_defs: Any = None
     

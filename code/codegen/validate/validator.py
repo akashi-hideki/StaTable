@@ -1,7 +1,5 @@
 # codegen/validate/validator.py
-"""
-検証メインクラス
-"""
+"""\nValidation main class\n"""
 
 import sys
 import os
@@ -9,13 +7,13 @@ from typing import List, Dict, Type
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-# ロガーは直接参照
+# Logger referenced directly
 from validate.logger import logger
 
-# モデル
+# Model
 from validate.models import ValidationResult, ValidationIssue, ValidationContext
 
-# バリデータ
+# Validator
 from validate.items.state_validator import StateValidator
 from validate.items.event_validator import EventValidator
 from validate.items.transition_validator import TransitionValidator

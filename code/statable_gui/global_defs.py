@@ -50,7 +50,7 @@ class InterruptAction:
 
 @dataclass
 class InterruptHandlerDef:
-    """割り込み処理定義"""
+    """Interrupt handler definition"""
     name: str
     description: str = ""
     event_names: List[str] = field(default_factory=list)

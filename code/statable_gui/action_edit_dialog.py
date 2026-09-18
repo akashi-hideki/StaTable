@@ -20,7 +20,7 @@ class ActionEditDialog(QDialog):
     def __init__(self, parent=None, action_text="", title="",
                  role_functions=None, global_defs=None):
         super().__init__(parent)
-        self.setWindowTitle("動作Edit")
+        self.setWindowTitle("ActionEdit")
         self.setMinimumSize(900, 650)
         self.role_functions = role_functions if role_functions is not None else {}
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
@@ -67,7 +67,7 @@ class ActionEditDialog(QDialog):
 
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
-        right_layout.addWidget(QLabel("動作コード:"))
+        right_layout.addWidget(QLabel("Action code:"))
         self.action_edit = QTextEdit()
         self.action_edit.setAcceptRichText(False)
         self.action_edit.setPlainText(action_text)
@@ -101,7 +101,7 @@ class ActionEditDialog(QDialog):
         if func_name:
             rf = self.role_functions.get(func_name)
             if rf:
-                # ★ qualified_name を優先表示
+                # Prefer displaying qualified_name
                 display = getattr(rf, 'qualified_name', rf.name)
                 arg1 = getattr(rf, 'arg1_type', '') or ''
                 arg1n = getattr(rf, 'arg1_name', '') or ''
@@ -130,7 +130,7 @@ class ActionEditDialog(QDialog):
             # Namespace.Name form: insert reference only
             call = qualified
         else:
-            # ★ 旧形式: 引数付き呼び出しを維持
+            # Legacy form: preserve call with args
             arg1 = getattr(rf, 'arg1_name', '') or ''
             arg2 = getattr(rf, 'arg2_name', '') or ''
             call = f"{qualified}({arg1}, {arg2});"
@@ -195,7 +195,7 @@ class ActionEditDialog(QDialog):
             first_line = action_text.split('\n')[0].strip()
             auto_title = first_line[:20] + ("..." if len(first_line) > 20 else "")
         else:
-            auto_title = "(無題動作)"
+            auto_title = "(untitled action)"
         self.title_widget.ensure_title(auto_title)
         self.accept()
 

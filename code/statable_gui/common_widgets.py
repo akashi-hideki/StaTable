@@ -1,4 +1,4 @@
-"""共通UIコンポーネント"""
+"""Common UI components"""
 
 from typing import Optional, List
 
@@ -150,7 +150,7 @@ class GroupComboBox(QWidget):
 
 
 class EventComboBox(QComboBox):
-    """イベントSelection用コンボボックス"""
+    """EventSelection用コンボボックス"""
 
     def __init__(self, parent=None, event_names: Optional[List[str]] = None):
         super().__init__(parent)
@@ -162,7 +162,7 @@ class EventComboBox(QComboBox):
 
 
 class StateComboBox(QComboBox):
-    """状態Selection用コンボボックス"""
+    """StateSelection用コンボボックス"""
 
     def __init__(self, parent=None, state_names: Optional[List[str]] = None):
         super().__init__(parent)
@@ -215,7 +215,7 @@ class TypeManagerDialog(QDialog):
         layout = QVBoxLayout(self)
 
         self.table = QTableWidget(0, 3)
-        self.table.setHorizontalHeaderLabels(["Title", "Type name", "メンバ数"])
+        self.table.setHorizontalHeaderLabels(["Title", "Type name", "Member count"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -329,7 +329,7 @@ class TypeEditDialog(QDialog):
         self.desc_edit = QLineEdit(self.custom_type.description)
         form.addRow("Description", self.desc_edit)
 
-        layout.addWidget(QLabel("メンバ一覧:"))
+        layout.addWidget(QLabel("Member list:"))
         self.member_table = QTableWidget(0, 5)
         self.member_table.setHorizontalHeaderLabels(["Member name", "Type", "Bit width", "Array", "Description"])
         self.member_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -436,12 +436,12 @@ class TypeEditDialog(QDialog):
 
 
 class StructMemberEditDialog(QDialog):
-    """構造体メンバEditダイアログ"""
+    """StructメンバEditダイアログ"""
 
     def __init__(self, parent=None, member: Optional[StructMemberDef] = None):
         super().__init__(parent)
         self.member = member if member else StructMemberDef(name="", data_type="uint8_t")
-        self.setWindowTitle("構造体メンバEdit")
+        self.setWindowTitle("StructメンバEdit")
         self.setMinimumWidth(450)
 
         layout = QVBoxLayout(self)
@@ -469,8 +469,8 @@ class StructMemberEditDialog(QDialog):
             self.type_combo.setCurrentText(self.member.data_type)
         form.addRow("Type", self.type_combo)
 
-        # ビットフィールド
-        self.bitfield_check = QCheckBox("ビットフィールドを使用する")
+        # Bit field
+        self.bitfield_check = QCheckBox("Use bit fields")
         self.bitfield_check.setChecked(self.member.bit_width > 0)
         form.addRow("", self.bitfield_check)
 

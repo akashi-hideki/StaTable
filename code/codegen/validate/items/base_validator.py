@@ -1,7 +1,5 @@
 # codegen/validate/items/base_validator.py
-"""
-バリデータ基底クラス
-"""
+"""\nValidator base class\n"""
 
 import sys
 import os
@@ -13,7 +11,7 @@ from validate.models import ValidationIssue, ValidationContext
 
 
 class BaseValidator:
-    """バリデータ基底クラス"""
+    """Validator base class"""
     
     category: str = ""
     rules = {}

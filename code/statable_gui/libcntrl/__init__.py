@@ -1,7 +1,5 @@
 # statable_gui/libcntrl/__init__.py
-"""
-共有ライブラリ管理パッケージ
-"""
+"""\nShared library management package\n"""
 
 from .role_function_library import RoleFunctionLibrary, RoleFunction
 from .condition_library import ConditionLibrary, ConditionTemplate

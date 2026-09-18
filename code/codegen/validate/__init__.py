@@ -1,7 +1,5 @@
 # codegen/validate/__init__.py
-"""
-検証・AI連携パッケージ
-"""
+"""\nValidation / AI integration package\n"""
 
 from .logger import logger, setup_logger
 from .models import (

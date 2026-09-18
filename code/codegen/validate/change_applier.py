@@ -18,7 +18,7 @@ from validate.change_actions import ChangeRequest, ChangeActionType
 
 
 class ChangeApplier:
-    """変更リクエストをシステムに適用する"""
+    """Apply change requests to system"""
 
     def __init__(self, sm, gd):
         logger.debug("ChangeApplier.__init__ started")
@@ -26,7 +26,7 @@ class ChangeApplier:
         self.gd = gd
         self.applied_changes = []
         self.failed_changes = []
-        # ハンドラ辞書を文字列キーで定義
+        # Define handler dict by string key
         self._handlers = {
             'set_initial': self._set_initial,
             'add_transition': self._add_transition,
@@ -42,10 +42,10 @@ class ChangeApplier:
         logger.debug("ChangeApplier.__init__ completed")
 
     def apply(self, change: ChangeRequest) -> Tuple[bool, str]:
-        """変更を適用"""
+        """Apply change"""
         logger.debug(f"apply: action={change.action}")
 
-        # ChangeActionTypeの値（文字列）でハンドラを取得
+        # Get handler by ChangeActionType value
         action_value = change.action.value if hasattr(change.action, 'value') else str(change.action)
         logger.debug(f"action_value: {action_value}")
 
@@ -69,7 +69,7 @@ class ChangeApplier:
             return False, str(e)
 
     def apply_all(self, changes: List[ChangeRequest]) -> Dict:
-        """全変更を適用"""
+        """Apply all changes"""
         logger.debug(f"apply_all: {len(changes)} changes")
 
         results = []
@@ -104,7 +104,7 @@ class ChangeApplier:
         logger.debug(f"_add_transition: {source} --[{event}]--> {target}")
 
         if not all([source, event, target]):
-            return False, "遷移のInfoが不足しています"
+            return False, "TransitionのInfoが不足していdoes"
 
         transition = Transition(
             source=source, event=event, target=target,
@@ -123,11 +123,11 @@ class ChangeApplier:
 
         name = params.get('name', '')
         if not name:
-            return False, "状態名が指定されていません"
+            return False, "State name is not specified"
         if name in self.sm.states:
             return False, f"状態「{name}」は既に存在します"
 
-        # ★ v1.6: StateType に存在しない値は NORMAL にフォールバック
+        # v1.6: fall back to NORMAL
         type_name = params.get('type', 'NORMAL')
         state_type = getattr(StateType, type_name, StateType.NORMAL)
         if not hasattr(StateType, type_name):
@@ -169,7 +169,7 @@ class ChangeApplier:
                 self.sm.remove_transition(t)
                 return True, f"遷移「{source} --[{event}]--> {target}」を削除しました"
 
-        return False, "該当する遷移が見つかりません"
+        return False, "No matching transition found"
 
     def _update_transition(self, params: Dict) -> Tuple[bool, str]:
         source = params.get('source', '')
@@ -185,7 +185,7 @@ class ChangeApplier:
                     t.action = params['new_action']
                 return True, f"遷移「{source} --[{event}]-->」を更新しました"
 
-        return False, "該当する遷移が見つかりません"
+        return False, "No matching transition found"
 
     def _add_role_function(self, params: Dict) -> Tuple[bool, str]:
         from statable.model import RoleFunction
@@ -209,7 +209,7 @@ class ChangeApplier:
         """
         Role functionをDeleteする。
 
-        v1.6 Add。ChangeActionType.REMOVE_ROLE_FUNCTION と対応。
+        v1.6 Add。ChangeActionType.REMOVE_ROLE_FUNCTION とCorresponds。
         params:
           name: 'HandleErr' または 'Middleware.HandleErr' のどちらでも可
         """
@@ -222,19 +222,19 @@ class ChangeApplier:
             f"available={list(self.sm.role_functions.keys())}"
         )
 
-        # 完全一致
+        # Exact match
         if name in self.sm.role_functions:
             self.sm.remove_role_function(name)
             return True, f"ロール関数「{name}」を削除しました"
 
-        # qualified_name での一致（'Middleware.HandleErr' 形式）
+        # Match by qualified_name
         for key, rf in list(self.sm.role_functions.items()):
             qn = getattr(rf, 'qualified_name', None) or key
             if qn == name:
                 self.sm.remove_role_function(key)
                 return True, f"ロール関数「{name}」を削除しました"
 
-        # 純粋名での一致（namespace を無視して name フィールドで探す）
+        # Match by bare name
         for key, rf in list(self.sm.role_functions.items()):
             if getattr(rf, 'name', '') == name:
                 self.sm.remove_role_function(key)

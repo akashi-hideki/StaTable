@@ -1,11 +1,11 @@
 # codegen/validate/items/transition_validator.py
 """
-遷移検証
+Transition検証
 
 【v1.8 §11.2 #6】
   - StateValidator と logger Outputを統一
-  - __init__ / validate の開始・CompletionログをAdd
-  - ルール実行を try/except で囲み、失敗時は logger.error で記録
+  - __init__ / validate のStart・CompletionログをAdd
+  - ルール実Rowを try/except で囲み、失敗時は logger.error で記録
 """
 
 import sys
@@ -21,7 +21,7 @@ from validate.items.base_validator import BaseValidator
 
 
 class TransitionValidator(BaseValidator):
-    """遷移検証クラス"""
+    """Transition validation class"""
 
     category = "transition"
 

@@ -190,7 +190,7 @@ def transition_to_flow_item(trans) -> FlowItem:
 
 
 def flow_item_to_transition(item: FlowItem, source: str, event: str):
-    """FlowItem → Transition 変換"""
+    """FlowItem -> Transition conversion"""
     from statable.model import Transition
     params = item.params
     pre_actions = ensure_list(params.get('pre_actions', []))

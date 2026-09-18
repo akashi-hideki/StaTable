@@ -9,25 +9,25 @@ Action定義（データのみ）
 
 ACTION_DEFINITIONS = {
     'set_initial': {
-        'description': '初期状態を設定',
+        'description': 'Set initial state',
         'params': {
-            'state': {'type': 'str', 'required': True, 'description': '状態名'},
+            'state': {'type': 'str', 'required': True, 'description': 'State name'},
         },
     },
     'add_transition': {
-        'description': '遷移をAdd',
+        'description': 'TransitionをAdd',
         'params': {
-            'source': {'type': 'str', 'required': True, 'description': '遷移元'},
+            'source': {'type': 'str', 'required': True, 'description': 'Source'},
             'event': {'type': 'str', 'required': True, 'description': 'Event name'},
             'target': {'type': 'str', 'required': True, 'description': 'Target'},
-            'condition': {'type': 'str', 'required': False, 'description': '条件'},
+            'condition': {'type': 'str', 'required': False, 'description': 'Condition'},
             'action_name': {'type': 'str', 'required': False, 'description': 'Action名'},
         },
     },
     'add_state': {
-        'description': '状態をAdd',
+        'description': 'StateをAdd',
         'params': {
-            'name': {'type': 'str', 'required': True, 'description': '状態名'},
+            'name': {'type': 'str', 'required': True, 'description': 'State name'},
             'type': {
                 'type': 'enum',
                 'required': False,
@@ -40,13 +40,13 @@ ACTION_DEFINITIONS = {
                     'CHOICE',
                     'JUNCTION',
                 ],
-                'description': '状態タイプ',
+                'description': 'State type',
             },
             'description': {'type': 'str', 'required': False, 'description': 'Description'},
         },
     },
     'add_event': {
-        'description': 'イベントをAdd',
+        'description': 'EventをAdd',
         'params': {
             'name': {'type': 'str', 'required': True, 'description': 'Event name'},
             'kind': {'type': 'enum', 'required': False, 'values': ['SIGNAL', 'CALL', 'TIME', 'CHANGE'], 'description': 'Event kind'},
@@ -54,20 +54,20 @@ ACTION_DEFINITIONS = {
         },
     },
     'remove_transition': {
-        'description': '遷移をDelete',
+        'description': 'TransitionをDelete',
         'params': {
-            'source': {'type': 'str', 'required': True, 'description': '遷移元'},
+            'source': {'type': 'str', 'required': True, 'description': 'Source'},
             'event': {'type': 'str', 'required': True, 'description': 'Event name'},
             'target': {'type': 'str', 'required': True, 'description': 'Target'},
         },
     },
     'update_transition': {
-        'description': '遷移を更新',
+        'description': 'Update transition',
         'params': {
-            'source': {'type': 'str', 'required': True, 'description': '遷移元'},
+            'source': {'type': 'str', 'required': True, 'description': 'Source'},
             'event': {'type': 'str', 'required': True, 'description': 'Event name'},
             'new_target': {'type': 'str', 'required': False, 'description': '新しいTarget'},
-            'new_condition': {'type': 'str', 'required': False, 'description': '新しい条件'},
+            'new_condition': {'type': 'str', 'required': False, 'description': 'New condition'},
             'new_action': {'type': 'str', 'required': False, 'description': '新しいAction'},
         },
     },
@@ -86,7 +86,7 @@ ACTION_DEFINITIONS = {
         },
     },
     'add_variable': {
-        'description': '変数をAdd',
+        'description': 'VariableをAdd',
         'params': {
             'name': {'type': 'str', 'required': True, 'description': 'Variable name'},
             'type': {'type': 'str', 'required': True, 'description': 'Type'},
@@ -95,7 +95,7 @@ ACTION_DEFINITIONS = {
         },
     },
     'add_flag': {
-        'description': 'フラグをAdd',
+        'description': 'FlagをAdd',
         'params': {
             'name': {'type': 'str', 'required': True, 'description': 'Flag name'},
             'min_value': {'type': 'int', 'required': False, 'description': 'Min value'},
@@ -113,7 +113,7 @@ def format_action_definitions() -> str:
         params = definition['params']
         param_strs = []
         for key, param in params.items():
-            required = "必須" if param['required'] else "省略可"
+            required = "Required" if param['required'] else "Optional"
             param_strs.append(f'"{key}": {param["description"]}({required})')
 
         lines.append(f"{i}. {action}: {definition['description']}")

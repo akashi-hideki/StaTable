@@ -32,9 +32,9 @@ class RoleFunctionDialog(QDialog):
         )
         self.namespace_edit.setPlaceholderText("例: Driver（空なら層None）")
         self.namespace_edit.setToolTip(
-            "Namespace（層名・機能Group名）。\n"
+            "Namespace（Layer name・機能Group名）。\n"
             "If specified, it can be referenced as 'Driver.Init'.\n"
-            "空の場合は層None扱い（'Init'）となります。"
+            "空の場合は層None扱い（'Init'）となりdoes。"
         )
         layout.addRow("Namespace", self.namespace_edit)
 
@@ -79,7 +79,7 @@ class RoleFunctionDialog(QDialog):
         """\n        [v1.5 change]\n          - Set namespace and specify all arguments as kwargs\n          - Since model.py's RoleFunction became kw_only=True,\n            it cannot be constructed with positional arguments.\n        """
         return RoleFunction(
             name=self.name_edit.text().strip(),
-            namespace=self.namespace_edit.text().strip(),   # ★ 新規Add
+            namespace=self.namespace_edit.text().strip(),   # NewAdd
             description=self.desc_edit.text().strip(),
             return_type=self.return_type_edit.text().strip(),
             arg1_type=self.arg1_type_edit.text().strip(),

@@ -22,7 +22,7 @@ from .model import (
     EventSourceLayer,
 )
 
-# state_machine.py（model に依存）
+# state_machine.py (depends on model)
 from .state_machine import StateMachine
 
 # global_defs.py（依存None）

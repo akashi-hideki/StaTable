@@ -65,7 +65,7 @@ class ActionEditorDialog(QDialog):
         main_layout = QVBoxLayout(self)
 
         toolbar = QToolBar()
-        auto_align_btn = QPushButton("自動整列")
+        auto_align_btn = QPushButton("Auto layout")
         auto_align_btn.clicked.connect(self.canvas_auto_align)
         toolbar.addWidget(auto_align_btn)
         main_layout.addWidget(toolbar)
@@ -78,7 +78,7 @@ class ActionEditorDialog(QDialog):
 
         splitter = QSplitter(Qt.Horizontal)
 
-        # ライブラリオブジェクトを直接渡す
+        #Pass library object directly
         self.palette = PaletteWidget(
             role_function_library=self.role_function_library,
             condition_library=self.condition_library
@@ -94,9 +94,9 @@ class ActionEditorDialog(QDialog):
         self.tabs.addTab(flow_tab, "フローEdit")
 
         self.code_widget = CodeWidget(self.draft)
-        self.tabs.addTab(self.code_widget, "コード")
+        self.tabs.addTab(self.code_widget, "Code")
 
-        # シグナル接続
+        # Signal connection
         self.canvas.node_edit_requested.connect(self._on_node_edit_requested)
         self.canvas.node_delete_requested.connect(self._on_node_delete_requested)
         self.canvas.node_duplicate_requested.connect(self._on_node_duplicate_requested)
@@ -107,7 +107,7 @@ class ActionEditorDialog(QDialog):
         self.palette.edit_function_requested.connect(self._on_edit_function_requested)
         self.palette.edit_transition_requested.connect(self._on_edit_transition_requested)
 
-        global_btn = QPushButton("システムグローバル...")
+        global_btn = QPushButton("System globals...")
         global_btn.clicked.connect(self._open_system_global)
         main_layout.addWidget(global_btn)
 
@@ -236,7 +236,7 @@ class ActionEditorDialog(QDialog):
                     self.code_widget.update_code()
 
     def _on_node_delete_requested(self, node: FlowNodeItem):
-        ret = QMessageBox.question(self, "Confirm", "このノードをDeleteしますか？")
+        ret = QMessageBox.question(self, "Confirm", "このノードをDeleteしdoesか？")
         if ret == QMessageBox.Yes:
             flow_item = node.flow_item
             if flow_item and flow_item in self.draft.flow_items:

@@ -13,7 +13,7 @@ from .edit_dialogs import FunctionEditDialog, TransitionEditDialog
 
 
 class FlowListWidget(QListWidget):
-    """D&Dと行Insertをサポートするフローリスト"""
+    """D&DとRowInsertをサポートするフローリスト"""
     MIME_TYPE = "application/x-flow-item"
 
     def __init__(self, parent=None):
@@ -37,7 +37,7 @@ class FlowListWidget(QListWidget):
 
     def dropEvent(self, event):
         if event.mimeData().hasFormat(self.MIME_TYPE):
-            # パレットからのドロップ
+            # Drop from palette
             data = json.loads(event.mimeData().data(self.MIME_TYPE).data().decode("utf-8"))
             item_type = data.get("item_type", "function")
             name = data.get("name", "")
@@ -62,12 +62,12 @@ class FlowListWidget(QListWidget):
             self._notify_draft_changed()
             event.acceptProposedAction()
         else:
-            # 内部移動（並べ替え）は標準動作に任せる
+            #Internal moves left to standard behavior
             super().dropEvent(event)
             self._notify_draft_changed()
 
     def _notify_draft_changed(self):
-        # 親のFlowWidgetに通知
+        #Notify parent FlowWidget
         parent = self.parentWidget()
         if hasattr(parent, '_on_flow_list_changed'):
             parent._on_flow_list_changed()
@@ -89,9 +89,9 @@ class FlowWidget(QWidget):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("動作フロー（D&Dで配置・Double-click to edit）"))
+        layout.addWidget(QLabel("Actionフロー（D&Dで配置・Double-click to edit）"))
 
-        # カスタムリスト
+        # Custom list
         self.flow_list = FlowListWidget()
         self.flow_list.setMinimumHeight(300)
         self.flow_list.itemDoubleClicked.connect(self._on_item_double_clicked)
@@ -107,7 +107,7 @@ class FlowWidget(QWidget):
         default_layout.addWidget(self.default_target_combo)
         layout.addLayout(default_layout)
 
-    # ===== ドラフト読み込み =====
+    #===== Load draft =====
     def _load_draft(self):
         self.flow_list.clear()
         for item in self.draft.flow_items:
@@ -116,7 +116,7 @@ class FlowWidget(QWidget):
             self.flow_list.addItem(list_item)
         self.default_target_combo.setCurrentText(self.draft.default_target)
 
-    # ===== リスト変更時の同期 =====
+    #===== Sync on list change =====
     def _on_flow_list_changed(self):
         self._sync_draft_from_list()
         self.draft_updated.emit()
@@ -136,7 +136,7 @@ class FlowWidget(QWidget):
         self.draft.default_target = self.default_target_combo.currentText()
         self.draft_updated.emit()
 
-    # ===== ダブルクリックEdit =====
+    # ===== Double-clickEdit =====
     def _on_item_double_clicked(self, item):
         flow_item = item.data(Qt.UserRole)
         if not flow_item:

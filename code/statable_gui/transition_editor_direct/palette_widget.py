@@ -83,7 +83,7 @@ class PaletteListWidget(QListWidget):
 
 
 class PaletteWidget(QWidget):
-    """Category別折りたたみパレット（イベントSelection画面）"""
+    """Category別折りたたみパレット（EventSelection画面）"""
 
     edit_function_requested = Signal(str)
     edit_transition_requested = Signal(str)
@@ -102,7 +102,7 @@ class PaletteWidget(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
 
-        title_label = QLabel("イベントSelection画面")
+        title_label = QLabel("EventSelection画面")
         title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         title_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(title_label)
@@ -123,8 +123,8 @@ class PaletteWidget(QWidget):
         add_func_btn.clicked.connect(self._add_function)
         v1.addWidget(add_func_btn)
 
-        # 遷移条件セクション
-        transition_group = QGroupBox("遷移条件")
+        # Transition condition section
+        transition_group = QGroupBox("Transition condition")
         v2 = QVBoxLayout(transition_group)
         v2.setContentsMargins(4, 4, 4, 4)
         v2.setSpacing(2)
@@ -135,7 +135,7 @@ class PaletteWidget(QWidget):
         )
         v2.addWidget(self.transition_list)
 
-        add_transition_btn = QPushButton("+ 遷移条件Add")
+        add_transition_btn = QPushButton("+ Transition conditionAdd")
         add_transition_btn.clicked.connect(self._add_transition)
         v2.addWidget(add_transition_btn)
 

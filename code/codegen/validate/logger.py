@@ -1,7 +1,5 @@
 # codegen/validate/logger.py
-"""
-検証モジュール用ロガー設定
-"""
+"""\nLogger setup for validation module\n"""
 
 import logging
 import os
@@ -9,7 +7,7 @@ from datetime import datetime
 
 
 def setup_logger(name: str = "validate", log_dir: str = None) -> logging.Logger:
-    """ロガーをセットアップ"""
+    """Setup logger"""
     logger = logging.getLogger(name)
     
     if logger.handlers:
@@ -17,7 +15,7 @@ def setup_logger(name: str = "validate", log_dir: str = None) -> logging.Logger:
     
     logger.setLevel(logging.DEBUG)
     
-    # コンソールハンドラ
+    # Console handler
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)
     console_format = logging.Formatter(
@@ -27,7 +25,7 @@ def setup_logger(name: str = "validate", log_dir: str = None) -> logging.Logger:
     console_handler.setFormatter(console_format)
     logger.addHandler(console_handler)
     
-    # ファイルハンドラ
+    # File handler
     if log_dir is None:
         log_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -49,6 +47,6 @@ def setup_logger(name: str = "validate", log_dir: str = None) -> logging.Logger:
     return logger
 
 
-# デフォルトロガー（validate_logger として公開）
+# Default logger
 validate_logger = setup_logger()
 logger = validate_logger

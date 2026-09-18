@@ -4,7 +4,7 @@ from typing import Optional, Callable
 
 
 class StaTableLogger:
-    """StaTable専用ロガー（シングルトン）"""
+    """StaTable dedicated logger (singleton)"""
     _instance: Optional['StaTableLogger'] = None
     _log_callback: Optional[Callable[[str], None]] = None
 

@@ -42,7 +42,7 @@ except ImportError:
         CodeGenerationConfig, ConfigManager,
     )
 
-# 設定ダイアログをインポート
+#Import the settings dialog
 try:
     from .code_generation_settings_dialog import (
         CodeGenerationSettingsDialog,
@@ -54,7 +54,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# デフォルト設定ファイルパス
+#Default settings file path
 DEFAULT_SETTINGS_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "codegen_settings.json",
@@ -84,7 +84,7 @@ class WarningCollector(logging.Handler):
 # CodeGenerationDialog
 # ============================================================
 class CodeGenerationDialog(QDialog):
-    """CCode generationダイアログ（複数層対応）"""
+    """CCode generationダイアログ（複数層Corresponds）"""
 
     def __init__(self, state_machine=None,
                  global_defs=None,
@@ -100,7 +100,7 @@ class CodeGenerationDialog(QDialog):
             settings_file or DEFAULT_SETTINGS_FILE
         )
         self.role_function_library = role_function_library
-        # ★ 複数層リスト（外部から設定）
+        # Multi-layer list (set from outside)
         self.all_layers = None
 
         self._load_saved_settings()
@@ -112,7 +112,7 @@ class CodeGenerationDialog(QDialog):
         self._load_sample_data_if_needed()
         self._load_config_to_ui()
 
-    # ---- 設定読み書き ----
+    #---- Setting read/write ----
     def _load_saved_settings(self):
         try:
             if os.path.exists(self.settings_file):
@@ -165,7 +165,7 @@ class CodeGenerationDialog(QDialog):
         main_layout = QVBoxLayout(self)
         
         # 設定InfoGroup
-        info_group = QGroupBox("生成設定Info")
+        info_group = QGroupBox("Generation settingsInfo")
         info_layout = QFormLayout(info_group)
         
         # Output先
@@ -183,7 +183,7 @@ class CodeGenerationDialog(QDialog):
         output_dir_layout.addWidget(self.output_dir_btn)
         info_layout.addRow("Output directory:", output_dir_layout)
         
-        # 生成スタイル
+        # Generation style
         self.style_combo = QComboBox()
         self.style_combo.addItem(
             "Table-driven style", "table_driven")
@@ -191,18 +191,18 @@ class CodeGenerationDialog(QDialog):
             "switch-case style", "switch_case")
         self.style_combo.currentIndexChanged.connect(
             self._on_style_changed)
-        info_layout.addRow("生成スタイル:", self.style_combo)
+        info_layout.addRow("Generation style:", self.style_combo)
         
         # OS typeラベル
         self.os_label = QLabel("NonRTOS")
         info_layout.addRow("OS type:", self.os_label)
         
-        # マージ設定ラベル
+        # Merge settings label
         self.merge_label = QLabel("Enabled")
-        info_layout.addRow("マージ:", self.merge_label)
+        info_layout.addRow("Merge:", self.merge_label)
         
-        # 詳細設定ボタン
-        self.settings_btn = QPushButton("詳細設定...")
+        # Advanced settings button
+        self.settings_btn = QPushButton("Advanced settings...")
         self.settings_btn.clicked.connect(
             self._open_settings_dialog)
         info_layout.addRow("", self.settings_btn)
@@ -228,8 +228,8 @@ class CodeGenerationDialog(QDialog):
 
         main_layout.addLayout(button_layout)
         
-        # プレビューエリア
-        preview_label = QLabel("生成コードプレビュー:")
+        # Preview area
+        preview_label = QLabel("Generated code preview:")
         main_layout.addWidget(preview_label)
 
         self.preview_tabs = QComboBox()
@@ -242,23 +242,23 @@ class CodeGenerationDialog(QDialog):
         self.preview_text.setFont(QFont("Consolas", 10))
         main_layout.addWidget(self.preview_text)
         
-        # プログレスバー
+        # Progress bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         main_layout.addWidget(self.progress_bar)
 
-    # ---- データロード ----
+    #---- Data load ----
     def _load_sample_data_if_needed(self):
-        """サンプルデータが未設定の場合にロード"""
+        """Load when sample data not set"""
         if self.state_machine is None or \
            self.global_defs is None:
             sample_gen = SampleDataGenerator()
             self.state_machine, self.global_defs = \
                 sample_gen.get_sample_data()
-            logger.info("サンプルデータをロードしました")
+            logger.info("Sample data loaded")
 
     def _load_config_to_ui(self):
-        """設定をUIに反映"""
+        """Reflect settings to UI"""
         config = self.config_manager.get_config()
         
         if config.output_directory:
@@ -280,11 +280,11 @@ class CodeGenerationDialog(QDialog):
         self.os_label.setText(
             os_names.get(config.os_type, config.os_type))
         self.merge_label.setText(
-            "Enabled" if config.save_with_merge else "無効")
+            "Enabled" if config.save_with_merge else "Disabled")
 
-    # ---- イベントハンドラ ----
+    #---- Event handler ----
     def _on_output_dir_changed(self, text):
-        """出力先変更時の処理"""
+        """Handler when output dir changes"""
         self.config_manager.update(
             output_directory=text if text else "")
 
@@ -300,14 +300,14 @@ class CodeGenerationDialog(QDialog):
             self._save_settings()
 
     def _on_style_changed(self, index):
-        """スタイル変更時の処理"""
+        """Handler when style changes"""
         style = self.style_combo.currentData()
         self.config_manager.update(
             generation_style=style)
         self._save_settings()
 
     def _open_settings_dialog(self):
-        """詳細設定ダイアログを開く"""
+        """Open advanced settings dialog"""
         dialog = CodeGenerationSettingsDialog(
             config_manager=self.config_manager,
             parent=self)
@@ -337,13 +337,13 @@ class CodeGenerationDialog(QDialog):
 
     # ---- ★ Code generation ----
     def _generate_code(self):
-        """Code generationを実行"""
+        """Code generationを実Row"""
         if self.state_machine is None or \
            self.global_defs is None:
             QMessageBox.warning(
                 self, "Warning",
-                "ステートマシンとグローバル定義が"
-                "設定されていません。")
+                "State machine and global definitions"
+                "is not set.")
             return
 
         output_dir = self.output_dir_edit.text().strip()
@@ -372,7 +372,7 @@ class CodeGenerationDialog(QDialog):
         root_logger.addHandler(collector)
         try:
             generator = CCodeGenerator(config=config)
-            # ★ 複数層 / 単層 自動判定
+            # Automatic multi-layer / single detection
             if self.all_layers and len(self.all_layers) > 0:
                 logger.info(
                     f"Multi-layer generation: "
@@ -404,7 +404,7 @@ class CodeGenerationDialog(QDialog):
         finally:
             root_logger.removeHandler(collector)
 
-        # プレビュー反映
+        # Preview apply
         self.preview_tabs.clear()
         for filename in self.generated_files.keys():
             self.preview_tabs.addItem(filename)
@@ -425,7 +425,7 @@ class CodeGenerationDialog(QDialog):
         self._show_warnings(collector.records)
 
     def _update_preview(self):
-        """プレビューを更新"""
+        """Update preview"""
         filename = self.preview_tabs.currentText()
         if filename in self.generated_files:
             self.preview_text.setPlainText(
@@ -434,11 +434,11 @@ class CodeGenerationDialog(QDialog):
             self.preview_text.clear()
 
     def _save_code(self):
-        """生成コードをSave"""
+        """生成CodeをSave"""
         if not self.generated_files:
             QMessageBox.warning(
                 self, "Warning",
-                "生成されたコードがYesません。")
+                "生成されたCodeがYesません。")
             return
         
         output_dir = self.output_dir_edit.text().strip()
@@ -478,7 +478,7 @@ class CodeGenerationDialog(QDialog):
 
     # ---- getter ----
     def get_generated_files(self) -> Dict[str, str]:
-        """生成されたファイルを取得"""
+        """Get generated files"""
         return self.generated_files
 
     def get_config(self):

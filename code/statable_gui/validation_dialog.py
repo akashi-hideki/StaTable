@@ -184,9 +184,9 @@ class ValidationDialog(QDialog):
         # Problem list update
         self.issue_tree.clear()
         severity_colors = {
-            'error': QColor(200, 0, 0),      # 赤
-            'warning': QColor(200, 150, 0),  # オレンジ
-            'info': QColor(0, 0, 200),       # 青
+            'error': QColor(200, 0, 0),      # Red
+            'warning': QColor(200, 150, 0),  # Orange
+            'info': QColor(0, 0, 200),       # Blue
         }
         
         for issue in self.validation_result.issues:

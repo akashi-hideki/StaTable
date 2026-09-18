@@ -42,19 +42,19 @@ class EventDeliverySettingsDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        # グローバル設定チェックボックス
+        #Global settings checkbox
         self.auto_convert_check = QCheckBox("Automatically convert DIRECT events used in ISR to DOUBLE")
         self.auto_convert_check.setChecked(self.auto_convert)
         layout.addWidget(self.auto_convert_check)
 
-        # イベント一覧テーブル
+        # Event list table
         self.table = DoubleClickTable(0, 6)
-        self.table.setHorizontalHeaderLabels(["Title", "Event name", "Source", "Delivery type", "ISR使用", "変換後"])
+        self.table.setHorizontalHeaderLabels(["Title", "Event name", "Source", "Delivery type", "ISR usage", "Converted"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setFont(QFont("Consolas", 10))
         layout.addWidget(self.table, stretch=1)
 
-        # ヘルプ
+        # Help
         help_label = QLabel(
             "If a DIRECT event is notified from an ISR, it is automatically converted to DOUBLE.\n"
             "Select QUEUE if you need event counts or data."
@@ -74,7 +74,7 @@ class EventDeliverySettingsDialog(QDialog):
         StaTableLogger.debug("EventDeliverySettingsDialog initialized")
 
     def _build_table(self):
-        """テーブルを構築する"""
+        """Build the table"""
         self.table.setRowCount(0)
         for event in self.sm.events.values():
             row = self.table.rowCount()
@@ -106,13 +106,13 @@ class EventDeliverySettingsDialog(QDialog):
             combo.currentIndexChanged.connect(lambda _index, r=row: self._on_delivery_changed(r))
             self.table.setCellWidget(row, 3, combo)
 
-            # ISR使用列（読み取り専用）
+            #ISR usage column (read-only)
             isr_used = self._check_isr_usage(event.name)
             isr_item = QTableWidgetItem("Yes" if isr_used else "")
             isr_item.setFlags(isr_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, 4, isr_item)
 
-            # 変換後列（読み取り専用）
+            # Conversion column (read-only)
             converted_item = QTableWidgetItem()
             converted_item.setFlags(converted_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, 5, converted_item)
@@ -122,17 +122,17 @@ class EventDeliverySettingsDialog(QDialog):
         self._update_converted_column()
 
     def _check_isr_usage(self, event_name: str) -> bool:
-        """割り込み処理からイベントが使用されているか判定する"""
+        """Determine if event used from interrupt handler"""
         if not event_name:
             return False
 
         for intr in self.global_defs.interrupts:
-            # event_names リストをチェック
+            #Check event_names list
             if event_name in intr.event_names:
                 StaTableLogger.debug(f"  '{event_name}' found in interrupt '{intr.name}' event_names")
                 return True
 
-            # actions 内のコードをチェック
+            #Check the code in actions
             for act in intr.actions:
                 combined = act.condition + "\n" + act.action
                 if event_name in combined:
@@ -142,7 +142,7 @@ class EventDeliverySettingsDialog(QDialog):
         return False
 
     def _find_row_by_event_name(self, event_name: str) -> int:
-        """Event nameから行番号を探す"""
+        """Event nameからRow番号を探す"""
         for row in range(self.table.rowCount()):
             item = self.table.item(row, 1)
             if item and item.text() == event_name:
@@ -150,11 +150,11 @@ class EventDeliverySettingsDialog(QDialog):
         return -1
 
     def _on_delivery_changed(self, row: int):
-        """Delivery typeコンボ変更時に変換後列を更新"""
+        """Delivery typeコンボ変更時にConverted列を更新"""
         self._update_converted_column()
 
     def _update_converted_column(self):
-        """変換後列を現在の設定から再計算して表示する"""
+        """Recompute conversion column from settings"""
         auto = self.auto_convert_check.isChecked()
         for row in range(self.table.rowCount()):
             name_item = self.table.item(row, 1)
@@ -187,5 +187,5 @@ class EventDeliverySettingsDialog(QDialog):
         self.accept()
 
     def get_auto_convert(self) -> bool:
-        """チェックボックスの状態を返す"""
+        """Return the checkbox state"""
         return self.auto_convert_check.isChecked()

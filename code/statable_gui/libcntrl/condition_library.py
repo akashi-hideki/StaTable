@@ -1,7 +1,5 @@
 # statable_gui/libcntrl/condition_library.py
-"""
-共有遷移条件ライブラリ
-"""
+"""\nShared transition condition library\n"""
 
 from dataclasses import dataclass
 from typing import Dict, List
@@ -9,9 +7,9 @@ from typing import Dict, List
 
 @dataclass
 class ConditionTemplate:
-    """共有遷移条件テンプレート"""
-    name: str           # テンプレート名
-    condition: str      # 条件式（リテラル名含む）
+    """Shared transition condition template"""
+    name: str           # Template name
+    condition: str      # Condition expression (including literals)
     description: str = ""
 
     def to_dict(self) -> dict:
@@ -31,7 +29,7 @@ class ConditionTemplate:
 
 
 class ConditionLibrary:
-    """プロジェクト全体で共有する遷移条件ライブラリ"""
+    """Transition condition library shared"""
 
     def __init__(self):
         self.condition_templates: Dict[str, ConditionTemplate] = {}

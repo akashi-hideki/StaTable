@@ -12,10 +12,10 @@ from typing import Dict, List, Optional
 class CodeGenerationConfig:
     """Code generation settings"""
     
-    # ===== 生成スタイル =====
+    # ===== Generation style =====
     generation_style: str = "table_driven"  # table_driven / switch_case
     
-    # 遷移テーブル方式
+    # Transition table style
     table_type: str = "array"  # array / switch / dictionary
     
     # OS type
@@ -27,7 +27,7 @@ class CodeGenerationConfig:
     event_prefix: str = "EVENT"
     flag_prefix: str = "FLAG"
     
-    # ===== デバッグログ =====
+    # ===== Debug log =====
     enable_debug_logs: bool = True
     enable_info_logs: bool = True
     enable_error_logs: bool = True
@@ -36,14 +36,14 @@ class CodeGenerationConfig:
     enable_comments: bool = True
     enable_doxygen: bool = True
     
-    # ===== マーカー =====
+    # ===== Marker =====
     enable_user_markers: bool = True
     
     # ===== Output settings =====
     output_directory: str = ""
     save_with_merge: bool = True
     
-    # ===== プロジェクト設定 =====
+    # ===== Project settings =====
     project_name: str = "MyProject"
     
     # ===== Folder structure =====
@@ -65,11 +65,11 @@ class CodeGenerationConfig:
     external_includes_in_transitions: bool = False
     external_includes_in_common: bool = False
     
-    # ===== 予約イベント制限 =====
+    # ===== Reserved event limit =====
     max_consecutive_pending_events: int = 16
     
     def to_dict(self) -> Dict:
-        """辞書に変換"""
+        """Convert to dictionary"""
         return {
             'generation_style': self.generation_style,
             'table_type': self.table_type,
@@ -105,15 +105,15 @@ class CodeGenerationConfig:
     
     @classmethod
     def from_dict(cls, data: Dict) -> 'CodeGenerationConfig':
-        """辞書から復元"""
-        # 未知のキーは無視
+        """Restore from dictionary"""
+        # Ignore unknown keys
         valid_keys = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in data.items() if k in valid_keys}
         return cls(**filtered)
 
 
 class ConfigManager:
-    """設定管理クラス"""
+    """Settings management class"""
     
     def __init__(self):
         self._config = CodeGenerationConfig()
@@ -123,36 +123,36 @@ class ConfigManager:
         return self._config
     
     def set_config(self, config: CodeGenerationConfig):
-        """設定を更新"""
+        """Update settings"""
         self._config = config
     
     def update(self, **kwargs):
-        """設定を部分的に更新"""
+        """Partially update settings"""
         for key, value in kwargs.items():
             if hasattr(self._config, key):
                 setattr(self._config, key, value)
     
     def reset(self):
-        """設定をリセット"""
+        """Reset settings"""
         self._config = CodeGenerationConfig()
     
     def get_available_styles(self) -> Dict[str, str]:
-        """利用可能な生成スタイル"""
+        """Available generation styles"""
         return {
             'table_driven': 'Table-driven style',
             'switch_case': 'switch-case style',
         }
     
     def get_available_table_types(self) -> Dict[str, str]:
-        """利用可能なテーブル方式"""
+        """Available table styles"""
         return {
             'array': 'Array方式',
             'switch': 'switch-case style',
-            'dictionary': '辞書方式（非推奨）',
+            'dictionary': 'Dictionary style (deprecated)',
         }
     
     def get_available_os_types(self) -> Dict[str, str]:
-        """利用可能なOS種別"""
+        """Available OS types"""
         return {
             'non_rtos': 'NonRTOS (bare metal)',
             'freertos': 'FreeRTOS',
@@ -163,5 +163,5 @@ class ConfigManager:
         return {
             'flat': 'Flat',
             'by_layer': 'Per layer',
-            'by_type': 'include/src分離',
+            'by_type': 'include/src separation',
         }

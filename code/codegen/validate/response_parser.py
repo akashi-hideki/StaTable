@@ -1,7 +1,5 @@
 # codegen/validate/response_parser.py
-"""
-AI回答パーサー
-"""
+"""\nAI answer parser\n"""
 
 import sys
 import os
@@ -17,7 +15,7 @@ from validate.data.keywords import MARKERS
 
 
 class AIResponseParser:
-    """AI回答パーサー"""
+    """AI answer parser"""
     
     ACTION_MAPPING = {
         'set_initial': ChangeActionType.SET_INITIAL,
@@ -122,7 +120,7 @@ class AIResponseParser:
                     'target': transition_match.group(3),
                 }
             )
-        initial_match = re.match(r'初期状態[::]\s*(\w+)', line)
+        initial_match = re.match(r'Initial state[::]\s*(\w+)', line)
         if initial_match:
             return ChangeRequest(
                 action=ChangeActionType.SET_INITIAL,

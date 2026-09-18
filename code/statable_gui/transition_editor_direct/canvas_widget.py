@@ -44,14 +44,14 @@ class FlowNodeItem(QGraphicsRectItem):
         self.move_down_callback = None
         self.move_finished_callback = None
 
-        # ★ デバッグログ: 受け取ったテキストを出力
+        # Debug log: output received text
         logger.debug(f"FlowNodeItem.__init__: type={item_type}, text='{text}'")
 
         color = self.COLORS.get(item_type, QColor(200, 200, 200))
         self.setBrush(QBrush(color))
         self.setPen(QPen(Qt.black, 1))
 
-        # テキストアイテムを作成
+        # Create text item
         self.text_item = QGraphicsTextItem(self)
         self.text_item.setDefaultTextColor(Qt.white)
         self.text_item.setFont(QFont("Arial", 10))
@@ -60,13 +60,13 @@ class FlowNodeItem(QGraphicsRectItem):
 
         # ノードのSizeと表示内容を設定
         if item_type == "transition":
-            # 常に3行表示（Event name・条件・Target）に固定
+            # 常に3Row表示（Event name・Condition・Target）に固定
             lines = []
             lines.append(f"{self.ICONS.get(item_type, '')} {text}")
             if flow_item:
                 condition = flow_item.params.get('condition', '')
                 target = flow_item.params.get('target', '')
-                # 条件式が空なら「Condition: none」を表示
+                # Condition式が空なら「Condition: none」を表示
                 if condition:
                     lines.append(f"条件: {condition}")
                 else:
@@ -77,7 +77,7 @@ class FlowNodeItem(QGraphicsRectItem):
                 else:
                     lines.append("-> (not set)")
             else:
-                # flow_item が無い場合も3行を維持
+                #Maintain 3 lines when flow_item absent
                 lines.append("Condition: none")
                 lines.append("-> (not set)")
 
@@ -90,7 +90,7 @@ class FlowNodeItem(QGraphicsRectItem):
         self.text_item.setPlainText(label)
         self.text_item.setPos(8, 4)
 
-        # 矩形を設定
+        # Set rect
         self.setRect(0, 0, 240, height)
 
         self.setAcceptHoverEvents(True)
@@ -101,7 +101,7 @@ class FlowNodeItem(QGraphicsRectItem):
 
         self.setFlag(QGraphicsRectItem.ItemSendsGeometryChanges, True)
 
-        # ドラッグ試行検出用
+        # For drag attempt detection
         self._drag_start_pos = None
 
     def itemChange(self, change, value):
@@ -120,7 +120,7 @@ class FlowNodeItem(QGraphicsRectItem):
                 logger.debug(f"FlowNodeItem.mouseMoveEvent: drag attempted on type={self.item_type}")
                 QMessageBox.information(
                     None,
-                    "操作不可",
+                    "Operation not allowed",
                     "Nodes cannot be moved inside the canvas.\nPlease reorder using the ordered list."
                 )
                 self._drag_start_pos = None
@@ -160,7 +160,7 @@ class FlowNodeItem(QGraphicsRectItem):
         down_action.triggered.connect(lambda: self.move_down_callback(self) if self.move_down_callback else None)
         menu.addAction(down_action)
         menu.addSeparator()
-        duplicate_action = QAction("複製", menu)
+        duplicate_action = QAction("Duplicate", menu)
         duplicate_action.triggered.connect(lambda: self.duplicate_callback(self) if self.duplicate_callback else None)
         menu.addAction(duplicate_action)
         delete_action = QAction("Delete", menu)
@@ -175,7 +175,7 @@ class FlowNodeItem(QGraphicsRectItem):
         elif self.item_type == "function":
             return "Role functionノード\n・ダブルクリックでFunction nameを変更"
         elif self.item_type == "pre_action":
-            return "遷移直前処理\n・順序リストで並べ替え"
+            return "Pre-transition processing\n- Reorder via ordered list"
         elif self.item_type == "else":
             return "else condition\n- Drop a function on top to add else action"
         elif self.item_type == "else_action":
@@ -258,7 +258,7 @@ class FlowCanvas(QGraphicsView):
                 disp_text = item.display_text()
                 logger.debug(f"  transition '{item.name}': target='{target}', else_target='{else_target}'")
 
-                # FlowNodeItem側で3行表示を行う
+                #3-line display on FlowNodeItem side
                 main_node = FlowNodeItem("transition", disp_text, flow_item=item)
                 self._setup_node_callbacks(main_node)
                 self.scene.addItem(main_node)
@@ -275,7 +275,7 @@ class FlowCanvas(QGraphicsView):
                     child_y += pre_node.rect().height() + 10
 
                 if has_else:
-                    else_text = f"else → {else_target}" if else_target else "else（未設定）"
+                    else_text = f"else → {else_target}" if else_target else "else (not set)"
                     else_node = FlowNodeItem("else", else_text, flow_item=item)
                     self.scene.addItem(else_node)
                     else_node.setPos(60, child_y)

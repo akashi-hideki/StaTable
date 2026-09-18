@@ -1,7 +1,5 @@
 # codegen/validate/items/flag_validator.py
-"""
-フラグ検証
-"""
+"""\nFlag validation\n"""
 
 import sys
 import os
@@ -16,7 +14,7 @@ from validate.items.base_validator import BaseValidator
 
 
 class FlagValidator(BaseValidator):
-    """フラグ検証クラス"""
+    """Flag validation class"""
     
     category = "flag"
     

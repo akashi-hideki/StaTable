@@ -1,7 +1,5 @@
 # codegen/naming_convention.py
-"""
-C言語命名規則モジュール（辞書駆動版）
-"""
+"""\nC language naming convention module\n"""
 
 import re
 import sys
@@ -16,7 +14,7 @@ except ImportError:
 
 
 class CNamingConvention:
-    """C言語の命名規則を管理するクラス"""
+    """Class managing C naming conventions"""
     
     CONVERSION_PATTERNS = {
         'upper_snake': {
@@ -98,7 +96,7 @@ class CNamingConvention:
     
     @classmethod
     def to_pascal_case(cls, name):
-        """パスカルケースに変換（キャメルケースの区切りを維持）"""
+        """Convert to PascalCase"""
         config = cls.CONVERSION_PATTERNS['pascal']
         parts = re.split(config['split'], name)
         if not parts:
@@ -107,7 +105,7 @@ class CNamingConvention:
         result = ""
         for part in parts:
             if part:
-                # 既にキャメルケースの場合は先頭のみ大文字化
+                # If camelCase, capitalize first letter
                 result += part[0].upper() + part[1:]
         return result
     

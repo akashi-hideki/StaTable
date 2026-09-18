@@ -1,4 +1,4 @@
-"""サンプルデータ生成（GUI層リエクスポート）"""
+"""Sample data generation (GUI layer re-export)"""
 
 from statable.sample_data import (
     create_sample_state_machine,

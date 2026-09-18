@@ -24,7 +24,7 @@ class ChangeActionType(Enum):
 
 @dataclass
 class ChangeRequest:
-    """変更リクエスト"""
+    """Change request"""
     action: ChangeActionType
     params: Dict[str, Any] = field(default_factory=dict)
     reason: str = ""

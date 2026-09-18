@@ -44,11 +44,11 @@ class ConditionEditDialog(QDialog):
         role_bar.addWidget(insert_role_btn)
         main_layout.addLayout(role_bar)
 
-        # 左右分割
+        # Left/right split
         splitter = QSplitter(Qt.Horizontal)
         main_layout.addWidget(splitter)
 
-        # 左側：シンボルピッカー
+        # Left: symbol picker
         self.symbol_picker = SymbolPickerWidget(
             global_defs=self.global_defs,
             role_functions=self.role_functions
@@ -56,7 +56,7 @@ class ConditionEditDialog(QDialog):
         self.symbol_picker.insert_requested.connect(self.insert_symbol)
         splitter.addWidget(self.symbol_picker)
 
-        # 右側：条件式Edit
+        # 右側:Condition式Edit
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
         right_layout.addWidget(QLabel("Condition:"))
@@ -66,9 +66,9 @@ class ConditionEditDialog(QDialog):
         right_layout.addWidget(self.condition_edit, stretch=1)
         splitter.addWidget(right_widget)
 
-        # 論理演算子コンボ
+        # Logical operator combo
         op_layout = QHBoxLayout()
-        op_layout.addWidget(QLabel("論理演算子:"))
+        op_layout.addWidget(QLabel("Logical operator:"))
         self.op_combo = QComboBox()
         self.op_combo.addItems(["AND", "OR", "XOR", "NAND", "NOR"])
         op_layout.addWidget(self.op_combo)
@@ -104,11 +104,11 @@ class ConditionEditDialog(QDialog):
         """OK button: auto-set provisional title if title is empty"""
         condition_text = self.condition_edit.toPlainText().strip()
         if condition_text:
-            # 条件式の先頭20文字を仮Titleに
+            # Condition式の先頭20文字を仮Titleに
             first_line = condition_text.split('\n')[0].strip()
             auto_title = first_line[:20] + ("..." if len(first_line) > 20 else "")
         else:
-            auto_title = "(無題条件)"
+            auto_title = "(untitled condition)"
         self.title_widget.ensure_title(auto_title)
         self.accept()
 

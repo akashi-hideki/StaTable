@@ -8,9 +8,9 @@ StaTable パーサー（未実装スタブ）
 
 【将来実装予定】
   - Excel (.xlsx) 読み込み
-    openpyxl 等を使用して状態遷移表を取り込む
+    openpyxl 等を使用してStateTransition表を取り込む
   - CSV (.csv) 読み込み
-    状態 × イベントのマトリクス形式を想定
+    State × Eventのマトリクス形式を想定
   - JSON (.json) 読み込み
     外部ツール連携用の汎用フォーマット
 
@@ -27,62 +27,38 @@ StaTable パーサー（未実装スタブ）
 """
 
 # ======================================================================
-# 未実装マーカー
+# Unimplemented marker
 # ======================================================================
-# 以下は将来実装する予定のプレースホルダ。
-# 実装するまでは呼び出さないこと。
+# The following are placeholders.
+# Do not call until implemented.
 
 __all__ = []   # Public API None（未実装のため）
 
 
 class ParserNotImplementedError(NotImplementedError):
-    """parser.py の機能が未実装であることを示す例外"""
+    """Exception indicating parser.py features not implemented"""
     pass
 
 
 def parse_excel(filepath: str):
-    """
-    Excel ファイルから状態遷移データを読み込む（未実装）
-
-    Args:
-        filepath: 読み込む Excel ファイルパス
-
-    Raises:
-        ParserNotImplementedError: 常に送出（未実装のため）
-    """
+    """\n    Load state transition data from an Excel file (not implemented)\n"""
     raise ParserNotImplementedError(
-        "parse_excel は未実装です。"
-        "現状は statable/xml_io.py を使用してください。"
+        "parse_excel is not implemented."
+        "Currently, please use statable/xml_io.py."
     )
 
 
 def parse_csv(filepath: str):
-    """
-    CSV ファイルから状態遷移データを読み込む（未実装）
-
-    Args:
-        filepath: 読み込む CSV ファイルパス
-
-    Raises:
-        ParserNotImplementedError: 常に送出（未実装のため）
-    """
+    """\n    Load state transition data from a CSV file (not implemented)\n"""
     raise ParserNotImplementedError(
-        "parse_csv は未実装です。"
-        "現状は statable/xml_io.py を使用してください。"
+        "parse_csv is not implemented."
+        "Currently, please use statable/xml_io.py."
     )
 
 
 def parse_json(filepath: str):
-    """
-    JSON ファイルから状態遷移データを読み込む（未実装）
-
-    Args:
-        filepath: 読み込む JSON ファイルパス
-
-    Raises:
-        ParserNotImplementedError: 常に送出（未実装のため）
-    """
+    """\n    Load state transition data from a JSON file (not implemented)\n"""
     raise ParserNotImplementedError(
-        "parse_json は未実装です。"
-        "現状は statable/xml_io.py を使用してください。"
+        "parse_json is not implemented."
+        "Currently, please use statable/xml_io.py."
     )

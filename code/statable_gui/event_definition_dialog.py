@@ -1,4 +1,4 @@
-"""状態遷移Event definitionsダイアログ"""
+"""StateTransitionEvent definitionsダイアログ"""
 
 from typing import Optional, List
 
@@ -55,12 +55,12 @@ class EventEditDialog(QDialog):
         self.name_edit = QLineEdit(event.name if event else "")
         form.addRow("Event name", self.name_edit)
 
-        # イベントID
+        # Event ID
         self.id_spin = QSpinBox()
         self.id_spin.setRange(0, 65535)
         if event and event.id is not None:
             self.id_spin.setValue(event.id)
-        form.addRow("イベントID", self.id_spin)
+        form.addRow("Event ID", self.id_spin)
 
         # description
         self.desc_edit = QLineEdit(event.description if event else "")
@@ -77,8 +77,8 @@ class EventEditDialog(QDialog):
         form.addRow("Event kind", self.kind_combo)
 
         # Sourceレイヤ
-        self.layer_driver = QRadioButton("ドライバ層")
-        self.layer_middleware = QRadioButton("ミドル層")
+        self.layer_driver = QRadioButton("Driver layer")
+        self.layer_middleware = QRadioButton("Middle layer")
         group = QButtonGroup(self)
         group.addButton(self.layer_driver)
         group.addButton(self.layer_middleware)
@@ -103,8 +103,8 @@ class EventEditDialog(QDialog):
                 self.delivery_combo.setCurrentIndex(idx)
         form.addRow("Delivery type", self.delivery_combo)
 
-        # 付随データ
-        self.data_check = QCheckBox("付随データを使用する")
+        # Attached data
+        self.data_check = QCheckBox("Use attached data")
         self.data_check.setChecked(bool(event.data_type if event else False))
         form.addRow("", self.data_check)
 
@@ -155,13 +155,13 @@ class EventEditDialog(QDialog):
 
 
 class EventDefinitionDialog(QDialog):
-    """状態遷移Event definitions一覧ダイアログ"""
+    """StateTransitionEvent definitions一覧ダイアログ"""
 
     def __init__(self, sm: StateMachine, global_defs: Optional[GlobalDefinitions] = None, parent=None):
         super().__init__(parent)
         self.sm = sm
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
-        self.setWindowTitle("状態遷移Event definitions")
+        self.setWindowTitle("StateTransitionEvent definitions")
         self.setMinimumSize(1100, 650)
 
         layout = QVBoxLayout(self)
@@ -177,7 +177,7 @@ class EventDefinitionDialog(QDialog):
 
         # Event list table (title column added / direct edit)
         self.table = DoubleClickTable(0, 7)
-        self.table.setHorizontalHeaderLabels(["Title", "Event name", "ID", "Source", "Delivery type", "付随データ", "Description"])
+        self.table.setHorizontalHeaderLabels(["Title", "Event name", "ID", "Source", "Delivery type", "Attached data", "Description"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setFont(QFont("Consolas", 10))
         self.table.cellDoubleClicked.connect(self.on_double_clicked)
@@ -217,7 +217,7 @@ class EventDefinitionDialog(QDialog):
 
             # Title（直接Edit可能）
             title_item = QTableWidgetItem(title)
-            title_item.setToolTip("このイベントのTitle。直接Editできます。")
+            title_item.setToolTip("このEventのTitle。直接Editできdoes。")
             self.table.setItem(row, 0, title_item)
 
             self.table.setItem(row, 1, QTableWidgetItem(name))
@@ -268,7 +268,7 @@ class EventDefinitionDialog(QDialog):
                 if new_event.name in self.sm.events:
                     QMessageBox.warning(self, "Warning", f"イベント '{new_event.name}' は既に存在します。")
                     return
-                # 元の位置を維持して辞書を再構築
+                #Rebuild dict preserving original positions
                 new_events = {}
                 for key, value in self.sm.events.items():
                     if key == old_name:
@@ -307,17 +307,17 @@ class EventDefinitionDialog(QDialog):
         if not event:
             return
 
-        # 依存チェック
+        # Dependency check
         transitions = self.sm.get_transitions_for_event(event.name)
         if transitions:
             msg = f"イベント '{event.title}' は削除できません。\n\n以下の遷移で使用されています：\n\n"
             for trans in transitions:
                 msg += f"  - {trans.source} → {trans.target}\n"
-            msg += "\n先にこれらの遷移をDeleteしてください。"
+            msg += "\n先にこれらのTransitionをDeleteしてください。"
             QMessageBox.warning(self, "Warning", msg)
             return
 
-        # 割り込み処理のチェック
+        # Interrupt handler check
         for intr in self.global_defs.interrupts:
             if event.name in intr.event_names:
                 QMessageBox.warning(self, "Warning", f"イベント '{event.title}' は割り込み処理 '{intr.title}' で使用されています。")

@@ -59,7 +59,7 @@ class TransitionEditDialog(BaseEditDialog):
         layout = QVBoxLayout(self)
 
         h0 = QHBoxLayout()
-        h0.addWidget(QLabel("イベント:"))
+        h0.addWidget(QLabel("Event:"))
         self.event_label = QLabel(item.params.get('event', item.name))
         h0.addWidget(self.event_label)
         layout.addLayout(h0)
@@ -69,12 +69,12 @@ class TransitionEditDialog(BaseEditDialog):
         self.cond_edit = QLineEdit(item.params.get('condition', ''))
         h1.addWidget(self.cond_edit)
 
-        cond_builder_btn = QPushButton("条件をEdit...")
+        cond_builder_btn = QPushButton("ConditionをEdit...")
         cond_builder_btn.clicked.connect(self._open_condition_builder)
         h1.addWidget(cond_builder_btn)
         layout.addLayout(h1)
 
-        layout.addWidget(QLabel("遷移直前処理:"))
+        layout.addWidget(QLabel("Pre-transition processing:"))
         self.pre_list = QListWidget()
         self.pre_list.setDragDropMode(QAbstractItemView.InternalMove)
         self.pre_list.setDefaultDropAction(Qt.MoveAction)
@@ -91,7 +91,7 @@ class TransitionEditDialog(BaseEditDialog):
         pre_btn.addWidget(del_pre_btn)
         layout.addLayout(pre_btn)
 
-        self.has_else_check = QCheckBox("else条件を使用する")
+        self.has_else_check = QCheckBox("Use else condition")
         self.has_else_check.setChecked(item.params.get('has_else', True))
         layout.addWidget(self.has_else_check)
 
@@ -155,6 +155,6 @@ class TransitionEditDialog(BaseEditDialog):
             'target': target,
             'has_else': has_else,
             'else_target': else_target,
-            'else_actions': [],   # 今後対応
+            'else_actions': [],   # Future support
         }
         return edited, params

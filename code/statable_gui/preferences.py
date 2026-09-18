@@ -17,7 +17,7 @@ class Preferences:
         self._apply_defaults()
 
     def _apply_defaults(self):
-        """定義されたキーが未Saveならデフォルト値を設定"""
+        """定義されたキーが未SaveならデフォルトValueを設定"""
         changed = False
         for key, default in PREFERENCE_DEFINITIONS.items():
             if key not in self.data:
@@ -27,7 +27,7 @@ class Preferences:
             self.save()
 
     def load(self):
-        """JSONファイルから設定を読み込む"""
+        """Load settings from JSON file"""
         if self.filepath.exists():
             try:
                 with open(self.filepath, "r", encoding="utf-8") as f:
@@ -42,15 +42,15 @@ class Preferences:
             with open(self.filepath, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, indent=2, ensure_ascii=False)
         except OSError:
-            # 書き込み失敗時は無視（必要に応じてログ出力）
+            #Ignore write failures
             pass
 
     def get(self, key: str, default: Any = None) -> Any:
-        """設定値をキー名で取得する（従来方式）"""
+        """Get setting by key name (legacy style)"""
         return self.data.get(key, default)
 
     def set(self, key: str, value: Any):
-        """設定値をキー名で更新し、即座にSaveする"""
+        """設定Valueをキー名で更新し、即座にSaveする"""
         self.data[key] = value
         self.save()
 
@@ -58,17 +58,17 @@ class Preferences:
     # Attribute access (prefs.last_project_dir etc.)
     # ------------------------------------------------------------------
     def __getattr__(self, name: str) -> Any:
-        # 定義済みキーなら値を返す
+        # If key is defined, return its value
         if name in PREFERENCE_DEFINITIONS:
             return self.data.get(name, PREFERENCE_DEFINITIONS[name])
         # 未定義の属性は通常のError
         raise AttributeError(f"'Preferences' object has no attribute '{name}'")
 
     def __setattr__(self, name: str, value: Any):
-        # 定義済みキーなら設定とSaveを行う
+        # 定義済みキーなら設定とSaveをRowう
         if name in PREFERENCE_DEFINITIONS:
             self.data[name] = value
             self.save()
         else:
-            # 定義済み以外は通常の属性として設定
+            #Set undefined ones as normal attributes
             super().__setattr__(name, value)

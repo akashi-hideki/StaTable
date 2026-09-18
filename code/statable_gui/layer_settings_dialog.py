@@ -38,12 +38,12 @@ class LayerSettingsDialog(QDialog):
         layout = QVBoxLayout(self)
 
         # description
-        info_group = QGroupBox("設定項目について")
+        info_group = QGroupBox("About settings items")
         info_layout = QVBoxLayout(info_group)
 
         info_label = QLabel(
             "- Layer name: used in generated code identifiers (e.g., Driver -> "
-            "STATE_Driver_Idle）。\n"
+            "STATE_Driver_Idle).\n"
             "  Leaving it empty generates a version without a layer name (STATE_Idle).\n"
             "- Priority: range 1-9. 1 (low) runs / initializes first.\n"
             "- Tab name: display name (change via the tab rename menu)."
@@ -53,10 +53,10 @@ class LayerSettingsDialog(QDialog):
 
         layout.addWidget(info_group)
 
-        # 層一覧テーブル（4列）
+        # Layer list table (4 columns)
         self.table = QTableWidget(0, 4)
         self.table.setHorizontalHeaderLabels(
-            ["タブ名", "層名", "Priority", "Description"]
+            ["Tab name", "Layer name", "Priority", "Description"]
         )
         self.table.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeToContents)
@@ -99,14 +99,14 @@ class LayerSettingsDialog(QDialog):
         )
 
         for row, (tab_name, sm) in enumerate(sorted_layers):
-            # タブ名（Edit不可）
+            # Tab名（Edit不可）
             tab_item = QTableWidgetItem(tab_name)
             tab_item.setFlags(
                 tab_item.flags() & ~Qt.ItemIsEditable
             )
             self.table.setItem(row, 0, tab_item)
 
-            # ★ 層名（Edit可）
+            # Layer name（Edit可）
             layer_name = getattr(sm, 'layer_name', '')
             name_item = QTableWidgetItem(layer_name)
             self.table.setItem(row, 1, name_item)
@@ -136,7 +136,7 @@ class LayerSettingsDialog(QDialog):
         if len(priorities) != len(set(priorities)):
             reply = QMessageBox.question(
                 self, "Confirm",
-                "Priorityが重複しています。このまま続けますか？",
+                "Priorityが重複していdoes。このまま続けdoesか？",
                 QMessageBox.Yes | QMessageBox.No
             )
             if reply == QMessageBox.No:
@@ -145,11 +145,11 @@ class LayerSettingsDialog(QDialog):
         self.accept()
 
     def apply_settings(self):
-        """設定を各 StateMachine に反映"""
+        """Apply settings to each StateMachine"""
         for row in range(self.table.rowCount()):
             tab_name = self.table.item(row, 0).text()
 
-            # 対応する StateMachine を検索
+            #Search for corresponding StateMachine
             target_sm = None
             for name, sm in self.layers:
                 if name == tab_name:
@@ -159,7 +159,7 @@ class LayerSettingsDialog(QDialog):
             if target_sm is None:
                 continue
 
-            # ★ 層名
+            # Layer name
             name_item = self.table.item(row, 1)
             if name_item:
                 target_sm.layer_name = name_item.text().strip()

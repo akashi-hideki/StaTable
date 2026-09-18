@@ -86,7 +86,7 @@ class InterruptEditDialog(QDialog):
         self.desc_edit = QLineEdit()
         if interrupt:
             self.desc_edit.setText(interrupt.description)
-        self.desc_edit.setToolTip("この割り込み処理のDescriptionを入力してください")
+        self.desc_edit.setToolTip("このInterrupt handlerのDescriptionを入力してください")
         form.addRow("Description", self.desc_edit)
 
         self.event_combo = QComboBox()
@@ -107,17 +107,17 @@ class InterruptEditDialog(QDialog):
         self.timer_check.setToolTip("Timer interruptの場合にチェックしてください")
         form.addRow("Timer interrupt", self.timer_check)
 
-        layout.addWidget(QLabel("条件付きAction一覧:"))
+        layout.addWidget(QLabel("Condition付きAction一覧:"))
         help_label = QLabel(
             "Describe \"state transition condition\" and \"action code\" in each row.\n"
             "If the state transition condition is empty, the action is executed unconditionally.\n"
-            "ダブルクリックで各セルをEditできます。"
+            "ダブルクリックで各セルをEditできdoes。"
         )
         help_label.setStyleSheet("color: gray; font-size: 11px;")
         layout.addWidget(help_label)
 
         self.action_table = DoubleClickTable(0, 2)
-        self.action_table.setHorizontalHeaderLabels(["State transition condition", "動作コード"])
+        self.action_table.setHorizontalHeaderLabels(["State transition condition", "Action code"])
         self.action_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.action_table.cellDoubleClicked.connect(self.on_action_double_clicked)
         layout.addWidget(self.action_table, stretch=1)
@@ -155,7 +155,7 @@ class InterruptEditDialog(QDialog):
         self.action_table.setItem(row, 0, condition_item)
 
         action_item = QTableWidgetItem(action.replace('\n', ' ; ') if action else "")
-        action_item.setToolTip("ダブルクリックで動作コードをEdit")
+        action_item.setToolTip("ダブルクリックでAction codeをEdit")
         action_item.setData(Qt.UserRole, action)
         self.action_table.setItem(row, 1, action_item)
 
@@ -233,7 +233,7 @@ class InterruptEditDialog(QDialog):
             title=self.title_edit.text().strip(),
         )
 
-        # ★ 使用Role function・変数を自動抽出
+        # ★ 使用Role function・Variableを自動抽出
         try:
             from codegen.interrupt_generator import InterruptGenerator
             gen = InterruptGenerator()
@@ -354,7 +354,7 @@ class TimerBaseEditDialog(QDialog):
 class TimerDerivedEditDialog(QDialog):
     def __init__(self, parent=None, derived: Optional[TimerDerivedDef] = None):
         super().__init__(parent)
-        self.setWindowTitle("派生Timer変数Edit")
+        self.setWindowTitle("派生TimerVariableEdit")
         self.setMinimumWidth(450)
 
         form = QFormLayout(self)
@@ -422,7 +422,7 @@ class InterruptHandlerEditDialog(QDialog):
         self.event_names = event_names or []
         self.role_functions = role_functions if role_functions is not None else {}
 
-        self.setWindowTitle("割り込み処理・デバイスリソース・Timer設定")
+        self.setWindowTitle("Interrupt handler, device resources,Timer設定")
         self.setMinimumSize(1200, 800)
 
         layout = QVBoxLayout(self)
@@ -430,8 +430,8 @@ class InterruptHandlerEditDialog(QDialog):
         self.tabs = QTabWidget()
         layout.addWidget(self.tabs)
 
-        self.tabs.addTab(self._create_interrupt_tab(), "割り込み処理")
-        self.tabs.addTab(self._create_placeholder_tab(), "デバイスリソース")
+        self.tabs.addTab(self._create_interrupt_tab(), "Interrupt handler")
+        self.tabs.addTab(self._create_placeholder_tab(), "Device resource")
         self.tabs.addTab(self._create_timer_tab(), "Timer設定")
 
         close_btn = QPushButton("Close")
@@ -445,7 +445,7 @@ class InterruptHandlerEditDialog(QDialog):
         StaTableLogger.debug("InterruptHandlerEditDialog initialized")
 
     # ------------------------------------------------------------------
-    # 割り込み処理タブ
+    # Interrupt handler tab
     # ------------------------------------------------------------------
     def _create_interrupt_tab(self) -> QWidget:
         widget = QWidget()
@@ -453,7 +453,7 @@ class InterruptHandlerEditDialog(QDialog):
 
         self.interrupt_table = DoubleClickTable(0, 6)
         self.interrupt_table.setHorizontalHeaderLabels([
-            "Title", "Interrupt name", "Description", "Event name", "Timer", "条件付きAction数"
+            "Title", "Interrupt name", "Description", "Event name", "Timer", "Condition付きAction数"
         ])
         self.interrupt_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.interrupt_table.cellDoubleClicked.connect(self.on_interrupt_double_clicked)
@@ -525,7 +525,7 @@ class InterruptHandlerEditDialog(QDialog):
             self.refresh_interrupt_table()
 
     # ------------------------------------------------------------------
-    # デバイスリソースタブ
+    # Device resource tab
     # ------------------------------------------------------------------
     def _create_placeholder_tab(self) -> QWidget:
         widget = QWidget()
@@ -589,7 +589,7 @@ class InterruptHandlerEditDialog(QDialog):
             self.refresh_placeholder_table()
 
     # ------------------------------------------------------------------
-    # Timer設定タブ（複数基準Timer対応）
+    # Timer設定タブ（複数基準TimerCorresponds）
     # ------------------------------------------------------------------
     def _create_timer_tab(self) -> QWidget:
         widget = QWidget()
@@ -628,7 +628,7 @@ class InterruptHandlerEditDialog(QDialog):
         form = QFormLayout()
         layout.addLayout(form)
 
-        # Title（Edit可能・タブ名と連動）
+        # Title（Edit可能・Tab nameと連動）
         title_edit = QLineEdit(timer.title)
         title_edit.textChanged.connect(lambda text, t=timer: self._on_timer_title_changed(t, text))
         form.addRow("Title *", title_edit)
@@ -655,7 +655,7 @@ class InterruptHandlerEditDialog(QDialog):
         edit_btn.clicked.connect(lambda _checked, t=timer: self.edit_timer_base(t))
         form.addRow("", edit_btn)
 
-        layout.addWidget(QLabel("派生Timer変数:"))
+        layout.addWidget(QLabel("派生TimerVariable:"))
         derived_table = DoubleClickTable(0, 5)
         derived_table.setHorizontalHeaderLabels(["Title", "Period name", "Multiplier", "Variable name", "Type"])
         derived_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -763,7 +763,7 @@ class InterruptHandlerEditDialog(QDialog):
         if 0 <= index < len(all_timers):
             current = all_timers[index]
             new_name, ok = QInputDialog.getText(
-                self, "Timer名変更", "新しいTimer名を入力してください：",
+                self, "Timer名変更", "新しいTimer名を入力してください:",
                 text=current.title
             )
             if ok and new_name.strip():

@@ -41,7 +41,7 @@ class CodeWidget(QPlainTextEdit):
         logger.debug(f"Code updated ({len(code)} chars)")
 
     # ==================================================================
-    # 層名とType nameの解決
+    # Layer nameとType nameの解決
     # ==================================================================
     def _get_layer_name(self) -> str:
         """\n        Infer layer name from ActionDraft\n\n        - Cannot be inferred from draft.role_func_map etc.,\n          so collect the Namespace part of function names\n          (e.g., 'Middleware' from 'Middleware.HandleErr')\n          and use the most frequent value\n        - If undeterminable, empty string (no layer)\n        """
@@ -50,7 +50,7 @@ class CodeWidget(QPlainTextEdit):
         if layer:
             return layer
 
-        # 2. 参照関数の namespace を集計
+        #2. Count namespaces of referenced functions
         ns_count = {}
         for item in self.draft.flow_items:
             names = []
@@ -84,7 +84,7 @@ class CodeWidget(QPlainTextEdit):
         if not name:
             return ""
 
-        # 引数部分を除去
+        # Strip argument part
         if '(' in name:
             name = name.split('(', 1)[0].strip()
 
@@ -105,7 +105,7 @@ class CodeWidget(QPlainTextEdit):
             pascal = _to_pascal_case(base)
             return f"RoleFunc_{ns}_{pascal}"
 
-        # 単純名
+        # Bare name
         if not _VALID_C_IDENTIFIER.match(name):
             logger.warning(
                 f"_role_func_name: reject invalid identifier: {ref!r}"
@@ -123,13 +123,13 @@ class CodeWidget(QPlainTextEdit):
 
         context_type = self._context_type()
 
-        # システムグローバル定義（あれば）
+        #System global definitions (if any)
         for g in self.draft.system_globals:
             lines.append(f"{g.type} {g.name} = {g.initial_value};")
         if self.draft.system_globals:
             lines.append("")
 
-        # Role functionプロトタイプ収集（重複除去）
+        # Role functionプロトType収集（重複除去）
         proto_names = set()
         for item in self.draft.flow_items:
             logger.debug(
@@ -147,7 +147,7 @@ class CodeWidget(QPlainTextEdit):
                 proto_names.add(item.name)
 
         if proto_names:
-            # ★ 実ファイル生成と一致する形式で出力
+            # Output matching real file generation
             for ref in sorted(proto_names):
                 func_name = self._role_func_name(ref)
                 if not func_name:
@@ -162,7 +162,7 @@ class CodeWidget(QPlainTextEdit):
                 )
             lines.append("")
 
-        # 本体
+        # Body
         for item in self.draft.flow_items:
             logger.debug(
                 f"Processing flow_item for code: "
@@ -195,7 +195,7 @@ class CodeWidget(QPlainTextEdit):
                     if target:
                         lines.append(f"    next_state = {target};")
                     else:
-                        lines.append("    // Target未設定")
+                        lines.append("    // TargetNot set")
                     lines.append("}")
                     if has_else:
                         lines.append("else {")
@@ -212,13 +212,13 @@ class CodeWidget(QPlainTextEdit):
                         if else_target:
                             lines.append(f"    next_state = {else_target};")
                         else:
-                            lines.append("    // elseTarget（未設定）")
+                            lines.append("    // elseTarget（Not set）")
                         lines.append("}")
                 else:
                     if target:
                         lines.append(f"next_state = {target};")
                     else:
-                        lines.append("// Target未設定")
+                        lines.append("// TargetNot set")
 
             elif item.item_type == "function":
                 func_name = self._role_func_name(item.name)
@@ -227,7 +227,7 @@ class CodeWidget(QPlainTextEdit):
                 else:
                     lines.append(f"/* 不正な参照: {item.name} */")
 
-        # デバッグログ
+        # Debug log
         generated = "\n".join(lines)
         logger.debug("=== Generated Code ===")
         logger.debug(generated)

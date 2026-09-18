@@ -1,7 +1,5 @@
 # statable_gui/libcntrl/literal_library.py
-"""
-共有リテラルライブラリ
-"""
+"""\nShared literal library\n"""
 
 from dataclasses import dataclass
 from typing import Dict, List
@@ -9,9 +7,9 @@ from typing import Dict, List
 
 @dataclass
 class LiteralDefinition:
-    """共有リテラル定義"""
-    name: str               # 一意なリテラル名
-    value: str              # 値
+    """Shared literal definition"""
+    name: str               # Unique literal name
+    value: str              # Value
     literal_type: str = "int"  # int / float / string / bool
     description: str = ""
 
@@ -34,7 +32,7 @@ class LiteralDefinition:
 
 
 class LiteralLibrary:
-    """プロジェクト全体で共有するリテラルライブラリ"""
+    """Literal library shared across project"""
 
     def __init__(self):
         self.literals: Dict[str, LiteralDefinition] = {}

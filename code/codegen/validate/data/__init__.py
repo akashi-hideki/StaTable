@@ -1,7 +1,5 @@
 # codegen/validate/data/__init__.py
-"""
-検証データパッケージ
-"""
+"""\nValidation data package\n"""
 
 from .validation_rules import VALIDATION_RULES
 from .prompt_templates import (

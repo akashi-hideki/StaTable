@@ -1,13 +1,13 @@
 # statable/xml_io.py
 """
-XML入出力（プロジェクト設定・レイヤPriority・層名・Namespace対応版）
+XML入出力（Project settings・レイヤPriority・Layer name・NamespaceCorresponds版）
 - プロジェクトSave/読込で共有ライブラリをSave
 - Transitionのpre_actions/else_actions/has_else/else_targetもSave
 - 文字列→リスト正規化、1文字分解の自動結合
-- レイヤPriority・Description・層名（layer_name）・プロジェクト名のSave/復元
+- レイヤPriority・Description・Layer name（layer_name）・プロジェクト名のSave/復元
 - RoleFunction の namespace Save/復元
 - InterruptHandlerDef の used_role_functions / used_variables Save/復元
-- レガシー XML（namespace 無し）の自動移行
+- レガシー XML（namespace 無し）の自動移Row
 """
 
 import xml.etree.ElementTree as ET
@@ -28,7 +28,7 @@ from .global_defs import (
 
 logger = logging.getLogger("statable.xml_io")
 
-# 共有ライブラリ（インポート失敗時はNone）
+# Shared library (None if import fails)
 try:
     from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary, RoleFunction as LibRoleFunction
     from statable_gui.libcntrl.condition_library import ConditionLibrary, ConditionTemplate
@@ -40,25 +40,19 @@ except ImportError:
 # Helpers: 文字列/リストの正規化
 # ======================================================================
 def _normalize_actions(value) -> List[str]:
-    """
-    pre_actions / else_actions を必ず List[str] に正規化する。
-    - None / "" → []
-    - "init()" → ["init()"]
-    - ["init()"] → ["init()"]
-    - 1文字リスト ["i","n","i","t","(",")"] → ["init()"]  ※旧バージョンの壊れたデータ救済
-    """
+    """\n    Always normalize pre_actions / else_actions to List[str].\n"""
     if value is None:
         return []
     if isinstance(value, str):
         stripped = value.strip()
         return [stripped] if stripped else []
     if isinstance(value, list):
-        # 1文字ずつに分解された古いデータを検出して結合
+        # Detect and merge old data split into chars
         if value and all(isinstance(s, str) and len(s) == 1 for s in value):
             joined = "".join(value)
             logger.warning(f"Detected 1-char split actions, joining: {value} -> ['{joined}']")
             return [joined]
-        # 通常のリスト
+        # Normal list
         return [str(s) for s in value if str(s).strip()]
     logger.warning(f"Unexpected type for actions: {type(value)}. Converting to str.")
     return [str(value)]
@@ -132,7 +126,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
 
     trans_elem = ET.SubElement(root, "Transitions")
     for idx, t in enumerate(sm.transitions):
-        # ★ 正規化: 文字列や分解済みリストを必ず正しいリストに変換
+        # Normalization: convert strings to lists
         pre_actions = _normalize_actions(getattr(t, 'pre_actions', []))
         else_actions = _normalize_actions(getattr(t, 'else_actions', []))
         has_else = getattr(t, 'has_else', True)
@@ -215,14 +209,14 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             except Exception as e:
                 logger.error(f"  Failed to load event: {e}", exc_info=True)
 
-    # ★ RoleFunctions: namespace 読込 + レガシー移行
+    # RoleFunctions: namespace loading
     roles_elem = elem.find("RoleFunctions")
     if roles_elem is not None:
         for rf_elem in roles_elem:
             raw_name = rf_elem.get("name", "")
             namespace = rf_elem.get("namespace", "")
 
-            # レガシー移行: namespace 未設定 + name が層名プレフィックス付き
+            # Legacy migration: namespace unset + layer prefix
             if not namespace and sm.layer_name:
                 legacy_prefix = f"{sm.layer_name}_"
                 if raw_name.startswith(legacy_prefix):
@@ -252,11 +246,11 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
     trans_elem = elem.find("Transitions")
     if trans_elem is not None:
         for trans_elem_child in trans_elem:
-            # ★ 生のリストを取得
+            # Get raw list
             pre_actions_raw = [p.get("action", "") for p in trans_elem_child.findall("PreAction")]
             else_actions_raw = [e.get("action", "") for e in trans_elem_child.findall("ElseAction")]
 
-            # ★ 正規化（1文字分解されていれば結合）
+            # Normalization (merge if split)
             pre_actions = _normalize_actions(pre_actions_raw)
             else_actions = _normalize_actions(else_actions_raw)
 
@@ -372,7 +366,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
             "description": flag.description, "title": flag.title,
         })
 
-    # ★ Interrupts: used_role_functions / used_variables 対応
+    # Interrupts: used_role_functions support
     if defs.interrupts:
         intrs_elem = ET.SubElement(root, "Interrupts")
         for intr in defs.interrupts:
@@ -386,7 +380,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
                 ET.SubElement(intr_child, "Action", **{
                     "condition": act.condition, "action": act.action,
                 })
-            # ★ 使用Role function・変数を記録
+            # ★ 使用Role function・Variableを記録
             for ref in getattr(intr, 'used_role_functions', []):
                 ET.SubElement(intr_child, "UsedRoleFunction", ref=ref)
             for var in getattr(intr, 'used_variables', []):
@@ -481,7 +475,7 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 title=flag_elem.get("title", ""),
             ))
 
-    # ★ Interrupts: used_role_functions / used_variables 復元
+    # Interrupts: used_role_functions restore
     intrs_elem = elem.find("Interrupts")
     if intrs_elem is not None:
         for intr_elem in intrs_elem:
@@ -491,7 +485,7 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                     condition=act_elem.get("condition", ""),
                     action=act_elem.get("action", ""),
                 ))
-            # ★ 使用Role function・変数を復元
+            # ★ 使用Role function・Variableを復元
             used_rfs = [r.get("ref", "")
                         for r in intr_elem.findall("UsedRoleFunction")
                         if r.get("ref")]
@@ -556,7 +550,7 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
 
 
 # ======================================================================
-# 共有ライブラリ → XML
+# Shared library -> XML
 # ======================================================================
 def role_function_library_to_element(lib) -> Optional[ET.Element]:
     if lib is None:
@@ -592,7 +586,7 @@ def role_function_library_from_element(elem: Optional[ET.Element]):
         name = rf_elem.get("name", "")
         namespace = rf_elem.get("namespace", "")
         try:
-            # libcntrl.RoleFunction が受け付ける引数のみで生成
+            # Generate only with accepted arguments
             # namespace は keyword 引数としてAdd
             try:
                 rf = LibRoleFunction(
@@ -602,7 +596,7 @@ def role_function_library_from_element(elem: Optional[ET.Element]):
                     description=rf_elem.get("description", ""),
                 )
             except TypeError:
-                # 旧バージョン互換（namespace 未対応）
+                # Old version compatibility (no namespace)
                 rf = LibRoleFunction(
                     name=name,
                     title=rf_elem.get("title", ""),
@@ -688,10 +682,10 @@ def literal_library_from_element(elem: Optional[ET.Element]):
 
 
 # ======================================================================
-# プロジェクト設定 → XML
+# Project settings -> XML
 # ======================================================================
 def _project_settings_to_element(settings: Optional[dict]) -> ET.Element:
-    """プロジェクト設定をXML要素に変換"""
+    """Convert project settings to XML element"""
     logger.debug(f"_project_settings_to_element: settings={settings is not None}")
     elem = ET.Element("ProjectSettings")
 
@@ -733,7 +727,7 @@ def _project_settings_to_element(settings: Optional[dict]) -> ET.Element:
 
 
 def _project_settings_from_element(elem: Optional[ET.Element]) -> dict:
-    """XML要素からプロジェクト設定を復元"""
+    """Restore project settings from XML element"""
     settings = {}
     if elem is None:
         return settings
@@ -786,12 +780,12 @@ def project_to_xml(
         literal_library=None,
         project_settings: Optional[dict] = None,
 ) -> None:
-    """Save project to XML file（共有ライブラリ + プロジェクト設定含む）"""
+    """Save project to XML file (including shared library)"""
     logger.debug(f"=== project_to_xml START: {filepath} ===")
 
     root = ET.Element("Project")
 
-    # ★ プロジェクト設定
+    # Project settings
     project_name = "MyProject"
     if project_settings:
         project_name = project_settings.get('project_name', 'MyProject')
@@ -839,7 +833,7 @@ def project_from_xml(filepath: str):
     tree = ET.parse(filepath)
     root = tree.getroot()
 
-    # プロジェクト設定
+    # Project settings
     project_settings = _project_settings_from_element(
         root.find("ProjectSettings")
     )
@@ -850,7 +844,7 @@ def project_from_xml(filepath: str):
     global_defs = (global_defs_from_element(gd_elem)
                    if gd_elem is not None else GlobalDefinitions())
 
-    # 共有ライブラリを読込
+    # Load shared library
     role_function_library = (RoleFunctionLibrary()
                              if RoleFunctionLibrary else None)
     condition_library = (ConditionLibrary()

@@ -1,7 +1,5 @@
 # codegen/validate/items/variable_validator.py
-"""
-変数検証
-"""
+"""\nVariable validation\n"""
 
 import sys
 import os
@@ -16,7 +14,7 @@ from validate.items.base_validator import BaseValidator
 
 
 class VariableValidator(BaseValidator):
-    """変数検証クラス"""
+    """Variable validation class"""
     
     category = "variable"
     

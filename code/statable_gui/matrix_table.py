@@ -41,7 +41,7 @@ def _build_transition_tooltip(trans: Transition) -> str:
     if trans.event:
         parts.append(f"イベント: {trans.event}")
     else:
-        parts.append("イベント: Completion transition")
+        parts.append("Event: Completion transition")
     if trans.condition:
         parts.append(f"状態遷移条件:\n{trans.condition}")
     return "\n".join(parts)
@@ -122,7 +122,7 @@ class MatrixTableWidget(QTableWidget):
                 else:
                     item = QTableWidgetItem("")
                     item.setData(Qt.UserRole, [])
-                    item.setToolTip("遷移None")
+                    item.setToolTip("TransitionNone")
                     self.setItem(row, col, item)
 
         self.resizeColumnsToContents()
@@ -210,7 +210,7 @@ class MatrixTableWidget(QTableWidget):
         role_func_names = []
         _seen = set()
 
-        # 1. 共有ライブラリから
+        # 1. From shared library
         for rf in self.role_function_library.list_all():
             qn = getattr(rf, 'qualified_name', None) or rf.name
             if qn and qn not in _seen:

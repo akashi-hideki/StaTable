@@ -23,21 +23,21 @@ from PySide6.QtGui import QFontMetrics
 from statable.global_defs import GlobalDefinitions
 from statable.state_machine import StateMachine
 
-# 共有リテラルライブラリ
+# Shared literal library
 from statable_gui.libcntrl.literal_library import LiteralLibrary, LiteralDefinition
 class ConditionBuilderDialog(QDialog):
-    """遷移条件式をGUIで構築するダイアログ"""
+    """Dialog to build transition condition via GUI"""
 
     def __init__(self, condition: str = "", event_name: str = "",
                  global_defs: GlobalDefinitions = None,
                  state_machine: StateMachine = None,
                  literal_library: LiteralLibrary = None,
                  states: list = None,
-                 target_state: str = "",          # Add：現在のTarget
-                 else_target_state: str = "",     # Add：現在のelseTarget
+                 target_state: str = "",          # Add:現在のTarget
+                 else_target_state: str = "",     # Add:現在のelseTarget
                  parent=None):
         super().__init__(parent)
-        self.setWindowTitle("遷移条件ビルダー")
+        self.setWindowTitle("Transition condition builder")
         self.setMinimumSize(1000, 700)
 
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
@@ -51,7 +51,7 @@ class ConditionBuilderDialog(QDialog):
         self.else_target_state = else_target_state
 
         self._setup_ui()
-        # UI構築後に現在値をコンボボックスへ反映
+        #Reflect current value to combo box after UI
         self.set_current_targets()
         self.condition_edit.setPlainText(condition)
         self.event_name_edit.setText(event_name)
@@ -59,7 +59,7 @@ class ConditionBuilderDialog(QDialog):
         self._update_c_code_view()
 
     def _get_states_from_state_machine(self):
-        """ステートマシンから状態名リストを取得"""
+        """Get state name list from state machine"""
         if self.state_machine:
             return [s.name for s in self.state_machine.states.values()]
         return []
@@ -96,7 +96,7 @@ class ConditionBuilderDialog(QDialog):
 
         main_splitter = QSplitter(Qt.Horizontal)
 
-        # 左ペイン
+        # Left pane
         left_widget = QGroupBox("Insertするシンボル")
         left_layout = QVBoxLayout(left_widget)
         left_layout.setContentsMargins(4, 4, 4, 4)
@@ -109,7 +109,7 @@ class ConditionBuilderDialog(QDialog):
 
         num_layout = QHBoxLayout()
         self.num_input = QLineEdit()
-        self.num_input.setPlaceholderText("数値リテラル")
+        self.num_input.setPlaceholderText("Numeric literal")
         num_insert_btn = QPushButton("Insert")
         num_insert_btn.clicked.connect(self._insert_number)
         num_layout.addWidget(self.num_input)
@@ -118,8 +118,8 @@ class ConditionBuilderDialog(QDialog):
 
         main_splitter.addWidget(left_widget)
 
-        # 右ペイン
-        right_widget = QGroupBox("条件式（シンボル名で記述）")
+        # Right pane
+        right_widget = QGroupBox("Condition expression (symbol names)")
         right_layout = QVBoxLayout(right_widget)
         right_layout.setContentsMargins(4, 4, 4, 4)
         right_layout.setSpacing(2)
@@ -130,7 +130,7 @@ class ConditionBuilderDialog(QDialog):
         right_layout.addWidget(literal_btn, alignment=Qt.AlignLeft)
 
         self.condition_edit = QPlainTextEdit()
-        self.condition_edit.setPlaceholderText("例: battery_voltage > 3000")
+        self.condition_edit.setPlaceholderText("Example: battery_voltage > 3000")
         self.condition_edit.setFrameStyle(QFrame.NoFrame)
         self.condition_edit.setStyleSheet("QPlainTextEdit { padding: 0px; color: black; background: white; }")
         self.condition_edit.document().setDocumentMargin(0)
@@ -142,8 +142,8 @@ class ConditionBuilderDialog(QDialog):
         self.condition_edit.textChanged.connect(self._update_c_code_view)
         right_layout.addWidget(self.condition_edit, 1)
 
-        # クリアボタン
-        clear_btn = QPushButton("クリア")
+        # Clear button
+        clear_btn = QPushButton("Clear")
         clear_btn.clicked.connect(self._clear_condition)
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
@@ -154,8 +154,8 @@ class ConditionBuilderDialog(QDialog):
         main_splitter.setSizes([300, 700])
         main_layout.addWidget(main_splitter)
 
-        # 下部：ctx->形式のCコード表示
-        bottom_widget = QGroupBox("生成されるCコード（ctx->形式）")
+        #Bottom: display C code in ctx-> form
+        bottom_widget = QGroupBox("Generated C code (ctx-> form)")
         bottom_layout = QVBoxLayout(bottom_widget)
         bottom_layout.setContentsMargins(4, 4, 4, 4)
         bottom_layout.setSpacing(2)
@@ -208,8 +208,8 @@ class ConditionBuilderDialog(QDialog):
             flags_item.addChild(child)
         self.symbol_tree.addTopLevelItem(flags_item)
 
-        # イベント変数
-        event_vars_item = QTreeWidgetItem(["イベント変数"])
+        # Event variable
+        event_vars_item = QTreeWidgetItem(["Event variable"])
         for event in self.state_machine.events.values():
             data_name = getattr(event, 'data_name', '')
             if data_name:
@@ -230,8 +230,8 @@ class ConditionBuilderDialog(QDialog):
                 role_funcs_item.addChild(child)
         self.symbol_tree.addTopLevelItem(role_funcs_item)
 
-        # リテラル
-        literal_item = QTreeWidgetItem(["リテラル"])
+        # Literal
+        literal_item = QTreeWidgetItem(["Literal"])
         for lit in self.literal_library.list_all():
             child = QTreeWidgetItem([lit.name])
             child.setData(0, Qt.UserRole, lit.name)
@@ -239,8 +239,8 @@ class ConditionBuilderDialog(QDialog):
             literal_item.addChild(child)
         self.symbol_tree.addTopLevelItem(literal_item)
 
-        # 定数シンボル
-        const_item = QTreeWidgetItem(["定数シンボル"])
+        # Constant symbol
+        const_item = QTreeWidgetItem(["Constant symbol"])
         true_child = QTreeWidgetItem(["true"])
         true_child.setData(0, Qt.UserRole, "true")
         false_child = QTreeWidgetItem(["false"])
@@ -344,7 +344,7 @@ class ConditionBuilderDialog(QDialog):
     def _open_literalization(self):
         text = self.condition_edit.toPlainText()
         if not text.strip():
-            QMessageBox.information(self, "Info", "条件式が入力されていません。")
+            QMessageBox.information(self, "Info", "The condition expression is empty.")
             return
 
         dialog = LiteralizationDialog(text, self.literal_library, self)
@@ -371,7 +371,7 @@ class ConditionBuilderDialog(QDialog):
 
 
 class LiteralizationDialog(QDialog):
-    """条件式中の数値をLiteralizeするダイアログ"""
+    """Condition式中のNumericをLiteralizeするダイアログ"""
 
     def __init__(self, condition_text: str, literal_library: LiteralLibrary, parent=None):
         super().__init__(parent)
@@ -390,7 +390,7 @@ class LiteralizationDialog(QDialog):
         layout.addWidget(QLabel("Literalize numeric values in the condition expression. Give each value a name."))
 
         self.table = QTableWidget(0, 3)
-        self.table.setHorizontalHeaderLabels(["行", "数値", "リテラル名"])
+        self.table.setHorizontalHeaderLabels(["Row", "Numeric", "Literal name"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         layout.addWidget(self.table)
 

@@ -1,4 +1,4 @@
-"""Global variables・Event flags・割り込み処理・デバイスリソース・Timer設定・ユーザー定義Typeのデータモデル"""
+"""Global variables・Event flags・Interrupt handler, device resources,Timer設定・ユーザー定義Typeのデータモデル"""
 
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -6,7 +6,7 @@ from typing import List, Optional
 
 @dataclass
 class StructMemberDef:
-    """構造体メンバ定義"""
+    """Struct member definition"""
     name: str
     data_type: str
     bit_width: int = 0
@@ -26,7 +26,7 @@ class StructMemberDef:
 
 @dataclass
 class CustomTypeDef:
-    """ユーザー定義Type（構造体など）"""
+    """ユーザー定義Type（Structなど）"""
     name: str
     description: str = ""
     members: List[StructMemberDef] = field(default_factory=list)
@@ -87,12 +87,12 @@ class InterruptAction:
 
 @dataclass
 class InterruptHandlerDef:
-    """割り込み処理定義
+    """Interrupt handler definition
 
     used_role_functions: 使用Role functionの qualified_name リスト（自動抽出）
       - 例: ["Driver.Init", "Application.HandleTick"]
       - ISR の action Save時に更新
-      - 生成コードのコメントにも使用
+      - 生成Codeのコメントにも使用
 
     used_variables: 使用Global variables名のリスト（自動抽出）
       - 例: ["counter", "g_system_tick"]
@@ -172,7 +172,7 @@ class EventQueueDef:
 
 
 class GlobalDefinitions:
-    """Global variables・Event flags・割り込み処理・デバイスリソース・Timer設定・イベントキュー・ユーザー定義Typeの管理クラス"""
+    """Global variables・Event flags・Interrupt handler, device resources,Timer設定・EventQueue・ユーザー定義Typeの管理クラス"""
 
     def __init__(self):
         self.variables: List[SystemVariable] = []
@@ -185,11 +185,11 @@ class GlobalDefinitions:
         self.custom_types: List[CustomTypeDef] = []
 
     def add_timer_variables(self):
-        """Timer base variable・派生Timer変数をGlobal variablesとして登録する。
+        """Timer base variable・派生TimerVariableをGlobal variablesとして登録する。
 
-        - 既存変数（XML 読込 or GUI Edit済）は description / title を保持
+        - 既存Variable（XML 読込 or GUI Edit済）は description / title を保持
         - type / unit のみTimer定義側と同期
-        - 存在しない変数のみ新規Add
+        - 存在しないVariableのみ新規Add
 
         これにより round-trip で description / title がSaveされる。
         """
@@ -202,12 +202,12 @@ class GlobalDefinitions:
                 # Timer定義を正とする（Type・Unit）
                 v.type = type_
                 v.unit = unit
-                # description / title は既存を尊重、空なら既定値
+                # Preserve existing description / title
                 if not v.description:
                     v.description = default_desc
                 if not v.title:
                     v.title = default_title
-                # Groupが未設定なら補完
+                # GroupがNot setなら補完
                 if not v.group:
                     v.group = group
             else:
@@ -223,7 +223,7 @@ class GlobalDefinitions:
 
         all_timers = [self.timer_base] + self.extra_timers
         for timer in all_timers:
-            # 基準Timer変数
+            # 基準TimerVariable
             _sync_or_add(
                 name=timer.variable_name,
                 type_=timer.data_type,
@@ -233,7 +233,7 @@ class GlobalDefinitions:
                 default_desc="Timer base variable",
                 default_title=timer.title or f"タイマ基準: {timer.variable_name}",
             )
-            # 派生Timer変数
+            # 派生TimerVariable
             for d in timer.derived:
                 _sync_or_add(
                     name=d.variable_name,

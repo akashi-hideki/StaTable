@@ -1,7 +1,5 @@
 # codegen/validate/items/interrupt_validator.py
-"""
-割り込み検証
-"""
+"""\nInterrupt validation\n"""
 
 import sys
 import os
@@ -16,7 +14,7 @@ from validate.items.base_validator import BaseValidator
 
 
 class InterruptValidator(BaseValidator):
-    """割り込み検証クラス"""
+    """Interrupt validation class"""
     
     category = "interrupt"
     

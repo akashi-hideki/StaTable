@@ -1,7 +1,5 @@
 # codegen/validate/items/state_validator.py
-"""
-状態検証
-"""
+"""\nState validation\n"""
 
 import sys
 import os
@@ -16,7 +14,7 @@ from validate.items.base_validator import BaseValidator
 
 
 class StateValidator(BaseValidator):
-    """状態検証クラス"""
+    """State validation class"""
     
     category = "state"
     

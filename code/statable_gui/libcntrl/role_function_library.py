@@ -74,7 +74,7 @@ class RoleFunctionLibrary:
         if name in self.role_functions:
             del self.role_functions[name]
             return
-        # 純粋名での検索
+        # Search by bare name
         for key, rf in list(self.role_functions.items()):
             if rf.name == name:
                 del self.role_functions[key]

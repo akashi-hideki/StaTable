@@ -1,6 +1,6 @@
 # codegen/validate/prompt_generator.py
 """
-AIプロンプト生成クラス
+AI prompt generation class
 
 【v1.8 §11.2 #7】
   - generate_review_prompt をDelete（未使用・呼び出し元None）
@@ -20,7 +20,7 @@ from validate.data.action_definitions import format_action_definitions
 
 
 class AIPromptGenerator:
-    """AIプロンプト生成クラス"""
+    """AI prompt generation class"""
 
     def __init__(self):
         logger.debug("AIPromptGenerator.__init__ started")
@@ -31,13 +31,13 @@ class AIPromptGenerator:
 
     def _format_data(self, sm, gd) -> str:
         lines = []
-        lines.append("### 状態")
+        lines.append("### States")
         for name, state in sm.states.items():
             lines.append(f"- {name}: type={state.type.name}, description={state.description or '-'}")
-        lines.append("\n### イベント")
+        lines.append("\n### Events")
         for name, event in sm.events.items():
             lines.append(f"- {name}: kind={event.kind.name}, description={event.description or '-'}")
-        lines.append("\n### 遷移")
+        lines.append("\n### Transitions")
         if sm.transitions:
             for t in sm.transitions:
                 line = f"- {t.source} --[{t.event}]--> {t.target}"
@@ -47,14 +47,14 @@ class AIPromptGenerator:
                     line += f" [アクション: {t.action}]"
                 lines.append(line)
         else:
-            lines.append("- 遷移None")
-        lines.append(f"\n### 初期状態\n{sm.initial_state or '未設定'}")
+            lines.append("- TransitionNone")
+        lines.append(f"\n### 初期状態\n{sm.initial_state or 'Not set'}")
         return '\n'.join(lines)
 
     def _format_validation(self, validation_result) -> str:
         if not validation_result or not validation_result.issues:
-            return "### 内部検証結果\n問題None"
-        lines = ["### 内部検証で検出された問題"]
+            return "### 内部Validation result\n問題None"
+        lines = ["### Problems detected by internal validation"]
         for issue in validation_result.issues:
             lines.append(f"- [{issue.severity.value.upper()}] {issue.message}")
         return '\n'.join(lines)

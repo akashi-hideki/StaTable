@@ -1,7 +1,5 @@
 # codegen/validate/items/queue_validator.py
-"""
-キュー検証
-"""
+"""\nQueue validation\n"""
 
 import sys
 import os
@@ -16,7 +14,7 @@ from validate.items.base_validator import BaseValidator
 
 
 class QueueValidator(BaseValidator):
-    """キュー検証クラス"""
+    """Queue validation class"""
     
     category = "queue"
     
