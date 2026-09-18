@@ -16,7 +16,7 @@ from .logger import StaTableLogger
 
 
 class TitleEditWidget(QWidget):
-    """Title入力ウィジェット"""
+    """Title input widget"""
 
     def __init__(self, parent=None, title="", placeholder="Label shown in the list (auto-set if empty)"):
         super().__init__(parent)
@@ -46,7 +46,7 @@ class TitleEditWidget(QWidget):
 
 
 class TypeComboBox(QWidget):
-    """TypeSelection用コンボボックス"""
+    """Combo box for type selection"""
 
     def __init__(self, parent=None, global_defs: Optional[GlobalDefinitions] = None):
         super().__init__(parent)
@@ -61,7 +61,7 @@ class TypeComboBox(QWidget):
         layout.addWidget(self.combo, stretch=1)
 
         add_btn = QPushButton("Add...")
-        add_btn.setToolTip("ユーザー定義TypeをAdd・Edit")
+        add_btn.setToolTip("Add / edit user-defined types")
         add_btn.clicked.connect(self._open_type_manager)
         layout.addWidget(add_btn)
 
@@ -100,7 +100,7 @@ class TypeComboBox(QWidget):
 
 
 class GroupComboBox(QWidget):
-    """GroupSelection用コンボボックス"""
+    """Combo box for group selection"""
 
     def __init__(self, parent=None, groups: Optional[List[str]] = None):
         super().__init__(parent)
@@ -115,7 +115,7 @@ class GroupComboBox(QWidget):
         layout.addWidget(self.combo, stretch=1)
 
         add_btn = QPushButton("Add...")
-        add_btn.setToolTip("新しいGroupをAdd")
+        add_btn.setToolTip("Add a new group")
         add_btn.clicked.connect(self._add_group)
         layout.addWidget(add_btn)
 
@@ -150,7 +150,7 @@ class GroupComboBox(QWidget):
 
 
 class EventComboBox(QComboBox):
-    """EventSelection用コンボボックス"""
+    """Combo box for event selection"""
 
     def __init__(self, parent=None, event_names: Optional[List[str]] = None):
         super().__init__(parent)
@@ -162,7 +162,7 @@ class EventComboBox(QComboBox):
 
 
 class StateComboBox(QComboBox):
-    """StateSelection用コンボボックス"""
+    """Combo box for state selection"""
 
     def __init__(self, parent=None, state_names: Optional[List[str]] = None):
         super().__init__(parent)
@@ -173,7 +173,7 @@ class StateComboBox(QComboBox):
 
 
 class GroupAddDialog(QDialog):
-    """GroupAddダイアログ"""
+    """Group add dialog"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -185,8 +185,8 @@ class GroupAddDialog(QDialog):
         layout.addLayout(form)
 
         self.name_edit = QLineEdit()
-        self.name_edit.setPlaceholderText("新しいGroup名を入力")
-        form.addRow("Group名", self.name_edit)
+        self.name_edit.setPlaceholderText("Enter a new group name")
+        form.addRow("Group name", self.name_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._on_accept)
@@ -195,7 +195,7 @@ class GroupAddDialog(QDialog):
 
     def _on_accept(self):
         if not self.name_edit.text().strip():
-            QMessageBox.warning(self, "Warning", "Group名を入力してください。")
+            QMessageBox.warning(self, "Warning", "Please enter a group name.")
             return
         self.accept()
 
@@ -204,12 +204,12 @@ class GroupAddDialog(QDialog):
 
 
 class TypeManagerDialog(QDialog):
-    """ユーザー定義Type管理ダイアログ"""
+    """User-defined type management dialog"""
 
     def __init__(self, parent=None, global_defs: Optional[GlobalDefinitions] = None):
         super().__init__(parent)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
-        self.setWindowTitle("ユーザー定義Type管理")
+        self.setWindowTitle("User-defined type management")
         self.setMinimumSize(800, 500)
 
         layout = QVBoxLayout(self)
@@ -307,12 +307,12 @@ class TypeManagerDialog(QDialog):
 
 
 class TypeEditDialog(QDialog):
-    """ユーザー定義TypeEditダイアログ"""
+    """User-defined type edit dialog"""
 
     def __init__(self, parent=None, custom_type: Optional[CustomTypeDef] = None):
         super().__init__(parent)
         self.custom_type = custom_type if custom_type else CustomTypeDef(name="", title="")
-        self.setWindowTitle("ユーザー定義TypeEdit")
+        self.setWindowTitle("Edit user-defined type")
         self.setMinimumSize(700, 500)
 
         layout = QVBoxLayout(self)
@@ -340,11 +340,11 @@ class TypeEditDialog(QDialog):
         layout.addWidget(self.member_table, stretch=1)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("メンバAdd")
+        add_btn = QPushButton("Add member")
         add_btn.clicked.connect(self._add_member)
-        edit_btn = QPushButton("メンバEdit")
+        edit_btn = QPushButton("Edit member")
         edit_btn.clicked.connect(self._edit_member)
-        del_btn = QPushButton("メンバDelete")
+        del_btn = QPushButton("Delete member")
         del_btn.clicked.connect(self._delete_member)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(edit_btn)
@@ -436,12 +436,12 @@ class TypeEditDialog(QDialog):
 
 
 class StructMemberEditDialog(QDialog):
-    """StructメンバEditダイアログ"""
+    """Struct member edit dialog"""
 
     def __init__(self, parent=None, member: Optional[StructMemberDef] = None):
         super().__init__(parent)
         self.member = member if member else StructMemberDef(name="", data_type="uint8_t")
-        self.setWindowTitle("StructメンバEdit")
+        self.setWindowTitle("Struct member edit")
         self.setMinimumWidth(450)
 
         layout = QVBoxLayout(self)

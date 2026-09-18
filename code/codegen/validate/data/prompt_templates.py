@@ -1,32 +1,32 @@
 # codegen/validate/data/prompt_templates.py
 """
-プロンプトテンプレート定義（データのみ）
+Prompt template definitions (data only)
 
-【v1.8 §11.2 #7】
-  - 未使用の 'review' キーをDelete
-    （prompt_generator.generate_review_prompt と共にDelete）
+[v1.8 section 11.2 #7]
+  - Removed unused 'review' key
+    (removed together with prompt_generator.generate_review_prompt)
 """
 
 PROMPT_TEMPLATES = {
     'diagnosis': {
-        'template': """あなたは組み込みソフトウェアのStateTransition設計の専門家is.
+        'template': """You are an expert in embedded software state transition design.
 
-【タスク】
-StateTransition設計データを検証し、必要な変更をJSON形式で出力してください。
+[Task]
+Validate state transition design data and output necessary changes in JSON format.
 
-【出力形式】
-純粋なJSONのみを出力してください。
-挨拶、Description、Supplement、マーカー、Codeブロック記号は一切不要is.
+[Output format]
+Output pure JSON only.
+No greetings, descriptions, supplements, markers, or code block symbols.
 
-【出力例】
+[Output example]
 {example}
 
-【実際のデータ】
+[Actual data]
 {data}
 
-【指示】
-出力例と同じJSON形式で、実際のデータに対する変更をProposalしてください。
-JSON以外は出力しないでください。
+[Instructions]
+Propose changes to the actual data using the same JSON format as the example.
+Do not output anything other than JSON.
 
 {action_definitions}
 
@@ -40,7 +40,7 @@ FEW_SHOT_EXAMPLE = """{
     {
       "action": "set_initial",
       "params": {"state": "INIT"},
-      "reason": "Initial stateがNot setのため"
+      "reason": "Initial state is not set"
     },
     {
       "action": "add_transition",
@@ -50,16 +50,16 @@ FEW_SHOT_EXAMPLE = """{
         "target": "IDLE",
         "action_name": "ResetError"
       },
-      "reason": "ErrorStateからの回復Transitionがないため"
+      "reason": "No error recovery transition from the error state"
     }
   ]
 }"""
 
-VALIDATION_POINTS = """【検証観点】
-1. Initial stateが設定されているか
-2. すべてのStateにTransitionが定義されているか
-3. ErrorStateからの回復Transitionがあるか
-4. 各Stateで処理すべきEventが網羅されているか
-5. 到達不能なStateがないか
-6. デッドロックの可能性がないか
+VALIDATION_POINTS = """[Validation points]
+1. Is the initial state set?
+2. Are transitions defined for all states?
+3. Is there a recovery transition from the error state?
+4. Are all events that each state should handle covered?
+5. Are there any unreachable states?
+6. Is there any possibility of deadlock?
 """

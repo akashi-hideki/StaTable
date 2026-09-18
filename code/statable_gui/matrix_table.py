@@ -217,7 +217,7 @@ class MatrixTableWidget(QTableWidget):
                 _seen.add(qn)
                 role_func_names.append(qn)
 
-        # 2. 現在の SM のRole functionから
+        # 2. From the current SM's role functions
         for rf in self.sm.role_functions.values():
             qn = getattr(rf, 'qualified_name', None) or rf.name
             if qn and qn not in _seen:

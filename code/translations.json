@@ -23522,6 +23522,4540 @@
       "files": [
         "statable/mermaid_gen.py"
       ]
+    },
+    {
+      "id": "s1661",
+      "kind": "string",
+      "japanese": "Event definitionsをConfirmしてください",
+      "english": "Please confirm the event definitions",
+      "category": "NEW",
+      "occurrences": 2,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1662",
+      "kind": "string",
+      "japanese": "Function nameが指定されていません",
+      "english": "Function name is not specified",
+      "category": "NEW",
+      "occurrences": 2,
+      "files": [
+        "codegen/validate/change_applier.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1663",
+      "kind": "string",
+      "japanese": "Variable nameを変更してください",
+      "english": "Please change the variable name",
+      "category": "NEW",
+      "occurrences": 2,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1664",
+      "kind": "string",
+      "japanese": "Errorログ出力",
+      "english": "Error log output",
+      "category": "NEW",
+      "occurrences": 2,
+      "files": [
+        "statable/sample_data.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1665",
+      "kind": "string",
+      "japanese": "データArray",
+      "english": "Data array",
+      "category": "NEW",
+      "occurrences": 2,
+      "files": [
+        "statable/sample_data.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1666",
+      "kind": "string",
+      "japanese": "Error通知",
+      "english": "Error notification",
+      "category": "NEW",
+      "occurrences": 2,
+      "files": [
+        "statable/sample_data.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1667",
+      "kind": "string",
+      "japanese": "\n    StateTransition定義\n\n    【v1.6 変更】kw_only=True 化\n      位置引数によるフィールド順序ずれ事故（v1.4 §9.6 #67）を\n      構造的に防止するため、kw_only 引数のみ受け付ける。\n\n    旧: Transition(\"Idle\", \"START\", \"\", [\"init()\"], \"Active\")  ← 位置引数（危険）\n    新: Transition(source=\"Idle\", event=\"START\", pre_actions=[\"init()\"], ...)  ← kwarg のみ\n\n    v1.5 で sample_data.py / xml_io.py / dialogs.py / draft.py /\n    change_applier.py の全 14 箇所が kwarg 済みであることを AST 監査でConfirm済み。\n\n    【v2.0 既知の制約: transition_type は予約フィールド】\n      - \"external\": 通常Transition（既定Value、実装済み）\n      - \"internal\": Stateを出ず action のみ実Row（**未実装・予約**）\n      - \"local\":    自己Transition（**未実装・予約**）\n\n      v1.9 時点で internal / local は未実装。生成Code\n      （codegen/transition_generator.py）は transition_type を参照せず、\n      常に external 相当（target へTransition）として扱う。\n\n      影響:\n        - GUI（matrix_table.py）にTransition種別列は表示されない\n        - 生成Codeで entry/exit 呼び分けはRowわれない\n        - XML Save/読込ではValueが保持される（round-trip は維持）\n\n      予約Reason:\n        entry/exit 呼び出し制御は state machine runner\n        （c_code_generator.py / テンプレート群）に広く影響するため、\n        v2.0 では仕様を凍結し、v2.x で段階的に実装する。\n\n      参照: v1.9 §9.9 #93（一貫性チェック検出）\n    ",
+      "english": "\n    State transition definition\n\n    [v1.6 change] kw_only=True\n      To structurally prevent positional-argument field-order accidents\n      (v1.4 section 9.6 #67), only kw_only arguments are accepted.\n\n    Old: Transition(\"Idle\", \"START\", \"\", [\"init()\"], \"Active\")  <- positional args (dangerous)\n    New: Transition(source=\"Idle\", event=\"START\", pre_actions=[\"init()\"], ...)  <- kwargs only\n\n    In v1.5, an AST audit confirmed that all 14 sites in sample_data.py /\n    xml_io.py / dialogs.py / draft.py / change_applier.py use kwargs.\n\n    [v2.0 known constraint: transition_type is a reserved field]\n      - \"external\": normal transition (default, implemented)\n      - \"internal\": executes only the action without leaving the state (**unimplemented / reserved**)\n      - \"local\":    self transition (**unimplemented / reserved**)\n\n      As of v1.9, internal / local are unimplemented. Generated code\n      (codegen/transition_generator.py) does not reference transition_type,\n      and always treats it as equivalent to external (transition to target).\n\n      Impact:\n        - GUI (matrix_table.py) does not display a transition-type column\n        - Generated code does not call entry / exit separately\n        - XML save / load preserves the value (round-trip maintained)\n\n      Reservation reason:\n        Entry / exit call control widely affects the state machine runner\n        (c_code_generator.py / template group), so\n        v2.0 freezes the spec and implements it incrementally in v2.x.\n\n      Reference: v1.9 section 9.9 #93 (consistency check detected)\n    ",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/model.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1668",
+      "kind": "string",
+      "japanese": "\nStaTable パーサー（未実装スタブ）\n\n【v1.8 §11.2 #9】\n  現状は未実装のスタブ。\n  XML の入出力は `statable/xml_io.py` が担当している。\n\n【将来実装予定】\n  - Excel (.xlsx) 読み込み\n    openpyxl 等を使用してStateTransition表を取り込む\n  - CSV (.csv) 読み込み\n    State × Eventのマトリクス形式を想定\n  - JSON (.json) 読み込み\n    外部ツール連携用の汎用フォーマット\n\n【注意】\n  - このモジュールは現時点で呼び出し元が存在しない\n  - 実装する際は `statable/model.py` の\n    StateMachine / State / Event / Transition に変換すること\n  - 既存の `xml_io.py` と同じインターフェース\n    （project_to_xml / project_from_xml 相当）を目指すのが望ましい\n\n【実装しない場合】\n  このファイル自体をDeleteしても問題ない。\n  呼び出し元がないため、Deleteしても影響はない。\n",
+      "english": "\nStaTable parser (unimplemented stub)\n\n[v1.8 section 11.2 #9]\n  Currently an unimplemented stub.\n  XML I/O is handled by `statable/xml_io.py`.\n\n[Planned for future implementation]\n  - Excel (.xlsx) loading\n    Import state transition tables using openpyxl etc.\n  - CSV (.csv) loading\n    Assume state x event matrix format\n  - JSON (.json) loading\n    General-purpose format for external tool integration\n\n[Notes]\n  - This module currently has no callers\n  - When implementing, convert to `statable/model.py`'s\n    StateMachine / State / Event / Transition\n  - It is desirable to target the same interface as the existing `xml_io.py`\n    (equivalent to project_to_xml / project_from_xml)\n\n[If not implementing]\n  This file itself can be deleted without issue.\n  Since there are no callers, deletion has no impact.\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/parser.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1669",
+      "kind": "string",
+      "japanese": "\n    Role function（State transition condition・Actionをまとめて実装するFunction）\n\n    【v1.5 変更】kw_only=True 化\n      位置引数によるフィールド順序ずれ事故（v1.4 §9.6 #76）を\n      構造的に防止するため、kw_only 引数のみ受け付ける。\n\n    旧: RoleFunction(name, desc, ret, ...)  ← 位置引数（危険）\n    新: RoleFunction(name=..., description=..., return_type=...)  ← kwarg のみ\n\n    namespace: Layer nameや機能Group名（例: \"Driver\"）\n      - `Driver.Init` のように参照可能\n      - 空文字の場合は層None扱い\n    ",
+      "english": "\n    Role function (implements state transition conditions and actions together)\n\n    [v1.5 change] kw_only=True\n      To structurally prevent positional-argument field-order accidents\n      (v1.4 section 9.6 #76), only kw_only arguments are accepted.\n\n    Old: RoleFunction(name, desc, ret, ...)  <- positional args (dangerous)\n    New: RoleFunction(name=..., description=..., return_type=...)  <- kwargs only\n\n    namespace: layer name or feature group name (e.g. \"Driver\")\n      - Referenceable as `Driver.Init`\n      - Empty string means no layer\n    ",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/model.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1670",
+      "kind": "string",
+      "japanese": "\nXML入出力（Project settings・レイヤPriority・Layer name・NamespaceCorresponds版）\n- プロジェクトSave/読込で共有ライブラリをSave\n- Transitionのpre_actions/else_actions/has_else/else_targetもSave\n- 文字列→リスト正規化、1文字分解の自動結合\n- レイヤPriority・Description・Layer name（layer_name）・プロジェクト名のSave/復元\n- RoleFunction の namespace Save/復元\n- InterruptHandlerDef の used_role_functions / used_variables Save/復元\n- レガシー XML（namespace 無し）の自動移Row\n",
+      "english": "\nXML I/O (project settings / layer priority / layer name / namespace support)\n- Save shared libraries on project save / load\n- Also save Transition's pre_actions / else_actions / has_else / else_target\n- String-to-list normalization, auto-merge of single-character splits\n- Save / restore layer priority, description, layer_name, project name\n- Save / restore RoleFunction namespace\n- Save / restore InterruptHandlerDef's used_role_functions / used_variables\n- Auto-migrate legacy XML (without namespace)\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/xml_io.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1671",
+      "kind": "string",
+      "japanese": "{\n  \"changes\": [\n    {\n      \"action\": \"set_initial\",\n      \"params\": {\"state\": \"INIT\"},\n      \"reason\": \"Initial stateがNot setのため\"\n    },\n    {\n      \"action\": \"add_transition\",\n      \"params\": {\n        \"source\": \"ERROR\",\n        \"event\": \"RESET\",\n        \"target\": \"IDLE\",\n        \"action_name\": \"ResetError\"\n      },\n      \"reason\": \"ErrorStateからの回復Transitionがないため\"\n    }\n  ]\n}",
+      "english": "{\n  \"changes\": [\n    {\n      \"action\": \"set_initial\",\n      \"params\": {\"state\": \"INIT\"},\n      \"reason\": \"Initial state is not set\"\n    },\n    {\n      \"action\": \"add_transition\",\n      \"params\": {\n        \"source\": \"ERROR\",\n        \"event\": \"RESET\",\n        \"target\": \"IDLE\",\n        \"action_name\": \"ResetError\"\n      },\n      \"reason\": \"No error recovery transition from the error state\"\n    }\n  ]\n}",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/prompt_templates.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1672",
+      "kind": "string",
+      "japanese": "あなたは組み込みソフトウェアのStateTransition設計の専門家is.\n\n【タスク】\nStateTransition設計データを検証し、必要な変更をJSON形式で出力してください。\n\n【出力形式】\n純粋なJSONのみを出力してください。\n挨拶、Description、Supplement、マーカー、Codeブロック記号は一切不要is.\n\n【出力例】\n{example}\n\n【実際のデータ】\n{data}\n\n【指示】\n出力例と同じJSON形式で、実際のデータに対する変更をProposalしてください。\nJSON以外は出力しないでください。\n\n{action_definitions}\n\n{validation_points}\n",
+      "english": "You are an expert in embedded software state transition design.\n\n[Task]\nValidate state transition design data and output necessary changes in JSON format.\n\n[Output format]\nOutput pure JSON only.\nNo greetings, descriptions, supplements, markers, or code block symbols.\n\n[Output example]\n{example}\n\n[Actual data]\n{data}\n\n[Instructions]\nPropose changes to the actual data using the same JSON format as the example.\nDo not output anything other than JSON.\n\n{action_definitions}\n\n{validation_points}\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/prompt_templates.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1673",
+      "kind": "string",
+      "japanese": "Interrupt handler definition\n\n    used_role_functions: 使用Role functionの qualified_name リスト（自動抽出）\n      - 例: [\"Driver.Init\", \"Application.HandleTick\"]\n      - ISR の action Save時に更新\n      - 生成Codeのコメントにも使用\n\n    used_variables: 使用Global variables名のリスト（自動抽出）\n      - 例: [\"counter\", \"g_system_tick\"]\n    ",
+      "english": "Interrupt handler definition\n\n    used_role_functions: list of used role functions' qualified_name (auto-extracted)\n      - e.g. [\"Driver.Init\", \"Application.HandleTick\"]\n      - Updated when the ISR action is saved\n      - Also used in generated code comments\n\n    used_variables: list of used global variable names (auto-extracted)\n      - e.g. [\"counter\", \"g_system_tick\"]\n    ",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/global_defs.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1674",
+      "kind": "string",
+      "japanese": "Timer base variable・派生TimerVariableをGlobal variablesとして登録する。\n\n        - 既存Variable（XML 読込 or GUI Edit済）は description / title を保持\n        - type / unit のみTimer定義側と同期\n        - 存在しないVariableのみ新規Add\n\n        これにより round-trip で description / title がSaveされる。\n        ",
+      "english": "Timer base variables and derived timer variables are registered as global variables.\n\n        - Existing variables (loaded from XML or edited in GUI) preserve description / title\n        - Only type / unit are synchronized with the timer definition\n        - Only non-existing variables are newly added\n\n        This ensures description / title are preserved across round-trips.\n        ",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/global_defs.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1675",
+      "kind": "string",
+      "japanese": "\n    Mermaid のラベル文字列を安全化する。\n\n    ユーザー入力のTitle・Event name・Condition式に\n    Mermaid のメタ文字が含まれていても、パースErrorを\n    起こさないように置換する。\n\n    例:\n      \"RETRY: battery_voltage >600\"\n        → \"RETRY: battery_voltage >600\"\n    ",
+      "english": "\n    Sanitize the Mermaid label string.\n\n    Even if user-entered title, event name, or condition expression\n    contains Mermaid meta characters, replace them so that\n    no parse error occurs.\n\n    Example:\n      \"RETRY: battery_voltage >600\"\n        -> \"RETRY: battery_voltage >600\"\n    ",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/mermaid_gen.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1676",
+      "kind": "string",
+      "japanese": "\n        Role functionをDeleteする。\n\n        v1.6 Add。ChangeActionType.REMOVE_ROLE_FUNCTION とCorresponds。\n        params:\n          name: 'HandleErr' または 'Middleware.HandleErr' のどちらでも可\n        ",
+      "english": "\n        Remove a role function.\n\n        Added in v1.6. Corresponds to ChangeActionType.REMOVE_ROLE_FUNCTION.\n        params:\n          name: 'HandleErr' or 'Middleware.HandleErr' (either is acceptable)\n        ",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/change_applier.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1677",
+      "kind": "string",
+      "japanese": "\nTransition検証\n\n【v1.8 §11.2 #6】\n  - StateValidator と logger Outputを統一\n  - __init__ / validate のStart・CompletionログをAdd\n  - ルール実Rowを try/except で囲み、失敗時は logger.error で記録\n",
+      "english": "\nTransition validation\n\n[v1.8 section 11.2 #6]\n  - Unified logger output with StateValidator\n  - Added start / completion logs to __init__ / validate\n  - Wrapped rule execution in try/except; on failure, log via logger.error\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/items/transition_validator.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1678",
+      "kind": "string",
+      "japanese": "【検証観点】\n1. Initial stateが設定されているか\n2. すべてのStateにTransitionが定義されているか\n3. ErrorStateからの回復Transitionがあるか\n4. 各Stateで処理すべきEventが網羅されているか\n5. 到達不能なStateがないか\n6. デッドロックの可能性がないか\n",
+      "english": "[Validation points]\n1. Is the initial state set?\n2. Are transitions defined for all states?\n3. Is there a recovery transition from the error state?\n4. Are all events that each state should handle covered?\n5. Are there any unreachable states?\n6. Is there any possibility of deadlock?\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/prompt_templates.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1679",
+      "kind": "string",
+      "japanese": "\nEvent検証\n\n【v1.8 §11.2 #6】\n  - StateValidator と logger Outputを統一\n  - __init__ / validate のStart・CompletionログをAdd\n  - ルール実Rowを try/except で囲み、失敗時は logger.error で記録\n",
+      "english": "\nEvent validation\n\n[v1.8 section 11.2 #6]\n  - Unified logger output with StateValidator\n  - Added start / completion logs to __init__ / validate\n  - Wrapped rule execution in try/except; on failure, log via logger.error\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/items/event_validator.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1680",
+      "kind": "string",
+      "japanese": "\nStaTable データモデル層\n\n主要クラスを再エクスポートし、外部からの利用を簡便にする。\n\n【v1.5 Add】\n  - 循環インポート回避のため、依存の軽いモジュールのみ再エクスポート\n  - xml_io / sample_data は意図的に除外\n    （これらは重い依存を持ち、循環参照の原因になるため）\n",
+      "english": "\nStaTable data model layer\n\nRe-exports main classes for convenient external use.\n\n[v1.5 added]\n  - Re-export only lightweight-dependency modules to avoid circular imports\n  - xml_io / sample_data are intentionally excluded\n    (they have heavy dependencies and can cause circular references)\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/__init__.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1681",
+      "kind": "string",
+      "japanese": "\n    StateMachine から Mermaid stateDiagram-v2 形式の文字列を生成する。\n\n    ラベル（Title / Event name / Condition式）はすべて\n    _sanitize_label で正規化してパースErrorを防止する。\n    ",
+      "english": "\n    Generate a Mermaid stateDiagram-v2 string from a StateMachine.\n\n    Labels (title / event name / condition expression) are all\n    normalized by _sanitize_label to prevent parse errors.\n    ",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/mermaid_gen.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1682",
+      "kind": "string",
+      "japanese": "\nStaTable Code generation層\n\n【v1.5 Add】\n  - 再エクスポートは最小限に留める\n  - CCodeGenerator は生成時に多数のサブモジュールを読み込むため、\n    トップレベルで再エクスポートしない（Startup時間短縮のため）\n",
+      "english": "\nStaTable code generation layer\n\n[v1.5 added]\n  - Keep re-exports minimal\n  - CCodeGenerator loads many submodules at generation time,\n    so it is not re-exported at top level (to reduce startup time)\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/__init__.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1683",
+      "kind": "string",
+      "japanese": "\nAction定義（データのみ）\n\n【v1.6 変更】\n  - add_state の type 列挙を 7 種類に拡張（StateType と一致）\n  - remove_role_function をAdd（ChangeActionType との不一致解消）\n",
+      "english": "\nAction definitions (data only)\n\n[v1.6 change]\n  - Extended the type enum of add_state to 7 kinds (matching StateType)\n  - Added remove_role_function (resolved mismatch with ChangeActionType)\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1684",
+      "kind": "string",
+      "japanese": "\n変更適用エンジン（修正版）\n\n【v1.6 変更】\n  - _handlers に 'remove_role_function' をAdd（ChangeActionType との不一致解消）\n  - _remove_role_function メソッドを実装\n",
+      "english": "\nChange apply engine (fixed version)\n\n[v1.6 change]\n  - Added 'remove_role_function' to _handlers (resolved mismatch with ChangeActionType)\n  - Implemented _remove_role_function method\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/change_applier.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1685",
+      "kind": "string",
+      "japanese": "\nプロンプトテンプレート定義（データのみ）\n\n【v1.8 §11.2 #7】\n  - 未使用の 'review' キーをDelete\n    （prompt_generator.generate_review_prompt と共にDelete）\n",
+      "english": "\nPrompt template definitions (data only)\n\n[v1.8 section 11.2 #7]\n  - Removed unused 'review' key\n    (removed together with prompt_generator.generate_review_prompt)\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/prompt_templates.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1686",
+      "kind": "string",
+      "japanese": "\n    libcntrl.RoleFunction は name/title/description のみ受け付けるため、\n    それ以外の属性は hasattr でConfirmしてから setattr する。\n    ",
+      "english": "\n    libcntrl.RoleFunction accepts only name/title/description,\n    so other attributes are set via setattr after checking with hasattr.\n    ",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/xml_io.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1687",
+      "kind": "string",
+      "japanese": "Global variables・Event flags・Interrupt handler, device resources,Timer設定・EventQueue・ユーザー定義Typeの管理クラス",
+      "english": "Management class for global variables, event flags, interrupt handlers, device resources, timer settings, event queues, and user-defined types",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/global_defs.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1688",
+      "kind": "string",
+      "japanese": "\nAI prompt generation class\n\n【v1.8 §11.2 #7】\n  - generate_review_prompt をDelete（未使用・呼び出し元None）\n",
+      "english": "\nAI prompt generation class\n\n[v1.8 section 11.2 #7]\n  - Removed generate_review_prompt (unused, no callers)\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/prompt_generator.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1689",
+      "kind": "string",
+      "japanese": "Global variables・Event flags・Interrupt handler, device resources,Timer設定・ユーザー定義Typeのデータモデル",
+      "english": "Data model for global variables, event flags, interrupt handlers, device resources, timer settings, and user-defined types",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/global_defs.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1690",
+      "kind": "comment",
+      "japanese": " ★ v1.6: parent Parameterを受理（REGION / CONCURRENT 用）",
+      "english": " v1.6: accept parent parameter (for REGION / CONCURRENT)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/change_applier.py"
+      ]
+    },
+    {
+      "id": "s1691",
+      "kind": "string",
+      "japanese": "長いState transition conditionを省略表示する（改Rowは先頭Rowのみ）",
+      "english": "Show long state transition conditions abbreviated (only the first line if multiline)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/mermaid_gen.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1692",
+      "kind": "string",
+      "japanese": "\nCode generation settings管理モジュール\n生成オプションを一元管理する\n",
+      "english": "\nCode generation settings management module\nCentralizes generation options\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/config.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1693",
+      "kind": "comment",
+      "japanese": " State transition condition列 → Condition builder",
+      "english": " State transition condition column -> condition builder",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/dialogs.py"
+      ]
+    },
+    {
+      "id": "s1694",
+      "kind": "string",
+      "japanese": "Global variables・Event flag definitionをOpen",
+      "english": "Open global variables / event flag definitions",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1695",
+      "kind": "string",
+      "japanese": "Interrupt handler, device resources,Timer設定",
+      "english": "Interrupt handlers, device resources, timer settings",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1696",
+      "kind": "string",
+      "japanese": "Role functionノード\\n・ダブルクリックでFunction nameを変更",
+      "english": "Role function node\\n- Double-click to rename the function",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/canvas_widget.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1697",
+      "kind": "string",
+      "japanese": "TimerVariable「{name}」が既存のVariableと重複していdoes",
+      "english": "Timer variable \"{name}\" duplicates an existing variable",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1698",
+      "kind": "string",
+      "japanese": "Global variables・Event flag definition管理画面",
+      "english": "Global variables / event flag definition management screen",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/global_defs_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1699",
+      "kind": "comment",
+      "japanese": " 常に3Row表示（Event name・Condition・Target）に固定",
+      "english": " Fixed to always show 3 lines (event name, condition, target)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/canvas_widget.py"
+      ]
+    },
+    {
+      "id": "s1700",
+      "kind": "comment",
+      "japanese": " 生成Code直接Save（複数層 + Warning収集Corresponds）",
+      "english": " Direct save of generated code (multi-layer + warning collection)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ]
+    },
+    {
+      "id": "s1701",
+      "kind": "comment",
+      "japanese": " Global variables・Event flags・Interrupt・",
+      "english": " Global variables, event flags, interrupts,",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ]
+    },
+    {
+      "id": "s1702",
+      "kind": "string",
+      "japanese": "Variable「{name}」のType「{type}」がDisabledis",
+      "english": "Variable \"{name}\" has invalid type \"{type}\"",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1703",
+      "kind": "string",
+      "japanese": "このInterrupt handlerのDescriptionを入力してください",
+      "english": "Enter the description of this interrupt handler",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1704",
+      "kind": "string",
+      "japanese": "Role function「{name}」のReturn typeが未定義is",
+      "english": "Role function \"{name}\" has no return type defined",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1705",
+      "kind": "string",
+      "japanese": "StateTransitionEvent definitions一覧ダイアログ",
+      "english": "State transition event definition list dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_definition_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1706",
+      "kind": "string",
+      "japanese": "ダブルクリックでState transition conditionをEdit",
+      "english": "Double-click to edit the state transition condition",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1707",
+      "kind": "string",
+      "japanese": "\nLiteral managementダイアログ（表形式・Edit修正版）\n",
+      "english": "\nLiteral management dialog (table format, edit-fixed version)\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/literal_management_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1708",
+      "kind": "comment",
+      "japanese": " TimerVariableをGlobal variablesとして自動登録",
+      "english": " Auto-register timer variables as global variables",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/sample_data.py"
+      ]
+    },
+    {
+      "id": "s1709",
+      "kind": "string",
+      "japanese": "Actionフロー（D&Dで配置・Double-click to edit）",
+      "english": "Action flow (place via D&D, double-click to edit)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/flow_widget.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1710",
+      "kind": "string",
+      "japanese": "Global variables・Event flags・戻りValue一覧",
+      "english": "Global variables, event flags, and return values",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/symbol_picker.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1711",
+      "kind": "string",
+      "japanese": "State transition conditionをEditするダイアログ",
+      "english": "Dialog to edit the state transition condition",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1712",
+      "kind": "string",
+      "japanese": "CCode generationダイアログ（複数層Corresponds）",
+      "english": "C code generation dialog (multi-layer support)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1713",
+      "kind": "string",
+      "japanese": "Condition式中のNumericをLiteralizeするダイアログ",
+      "english": "Dialog to literalize numeric values in condition expressions",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_builder_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1714",
+      "kind": "string",
+      "japanese": "StateTransitionEvent definitionsをOpen",
+      "english": "Open state transition event definitions",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1715",
+      "kind": "string",
+      "japanese": "StateTransitionEvent definitionsダイアログ",
+      "english": "State transition event definition dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_definition_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1716",
+      "kind": "comment",
+      "japanese": "   \"\\n\" ラベルは 1 RowのみEnabled → 空白に正規化",
+      "english": "   \"\\n\" label is valid only on one line -> normalized to space",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/mermaid_gen.py"
+      ]
+    },
+    {
+      "id": "s1717",
+      "kind": "string",
+      "japanese": "Category別折りたたみパレット（EventSelection画面）",
+      "english": "Collapsible palette by category (event selection screen)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/palette_widget.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1718",
+      "kind": "string",
+      "japanese": "Function name（純粋名 or namespace.name）",
+      "english": "Function name (bare name or namespace.name)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1719",
+      "kind": "string",
+      "japanese": "TransitionをAddするか、EventをDeleteしてください",
+      "english": "Add a transition or delete the event",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1720",
+      "kind": "string",
+      "japanese": "TransitionをAddするか、StateをDeleteしてください",
+      "english": "Add a transition or delete the state",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1721",
+      "kind": "string",
+      "japanese": "TransitionをAddするか、終端Stateとして明示してください",
+      "english": "Add a transition or mark this as a terminal state",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1722",
+      "kind": "comment",
+      "japanese": " Condition式が空なら「Condition: none」を表示",
+      "english": " If the condition expression is empty, show \"Condition: none\"",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/canvas_widget.py"
+      ]
+    },
+    {
+      "id": "s1723",
+      "kind": "comment",
+      "japanese": " Global variables（ArrayCorresponds）",
+      "english": " Global variables (array support)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/sample_data.py"
+      ]
+    },
+    {
+      "id": "s1724",
+      "kind": "comment",
+      "japanese": " ★ RoleFunctions に namespace 属性をAdd",
+      "english": " Add namespace attribute to RoleFunctions",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/xml_io.py"
+      ]
+    },
+    {
+      "id": "s1725",
+      "kind": "string",
+      "japanese": "該当のCondition式からもDeleteする必要がYesdoes。",
+      "english": "It must also be removed from the relevant condition expression.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/literal_management_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1726",
+      "kind": "comment",
+      "japanese": " TargetステートのSelection肢をステートマシンから取得",
+      "english": " Get target state choices from the state machine",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/dialog.py"
+      ]
+    },
+    {
+      "id": "s1727",
+      "kind": "comment",
+      "japanese": " ★ v1.5: Function nameは列 1（変更None）",
+      "english": " v1.5: function name is column 1 (unchanged)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/widgets.py"
+      ]
+    },
+    {
+      "id": "s1728",
+      "kind": "comment",
+      "japanese": " ユーザー定義Type（Struct＋ビットフィールド＋Array）",
+      "english": " User-defined type (struct + bit field + array)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/sample_data.py"
+      ]
+    },
+    {
+      "id": "s1729",
+      "kind": "string",
+      "japanese": "Conditionビルダーを開いてCondition式をEditする",
+      "english": "Open the condition builder to edit the condition expression",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/dialogs.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1730",
+      "kind": "string",
+      "japanese": "Selection中のRowをビジュアルエディタでEditしdoes",
+      "english": "Edit the selected row in the visual editor",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/dialogs.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1731",
+      "kind": "comment",
+      "japanese": " Role function戻りValue（一時Variable）",
+      "english": " Role function return value (temp variable)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/symbol_picker.py"
+      ]
+    },
+    {
+      "id": "s1732",
+      "kind": "string",
+      "japanese": "Delivery typeコンボ変更時にConverted列を更新",
+      "english": "Update the converted column when the delivery type combo changes",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_delivery_settings_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1733",
+      "kind": "string",
+      "japanese": "Namespace（Layer name・機能Group名）。\\n",
+      "english": "Namespace (layer name / feature group name).\\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/role_function_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1734",
+      "kind": "string",
+      "japanese": "StaTableのTypeをC言語のTypeにマッピングするクラス",
+      "english": "Class mapping StaTable types to C language types",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/type_mapper.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1735",
+      "kind": "string",
+      "japanese": "State「{name}」からのTransitionがYesません",
+      "english": "State \"{name}\" has no outgoing transition",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1736",
+      "kind": "comment",
+      "japanese": " ---- Title（無題Transition以外） ----",
+      "english": " ---- Title (other than untitled transition) ----",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/mermaid_gen.py"
+      ]
+    },
+    {
+      "id": "s1737",
+      "kind": "comment",
+      "japanese": " Role functionSelection・Insertバー",
+      "english": " Role function select / insert bar",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_edit_dialog.py"
+      ]
+    },
+    {
+      "id": "s1738",
+      "kind": "comment",
+      "japanese": " Timer設定タブ（複数基準TimerCorresponds）",
+      "english": " Timer settings tab (multi-base-timer support)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ]
+    },
+    {
+      "id": "s1739",
+      "kind": "comment",
+      "japanese": " ★ 使用Role function・Variableを自動抽出",
+      "english": " Auto-extract used role functions and variables",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ]
+    },
+    {
+      "id": "s1740",
+      "kind": "string",
+      "japanese": "DeleteするLiteralをSelectionしてください。",
+      "english": "Please select a literal to delete.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/literal_management_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1741",
+      "kind": "string",
+      "japanese": "Edit state transition eventダイアログ",
+      "english": "Edit state transition event dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_definition_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1742",
+      "kind": "string",
+      "japanese": "Interrupt name「{name}」が重複していdoes",
+      "english": "Interrupt name \"{name}\" is duplicated",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1743",
+      "kind": "string",
+      "japanese": "Role function「{name}」の引数定義が不完全is",
+      "english": "Role function \"{name}\" has incomplete argument definitions",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1744",
+      "kind": "string",
+      "japanese": "Variable「{name}」のArray sizeが不正is",
+      "english": "Variable \"{name}\" has an invalid array size",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1745",
+      "kind": "string",
+      "japanese": "\\n先にこれらのTransitionをDeleteしてください。",
+      "english": "\\nPlease delete these transitions first.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_definition_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1746",
+      "kind": "string",
+      "japanese": "このTransitionのTitle。直接Editできdoes。",
+      "english": "Title of this transition. Can be edited directly.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/dialogs.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1747",
+      "kind": "comment",
+      "japanese": "        → Title内の \":\" でパースError",
+      "english": "        -> Parse error due to \":\" in the title",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/mermaid_gen.py"
+      ]
+    },
+    {
+      "id": "s1748",
+      "kind": "comment",
+      "japanese": " ===== External include操作 =====",
+      "english": " ===== External include operations =====",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1749",
+      "kind": "comment",
+      "japanese": " OS type（これは意味があるのでSelection可能）",
+      "english": " OS type (this is meaningful, so it is selectable)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1750",
+      "kind": "string",
+      "japanese": "### 内部Validation result\\n問題None",
+      "english": "### Internal validation result\\nNo issues",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/prompt_generator.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1751",
+      "kind": "string",
+      "japanese": "External include fileをSelection",
+      "english": "Select external include file",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1752",
+      "kind": "string",
+      "japanese": "Priorityが重複していdoes。このまま続けdoesか？",
+      "english": "Priority is duplicated. Continue anyway?",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/layer_settings_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1753",
+      "kind": "string",
+      "japanese": "Role function「{name}」は使用されていません",
+      "english": "Role function \"{name}\" is not used",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1754",
+      "kind": "string",
+      "japanese": "Variable name「{name}」が重複していdoes",
+      "english": "Variable name \"{name}\" is duplicated",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1755",
+      "kind": "string",
+      "japanese": "プロジェクト全体で共有するRole functionライブラリ",
+      "english": "Role function library shared across the project",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/role_function_library.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1756",
+      "kind": "comment",
+      "japanese": " Code generation settingsマネージャ",
+      "english": " Code generation settings manager",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ]
+    },
+    {
+      "id": "s1757",
+      "kind": "comment",
+      "japanese": " Edit時は常に旧エントリをDeleteしてからAddする",
+      "english": " On edit, always delete the old entry before adding",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/literal_management_dialog.py"
+      ]
+    },
+    {
+      "id": "s1758",
+      "kind": "comment",
+      "japanese": " ★ 使用Role function・Variableを復元",
+      "english": " Restore used role functions and variables",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/xml_io.py"
+      ]
+    },
+    {
+      "id": "s1759",
+      "kind": "comment",
+      "japanese": " ★ 使用Role function・Variableを記録",
+      "english": " Record used role functions and variables",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/xml_io.py"
+      ]
+    },
+    {
+      "id": "s1760",
+      "kind": "string",
+      "japanese": "Code generation前検証・AI連携診断をOpen",
+      "english": "Open pre-generation validation / AI diagnosis",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1761",
+      "kind": "string",
+      "japanese": "EditするLiteralをSelectionしてください。",
+      "english": "Please select a literal to edit.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/literal_management_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1762",
+      "kind": "string",
+      "japanese": "このTimerを駆動するInterrupt name（任意）",
+      "english": "Interrupt name driving this timer (optional)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1763",
+      "kind": "string",
+      "japanese": "自己Transitionが意図的かConfirmしてください",
+      "english": "Please confirm whether the self transition is intentional",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1764",
+      "kind": "comment",
+      "japanese": " === Role functionテーブルの反映 ===",
+      "english": " === Reflect role function table ===",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/widgets.py"
+      ]
+    },
+    {
+      "id": "s1765",
+      "kind": "comment",
+      "japanese": " Listテーブル（Title列Add・直接Edit可能）",
+      "english": " List table (title column added / direct edit)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_queue_dialog.py"
+      ]
+    },
+    {
+      "id": "s1766",
+      "kind": "comment",
+      "japanese": " Role functionプロトType収集（重複除去）",
+      "english": " Collect role function prototypes (dedupe)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/code_widget.py"
+      ]
+    },
+    {
+      "id": "s1767",
+      "kind": "comment",
+      "japanese": " namespace は keyword 引数としてAdd",
+      "english": " namespace added as a keyword argument",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/xml_io.py"
+      ]
+    },
+    {
+      "id": "s1768",
+      "kind": "comment",
+      "japanese": " ★ このTimerを駆動するInterrupt name",
+      "english": " Interrupt name driving this timer",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/global_defs.py"
+      ]
+    },
+    {
+      "id": "s1769",
+      "kind": "comment",
+      "japanese": " 参照名 → RoleFunc Function name",
+      "english": " Reference name -> RoleFunc function name",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/code_widget.py"
+      ]
+    },
+    {
+      "id": "s1770",
+      "kind": "string",
+      "japanese": "Array sizeを0より大きいValueにしてください",
+      "english": "Array size must be greater than 0",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1771",
+      "kind": "string",
+      "japanese": "Array方式（2次元Array + O(1) アクセス）",
+      "english": "Array style (2D array + O(1) access)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1772",
+      "kind": "string",
+      "japanese": "Code generation settingsダイアログ",
+      "english": "Code generation settings dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1773",
+      "kind": "string",
+      "japanese": "Event queue definition一覧ダイアログ",
+      "english": "Event queue definition list dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_queue_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1774",
+      "kind": "string",
+      "japanese": "Role functionの新規登録・Edit用ダイアログ",
+      "english": "Dialog for creating / editing role functions",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/role_function_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1775",
+      "kind": "string",
+      "japanese": "Timer interruptの場合にチェックしてください",
+      "english": "Check this if it is a timer interrupt",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1776",
+      "kind": "string",
+      "japanese": "Timer0InterruptFlagClear用レジスタ",
+      "english": "Timer0 interrupt flag clear register",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/sample_data.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1777",
+      "kind": "comment",
+      "japanese": " Mermaid ラベル用サニタイズ（v2.0 Add）",
+      "english": " Mermaid label sanitization (v2.0 added)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/mermaid_gen.py"
+      ]
+    },
+    {
+      "id": "s1778",
+      "kind": "comment",
+      "japanese": " Targetが空なら「-> (not set)」を表示",
+      "english": " If target is empty, show \"-> (not set)\"",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/canvas_widget.py"
+      ]
+    },
+    {
+      "id": "s1779",
+      "kind": "comment",
+      "japanese": " model.py（依存None）— 最初にロードすべき",
+      "english": " model.py (no dependencies) -- load first",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/__init__.py"
+      ]
+    },
+    {
+      "id": "s1780",
+      "kind": "string",
+      "japanese": "Event delivery settingsダイアログ",
+      "english": "Event delivery settings dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_delivery_settings_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1781",
+      "kind": "string",
+      "japanese": "Title・Event name・Description",
+      "english": "Title, event name, description",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_definition_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1782",
+      "kind": "string",
+      "japanese": "Title・Queue name・Description",
+      "english": "Title, queue name, description",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_queue_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1783",
+      "kind": "string",
+      "japanese": "TransitionEdit（D&DビジュアルEdit）",
+      "english": "Transition edit (D&D visual editing)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/dialogs.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1784",
+      "kind": "string",
+      "japanese": "定義されたキーが未SaveならデフォルトValueを設定",
+      "english": "Set default values for keys that have not yet been saved",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/preferences.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1785",
+      "kind": "string",
+      "japanese": "既存ファイルとマージしてSave（ユーザーCode保持）",
+      "english": "Save by merging with existing file (preserve user code)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1786",
+      "kind": "string",
+      "japanese": "空の場合は層None扱い（'Init'）となりdoes。",
+      "english": "If empty, it is treated as having no layer ('Init').",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/role_function_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1787",
+      "kind": "comment",
+      "japanese": " 2. 現在の SM のRole functionから",
+      "english": " 2. From the current SM's role functions",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/matrix_table.py"
+      ]
+    },
+    {
+      "id": "s1788",
+      "kind": "comment",
+      "japanese": " Related eventsSelectionリスト",
+      "english": " Related event selection list",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_queue_dialog.py"
+      ]
+    },
+    {
+      "id": "s1789",
+      "kind": "string",
+      "japanese": "Code generation settingsを変更",
+      "english": "Change code generation settings",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1790",
+      "kind": "string",
+      "japanese": "Event queue definitionダイアログ",
+      "english": "Event queue definition dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_queue_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1791",
+      "kind": "string",
+      "japanese": "Flag name「{name}」が重複していdoes",
+      "english": "Flag name \"{name}\" is duplicated",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1792",
+      "kind": "string",
+      "japanese": "Title・Member name・Group名を入力",
+      "english": "Enter title, member name, and group name",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/symbol_picker.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1793",
+      "kind": "string",
+      "japanese": "Type name「{name}」が重複していdoes",
+      "english": "Type name \"{name}\" is duplicated",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1794",
+      "kind": "string",
+      "japanese": "Type「{name}」にメンバーが定義されていません",
+      "english": "Type \"{name}\" has no members defined",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1795",
+      "kind": "string",
+      "japanese": "このEventのTitle。直接Editできdoes。",
+      "english": "Title of this event. Can be edited directly.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_definition_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1796",
+      "kind": "string",
+      "japanese": "このQueueのTitle。直接Editできdoes。",
+      "english": "Title of this queue. Can be edited directly.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_queue_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1797",
+      "kind": "string",
+      "japanese": "利用可能なシンボルをCategory別にツリーへAdd",
+      "english": "Add available symbols to the tree by category",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_builder_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1798",
+      "kind": "string",
+      "japanese": "重複したTransitionをDeleteしてください",
+      "english": "Please delete the duplicate transition",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1799",
+      "kind": "string",
+      "japanese": "\nC言語Typeマッピングモジュール（辞書駆動版）\n",
+      "english": "\nC language type mapping module (dictionary-driven)\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/type_mapper.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1800",
+      "kind": "string",
+      "japanese": "\nシステムGlobal variables 別画面\n",
+      "english": "\nSystem global variables (separate screen)\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/system_global_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1801",
+      "kind": "string",
+      "japanese": "    // elseTarget（Not set）",
+      "english": "    // else target (not set)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/code_widget.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1802",
+      "kind": "comment",
+      "japanese": " Condition式の先頭20文字を仮Titleに",
+      "english": " Use first 20 chars of condition as provisional title",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_edit_dialog.py"
+      ]
+    },
+    {
+      "id": "s1803",
+      "kind": "comment",
+      "japanese": " Title（Edit可能・Tab nameと連動）",
+      "english": " Title (editable, linked to tab name)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ]
+    },
+    {
+      "id": "s1804",
+      "kind": "string",
+      "japanese": "D&DとRowInsertをサポートするフローリスト",
+      "english": "Flow list supporting D&D and row insertion",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/flow_widget.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1805",
+      "kind": "string",
+      "japanese": "EditするRowをSelectionしてください。",
+      "english": "Please select a row to edit.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/dialogs.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1806",
+      "kind": "string",
+      "japanese": "Global variables 一括登録ダイアログ",
+      "english": "Bulk registration dialog for global variables",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/global_defs_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1807",
+      "kind": "string",
+      "japanese": "Target「{target}」が定義されていません",
+      "english": "Target \"{target}\" is not defined",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1808",
+      "kind": "string",
+      "japanese": "指定されたTimerの派生Timerをテーブルに表示",
+      "english": "Display derived timers of the specified timer in the table",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1809",
+      "kind": "string",
+      "japanese": "\nEdit role functionダイアログ\n",
+      "english": "\nEdit role function dialog\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/role_function_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1810",
+      "kind": "string",
+      "japanese": "EventDelivery type設定をOpen",
+      "english": "Open event delivery type settings",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1811",
+      "kind": "string",
+      "japanese": "Function nameのプレフィックス（任意）",
+      "english": "Function name prefix (optional)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1812",
+      "kind": "string",
+      "japanese": "TransitionのInfoが不足していdoes",
+      "english": "Transition information is incomplete",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/change_applier.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1813",
+      "kind": "string",
+      "japanese": "共有Role functionのEditダイアログ",
+      "english": "Shared role function edit dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/role_function_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1814",
+      "kind": "string",
+      "japanese": "設定Valueをキー名で更新し、即座にSaveする",
+      "english": "Update the setting value by key name and save immediately",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/preferences.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1815",
+      "kind": "comment",
+      "japanese": " Layer nameとType nameの解決",
+      "english": " Resolve layer name and type name",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/code_widget.py"
+      ]
+    },
+    {
+      "id": "s1816",
+      "kind": "comment",
+      "japanese": " Public API None（未実装のため）",
+      "english": " No public API (not implemented)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/parser.py"
+      ]
+    },
+    {
+      "id": "s1817",
+      "kind": "comment",
+      "japanese": " Timer定義を正とする（Type・Unit）",
+      "english": " Treat timer definition as authoritative (type, unit)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/global_defs.py"
+      ]
+    },
+    {
+      "id": "s1818",
+      "kind": "comment",
+      "japanese": " elseTargetステートSelection",
+      "english": " else target state selection",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_builder_dialog.py"
+      ]
+    },
+    {
+      "id": "s1819",
+      "kind": "string",
+      "japanese": "Layer settingsダイアログをOpen",
+      "english": "Open the layer settings dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1820",
+      "kind": "string",
+      "japanese": "Title・Member name・Group名",
+      "english": "Title, member name, group name",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/global_defs_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1821",
+      "kind": "string",
+      "japanese": "ダブルクリックでAction codeをEdit",
+      "english": "Double-click to edit the action code",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1822",
+      "kind": "string",
+      "japanese": "使用Literal（既存からSelection）",
+      "english": "Used literals (select from existing)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/role_function_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1823",
+      "kind": "string",
+      "japanese": "新しいStateTransitionタブをAdd",
+      "english": "Add a new state transition tab",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1824",
+      "kind": "comment",
+      "japanese": " Log・検証・Code generation",
+      "english": " Log / validation / code generation",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ]
+    },
+    {
+      "id": "s1825",
+      "kind": "comment",
+      "japanese": " global_defs.py（依存None）",
+      "english": " global_defs.py (no dependencies)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/__init__.py"
+      ]
+    },
+    {
+      "id": "s1826",
+      "kind": "string",
+      "japanese": "Code generation検証メインクラス",
+      "english": "Code generation validation main class",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/validator.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1827",
+      "kind": "string",
+      "japanese": "Interrupt nameを変更してください",
+      "english": "Please change the interrupt name",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1828",
+      "kind": "string",
+      "japanese": "Queue「{name}」のSizeが不正is",
+      "english": "Queue \"{name}\" has an invalid size",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1829",
+      "kind": "string",
+      "japanese": "Sizeを0より大きいValueにしてください",
+      "english": "Size must be greater than 0",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1830",
+      "kind": "string",
+      "japanese": "elseAction\\n・順序リストで並べ替え",
+      "english": "else action\\n- Reorder via ordered list",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/canvas_widget.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1831",
+      "kind": "string",
+      "japanese": "ダブルクリックで各セルをEditできdoes。",
+      "english": "Double-click to edit each cell.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1832",
+      "kind": "string",
+      "japanese": "層の実RowPriority・初期化順序を設定",
+      "english": "Set layer execution priority and initialization order",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1833",
+      "kind": "string",
+      "japanese": "\n共有Role functionライブラリ\n",
+      "english": "\nShared role function library\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/role_function_library.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1834",
+      "kind": "comment",
+      "japanese": " ===== comment生成 =====",
+      "english": " ===== Comment generation =====",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/config.py"
+      ]
+    },
+    {
+      "id": "s1835",
+      "kind": "comment",
+      "japanese": " TitleNone → Targetを表示",
+      "english": " If no title, show target",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/mermaid_gen.py"
+      ]
+    },
+    {
+      "id": "s1836",
+      "kind": "string",
+      "japanese": "Action定義をプロンプト用テキストに変換",
+      "english": "Convert action definitions to prompt text",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1837",
+      "kind": "string",
+      "japanese": "EventSelection用コンボボックス",
+      "english": "Combo box for event selection",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1838",
+      "kind": "string",
+      "japanese": "GroupSelection用コンボボックス",
+      "english": "Combo box for group selection",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1839",
+      "kind": "string",
+      "japanese": "LiteralのAdd・Edit用ダイアログ",
+      "english": "Dialog for adding / editing literals",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/literal_management_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1840",
+      "kind": "string",
+      "japanese": "StateSelection用コンボボックス",
+      "english": "Combo box for state selection",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1841",
+      "kind": "string",
+      "japanese": "引数名と引数Typeを正しく設定してください",
+      "english": "Please set argument names and types correctly",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1842",
+      "kind": "string",
+      "japanese": "現在のTargetをコンボボックスに反映する",
+      "english": "Reflect the current target in the combo box",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_builder_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1843",
+      "kind": "comment",
+      "japanese": " Code generationモジュール",
+      "english": " Code generation module",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ]
+    },
+    {
+      "id": "s1844",
+      "kind": "comment",
+      "japanese": " External includeファイル",
+      "english": " External include file",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1845",
+      "kind": "comment",
+      "japanese": " Helpers: 文字列/リストの正規化",
+      "english": " Helpers: string / list normalization",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/xml_io.py"
+      ]
+    },
+    {
+      "id": "s1846",
+      "kind": "comment",
+      "japanese": " ★ Warning収集ハンドラをアタッチ",
+      "english": " Attach warning collection handler",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ]
+    },
+    {
+      "id": "s1847",
+      "kind": "comment",
+      "japanese": " 定義済みキーなら設定とSaveをRowう",
+      "english": " If key is defined, apply and save the setting",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/preferences.py"
+      ]
+    },
+    {
+      "id": "s1848",
+      "kind": "string",
+      "japanese": "Event flags 一括登録ダイアログ",
+      "english": "Bulk registration dialog for event flags",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/global_defs_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1849",
+      "kind": "string",
+      "japanese": "Global variables 一括登録",
+      "english": "Bulk registration of global variables",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/global_defs_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1850",
+      "kind": "string",
+      "japanese": "Role function .c ファイル",
+      "english": "Role function .c file",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1851",
+      "kind": "string",
+      "japanese": "TargetのStateを定義してください",
+      "english": "Please define the target state",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1852",
+      "kind": "string",
+      "japanese": "Timer「{name}」の乗数が不正is",
+      "english": "Timer \"{name}\" has an invalid multiplier",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1853",
+      "kind": "string",
+      "japanese": "TypeSelection用コンボボックス",
+      "english": "Combo box for type selection",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1854",
+      "kind": "string",
+      "japanese": "メインTimerはDeleteできません。",
+      "english": "The main timer cannot be deleted.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1855",
+      "kind": "string",
+      "japanese": "ユーザー定義Type（Struct）を管理",
+      "english": "Manage user-defined types (structs)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1856",
+      "kind": "string",
+      "japanese": "現在の設定をJSONファイルにSaveする",
+      "english": "Save current settings to a JSON file",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/preferences.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1857",
+      "kind": "string",
+      "japanese": "\nActionEditD&Dパッケージ\n",
+      "english": "\nAction edit D&D package\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/__init__.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1858",
+      "kind": "comment",
+      "japanese": " ---- Warning表示 ----",
+      "english": " ---- Warning display ----",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ]
+    },
+    {
+      "id": "s1859",
+      "kind": "comment",
+      "japanese": " ConditionテンプレートをAdd",
+      "english": " Add condition template",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ]
+    },
+    {
+      "id": "s1860",
+      "kind": "comment",
+      "japanese": " Deduplication（順序保持）",
+      "english": " Deduplication (order-preserving)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ]
+    },
+    {
+      "id": "s1861",
+      "kind": "comment",
+      "japanese": " FlowItemを作成してInsert",
+      "english": " Create and insert FlowItem",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/flow_widget.py"
+      ]
+    },
+    {
+      "id": "s1862",
+      "kind": "comment",
+      "japanese": " Role function（bool）",
+      "english": " Role function (bool)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_builder_dialog.py"
+      ]
+    },
+    {
+      "id": "s1863",
+      "kind": "comment",
+      "japanese": " TargetステートSelection",
+      "english": " Target state selection",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_builder_dialog.py"
+      ]
+    },
+    {
+      "id": "s1864",
+      "kind": "string",
+      "japanese": "1つの基準TimerのEditタブを作成",
+      "english": "Create an edit tab for one base timer",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1865",
+      "kind": "string",
+      "japanese": "Code generationを実Row",
+      "english": "Execute code generation",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1866",
+      "kind": "string",
+      "japanese": "Condition付きAction一覧:",
+      "english": "Conditional action list:",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1867",
+      "kind": "string",
+      "japanese": "Event nameからRow番号を探す",
+      "english": "Find the row number from the event name",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_delivery_settings_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1868",
+      "kind": "string",
+      "japanese": "Event nameが指定されていません",
+      "english": "Event name is not specified",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/change_applier.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1869",
+      "kind": "string",
+      "japanese": "Return typeを設定してください",
+      "english": "Please set the return type",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1870",
+      "kind": "string",
+      "japanese": "Role functionをDelete",
+      "english": "Delete role function",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1871",
+      "kind": "string",
+      "japanese": "TransitionをAddしてください",
+      "english": "Please add a transition",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1872",
+      "kind": "string",
+      "japanese": "システムGlobal variables",
+      "english": "System global variables",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/system_global_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1873",
+      "kind": "string",
+      "japanese": "ユーザー定義Type（Structなど）",
+      "english": "User-defined types (structs, etc.)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/global_defs.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1874",
+      "kind": "string",
+      "japanese": "列に応じてEditダイアログを切り替える",
+      "english": "Switch the edit dialog based on the column",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/dialogs.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1875",
+      "kind": "comment",
+      "japanese": " Event name（読み取り専用）",
+      "english": " Event name (read-only)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_delivery_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1876",
+      "kind": "comment",
+      "japanese": " Role functionセクション",
+      "english": " Role function section",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/palette_widget.py"
+      ]
+    },
+    {
+      "id": "s1877",
+      "kind": "comment",
+      "japanese": " ★ Warningがあれば最後に表示",
+      "english": " Show warnings last if any",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ]
+    },
+    {
+      "id": "s1878",
+      "kind": "comment",
+      "japanese": " ★ 現在のelseTargetを渡す",
+      "english": " Pass the current else target",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/dialog.py"
+      ]
+    },
+    {
+      "id": "s1879",
+      "kind": "comment",
+      "japanese": " ウィンドウ・プレビューのSize定数",
+      "english": " Window / preview size constants",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/config.py"
+      ]
+    },
+    {
+      "id": "s1880",
+      "kind": "comment",
+      "japanese": " 使用Global variables",
+      "english": " Used global variables",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/role_function_edit_dialog.py"
+      ]
+    },
+    {
+      "id": "s1881",
+      "kind": "string",
+      "japanese": "Layer settingsダイアログ",
+      "english": "Layer settings dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/layer_settings_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1882",
+      "kind": "string",
+      "japanese": "Role function（bool）",
+      "english": "Role function (bool)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_builder_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1883",
+      "kind": "string",
+      "japanese": "このノードをDeleteしdoesか？",
+      "english": "Delete this node?",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1884",
+      "kind": "string",
+      "japanese": "ユーザー定義TypeEditダイアログ",
+      "english": "User-defined type edit dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1885",
+      "kind": "string",
+      "japanese": "ユーザー定義TypeをAdd・Edit",
+      "english": "Add / edit user-defined types",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1886",
+      "kind": "string",
+      "japanese": "例: Driver（空なら層None）",
+      "english": "Example: Driver (empty = no layer)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/role_function_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1887",
+      "kind": "string",
+      "japanese": "新しいTimer名を入力してください:",
+      "english": "Enter a new timer name:",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1888",
+      "kind": "string",
+      "japanese": "派生TimerVariableEdit",
+      "english": "Edit derived timer variable",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1889",
+      "kind": "comment",
+      "japanese": " Add:現在のelseTarget",
+      "english": " Added: current else target",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_builder_dialog.py"
+      ]
+    },
+    {
+      "id": "s1890",
+      "kind": "comment",
+      "japanese": " GroupがNot setなら補完",
+      "english": " If group is unset, fill in",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/global_defs.py"
+      ]
+    },
+    {
+      "id": "s1891",
+      "kind": "comment",
+      "japanese": " Layer name（Edit可）",
+      "english": " Layer name (editable)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/layer_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1892",
+      "kind": "comment",
+      "japanese": " Output settingsタブ",
+      "english": " Output settings tab",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1893",
+      "kind": "comment",
+      "japanese": " Priority（スピンボックス）",
+      "english": " Priority (spin box)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/layer_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1894",
+      "kind": "comment",
+      "japanese": " 右側:Condition式Edit",
+      "english": " Right pane: condition expression edit",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_edit_dialog.py"
+      ]
+    },
+    {
+      "id": "s1895",
+      "kind": "comment",
+      "japanese": " 実RowPriority（1〜9）",
+      "english": " Execution priority (1-9)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/state_machine.py"
+      ]
+    },
+    {
+      "id": "s1896",
+      "kind": "comment",
+      "japanese": " 層のDescription（任意）",
+      "english": " Layer description (optional)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/state_machine.py"
+      ]
+    },
+    {
+      "id": "s1897",
+      "kind": "string",
+      "japanese": "Condition付きAction数",
+      "english": "Number of conditional actions",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1898",
+      "kind": "string",
+      "japanese": "Flag nameを変更してください",
+      "english": "Please change the flag name",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1899",
+      "kind": "string",
+      "japanese": "Interrupt name（任意）",
+      "english": "Interrupt name (optional)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1900",
+      "kind": "string",
+      "japanese": "Role function検証クラス",
+      "english": "Role function validator class",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/items/role_function_validator.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1901",
+      "kind": "string",
+      "japanese": "StructメンバEditダイアログ",
+      "english": "Struct member edit dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1902",
+      "kind": "string",
+      "japanese": "Type nameを変更してください",
+      "english": "Please change the type name",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1903",
+      "kind": "string",
+      "japanese": "使用Global variables",
+      "english": "Used global variables",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/role_function_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1904",
+      "kind": "string",
+      "japanese": "新規Role function...",
+      "english": "New role function...",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/action_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1905",
+      "kind": "string",
+      "japanese": "\nRole function検証\n",
+      "english": "\nRole function validation\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/items/role_function_validator.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1906",
+      "kind": "comment",
+      "japanese": " Add属性は存在する場合のみ設定",
+      "english": " Set additional attributes only if they exist",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/xml_io.py"
+      ]
+    },
+    {
+      "id": "s1907",
+      "kind": "comment",
+      "japanese": " Delivery typeコンボ",
+      "english": " Delivery type combo",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_delivery_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1908",
+      "kind": "comment",
+      "japanese": " ノードのSizeと表示内容を設定",
+      "english": " Set node size and displayed content",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/canvas_widget.py"
+      ]
+    },
+    {
+      "id": "s1909",
+      "kind": "string",
+      "japanese": "ConditionをEdit...",
+      "english": "Edit condition...",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/edit_dialogs.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1910",
+      "kind": "string",
+      "japanese": "Output settingsタブ",
+      "english": "Output settings tab",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1911",
+      "kind": "string",
+      "japanese": "Role functionをAdd",
+      "english": "Add role function",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1912",
+      "kind": "string",
+      "japanese": "TransitionをDelete",
+      "english": "Delete transition",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1913",
+      "kind": "string",
+      "japanese": "ユーザー定義Type管理ダイアログ",
+      "english": "User-defined type management dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1914",
+      "kind": "string",
+      "japanese": "使用するかDeleteしてください",
+      "english": "Please use it or delete it",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1915",
+      "kind": "string",
+      "japanese": "生成されたCodeがYesません。",
+      "english": "No code was generated.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1916",
+      "kind": "comment",
+      "japanese": " Event nameEdit欄",
+      "english": " Event name edit field",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_builder_dialog.py"
+      ]
+    },
+    {
+      "id": "s1917",
+      "kind": "comment",
+      "japanese": " Pending event制限",
+      "english": " Pending event limit",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1918",
+      "kind": "comment",
+      "japanese": " Priorityの昇順でソート",
+      "english": " Sort by priority ascending",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/layer_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1919",
+      "kind": "comment",
+      "japanese": " Priorityの重複チェック",
+      "english": " Priority duplicate check",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/layer_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1920",
+      "kind": "comment",
+      "japanese": " Title（直接Edit可能）",
+      "english": " Title (directly editable)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_definition_dialog.py"
+      ]
+    },
+    {
+      "id": "s1921",
+      "kind": "comment",
+      "japanese": " 基準TimerVariable",
+      "english": " Base timer variable",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/global_defs.py"
+      ]
+    },
+    {
+      "id": "s1922",
+      "kind": "comment",
+      "japanese": " 未定義の属性は通常のError",
+      "english": " Undefined attributes raise a normal error",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/preferences.py"
+      ]
+    },
+    {
+      "id": "s1923",
+      "kind": "comment",
+      "japanese": " 派生TimerVariable",
+      "english": " Derived timer variable",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/global_defs.py"
+      ]
+    },
+    {
+      "id": "s1924",
+      "kind": "string",
+      "japanese": "Event flags 一括登録",
+      "english": "Bulk registration of event flags",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/global_defs_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1925",
+      "kind": "string",
+      "japanese": "EventSelection画面",
+      "english": "Event selection screen",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/palette_widget.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1926",
+      "kind": "string",
+      "japanese": "Group名を入力してください。",
+      "english": "Please enter a group name.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1927",
+      "kind": "string",
+      "japanese": "データVariable name",
+      "english": "Data variable name",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_definition_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1928",
+      "kind": "string",
+      "japanese": "全基準Timerをタブとして表示",
+      "english": "Display all base timers as tabs",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1929",
+      "kind": "string",
+      "japanese": "正しいTypeを指定してください",
+      "english": "Please specify a valid type",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1930",
+      "kind": "string",
+      "japanese": "派生TimerVariable:",
+      "english": "Derived timer variable:",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1931",
+      "kind": "comment",
+      "japanese": " Nameが変わった場合の処理",
+      "english": " Handler when the name changes",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_definition_dialog.py"
+      ]
+    },
+    {
+      "id": "s1932",
+      "kind": "comment",
+      "japanese": " Source（読み取り専用）",
+      "english": " Source (read-only)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_delivery_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1933",
+      "kind": "comment",
+      "japanese": " ★ 現在のTargetを渡す",
+      "english": " Pass the current target",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/dialog.py"
+      ]
+    },
+    {
+      "id": "s1934",
+      "kind": "string",
+      "japanese": "EventのSourceレイヤ",
+      "english": "Event source layer",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/model.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1935",
+      "kind": "string",
+      "japanese": "ダブルクリックでD&DEdit",
+      "english": "Double-click for D&D editing",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/dialogs.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1936",
+      "kind": "string",
+      "japanese": "ビジュアルEditウィジェット",
+      "english": "Visual edit widget",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/flow_widget.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1937",
+      "kind": "comment",
+      "japanese": " Add:現在のTarget",
+      "english": " Added: current target",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_builder_dialog.py"
+      ]
+    },
+    {
+      "id": "s1938",
+      "kind": "comment",
+      "japanese": " Literalizeボタン",
+      "english": " Literalize button",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_builder_dialog.py"
+      ]
+    },
+    {
+      "id": "s1939",
+      "kind": "comment",
+      "japanese": " Title入力ウィジェット",
+      "english": " Title input widget",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_edit_dialog.py"
+      ]
+    },
+    {
+      "id": "s1940",
+      "kind": "comment",
+      "japanese": " Title（読み取り専用）",
+      "english": " Title (read-only)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_delivery_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1941",
+      "kind": "comment",
+      "japanese": " プロジェクトSave/読込",
+      "english": " Project save / load",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/xml_io.py"
+      ]
+    },
+    {
+      "id": "s1942",
+      "kind": "comment",
+      "japanese": " プロジェクトSave・読込",
+      "english": " Project save / load",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ]
+    },
+    {
+      "id": "s1943",
+      "kind": "string",
+      "japanese": "Nameを入力してください。",
+      "english": "Please enter a name.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/libcntrl/literal_management_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1944",
+      "kind": "string",
+      "japanese": "TransitionをAdd",
+      "english": "Add transition",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1945",
+      "kind": "string",
+      "japanese": "メンバーをAddしてください",
+      "english": "Please add a member",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/validation_rules.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1946",
+      "kind": "string",
+      "japanese": "ユーザー定義TypeEdit",
+      "english": "Edit user-defined type",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1947",
+      "kind": "string",
+      "japanese": "基準TimerEdit...",
+      "english": "Edit base timer...",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1948",
+      "kind": "string",
+      "japanese": "生成CodeをSave...",
+      "english": "Save generated code...",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1949",
+      "kind": "comment",
+      "japanese": " Tab名（Edit不可）",
+      "english": " Tab name (not editable)",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/layer_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1950",
+      "kind": "comment",
+      "japanese": " Warning収集クラス",
+      "english": " Warning collector class",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ]
+    },
+    {
+      "id": "s1951",
+      "kind": "comment",
+      "japanese": " ★ AddTimer基準",
+      "english": " Add timer base",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/global_defs.py"
+      ]
+    },
+    {
+      "id": "s1952",
+      "kind": "comment",
+      "japanese": " デバイス・Timer設定",
+      "english": " Device / timer settings",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ]
+    },
+    {
+      "id": "s1953",
+      "kind": "string",
+      "japanese": "GroupAddダイアログ",
+      "english": "Group add dialog",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1954",
+      "kind": "string",
+      "japanese": "StructメンバEdit",
+      "english": "Struct member edit",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1955",
+      "kind": "string",
+      "japanese": "Title入力ウィジェット",
+      "english": "Title input widget",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1956",
+      "kind": "string",
+      "japanese": "【使用可能なAction】",
+      "english": "[Available actions]",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1957",
+      "kind": "string",
+      "japanese": "カスタムType検証クラス",
+      "english": "Custom type validator class",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/items/custom_type_validator.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1958",
+      "kind": "string",
+      "japanese": "生成Codeを直接Save",
+      "english": "Directly save generated code",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1959",
+      "kind": "string",
+      "japanese": "\nカスタムType検証\n",
+      "english": "\nCustom type validation\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/items/custom_type_validator.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1960",
+      "kind": "string",
+      "japanese": "\n変更Action定義\n",
+      "english": "\nChange action definitions\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/change_actions.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1961",
+      "kind": "comment",
+      "japanese": " Insert位置を決定",
+      "english": " Determine insertion position",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/flow_widget.py"
+      ]
+    },
+    {
+      "id": "s1962",
+      "kind": "comment",
+      "japanese": " LiteralをAdd",
+      "english": " Add literal",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ]
+    },
+    {
+      "id": "s1963",
+      "kind": "comment",
+      "japanese": " ★ Add: 使用記録",
+      "english": " Added: usage record",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/global_defs.py"
+      ]
+    },
+    {
+      "id": "s1964",
+      "kind": "comment",
+      "japanese": " デフォルトTarget",
+      "english": " Default target",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/flow_widget.py"
+      ]
+    },
+    {
+      "id": "s1965",
+      "kind": "comment",
+      "japanese": " 派生Timer用ボタン",
+      "english": " Derived timer button",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ]
+    },
+    {
+      "id": "s1966",
+      "kind": "comment",
+      "japanese": " 設定InfoGroup",
+      "english": " Settings info group",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ]
+    },
+    {
+      "id": "s1967",
+      "kind": "string",
+      "japanese": "Insertするシンボル",
+      "english": "Symbol to insert",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/condition_builder_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1968",
+      "kind": "string",
+      "japanese": "Timer設定をOpen",
+      "english": "Open timer settings",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1969",
+      "kind": "string",
+      "japanese": "VariableをAdd",
+      "english": "Add variable",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1970",
+      "kind": "string",
+      "japanese": "ごConfirmください",
+      "english": "Please confirm",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/keywords.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1971",
+      "kind": "string",
+      "japanese": "デフォルトTarget:",
+      "english": "Default target:",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/flow_widget.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1972",
+      "kind": "string",
+      "japanese": "ユーザー定義Type管理",
+      "english": "User-defined type management",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1973",
+      "kind": "string",
+      "japanese": "新しいGroupをAdd",
+      "english": "Add a new group",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1974",
+      "kind": "string",
+      "japanese": "新しいGroup名を入力",
+      "english": "Enter a new group name",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1975",
+      "kind": "string",
+      "japanese": "設定Infoラベルを更新",
+      "english": "Update the settings info label",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1976",
+      "kind": "comment",
+      "japanese": " OS typeラベル",
+      "english": " OS type label",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ]
+    },
+    {
+      "id": "s1977",
+      "kind": "comment",
+      "japanese": " Priority付き",
+      "english": " With priority",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_queue_dialog.py"
+      ]
+    },
+    {
+      "id": "s1978",
+      "kind": "comment",
+      "japanese": " 基準Timer用タブ",
+      "english": " Base timer tab",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ]
+    },
+    {
+      "id": "s1979",
+      "kind": "string",
+      "japanese": "Confirmしました",
+      "english": "Confirmed",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/keywords.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s1980",
+      "kind": "string",
+      "japanese": "システムTimer基準",
+      "english": "System timer base",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/sample_data.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1981",
+      "kind": "string",
+      "japanese": "プロジェクトをSave",
+      "english": "Save project",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1982",
+      "kind": "string",
+      "japanese": "基準TimerをAdd",
+      "english": "Add base timer",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1983",
+      "kind": "string",
+      "japanese": "生成CodeをSave",
+      "english": "Save generated code",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1984",
+      "kind": "comment",
+      "japanese": " Actionボタン",
+      "english": " Action buttons",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ]
+    },
+    {
+      "id": "s1985",
+      "kind": "comment",
+      "japanese": " Group名の取得",
+      "english": " Get group name",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/global_defs.py"
+      ]
+    },
+    {
+      "id": "s1986",
+      "kind": "comment",
+      "japanese": " Sourceレイヤ",
+      "english": " Source layer",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_definition_dialog.py"
+      ]
+    },
+    {
+      "id": "s1987",
+      "kind": "comment",
+      "japanese": " comment設定",
+      "english": " Comment settings",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s1988",
+      "kind": "string",
+      "japanese": "1msTimer満了",
+      "english": "1ms timer expired",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/sample_data.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1989",
+      "kind": "string",
+      "japanese": "1ms周期Timer",
+      "english": "1ms period timer",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/sample_data.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1990",
+      "kind": "string",
+      "japanese": "Priority付き",
+      "english": "With priority",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_queue_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1991",
+      "kind": "string",
+      "japanese": "Timer検証クラス",
+      "english": "Timer validator class",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/items/timer_validator.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1992",
+      "kind": "string",
+      "japanese": "タブがYesません。",
+      "english": "There are no tabs.",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1993",
+      "kind": "string",
+      "japanese": "変更Action種別",
+      "english": "Change action kind",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/change_actions.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1994",
+      "kind": "string",
+      "japanese": "検証Severity",
+      "english": "Validation severity",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/models.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1995",
+      "kind": "string",
+      "japanese": "現在の設定をSave",
+      "english": "Save current settings",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1996",
+      "kind": "string",
+      "japanese": "生成CodeSave",
+      "english": "Save generated code",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1997",
+      "kind": "string",
+      "japanese": "高速1msTimer",
+      "english": "High-speed 1ms timer",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/sample_data.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s1998",
+      "kind": "string",
+      "japanese": "\nTimer検証\n",
+      "english": "\nTimer validation\n",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/items/timer_validator.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s1999",
+      "kind": "string",
+      "japanese": "Close時の処理",
+      "english": "Handler on close",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\"\"\""
+    },
+    {
+      "id": "s2000",
+      "kind": "string",
+      "japanese": "EventをAdd",
+      "english": "Add event",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s2001",
+      "kind": "string",
+      "japanese": "Sourceレイヤ",
+      "english": "Source layer",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_definition_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2002",
+      "kind": "string",
+      "japanese": "StateをAdd",
+      "english": "Add state",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s2003",
+      "kind": "string",
+      "japanese": "メンバDelete",
+      "english": "Delete member",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2004",
+      "kind": "string",
+      "japanese": "新しいAction",
+      "english": "New action",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s2005",
+      "kind": "string",
+      "japanese": "新しいTarget",
+      "english": "New target",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s2006",
+      "kind": "string",
+      "japanese": "高速Timer基準",
+      "english": "High-speed timer base",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/sample_data.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2007",
+      "kind": "comment",
+      "japanese": " Editボタン",
+      "english": " Edit button",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ]
+    },
+    {
+      "id": "s2008",
+      "kind": "comment",
+      "japanese": " Insert先",
+      "english": " Insertion target",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s2009",
+      "kind": "comment",
+      "japanese": " Log設定タブ",
+      "english": " Log settings tab",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ]
+    },
+    {
+      "id": "s2010",
+      "kind": "comment",
+      "japanese": " Output先",
+      "english": " Output destination",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_dialog.py"
+      ]
+    },
+    {
+      "id": "s2011",
+      "kind": "string",
+      "japanese": "FlagをAdd",
+      "english": "Add flag",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s2012",
+      "kind": "string",
+      "japanese": "Timer名変更",
+      "english": "Rename timer",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2013",
+      "kind": "string",
+      "japanese": "Action名",
+      "english": "Action name",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/validate/data/action_definitions.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s2014",
+      "kind": "string",
+      "japanese": "Array方式",
+      "english": "Array style",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "codegen/config.py"
+      ],
+      "prefix": "",
+      "quote": "'"
+    },
+    {
+      "id": "s2015",
+      "kind": "string",
+      "japanese": "Insert先",
+      "english": "Insertion target",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/code_generation_settings_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2016",
+      "kind": "string",
+      "japanese": "RowをAdd",
+      "english": "Add row",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/global_defs_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2017",
+      "kind": "string",
+      "japanese": "Timer満了",
+      "english": "Timer expired",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/sample_data.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2018",
+      "kind": "string",
+      "japanese": "Timer設定",
+      "english": "Timer settings",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/interrupt_handler_edit_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2019",
+      "kind": "string",
+      "japanese": "データType",
+      "english": "Data type",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/event_definition_dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2020",
+      "kind": "string",
+      "japanese": "フローEdit",
+      "english": "Flow edit",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/transition_editor_direct/dialog.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2021",
+      "kind": "string",
+      "japanese": "メンバEdit",
+      "english": "Edit member",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2022",
+      "kind": "string",
+      "japanese": "表示Title",
+      "english": "Display title",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/dialogs.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2023",
+      "kind": "string",
+      "japanese": "Errorへ",
+      "english": "To error",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable/sample_data.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2024",
+      "kind": "string",
+      "japanese": "Group名",
+      "english": "Group name",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2025",
+      "kind": "string",
+      "japanese": "Type定義",
+      "english": "Type definitions",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/main_window.py"
+      ],
+      "prefix": "",
+      "quote": "\""
+    },
+    {
+      "id": "s2026",
+      "kind": "string",
+      "japanese": "メンバAdd",
+      "english": "Add member",
+      "category": "NEW",
+      "occurrences": 1,
+      "files": [
+        "statable_gui/common_widgets.py"
+      ],
+      "prefix": "",
+      "quote": "\""
     }
   ]
 }

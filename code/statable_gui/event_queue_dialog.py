@@ -1,4 +1,4 @@
-"""Event queue definitionダイアログ"""
+"""Event queue definition dialog"""
 
 from typing import Optional, List
 
@@ -63,7 +63,7 @@ class EventQueueEditDialog(QDialog):
             self.type_combo.set_current_text(queue_def.element_type)
         form.addRow("Element type", self.type_combo)
 
-        # Related eventsSelectionリスト
+        # Related event selection list
         self.event_list = QListWidget()
         for event_name in self.event_names:
             item = QListWidgetItem(event_name)
@@ -72,10 +72,10 @@ class EventQueueEditDialog(QDialog):
             self.event_list.addItem(item)
         form.addRow("Related events", self.event_list)
 
-        # Priority付き
+        # With priority
         self.priority_check = QCheckBox()
         self.priority_check.setChecked(queue_def.priority_enabled if queue_def else False)
-        form.addRow("Priority付き", self.priority_check)
+        form.addRow("With priority", self.priority_check)
 
         # Interrupt protection
         self.safe_check = QCheckBox()
@@ -124,7 +124,7 @@ class EventQueueEditDialog(QDialog):
 
 
 class EventQueueDefsDialog(QDialog):
-    """Event queue definition一覧ダイアログ"""
+    """Event queue definition list dialog"""
     def __init__(self, global_defs: GlobalDefinitions, event_names: Optional[List[str]] = None, parent=None):
         super().__init__(parent)
         self.global_defs = global_defs
@@ -138,12 +138,12 @@ class EventQueueDefsDialog(QDialog):
         search_layout = QHBoxLayout()
         search_layout.addWidget(QLabel("Search (prefix match):"))
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Title・Queue name・Description")
+        self.search_edit.setPlaceholderText("Title, queue name, description")
         self.search_edit.textChanged.connect(self.refresh_table)
         search_layout.addWidget(self.search_edit)
         layout.addLayout(search_layout)
 
-        # Listテーブル（Title列Add・直接Edit可能）
+        # List table (title column added / direct edit)
         self.table = DoubleClickTable(0, 9)
         self.table.setHorizontalHeaderLabels(["Title", "Queue name", "Size", "Element type", "Related events", "Priority", "Interrupt protection", "RTOS", "Description"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -180,7 +180,7 @@ class EventQueueDefsDialog(QDialog):
             self.table.insertRow(row)
 
             title_item = QTableWidgetItem(q.title)
-            title_item.setToolTip("このQueueのTitle。直接Editできdoes。")
+            title_item.setToolTip("Title of this queue. Can be edited directly.")
             self.table.setItem(row, 0, title_item)
 
             self.table.setItem(row, 1, QTableWidgetItem(q.name))

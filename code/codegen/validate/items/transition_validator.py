@@ -1,11 +1,11 @@
 # codegen/validate/items/transition_validator.py
 """
-Transition検証
+Transition validation
 
-【v1.8 §11.2 #6】
-  - StateValidator と logger Outputを統一
-  - __init__ / validate のStart・CompletionログをAdd
-  - ルール実Rowを try/except で囲み、失敗時は logger.error で記録
+[v1.8 section 11.2 #6]
+  - Unified logger output with StateValidator
+  - Added start / completion logs to __init__ / validate
+  - Wrapped rule execution in try/except; on failure, log via logger.error
 """
 
 import sys

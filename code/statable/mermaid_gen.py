@@ -2,14 +2,14 @@ from .state_machine import StateMachine
 
 
 # ============================================================
-# Mermaid ラベル用サニタイズ（v2.0 Add）
+# Mermaid label sanitization (v2.0 added)
 # ============================================================
 #
 # Characters causing problems in Mermaid labels:
 #
 #   : misidentified as label separator
 #        Example: \"Halt --> Active : RETRY\"
-#        → Title内の ":" でパースError
+#        -> Parse error due to ":" in the title
 #
 #   "[" "]"
 #        may conflict with condition block notation
@@ -17,7 +17,7 @@ from .state_machine import StateMachine
 #
 #   quote misidentified as label end
 #
-#   "\n" ラベルは 1 RowのみEnabled → 空白に正規化
+#   "\n" label is valid only on one line -> normalized to space
 #
 #   backquote may be misidentified as code block
 #
@@ -34,15 +34,15 @@ _MERMAID_LABEL_REPLACEMENTS = (
 
 def _sanitize_label(text: str) -> str:
     """
-    Mermaid のラベル文字列を安全化する。
+    Sanitize the Mermaid label string.
 
-    ユーザー入力のTitle・Event name・Condition式に
-    Mermaid のメタ文字が含まれていても、パースErrorを
-    起こさないように置換する。
+    Even if user-entered title, event name, or condition expression
+    contains Mermaid meta characters, replace them so that
+    no parse error occurs.
 
-    例:
+    Example:
       "RETRY: battery_voltage >600"
-        → "RETRY: battery_voltage >600"
+        -> "RETRY: battery_voltage >600"
     """
     if not text:
         return ""
@@ -54,7 +54,7 @@ def _sanitize_label(text: str) -> str:
 
 
 def _truncate_condition(condition: str, max_chars: int = 50) -> str:
-    """長いState transition conditionを省略表示する（改Rowは先頭Rowのみ）"""
+    """Show long state transition conditions abbreviated (only the first line if multiline)"""
     if not condition:
         return ""
 
@@ -74,10 +74,10 @@ def _truncate_condition(condition: str, max_chars: int = 50) -> str:
 
 def generate_mermaid(sm: StateMachine) -> str:
     """
-    StateMachine から Mermaid stateDiagram-v2 形式の文字列を生成する。
+    Generate a Mermaid stateDiagram-v2 string from a StateMachine.
 
-    ラベル（Title / Event name / Condition式）はすべて
-    _sanitize_label で正規化してパースErrorを防止する。
+    Labels (title / event name / condition expression) are all
+    normalized by _sanitize_label to prevent parse errors.
     """
     lines = ["stateDiagram-v2", "    direction LR"]
 
@@ -87,13 +87,13 @@ def generate_mermaid(sm: StateMachine) -> str:
     for t in sm.transitions:
         label_parts = []
 
-        # ---- Title（無題Transition以外） ----
+        # ---- Title (other than untitled transition) ----
         title_raw = t.title or ""
         title_safe = _sanitize_label(title_raw)
         if title_safe and title_safe != "(untitled transition)":
             label_parts.append(title_safe)
         else:
-            # TitleNone → Targetを表示
+            # If no title, show target
             if t.target:
                 label_parts.append(_sanitize_label(t.target))
             else:

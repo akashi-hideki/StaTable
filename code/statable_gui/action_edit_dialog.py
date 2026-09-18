@@ -45,7 +45,7 @@ class ActionEditDialog(QDialog):
         insert_role_btn = QPushButton("Insert")
         insert_role_btn.clicked.connect(self.insert_role_function)
         role_bar.addWidget(insert_role_btn)
-        new_role_btn = QPushButton("新規Role function...")
+        new_role_btn = QPushButton("New role function...")
         new_role_btn.clicked.connect(self.add_new_role_function)
         role_bar.addWidget(new_role_btn)
         main_layout.addLayout(role_bar)

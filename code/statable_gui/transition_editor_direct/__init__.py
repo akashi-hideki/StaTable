@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/__init__.py
 """
-ActionEditD&Dパッケージ
+Action edit D&D package
 """
 
 from .draft import FlowItem, TransitionParams, ActionDraft, SystemGlobal

@@ -13,7 +13,7 @@ from .edit_dialogs import FunctionEditDialog, TransitionEditDialog
 
 
 class FlowListWidget(QListWidget):
-    """D&DとRowInsertをサポートするフローリスト"""
+    """Flow list supporting D&D and row insertion"""
     MIME_TYPE = "application/x-flow-item"
 
     def __init__(self, parent=None):
@@ -42,7 +42,7 @@ class FlowListWidget(QListWidget):
             item_type = data.get("item_type", "function")
             name = data.get("name", "")
 
-            # Insert位置を決定
+            # Determine insertion position
             drop_pos = event.position().toPoint()
             item_at_pos = self.itemAt(drop_pos)
             if item_at_pos is not None:
@@ -54,7 +54,7 @@ class FlowListWidget(QListWidget):
             else:
                 insert_row = self.count()
 
-            # FlowItemを作成してInsert
+            # Create and insert FlowItem
             flow_item = FlowItem(item_type=item_type, name=name)
             list_item = QListWidgetItem(name)
             list_item.setData(Qt.UserRole, flow_item)
@@ -74,7 +74,7 @@ class FlowListWidget(QListWidget):
 
 
 class FlowWidget(QWidget):
-    """ビジュアルEditウィジェット"""
+    """Visual edit widget"""
 
     draft_updated = Signal()
 
@@ -89,7 +89,7 @@ class FlowWidget(QWidget):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Actionフロー（D&Dで配置・Double-click to edit）"))
+        layout.addWidget(QLabel("Action flow (place via D&D, double-click to edit)"))
 
         # Custom list
         self.flow_list = FlowListWidget()
@@ -97,9 +97,9 @@ class FlowWidget(QWidget):
         self.flow_list.itemDoubleClicked.connect(self._on_item_double_clicked)
         layout.addWidget(self.flow_list)
 
-        # デフォルトTarget
+        # Default target
         default_layout = QHBoxLayout()
-        default_layout.addWidget(QLabel("デフォルトTarget:"))
+        default_layout.addWidget(QLabel("Default target:"))
         self.default_target_combo = QComboBox()
         self.default_target_combo.setEditable(True)
         self.default_target_combo.addItems(self.states)

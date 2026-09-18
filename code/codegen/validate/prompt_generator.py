@@ -2,8 +2,8 @@
 """
 AI prompt generation class
 
-【v1.8 §11.2 #7】
-  - generate_review_prompt をDelete（未使用・呼び出し元None）
+[v1.8 section 11.2 #7]
+  - Removed generate_review_prompt (unused, no callers)
 """
 
 import sys
@@ -53,7 +53,7 @@ class AIPromptGenerator:
 
     def _format_validation(self, validation_result) -> str:
         if not validation_result or not validation_result.issues:
-            return "### 内部Validation result\n問題None"
+            return "### Internal validation result\nNo issues"
         lines = ["### Problems detected by internal validation"]
         for issue in validation_result.issues:
             lines.append(f"- [{issue.severity.value.upper()}] {issue.message}")

@@ -1,4 +1,4 @@
-"""Event delivery settingsダイアログ"""
+"""Event delivery settings dialog"""
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -80,22 +80,22 @@ class EventDeliverySettingsDialog(QDialog):
             row = self.table.rowCount()
             self.table.insertRow(row)
 
-            # Title（読み取り専用）
+            # Title (read-only)
             title_item = QTableWidgetItem(event.title)
             title_item.setFlags(title_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, 0, title_item)
 
-            # Event name（読み取り専用）
+            # Event name (read-only)
             name_item = QTableWidgetItem(event.name if event.name else "(completion)")
             name_item.setFlags(name_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, 1, name_item)
 
-            # Source（読み取り専用）
+            # Source (read-only)
             source_item = QTableWidgetItem(event.source_layer.value)
             source_item.setFlags(source_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, 2, source_item)
 
-            # Delivery typeコンボ
+            # Delivery type combo
             combo = QComboBox()
             combo.addItem("DIRECT", EventDeliveryType.DIRECT)
             combo.addItem("QUEUE", EventDeliveryType.QUEUE)
@@ -142,7 +142,7 @@ class EventDeliverySettingsDialog(QDialog):
         return False
 
     def _find_row_by_event_name(self, event_name: str) -> int:
-        """Event nameからRow番号を探す"""
+        """Find the row number from the event name"""
         for row in range(self.table.rowCount()):
             item = self.table.item(row, 1)
             if item and item.text() == event_name:
@@ -150,7 +150,7 @@ class EventDeliverySettingsDialog(QDialog):
         return -1
 
     def _on_delivery_changed(self, row: int):
-        """Delivery typeコンボ変更時にConverted列を更新"""
+        """Update the converted column when the delivery type combo changes"""
         self._update_converted_column()
 
     def _update_converted_column(self):

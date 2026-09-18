@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/system_global_dialog.py
 """
-システムGlobal variables 別画面
+System global variables (separate screen)
 """
 
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QInputDialog
@@ -12,7 +12,7 @@ class SystemGlobalDialog(QDialog):
     def __init__(self, draft, parent=None):
         super().__init__(parent)
         self.draft = draft
-        self.setWindowTitle("システムGlobal variables")
+        self.setWindowTitle("System global variables")
         self.setMinimumSize(400, 300)
 
         layout = QVBoxLayout(self)

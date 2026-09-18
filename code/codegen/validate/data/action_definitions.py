@@ -1,10 +1,10 @@
 # codegen/validate/data/action_definitions.py
 """
-Action定義（データのみ）
+Action definitions (data only)
 
-【v1.6 変更】
-  - add_state の type 列挙を 7 種類に拡張（StateType と一致）
-  - remove_role_function をAdd（ChangeActionType との不一致解消）
+[v1.6 change]
+  - Extended the type enum of add_state to 7 kinds (matching StateType)
+  - Added remove_role_function (resolved mismatch with ChangeActionType)
 """
 
 ACTION_DEFINITIONS = {
@@ -15,17 +15,17 @@ ACTION_DEFINITIONS = {
         },
     },
     'add_transition': {
-        'description': 'TransitionをAdd',
+        'description': 'Add transition',
         'params': {
             'source': {'type': 'str', 'required': True, 'description': 'Source'},
             'event': {'type': 'str', 'required': True, 'description': 'Event name'},
             'target': {'type': 'str', 'required': True, 'description': 'Target'},
             'condition': {'type': 'str', 'required': False, 'description': 'Condition'},
-            'action_name': {'type': 'str', 'required': False, 'description': 'Action名'},
+            'action_name': {'type': 'str', 'required': False, 'description': 'Action name'},
         },
     },
     'add_state': {
-        'description': 'StateをAdd',
+        'description': 'Add state',
         'params': {
             'name': {'type': 'str', 'required': True, 'description': 'State name'},
             'type': {
@@ -46,7 +46,7 @@ ACTION_DEFINITIONS = {
         },
     },
     'add_event': {
-        'description': 'EventをAdd',
+        'description': 'Add event',
         'params': {
             'name': {'type': 'str', 'required': True, 'description': 'Event name'},
             'kind': {'type': 'enum', 'required': False, 'values': ['SIGNAL', 'CALL', 'TIME', 'CHANGE'], 'description': 'Event kind'},
@@ -54,7 +54,7 @@ ACTION_DEFINITIONS = {
         },
     },
     'remove_transition': {
-        'description': 'TransitionをDelete',
+        'description': 'Delete transition',
         'params': {
             'source': {'type': 'str', 'required': True, 'description': 'Source'},
             'event': {'type': 'str', 'required': True, 'description': 'Event name'},
@@ -66,13 +66,13 @@ ACTION_DEFINITIONS = {
         'params': {
             'source': {'type': 'str', 'required': True, 'description': 'Source'},
             'event': {'type': 'str', 'required': True, 'description': 'Event name'},
-            'new_target': {'type': 'str', 'required': False, 'description': '新しいTarget'},
+            'new_target': {'type': 'str', 'required': False, 'description': 'New target'},
             'new_condition': {'type': 'str', 'required': False, 'description': 'New condition'},
-            'new_action': {'type': 'str', 'required': False, 'description': '新しいAction'},
+            'new_action': {'type': 'str', 'required': False, 'description': 'New action'},
         },
     },
     'add_role_function': {
-        'description': 'Role functionをAdd',
+        'description': 'Add role function',
         'params': {
             'name': {'type': 'str', 'required': True, 'description': 'Function name'},
             'return_type': {'type': 'str', 'required': True, 'description': 'Return type'},
@@ -80,13 +80,13 @@ ACTION_DEFINITIONS = {
         },
     },
     'remove_role_function': {
-        'description': 'Role functionをDelete',
+        'description': 'Delete role function',
         'params': {
-            'name': {'type': 'str', 'required': True, 'description': 'Function name（純粋名 or namespace.name）'},
+            'name': {'type': 'str', 'required': True, 'description': 'Function name (bare name or namespace.name)'},
         },
     },
     'add_variable': {
-        'description': 'VariableをAdd',
+        'description': 'Add variable',
         'params': {
             'name': {'type': 'str', 'required': True, 'description': 'Variable name'},
             'type': {'type': 'str', 'required': True, 'description': 'Type'},
@@ -95,7 +95,7 @@ ACTION_DEFINITIONS = {
         },
     },
     'add_flag': {
-        'description': 'FlagをAdd',
+        'description': 'Add flag',
         'params': {
             'name': {'type': 'str', 'required': True, 'description': 'Flag name'},
             'min_value': {'type': 'int', 'required': False, 'description': 'Min value'},
@@ -107,8 +107,8 @@ ACTION_DEFINITIONS = {
 
 
 def format_action_definitions() -> str:
-    """Action定義をプロンプト用テキストに変換"""
-    lines = ["【使用可能なAction】"]
+    """Convert action definitions to prompt text"""
+    lines = ["[Available actions]"]
     for i, (action, definition) in enumerate(ACTION_DEFINITIONS.items(), 1):
         params = definition['params']
         param_strs = []

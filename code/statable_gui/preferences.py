@@ -17,7 +17,7 @@ class Preferences:
         self._apply_defaults()
 
     def _apply_defaults(self):
-        """定義されたキーが未SaveならデフォルトValueを設定"""
+        """Set default values for keys that have not yet been saved"""
         changed = False
         for key, default in PREFERENCE_DEFINITIONS.items():
             if key not in self.data:
@@ -36,7 +36,7 @@ class Preferences:
                 self.data = {}
 
     def save(self):
-        """現在の設定をJSONファイルにSaveする"""
+        """Save current settings to a JSON file"""
         try:
             self.filepath.parent.mkdir(parents=True, exist_ok=True)
             with open(self.filepath, "w", encoding="utf-8") as f:
@@ -50,7 +50,7 @@ class Preferences:
         return self.data.get(key, default)
 
     def set(self, key: str, value: Any):
-        """設定Valueをキー名で更新し、即座にSaveする"""
+        """Update the setting value by key name and save immediately"""
         self.data[key] = value
         self.save()
 
@@ -61,11 +61,11 @@ class Preferences:
         # If key is defined, return its value
         if name in PREFERENCE_DEFINITIONS:
             return self.data.get(name, PREFERENCE_DEFINITIONS[name])
-        # 未定義の属性は通常のError
+        # Undefined attributes raise a normal error
         raise AttributeError(f"'Preferences' object has no attribute '{name}'")
 
     def __setattr__(self, name: str, value: Any):
-        # 定義済みキーなら設定とSaveをRowう
+        # If key is defined, apply and save the setting
         if name in PREFERENCE_DEFINITIONS:
             self.data[name] = value
             self.save()

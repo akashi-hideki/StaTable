@@ -1,6 +1,6 @@
 # statable_gui/libcntrl/literal_management_dialog.py
 """
-Literal managementダイアログ（表形式・Edit修正版）
+Literal management dialog (table format, edit-fixed version)
 """
 
 from PySide6.QtWidgets import (
@@ -89,7 +89,7 @@ class LiteralManagementDialog(QDialog):
     def _edit_literal(self):
         name = self._get_selected_literal_name()
         if name is None:
-            QMessageBox.information(self, "Info", "EditするLiteralをSelectionしてください。")
+            QMessageBox.information(self, "Info", "Please select a literal to edit.")
             return
 
         lit = self.literal_library.get(name)
@@ -100,7 +100,7 @@ class LiteralManagementDialog(QDialog):
         if dialog.exec() == QDialog.Accepted:
             new_lit = dialog.get_literal()
 
-            # Edit時は常に旧エントリをDeleteしてからAddする
+            # On edit, always delete the old entry before adding
             self.literal_library.remove(name)
             try:
                 self.literal_library.add(new_lit)
@@ -113,7 +113,7 @@ class LiteralManagementDialog(QDialog):
     def _delete_literal(self):
         name = self._get_selected_literal_name()
         if name is None:
-            QMessageBox.information(self, "Info", "DeleteするLiteralをSelectionしてください。")
+            QMessageBox.information(self, "Info", "Please select a literal to delete.")
             return
 
         ret = QMessageBox.warning(
@@ -121,7 +121,7 @@ class LiteralManagementDialog(QDialog):
             "Confirm",
             f"リテラル '{name}' を削除しますか？\n"
             "If any transition condition uses this literal,\n"
-            "該当のCondition式からもDeleteする必要がYesdoes。",
+            "It must also be removed from the relevant condition expression.",
             QMessageBox.Yes | QMessageBox.No
         )
         if ret == QMessageBox.Yes:
@@ -130,7 +130,7 @@ class LiteralManagementDialog(QDialog):
 
 
 class LiteralEditDialog(QDialog):
-    """LiteralのAdd・Edit用ダイアログ"""
+    """Dialog for adding / editing literals"""
 
     def __init__(self, literal: LiteralDefinition = None, parent=None):
         super().__init__(parent)
@@ -172,7 +172,7 @@ class LiteralEditDialog(QDialog):
     def _on_accept(self):
         name = self.name_edit.text().strip()
         if not name:
-            QMessageBox.warning(self, "Warning", "Nameを入力してください。")
+            QMessageBox.warning(self, "Warning", "Please enter a name.")
             return
         self.accept()
 

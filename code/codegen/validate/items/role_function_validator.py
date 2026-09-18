@@ -1,6 +1,6 @@
 # codegen/validate/items/role_function_validator.py
 """
-Role function検証
+Role function validation
 """
 
 import sys
@@ -16,7 +16,7 @@ from validate.items.base_validator import BaseValidator
 
 
 class RoleFunctionValidator(BaseValidator):
-    """Role function検証クラス"""
+    """Role function validator class"""
     
     category = "role_function"
     

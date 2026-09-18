@@ -1,6 +1,6 @@
 # codegen/validate/change_actions.py
 """
-変更Action定義
+Change action definitions
 """
 
 from enum import Enum
@@ -9,7 +9,7 @@ from typing import Dict, Any
 
 
 class ChangeActionType(Enum):
-    """変更Action種別"""
+    """Change action kind"""
     SET_INITIAL = "set_initial"
     ADD_TRANSITION = "add_transition"
     ADD_STATE = "add_state"

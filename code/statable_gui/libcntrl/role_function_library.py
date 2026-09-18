@@ -1,6 +1,6 @@
 # statable_gui/libcntrl/role_function_library.py
 """
-共有Role functionライブラリ
+Shared role function library
 """
 
 from dataclasses import dataclass, field
@@ -54,7 +54,7 @@ class RoleFunction:
 
 
 class RoleFunctionLibrary:
-    """プロジェクト全体で共有するRole functionライブラリ"""
+    """Role function library shared across the project"""
 
     def __init__(self):
         self.role_functions: Dict[str, RoleFunction] = {}

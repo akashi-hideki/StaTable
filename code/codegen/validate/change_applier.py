@@ -1,10 +1,10 @@
 # codegen/validate/change_applier.py
 """
-変更適用エンジン（修正版）
+Change apply engine (fixed version)
 
-【v1.6 変更】
-  - _handlers に 'remove_role_function' をAdd（ChangeActionType との不一致解消）
-  - _remove_role_function メソッドを実装
+[v1.6 change]
+  - Added 'remove_role_function' to _handlers (resolved mismatch with ChangeActionType)
+  - Implemented _remove_role_function method
 """
 
 import sys
@@ -104,7 +104,7 @@ class ChangeApplier:
         logger.debug(f"_add_transition: {source} --[{event}]--> {target}")
 
         if not all([source, event, target]):
-            return False, "TransitionのInfoが不足していdoes"
+            return False, "Transition information is incomplete"
 
         transition = Transition(
             source=source, event=event, target=target,
@@ -135,7 +135,7 @@ class ChangeApplier:
                 f"_add_state: unknown type '{type_name}' -> NORMAL fallback"
             )
 
-        # ★ v1.6: parent Parameterを受理（REGION / CONCURRENT 用）
+        # v1.6: accept parent parameter (for REGION / CONCURRENT)
         parent = params.get('parent', None) or None
 
         self.sm.add_state(State(
@@ -151,7 +151,7 @@ class ChangeApplier:
 
         name = params.get('name', '')
         if not name:
-            return False, "Event nameが指定されていません"
+            return False, "Event name is not specified"
         if name in self.sm.events:
             return False, f"イベント「{name}」は既に存在します"
 
@@ -192,7 +192,7 @@ class ChangeApplier:
 
         name = params.get('name', '')
         if not name:
-            return False, "Function nameが指定されていません"
+            return False, "Function name is not specified"
         if name in self.sm.role_functions:
             return False, f"関数「{name}」は既に存在します"
 
@@ -207,15 +207,15 @@ class ChangeApplier:
 
     def _remove_role_function(self, params: Dict) -> Tuple[bool, str]:
         """
-        Role functionをDeleteする。
+        Remove a role function.
 
-        v1.6 Add。ChangeActionType.REMOVE_ROLE_FUNCTION とCorresponds。
+        Added in v1.6. Corresponds to ChangeActionType.REMOVE_ROLE_FUNCTION.
         params:
-          name: 'HandleErr' または 'Middleware.HandleErr' のどちらでも可
+          name: 'HandleErr' or 'Middleware.HandleErr' (either is acceptable)
         """
         name = params.get('name', '')
         if not name:
-            return False, "Function nameが指定されていません"
+            return False, "Function name is not specified"
 
         logger.debug(
             f"_remove_role_function: name='{name}', "

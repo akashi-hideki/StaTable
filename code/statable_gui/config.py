@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-# ウィンドウ・プレビューのSize定数
+# Window / preview size constants
 WINDOW_WIDTH = 1800
 WINDOW_HEIGHT = 1000
 MERMAID_PREVIEW_MIN_HEIGHT = 400

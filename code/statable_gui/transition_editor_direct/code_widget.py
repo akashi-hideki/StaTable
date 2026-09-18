@@ -41,7 +41,7 @@ class CodeWidget(QPlainTextEdit):
         logger.debug(f"Code updated ({len(code)} chars)")
 
     # ==================================================================
-    # Layer nameとType nameの解決
+    # Resolve layer name and type name
     # ==================================================================
     def _get_layer_name(self) -> str:
         """\n        Infer layer name from ActionDraft\n\n        - Cannot be inferred from draft.role_func_map etc.,\n          so collect the Namespace part of function names\n          (e.g., 'Middleware' from 'Middleware.HandleErr')\n          and use the most frequent value\n        - If undeterminable, empty string (no layer)\n        """
@@ -74,7 +74,7 @@ class CodeWidget(QPlainTextEdit):
         return f"TransitionContext_{layer}_t" if layer else "TransitionContext_t"
 
     # ==================================================================
-    # 参照名 → RoleFunc Function name
+    # Reference name -> RoleFunc function name
     # ==================================================================
     def _role_func_name(self, ref: str) -> str:
         """\n        Convert reference string to RoleFunc_<Namespace>_<PascalName>\n\n        Input examples:\n          'Middleware.HandleErr'  -> 'RoleFunc_Middleware_HandleErr'\n          'Driver.Init'           -> 'RoleFunc_Driver_Init'\n          'HandleError'           -> 'RoleFunc_HandleError'\n          'RoleFunc_Xxx'          -> 'RoleFunc_Xxx' (already prefixed)\n          'retry_count++'         -> '' (invalid identifier)\n        """
@@ -129,7 +129,7 @@ class CodeWidget(QPlainTextEdit):
         if self.draft.system_globals:
             lines.append("")
 
-        # Role functionプロトType収集（重複除去）
+        # Collect role function prototypes (dedupe)
         proto_names = set()
         for item in self.draft.flow_items:
             logger.debug(
@@ -212,7 +212,7 @@ class CodeWidget(QPlainTextEdit):
                         if else_target:
                             lines.append(f"    next_state = {else_target};")
                         else:
-                            lines.append("    // elseTarget（Not set）")
+                            lines.append("    // else target (not set)")
                         lines.append("}")
                 else:
                     if target:

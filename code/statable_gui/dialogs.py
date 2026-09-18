@@ -49,7 +49,7 @@ class TransitionListDialog(QDialog):
                  existing_transitions=None, role_functions=None, global_defs=None,
                  state_machine=None):
         super().__init__(parent)
-        self.setWindowTitle("TransitionEdit（D&DビジュアルEdit）")
+        self.setWindowTitle("Transition edit (D&D visual editing)")
         self.setMinimumSize(1000, 600)
         self.state_names = state_names or []
         self.role_functions = role_functions or {}
@@ -61,7 +61,7 @@ class TransitionListDialog(QDialog):
         layout.addWidget(QLabel(f"イベント: {event_name if event_name else 'Completion transition'}"))
 
         self.table = TransitionTable(0, 5)
-        self.table.setHorizontalHeaderLabels(["Title", "State transition condition", "Action", "Target", "表示Title"])
+        self.table.setHorizontalHeaderLabels(["Title", "State transition condition", "Action", "Target", "Display title"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setFont(QFont("Consolas", 10))
         layout.addWidget(self.table)
@@ -80,7 +80,7 @@ class TransitionListDialog(QDialog):
         down_btn.clicked.connect(lambda: self.move_row_down())
 
         dnd_btn = QPushButton("D&DEdit")
-        dnd_btn.setToolTip("Selection中のRowをビジュアルエディタでEditしdoes")
+        dnd_btn.setToolTip("Edit the selected row in the visual editor")
         dnd_btn.clicked.connect(self.open_dnd_editor)
 
         btn_layout.addWidget(add_btn)
@@ -108,9 +108,9 @@ class TransitionListDialog(QDialog):
     # Double-click handling
     # ------------------------------------------------------------------
     def on_cell_double_clicked(self, row, col):
-        """列に応じてEditダイアログを切り替える"""
+        """Switch the edit dialog based on the column"""
         if col == 1:
-            # State transition condition列 → Condition builder
+            # State transition condition column -> condition builder
             self.open_condition_builder(row)
         elif col == 2 or col == 4:
             # Action column or display title column -> D&D editor
@@ -120,7 +120,7 @@ class TransitionListDialog(QDialog):
             pass
 
     def open_condition_builder(self, row):
-        """Conditionビルダーを開いてCondition式をEditする"""
+        """Open the condition builder to edit the condition expression"""
         item = self.table.item(row, 1)
         if not item:
             item = QTableWidgetItem("")
@@ -152,7 +152,7 @@ class TransitionListDialog(QDialog):
     def open_dnd_editor(self):
         row = self.table.currentRow()
         if row < 0:
-            QMessageBox.warning(self, "Warning", "EditするRowをSelectionしてください。")
+            QMessageBox.warning(self, "Warning", "Please select a row to edit.")
             return
 
         trans = self._row_to_transition(row)
@@ -280,7 +280,7 @@ class TransitionListDialog(QDialog):
 
         title_text = trans.title if trans else "(untitled transition)"
         title_item = QTableWidgetItem(title_text)
-        title_item.setToolTip("このTransitionのTitle。直接Editできdoes。")
+        title_item.setToolTip("Title of this transition. Can be edited directly.")
         self.table.setItem(row, 0, title_item)
 
         cond_item = QTableWidgetItem(trans.condition if trans else "")
@@ -290,7 +290,7 @@ class TransitionListDialog(QDialog):
 
         action_text = trans.action if trans else ""
         action_item = QTableWidgetItem(action_text.replace('\n', ' ; '))
-        action_item.setToolTip("ダブルクリックでD&DEdit")
+        action_item.setToolTip("Double-click for D&D editing")
         action_item.setData(Qt.UserRole, action_text)
         self.table.setItem(row, 2, action_item)
 

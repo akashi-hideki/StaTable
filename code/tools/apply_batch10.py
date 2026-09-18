@@ -1,6 +1,4 @@
-# apply_batch10.py - Fill residuals.json with English translations
-# and merge into translations.json. Windows PowerShell friendly.
-
+# apply_batch10.py - v2 (ID-matched, robust)
 import argparse
 import json
 import sys
@@ -8,57 +6,425 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# --- TRANSLATIONS dict (前回と同じ。省略せずコピーしてください) ---
-TRANSLATIONS = {
-    # ...（前回の apply_batch10.py の中身をそのまま）...
+BY_ID = {
+    # --- Validation rules / change_applier ---
+    "s1661": "Please confirm the event definitions",
+    "s1662": "Function name is not specified",
+    "s1663": "Please change the variable name",
+    "s1664": "Error log output",
+    "s1665": "Data array",
+    "s1666": "Error notification",
+    "s1667": """\n    State transition definition\n\n    [v1.6 change] kw_only=True\n      To structurally prevent positional-argument field-order accidents\n      (v1.4 section 9.6 #67), only kw_only arguments are accepted.\n\n    Old: Transition("Idle", "START", "", ["init()"], "Active")  <- positional args (dangerous)\n    New: Transition(source="Idle", event="START", pre_actions=["init()"], ...)  <- kwargs only\n\n    In v1.5, an AST audit confirmed that all 14 sites in sample_data.py /\n    xml_io.py / dialogs.py / draft.py / change_applier.py use kwargs.\n\n    [v2.0 known constraint: transition_type is a reserved field]\n      - "external": normal transition (default, implemented)\n      - "internal": executes only the action without leaving the state (**unimplemented / reserved**)\n      - "local":    self transition (**unimplemented / reserved**)\n\n      As of v1.9, internal / local are unimplemented. Generated code\n      (codegen/transition_generator.py) does not reference transition_type,\n      and always treats it as equivalent to external (transition to target).\n\n      Impact:\n        - GUI (matrix_table.py) does not display a transition-type column\n        - Generated code does not call entry / exit separately\n        - XML save / load preserves the value (round-trip maintained)\n\n      Reservation reason:\n        Entry / exit call control widely affects the state machine runner\n        (c_code_generator.py / template group), so\n        v2.0 freezes the spec and implements it incrementally in v2.x.\n\n      Reference: v1.9 section 9.9 #93 (consistency check detected)\n    """,
+    "s1668": """\nStaTable parser (unimplemented stub)\n\n[v1.8 section 11.2 #9]\n  Currently an unimplemented stub.\n  XML I/O is handled by `statable/xml_io.py`.\n\n[Planned for future implementation]\n  - Excel (.xlsx) loading\n    Import state transition tables using openpyxl etc.\n  - CSV (.csv) loading\n    Assume state x event matrix format\n  - JSON (.json) loading\n    General-purpose format for external tool integration\n\n[Notes]\n  - This module currently has no callers\n  - When implementing, convert to `statable/model.py`'s\n    StateMachine / State / Event / Transition\n  - It is desirable to target the same interface as the existing `xml_io.py`\n    (equivalent to project_to_xml / project_from_xml)\n\n[If not implementing]\n  This file itself can be deleted without issue.\n  Since there are no callers, deletion has no impact.\n""",
+    "s1669": """\n    Role function (implements state transition conditions and actions together)\n\n    [v1.5 change] kw_only=True\n      To structurally prevent positional-argument field-order accidents\n      (v1.4 section 9.6 #76), only kw_only arguments are accepted.\n\n    Old: RoleFunction(name, desc, ret, ...)  <- positional args (dangerous)\n    New: RoleFunction(name=..., description=..., return_type=...)  <- kwargs only\n\n    namespace: layer name or feature group name (e.g. "Driver")\n      - Referenceable as `Driver.Init`\n      - Empty string means no layer\n    """,
+    "s1670": """\nXML I/O (project settings / layer priority / layer name / namespace support)\n- Save shared libraries on project save / load\n- Also save Transition's pre_actions / else_actions / has_else / else_target\n- String-to-list normalization, auto-merge of single-character splits\n- Save / restore layer priority, description, layer_name, project name\n- Save / restore RoleFunction namespace\n- Save / restore InterruptHandlerDef's used_role_functions / used_variables\n- Auto-migrate legacy XML (without namespace)\n""",
+    "s1671": """{\n  "changes": [\n    {\n      "action": "set_initial",\n      "params": {"state": "INIT"},\n      "reason": "Initial state is not set"\n    },\n    {\n      "action": "add_transition",\n      "params": {\n        "source": "ERROR",\n        "event": "RESET",\n        "target": "IDLE",\n        "action_name": "ResetError"\n      },\n      "reason": "No error recovery transition from the error state"\n    }\n  ]\n}""",
+    "s1672": """You are an expert in embedded software state transition design.\n\n[Task]\nValidate state transition design data and output necessary changes in JSON format.\n\n[Output format]\nOutput pure JSON only.\nNo greetings, descriptions, supplements, markers, or code block symbols.\n\n[Output example]\n{example}\n\n[Actual data]\n{data}\n\n[Instructions]\nPropose changes to the actual data using the same JSON format as the example.\nDo not output anything other than JSON.\n\n{action_definitions}\n\n{validation_points}\n""",
+    "s1673": """Interrupt handler definition\n\n    used_role_functions: list of used role functions' qualified_name (auto-extracted)\n      - e.g. ["Driver.Init", "Application.HandleTick"]\n      - Updated when the ISR action is saved\n      - Also used in generated code comments\n\n    used_variables: list of used global variable names (auto-extracted)\n      - e.g. ["counter", "g_system_tick"]\n    """,
+    "s1674": """Timer base variables and derived timer variables are registered as global variables.\n\n        - Existing variables (loaded from XML or edited in GUI) preserve description / title\n        - Only type / unit are synchronized with the timer definition\n        - Only non-existing variables are newly added\n\n        This ensures description / title are preserved across round-trips.\n        """,
+    "s1675": """\n    Sanitize the Mermaid label string.\n\n    Even if user-entered title, event name, or condition expression\n    contains Mermaid meta characters, replace them so that\n    no parse error occurs.\n\n    Example:\n      "RETRY: battery_voltage >600"\n        -> "RETRY: battery_voltage >600"\n    """,
+    "s1676": """\n        Remove a role function.\n\n        Added in v1.6. Corresponds to ChangeActionType.REMOVE_ROLE_FUNCTION.\n        params:\n          name: 'HandleErr' or 'Middleware.HandleErr' (either is acceptable)\n        """,
+    "s1677": """\nTransition validation\n\n[v1.8 section 11.2 #6]\n  - Unified logger output with StateValidator\n  - Added start / completion logs to __init__ / validate\n  - Wrapped rule execution in try/except; on failure, log via logger.error\n""",
+    "s1678": """[Validation points]\n1. Is the initial state set?\n2. Are transitions defined for all states?\n3. Is there a recovery transition from the error state?\n4. Are all events that each state should handle covered?\n5. Are there any unreachable states?\n6. Is there any possibility of deadlock?\n""",
+    "s1679": """\nEvent validation\n\n[v1.8 section 11.2 #6]\n  - Unified logger output with StateValidator\n  - Added start / completion logs to __init__ / validate\n  - Wrapped rule execution in try/except; on failure, log via logger.error\n""",
+    "s1680": """\nStaTable data model layer\n\nRe-exports main classes for convenient external use.\n\n[v1.5 added]\n  - Re-export only lightweight-dependency modules to avoid circular imports\n  - xml_io / sample_data are intentionally excluded\n    (they have heavy dependencies and can cause circular references)\n""",
+    "s1681": """\n    Generate a Mermaid stateDiagram-v2 string from a StateMachine.\n\n    Labels (title / event name / condition expression) are all\n    normalized by _sanitize_label to prevent parse errors.\n    """,
+    "s1682": """\nStaTable code generation layer\n\n[v1.5 added]\n  - Keep re-exports minimal\n  - CCodeGenerator loads many submodules at generation time,\n    so it is not re-exported at top level (to reduce startup time)\n""",
+    "s1683": """\nAction definitions (data only)\n\n[v1.6 change]\n  - Extended the type enum of add_state to 7 kinds (matching StateType)\n  - Added remove_role_function (resolved mismatch with ChangeActionType)\n""",
+    "s1684": """\nChange apply engine (fixed version)\n\n[v1.6 change]\n  - Added 'remove_role_function' to _handlers (resolved mismatch with ChangeActionType)\n  - Implemented _remove_role_function method\n""",
+    "s1685": """\nPrompt template definitions (data only)\n\n[v1.8 section 11.2 #7]\n  - Removed unused 'review' key\n    (removed together with prompt_generator.generate_review_prompt)\n""",
+    "s1686": """\n    libcntrl.RoleFunction accepts only name/title/description,\n    so other attributes are set via setattr after checking with hasattr.\n    """,
+    "s1687": "Management class for global variables, event flags, interrupt handlers, device resources, timer settings, event queues, and user-defined types",
+    "s1688": """\nAI prompt generation class\n\n[v1.8 section 11.2 #7]\n  - Removed generate_review_prompt (unused, no callers)\n""",
+    "s1689": "Data model for global variables, event flags, interrupt handlers, device resources, timer settings, and user-defined types",
+    "s1690": " v1.6: accept parent parameter (for REGION / CONCURRENT)",
+    "s1691": "Show long state transition conditions abbreviated (only the first line if multiline)",
+    "s1692": """\nCode generation settings management module\nCentralizes generation options\n""",
+    "s1693": " State transition condition column -> condition builder",
+    "s1694": "Open global variables / event flag definitions",
+    "s1695": "Interrupt handlers, device resources, timer settings",
+    "s1696": "Role function node\\n- Double-click to rename the function",
+    "s1697": 'Timer variable "{name}" duplicates an existing variable',
+    "s1698": "Global variables / event flag definition management screen",
+    "s1699": " Fixed to always show 3 lines (event name, condition, target)",
+    "s1700": " Direct save of generated code (multi-layer + warning collection)",
+    "s1701": " Global variables, event flags, interrupts,",
+    "s1702": 'Variable "{name}" has invalid type "{type}"',
+    "s1703": "Enter the description of this interrupt handler",
+    "s1704": 'Role function "{name}" has no return type defined',
+    "s1705": "State transition event definition list dialog",
+    "s1706": "Double-click to edit the state transition condition",
+    "s1707": """\nLiteral management dialog (table format, edit-fixed version)\n""",
+    "s1708": " Auto-register timer variables as global variables",
+    "s1709": "Action flow (place via D&D, double-click to edit)",
+    "s1710": "Global variables, event flags, and return values",
+    "s1711": "Dialog to edit the state transition condition",
+    "s1712": "C code generation dialog (multi-layer support)",
+    "s1713": "Dialog to literalize numeric values in condition expressions",
+    "s1714": "Open state transition event definitions",
+    "s1715": "State transition event definition dialog",
+    "s1716": '   "\\n" label is valid only on one line -> normalized to space',
+    "s1717": "Collapsible palette by category (event selection screen)",
+    "s1718": "Function name (bare name or namespace.name)",
+    "s1719": "Add a transition or delete the event",
+    "s1720": "Add a transition or delete the state",
+    "s1721": "Add a transition or mark this as a terminal state",
+    "s1722": ' If the condition expression is empty, show "Condition: none"',
+    "s1723": " Global variables (array support)",
+    "s1724": " Add namespace attribute to RoleFunctions",
+    "s1725": "It must also be removed from the relevant condition expression.",
+    "s1726": " Get target state choices from the state machine",
+    "s1727": " v1.5: function name is column 1 (unchanged)",
+    "s1728": " User-defined type (struct + bit field + array)",
+    "s1729": "Open the condition builder to edit the condition expression",
+    "s1730": "Edit the selected row in the visual editor",
+    "s1731": " Role function return value (temp variable)",
+    "s1732": "Update the converted column when the delivery type combo changes",
+    "s1733": "Namespace (layer name / feature group name).\\n",
+    "s1734": "Class mapping StaTable types to C language types",
+    "s1735": 'State "{name}" has no outgoing transition',
+    "s1736": " ---- Title (other than untitled transition) ----",
+    "s1737": " Role function select / insert bar",
+    "s1738": " Timer settings tab (multi-base-timer support)",
+    "s1739": " Auto-extract used role functions and variables",
+    "s1740": "Please select a literal to delete.",
+    "s1741": "Edit state transition event dialog",
+    "s1742": 'Interrupt name "{name}" is duplicated',
+    "s1743": 'Role function "{name}" has incomplete argument definitions',
+    "s1744": 'Variable "{name}" has an invalid array size',
+    "s1745": "\\nPlease delete these transitions first.",
+    "s1746": "Title of this transition. Can be edited directly.",
+    "s1747": '        -> Parse error due to ":" in the title',
+    "s1748": " ===== External include operations =====",
+    "s1749": " OS type (this is meaningful, so it is selectable)",
+    "s1750": "### Internal validation result\\nNo issues",
+    "s1751": "Select external include file",
+    "s1752": "Priority is duplicated. Continue anyway?",
+    "s1753": 'Role function "{name}" is not used',
+    "s1754": 'Variable name "{name}" is duplicated',
+    "s1755": "Role function library shared across the project",
+    "s1756": " Code generation settings manager",
+    "s1757": " On edit, always delete the old entry before adding",
+    "s1758": " Restore used role functions and variables",
+    "s1759": " Record used role functions and variables",
+    "s1760": "Open pre-generation validation / AI diagnosis",
+    "s1761": "Please select a literal to edit.",
+    "s1762": "Interrupt name driving this timer (optional)",
+    "s1763": "Please confirm whether the self transition is intentional",
+    "s1764": " === Reflect role function table ===",
+    "s1765": " List table (title column added / direct edit)",
+    "s1766": " Collect role function prototypes (dedupe)",
+    "s1767": " namespace added as a keyword argument",
+    "s1768": " Interrupt name driving this timer",
+    "s1769": " Reference name -> RoleFunc function name",
+    "s1770": "Array size must be greater than 0",
+    "s1771": "Array style (2D array + O(1) access)",
+    "s1772": "Code generation settings dialog",
+    "s1773": "Event queue definition list dialog",
+    "s1774": "Dialog for creating / editing role functions",
+    "s1775": "Check this if it is a timer interrupt",
+    "s1776": "Timer0 interrupt flag clear register",
+    "s1777": " Mermaid label sanitization (v2.0 added)",
+    "s1778": ' If target is empty, show "-> (not set)"',
+    "s1779": " model.py (no dependencies) -- load first",
+    "s1780": "Event delivery settings dialog",
+    "s1781": "Title, event name, description",
+    "s1782": "Title, queue name, description",
+    "s1783": "Transition edit (D&D visual editing)",
+    "s1784": "Set default values for keys that have not yet been saved",
+    "s1785": "Save by merging with existing file (preserve user code)",
+    "s1786": "If empty, it is treated as having no layer ('Init').",
+    "s1787": " 2. From the current SM's role functions",
+    "s1788": " Related event selection list",
+    "s1789": "Change code generation settings",
+    "s1790": "Event queue definition dialog",
+    "s1791": 'Flag name "{name}" is duplicated',
+    "s1792": "Enter title, member name, and group name",
+    "s1793": 'Type name "{name}" is duplicated',
+    "s1794": 'Type "{name}" has no members defined',
+    "s1795": "Title of this event. Can be edited directly.",
+    "s1796": "Title of this queue. Can be edited directly.",
+    "s1797": "Add available symbols to the tree by category",
+    "s1798": "Please delete the duplicate transition",
+    "s1799": """\nC language type mapping module (dictionary-driven)\n""",
+    "s1800": """\nSystem global variables (separate screen)\n""",
+    "s1801": "    // else target (not set)",
+    "s1802": " Use first 20 chars of condition as provisional title",
+    "s1803": " Title (editable, linked to tab name)",
+    "s1804": "Flow list supporting D&D and row insertion",
+    "s1805": "Please select a row to edit.",
+    "s1806": "Bulk registration dialog for global variables",
+    "s1807": 'Target "{target}" is not defined',
+    "s1808": "Display derived timers of the specified timer in the table",
+    "s1809": """\nEdit role function dialog\n""",
+    "s1810": "Open event delivery type settings",
+    "s1811": "Function name prefix (optional)",
+    "s1812": "Transition information is incomplete",
+    "s1813": "Shared role function edit dialog",
+    "s1814": "Update the setting value by key name and save immediately",
+    "s1815": " Resolve layer name and type name",
+    "s1816": " No public API (not implemented)",
+    "s1817": " Treat timer definition as authoritative (type, unit)",
+    "s1818": " else target state selection",
+    "s1819": "Open the layer settings dialog",
+    "s1820": "Title, member name, group name",
+    "s1821": "Double-click to edit the action code",
+    "s1822": "Used literals (select from existing)",
+    "s1823": "Add a new state transition tab",
+    "s1824": " Log / validation / code generation",
+    "s1825": " global_defs.py (no dependencies)",
+    "s1826": "Code generation validation main class",
+    "s1827": "Please change the interrupt name",
+    "s1828": 'Queue "{name}" has an invalid size',
+    "s1829": "Size must be greater than 0",
+    "s1830": "else action\\n- Reorder via ordered list",
+    "s1831": "Double-click to edit each cell.",
+    "s1832": "Set layer execution priority and initialization order",
+    "s1833": """\nShared role function library\n""",
+    "s1834": " ===== Comment generation =====",
+    "s1835": " If no title, show target",
+    "s1836": "Convert action definitions to prompt text",
+    "s1837": "Combo box for event selection",
+    "s1838": "Combo box for group selection",
+    "s1839": "Dialog for adding / editing literals",
+    "s1840": "Combo box for state selection",
+    "s1841": "Please set argument names and types correctly",
+    "s1842": "Reflect the current target in the combo box",
+    "s1843": " Code generation module",
+    "s1844": " External include file",
+    "s1845": " Helpers: string / list normalization",
+    "s1846": " Attach warning collection handler",
+    "s1847": " If key is defined, apply and save the setting",
+    "s1848": "Bulk registration dialog for event flags",
+    "s1849": "Bulk registration of global variables",
+    "s1850": "Role function .c file",
+    "s1851": "Please define the target state",
+    "s1852": 'Timer "{name}" has an invalid multiplier',
+    "s1853": "Combo box for type selection",
+    "s1854": "The main timer cannot be deleted.",
+    "s1855": "Manage user-defined types (structs)",
+    "s1856": "Save current settings to a JSON file",
+    "s1857": """\nAction edit D&D package\n""",
+    "s1858": " ---- Warning display ----",
+    "s1859": " Add condition template",
+    "s1860": " Deduplication (order-preserving)",
+    "s1861": " Create and insert FlowItem",
+    "s1862": " Role function (bool)",
+    "s1863": " Target state selection",
+    "s1864": "Create an edit tab for one base timer",
+    "s1865": "Execute code generation",
+    "s1866": "Conditional action list:",
+    "s1867": "Find the row number from the event name",
+    "s1868": "Event name is not specified",
+    "s1869": "Please set the return type",
+    "s1870": "Delete role function",
+    "s1871": "Please add a transition",
+    "s1872": "System global variables",
+    "s1873": "User-defined types (structs, etc.)",
+    "s1874": "Switch the edit dialog based on the column",
+    "s1875": " Event name (read-only)",
+    "s1876": " Role function section",
+    "s1877": " Show warnings last if any",
+    "s1878": " Pass the current else target",
+    "s1879": " Window / preview size constants",
+    "s1880": " Used global variables",
+    "s1881": "Layer settings dialog",
+    "s1882": "Role function (bool)",
+    "s1883": "Delete this node?",
+    "s1884": "User-defined type edit dialog",
+    "s1885": "Add / edit user-defined types",
+    "s1886": "Example: Driver (empty = no layer)",
+    "s1887": "Enter a new timer name:",
+    "s1888": "Edit derived timer variable",
+    "s1889": " Added: current else target",
+    "s1890": " If group is unset, fill in",
+    "s1891": " Layer name (editable)",
+    "s1892": " Output settings tab",
+    "s1893": " Priority (spin box)",
+    "s1894": " Right pane: condition expression edit",
+    "s1895": " Execution priority (1-9)",
+    "s1896": " Layer description (optional)",
+    "s1897": "Number of conditional actions",
+    "s1898": "Please change the flag name",
+    "s1899": "Interrupt name (optional)",
+    "s1900": "Role function validator class",
+    "s1901": "Struct member edit dialog",
+    "s1902": "Please change the type name",
+    "s1903": "Used global variables",
+    "s1904": "New role function...",
+    "s1905": """\nRole function validation\n""",
+    "s1906": " Set additional attributes only if they exist",
+    "s1907": " Delivery type combo",
+    "s1908": " Set node size and displayed content",
+    "s1909": "Edit condition...",
+    "s1910": "Output settings tab",
+    "s1911": "Add role function",
+    "s1912": "Delete transition",
+    "s1913": "User-defined type management dialog",
+    "s1914": "Please use it or delete it",
+    "s1915": "No code was generated.",
+    "s1916": " Event name edit field",
+    "s1917": " Pending event limit",
+    "s1918": " Sort by priority ascending",
+    "s1919": " Priority duplicate check",
+    "s1920": " Title (directly editable)",
+    "s1921": " Base timer variable",
+    "s1922": " Undefined attributes raise a normal error",
+    "s1923": " Derived timer variable",
+    "s1924": "Bulk registration of event flags",
+    "s1925": "Event selection screen",
+    "s1926": "Please enter a group name.",
+    "s1927": "Data variable name",
+    "s1928": "Display all base timers as tabs",
+    "s1929": "Please specify a valid type",
+    "s1930": "Derived timer variable:",
+    "s1931": " Handler when the name changes",
+    "s1932": " Source (read-only)",
+    "s1933": " Pass the current target",
+    "s1934": "Event source layer",
+    "s1935": "Double-click for D&D editing",
+    "s1936": "Visual edit widget",
+    "s1937": " Added: current target",
+    "s1938": " Literalize button",
+    "s1939": " Title input widget",
+    "s1940": " Title (read-only)",
+    "s1941": " Project save / load",
+    "s1942": " Project save / load",
+    "s1943": "Please enter a name.",
+    "s1944": "Add transition",
+    "s1945": "Please add a member",
+    "s1946": "Edit user-defined type",
+    "s1947": "Edit base timer...",
+    "s1948": "Save generated code...",
+    "s1949": " Tab name (not editable)",
+    "s1950": " Warning collector class",
+    "s1951": " Add timer base",
+    "s1952": " Device / timer settings",
+    "s1953": "Group add dialog",
+    "s1954": "Struct member edit",
+    "s1955": "Title input widget",
+    "s1956": "[Available actions]",
+    "s1957": "Custom type validator class",
+    "s1958": "Directly save generated code",
+    "s1959": """\nCustom type validation\n""",
+    "s1960": """\nChange action definitions\n""",
+    "s1961": " Determine insertion position",
+    "s1962": " Add literal",
+    "s1963": " Added: usage record",
+    "s1964": " Default target",
+    "s1965": " Derived timer button",
+    "s1966": " Settings info group",
+    "s1967": "Symbol to insert",
+    "s1968": "Open timer settings",
+    "s1969": "Add variable",
+    "s1970": "Please confirm",
+    "s1971": "Default target:",
+    "s1972": "User-defined type management",
+    "s1973": "Add a new group",
+    "s1974": "Enter a new group name",
+    "s1975": "Update the settings info label",
+    "s1976": " OS type label",
+    "s1977": " With priority",
+    "s1978": " Base timer tab",
+    "s1979": "Confirmed",
+    "s1980": "System timer base",
+    "s1981": "Save project",
+    "s1982": "Add base timer",
+    "s1983": "Save generated code",
+    "s1984": " Action buttons",
+    "s1985": " Get group name",
+    "s1986": " Source layer",
+    "s1987": " Comment settings",
+    "s1988": "1ms timer expired",
+    "s1989": "1ms period timer",
+    "s1990": "With priority",
+    "s1991": "Timer validator class",
+    "s1992": "There are no tabs.",
+    "s1993": "Change action kind",
+    "s1994": "Validation severity",
+    "s1995": "Save current settings",
+    "s1996": "Save generated code",
+    "s1997": "High-speed 1ms timer",
+    "s1998": """\nTimer validation\n""",
+    "s1999": "Handler on close",
+    "s2000": "Add event",
+    "s2001": "Source layer",
+    "s2002": "Add state",
+    "s2003": "Delete member",
+    "s2004": "New action",
+    "s2005": "New target",
+    "s2006": "High-speed timer base",
+    "s2007": " Edit button",
+    "s2008": " Insertion target",
+    "s2009": " Log settings tab",
+    "s2010": " Output destination",
+    "s2011": "Add flag",
+    "s2012": "Rename timer",
+    "s2013": "Action name",
+    "s2014": "Array style",
+    "s2015": "Insertion target",
+    "s2016": "Add row",
+    "s2017": "Timer expired",
+    "s2018": "Timer settings",
+    "s2019": "Data type",
+    "s2020": "Flow edit",
+    "s2021": "Edit member",
+    "s2022": "Display title",
+    "s2023": "To error",
+    "s2024": "Group name",
+    "s2025": "Type definitions",
+    "s2026": "Add member",
 }
 
 
 def fill_residuals(dry_run=False):
     rp = PROJECT_ROOT / "residuals.json"
     if not rp.exists():
-        print(f"ERROR: {rp} not found")
+        print("ERROR: " + str(rp) + " not found")
         return None, 0, []
     data = json.loads(rp.read_text(encoding="utf-8"))
     filled, missing = 0, []
     for e in data["strings"]:
-        jp = e.get("japanese", "")
-        if jp in TRANSLATIONS:
-            e["english"] = TRANSLATIONS[jp]
+        sid = e.get("id", "")
+        if sid in BY_ID:
+            e["english"] = BY_ID[sid]
             filled += 1
         else:
-            missing.append((e["id"], jp[:70].replace("\n", "\\n")))
+            missing.append((sid, e.get("japanese", "")[:70].replace("\n", "\\n")))
     total = len(data["strings"])
-    print(f"[residuals] filled {filled}/{total}, missing {len(missing)}")
+    print("[residuals] filled " + str(filled) + "/" + str(total)
+          + ", missing " + str(len(missing)))
     if missing:
-        print("--- unmatched (first 50) ---")
+        print("--- unmatched ---")
         for sid, snip in missing[:50]:
-            print(f"  {sid}: {snip}")
+            print("  " + sid + ": " + snip)
     if not dry_run:
         rp.write_text(json.dumps(data, ensure_ascii=False, indent=2),
                       encoding="utf-8")
-        print(f"[residuals] wrote {rp}")
+        print("[residuals] wrote " + str(rp))
     return data, filled, missing
 
 
 def merge_into_translations(residual_data, dry_run=False):
     tp = PROJECT_ROOT / "translations.json"
     if not tp.exists():
-        print(f"ERROR: {tp} not found")
+        print("ERROR: " + str(tp) + " not found")
         return 0
     t = json.loads(tp.read_text(encoding="utf-8"))
     existing = {e.get("japanese", "") for e in t["strings"]}
     added = 0
     for e in residual_data["strings"]:
-        if e.get("english", "").strip() and e.get("japanese", "") not in existing:
+        jp = e.get("japanese", "")
+        if e.get("english", "").strip() and jp not in existing:
             t["strings"].append(e)
-            existing.add(e["japanese"])
+            existing.add(jp)
             added += 1
-    print(f"[merge] added {added} new entries, total {len(t['strings'])}")
+    print("[merge] added " + str(added) + " new entries, total "
+          + str(len(t["strings"])))
     if not dry_run:
         tp.write_text(json.dumps(t, ensure_ascii=False, indent=2),
                       encoding="utf-8")
-        print(f"[merge] wrote {tp}")
+        print("[merge] wrote " + str(tp))
     return added
 
 
@@ -71,8 +437,10 @@ def main():
     if data is None:
         return 1
     added = merge_into_translations(data, dry_run=args.dry_run)
-    print()
-    print(f"Summary: filled={filled}, missing={len(missing)}, merged={added}")
+    print("")
+    print("Summary: filled=" + str(filled)
+          + ", missing=" + str(len(missing))
+          + ", merged=" + str(added))
     return 0 if not missing else 2
 
 

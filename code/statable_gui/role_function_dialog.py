@@ -7,7 +7,7 @@ from .logger import StaTableLogger
 
 
 class RoleFunctionDialog(QDialog):
-    """Role functionの新規登録・Edit用ダイアログ"""
+    """Dialog for creating / editing role functions"""
     def __init__(self, parent=None, role_function=None):
         super().__init__(parent)
         self.setWindowTitle("Edit role function")
@@ -30,11 +30,11 @@ class RoleFunctionDialog(QDialog):
         self.namespace_edit.setText(
             role_function.namespace if role_function else ""
         )
-        self.namespace_edit.setPlaceholderText("例: Driver（空なら層None）")
+        self.namespace_edit.setPlaceholderText("Example: Driver (empty = no layer)")
         self.namespace_edit.setToolTip(
-            "Namespace（Layer name・機能Group名）。\n"
+            "Namespace (layer name / feature group name).\n"
             "If specified, it can be referenced as 'Driver.Init'.\n"
-            "空の場合は層None扱い（'Init'）となりdoes。"
+            "If empty, it is treated as having no layer ('Init')."
         )
         layout.addRow("Namespace", self.namespace_edit)
 

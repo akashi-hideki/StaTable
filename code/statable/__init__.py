@@ -1,16 +1,16 @@
 # statable package
 """
-StaTable データモデル層
+StaTable data model layer
 
-主要クラスを再エクスポートし、外部からの利用を簡便にする。
+Re-exports main classes for convenient external use.
 
-【v1.5 Add】
-  - 循環インポート回避のため、依存の軽いモジュールのみ再エクスポート
-  - xml_io / sample_data は意図的に除外
-    （これらは重い依存を持ち、循環参照の原因になるため）
+[v1.5 added]
+  - Re-export only lightweight-dependency modules to avoid circular imports
+  - xml_io / sample_data are intentionally excluded
+    (they have heavy dependencies and can cause circular references)
 """
 
-# model.py（依存None）— 最初にロードすべき
+# model.py (no dependencies) -- load first
 from .model import (
     State,
     Event,
@@ -25,7 +25,7 @@ from .model import (
 # state_machine.py (depends on model)
 from .state_machine import StateMachine
 
-# global_defs.py（依存None）
+# global_defs.py (no dependencies)
 from .global_defs import (
     GlobalDefinitions,
     SystemVariable,

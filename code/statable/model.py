@@ -28,7 +28,7 @@ class EventDeliveryType(Enum):
 
 
 class EventSourceLayer(Enum):
-    """EventのSourceレイヤ"""
+    """Event source layer"""
     DRIVER = "driver"
     MIDDLEWARE = "middleware"
 
@@ -67,38 +67,38 @@ class Event:
 @dataclass(kw_only=True)
 class Transition:
     """
-    StateTransition定義
+    State transition definition
 
-    【v1.6 変更】kw_only=True 化
-      位置引数によるフィールド順序ずれ事故（v1.4 §9.6 #67）を
-      構造的に防止するため、kw_only 引数のみ受け付ける。
+    [v1.6 change] kw_only=True
+      To structurally prevent positional-argument field-order accidents
+      (v1.4 section 9.6 #67), only kw_only arguments are accepted.
 
-    旧: Transition("Idle", "START", "", ["init()"], "Active")  ← 位置引数（危険）
-    新: Transition(source="Idle", event="START", pre_actions=["init()"], ...)  ← kwarg のみ
+    Old: Transition("Idle", "START", "", ["init()"], "Active")  <- positional args (dangerous)
+    New: Transition(source="Idle", event="START", pre_actions=["init()"], ...)  <- kwargs only
 
-    v1.5 で sample_data.py / xml_io.py / dialogs.py / draft.py /
-    change_applier.py の全 14 箇所が kwarg 済みであることを AST 監査でConfirm済み。
+    In v1.5, an AST audit confirmed that all 14 sites in sample_data.py /
+    xml_io.py / dialogs.py / draft.py / change_applier.py use kwargs.
 
-    【v2.0 既知の制約: transition_type は予約フィールド】
-      - "external": 通常Transition（既定Value、実装済み）
-      - "internal": Stateを出ず action のみ実Row（**未実装・予約**）
-      - "local":    自己Transition（**未実装・予約**）
+    [v2.0 known constraint: transition_type is a reserved field]
+      - "external": normal transition (default, implemented)
+      - "internal": executes only the action without leaving the state (**unimplemented / reserved**)
+      - "local":    self transition (**unimplemented / reserved**)
 
-      v1.9 時点で internal / local は未実装。生成Code
-      （codegen/transition_generator.py）は transition_type を参照せず、
-      常に external 相当（target へTransition）として扱う。
+      As of v1.9, internal / local are unimplemented. Generated code
+      (codegen/transition_generator.py) does not reference transition_type,
+      and always treats it as equivalent to external (transition to target).
 
-      影響:
-        - GUI（matrix_table.py）にTransition種別列は表示されない
-        - 生成Codeで entry/exit 呼び分けはRowわれない
-        - XML Save/読込ではValueが保持される（round-trip は維持）
+      Impact:
+        - GUI (matrix_table.py) does not display a transition-type column
+        - Generated code does not call entry / exit separately
+        - XML save / load preserves the value (round-trip maintained)
 
-      予約Reason:
-        entry/exit 呼び出し制御は state machine runner
-        （c_code_generator.py / テンプレート群）に広く影響するため、
-        v2.0 では仕様を凍結し、v2.x で段階的に実装する。
+      Reservation reason:
+        Entry / exit call control widely affects the state machine runner
+        (c_code_generator.py / template group), so
+        v2.0 freezes the spec and implements it incrementally in v2.x.
 
-      参照: v1.9 §9.9 #93（一貫性チェック検出）
+      Reference: v1.9 section 9.9 #93 (consistency check detected)
     """
     source: str
     event: str
@@ -120,18 +120,18 @@ class Transition:
 @dataclass(kw_only=True)
 class RoleFunction:
     """
-    Role function（State transition condition・Actionをまとめて実装するFunction）
+    Role function (implements state transition conditions and actions together)
 
-    【v1.5 変更】kw_only=True 化
-      位置引数によるフィールド順序ずれ事故（v1.4 §9.6 #76）を
-      構造的に防止するため、kw_only 引数のみ受け付ける。
+    [v1.5 change] kw_only=True
+      To structurally prevent positional-argument field-order accidents
+      (v1.4 section 9.6 #76), only kw_only arguments are accepted.
 
-    旧: RoleFunction(name, desc, ret, ...)  ← 位置引数（危険）
-    新: RoleFunction(name=..., description=..., return_type=...)  ← kwarg のみ
+    Old: RoleFunction(name, desc, ret, ...)  <- positional args (dangerous)
+    New: RoleFunction(name=..., description=..., return_type=...)  <- kwargs only
 
-    namespace: Layer nameや機能Group名（例: "Driver"）
-      - `Driver.Init` のように参照可能
-      - 空文字の場合は層None扱い
+    namespace: layer name or feature group name (e.g. "Driver")
+      - Referenceable as `Driver.Init`
+      - Empty string means no layer
     """
     name: str                               # Bare name (e.g., \"Init\")
     namespace: str = ""                     # Namespace (e.g., \"Driver\")

@@ -42,7 +42,7 @@ from statable_gui.libcntrl.condition_library import (
     ConditionLibrary, ConditionTemplate)
 from statable_gui.libcntrl.literal_library import (
     LiteralLibrary, LiteralDefinition)
-# Code generationモジュール
+# Code generation module
 sys.path.append(
     os.path.dirname(
         os.path.dirname(os.path.abspath(__file__))))
@@ -86,11 +86,11 @@ class MainWindow(QMainWindow):
         # Preferences
         self.prefs = Preferences()
 
-        # Code generation settingsマネージャ
+        # Code generation settings manager
         self.config_manager = ConfigManager()
 
-        # Global variables・Event flags・Interrupt・
-        # デバイス・Timer設定
+        # Global variables, event flags, interrupts,
+        # Device / timer settings
         self.global_defs = create_sample_global_defs()
         self.global_defs.add_timer_variables()
         StaTableLogger.debug(
@@ -140,7 +140,7 @@ class MainWindow(QMainWindow):
             f"After role registration: "
             f"roles={len(self.role_function_library.list_all())}")
 
-        # ConditionテンプレートをAdd
+        # Add condition template
         try:
             self.condition_library.add(ConditionTemplate(
                 name="ERROR",
@@ -155,7 +155,7 @@ class MainWindow(QMainWindow):
             StaTableLogger.warning(
                 f"Failed to register condition templates: {e}")
 
-        # LiteralをAdd
+        # Add literal
         try:
             self.literal_library.add(LiteralDefinition(
                 name="RETRY_THRESHOLD", value="3",
@@ -225,28 +225,28 @@ class MainWindow(QMainWindow):
 
         global_defs_btn = QAction("Global definitions", self)
         global_defs_btn.setToolTip(
-            "Global variables・Event flag definitionをOpen")
+            "Open global variables / event flag definitions")
         global_defs_btn.triggered.connect(
             self.open_global_defs_dialog)
         toolbar.addAction(global_defs_btn)
 
-        type_defs_btn = QAction("Type定義", self)
+        type_defs_btn = QAction("Type definitions", self)
         type_defs_btn.setToolTip(
-            "ユーザー定義Type（Struct）を管理")
+            "Manage user-defined types (structs)")
         type_defs_btn.triggered.connect(
             self.open_type_manager)
         toolbar.addAction(type_defs_btn)
 
         event_defs_btn = QAction("Event definitions", self)
         event_defs_btn.setToolTip(
-            "StateTransitionEvent definitionsをOpen")
+            "Open state transition event definitions")
         event_defs_btn.triggered.connect(
             self.open_event_definition_dialog)
         toolbar.addAction(event_defs_btn)
 
         delivery_btn = QAction("Event delivery settings", self)
         delivery_btn.setToolTip(
-            "EventDelivery type設定をOpen")
+            "Open event delivery type settings")
         delivery_btn.triggered.connect(
             self.open_event_delivery_settings)
         toolbar.addAction(delivery_btn)
@@ -254,7 +254,7 @@ class MainWindow(QMainWindow):
         interrupt_btn = QAction("Interrupt settings", self)
         interrupt_btn.setToolTip(
             "Interrupt handler, device resources,"
-            "Timer設定をOpen")
+            "Open timer settings")
         interrupt_btn.triggered.connect(
             self.open_interrupt_settings)
         toolbar.addAction(interrupt_btn)
@@ -262,7 +262,7 @@ class MainWindow(QMainWindow):
         # Layer settings
         layer_btn = QAction("Layer settings", self)
         layer_btn.setToolTip(
-            "層の実RowPriority・初期化順序を設定")
+            "Set layer execution priority and initialization order")
         layer_btn.triggered.connect(
             self.open_layer_settings)
         toolbar.addAction(layer_btn)
@@ -271,7 +271,7 @@ class MainWindow(QMainWindow):
 
         validate_btn = QAction("Validation / AI diagnosis", self)
         validate_btn.setToolTip(
-            "Code generation前検証・AI連携診断をOpen")
+            "Open pre-generation validation / AI diagnosis")
         validate_btn.triggered.connect(
             self.open_validation_dialog)
         toolbar.addAction(validate_btn)
@@ -286,14 +286,14 @@ class MainWindow(QMainWindow):
 
         gen_settings_btn = QAction("Generation settings", self)
         gen_settings_btn.setToolTip(
-            "Code generation settingsを変更")
+            "Change code generation settings")
         gen_settings_btn.triggered.connect(
             self.open_code_generation_settings)
         toolbar.addAction(gen_settings_btn)
 
-        gen_save_btn = QAction("生成CodeSave", self)
+        gen_save_btn = QAction("Save generated code", self)
         gen_save_btn.setToolTip(
-            "生成Codeを直接Save")
+            "Directly save generated code")
         gen_save_btn.triggered.connect(
             self.save_generated_code_direct)
         toolbar.addAction(gen_save_btn)
@@ -306,7 +306,7 @@ class MainWindow(QMainWindow):
         toolbar.addAction(open_btn)
 
         save_btn = QAction("Save", self)
-        save_btn.setToolTip("プロジェクトをSave")
+        save_btn.setToolTip("Save project")
         save_btn.triggered.connect(self.save_project)
         toolbar.addAction(save_btn)
 
@@ -314,7 +314,7 @@ class MainWindow(QMainWindow):
 
         new_tab_btn = QAction("New tab", self)
         new_tab_btn.setToolTip(
-            "新しいStateTransitionタブをAdd")
+            "Add a new state transition tab")
         new_tab_btn.triggered.connect(self.add_new_tab)
         toolbar.addAction(new_tab_btn)
 
@@ -426,7 +426,7 @@ class MainWindow(QMainWindow):
 
         code_gen_menu.addSeparator()
         gen_save_action = QAction(
-            "生成CodeをSave...", self)
+            "Save generated code...", self)
         gen_save_action.setShortcut("Ctrl+Shift+S")
         gen_save_action.triggered.connect(
             self.save_generated_code_direct)
@@ -444,7 +444,7 @@ class MainWindow(QMainWindow):
     # Layer settings
     # ------------------------------------------------------------------
     def open_layer_settings(self):
-        """Layer settingsダイアログをOpen"""
+        """Open the layer settings dialog"""
         StaTableLogger.debug(
             "MainWindow.open_layer_settings called")
 
@@ -570,7 +570,7 @@ class MainWindow(QMainWindow):
             "InterruptHandlerEditDialog closed")
 
     # ------------------------------------------------------------------
-    # プロジェクトSave・読込
+    # Project save / load
     # ------------------------------------------------------------------
     def save_project(self):
         """Save all tabs, global definitions, shared libraries, and\n           project settings"""
@@ -916,7 +916,7 @@ class MainWindow(QMainWindow):
             f"Tab closed at index {index}")
 
     # ------------------------------------------------------------------
-    # Log・検証・Code generation
+    # Log / validation / code generation
     # ------------------------------------------------------------------
     def toggle_traceball(self, checked: bool):
         if checked:
@@ -1005,7 +1005,7 @@ class MainWindow(QMainWindow):
             "CodeGenerationSettingsDialog closed")
 
     # ------------------------------------------------------------------
-    # 生成Code直接Save（複数層 + Warning収集Corresponds）
+    # Direct save of generated code (multi-layer + warning collection)
     # ------------------------------------------------------------------
     def save_generated_code_direct(self):
         StaTableLogger.debug(
@@ -1029,7 +1029,7 @@ class MainWindow(QMainWindow):
         layers = self._get_all_layers()
         if not layers:
             QMessageBox.warning(
-                self, "Warning", "タブがYesません。")
+                self, "Warning", "There are no tabs.")
             return
 
         global_defs = self.global_defs

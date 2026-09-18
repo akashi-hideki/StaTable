@@ -3,10 +3,10 @@
 
 IGNORE_KEYWORDS = {
     'greeting': ['Understood', 'Understood', 'Understood', 'Yes,', 'Hello'],
-    'preface': ['Below', 'Analysis result', 'Validated', 'Confirmしました', 'The following is'],
+    'preface': ['Below', 'Analysis result', 'Validated', 'Confirmed', 'The following is'],
     'explanation': ['is', 'does', 'Considering', 'I think', 'is.'],
     'supplement': ['Note,', 'By the way', 'For reference', 'Supplement'],
-    'closing': ['That is all', 'The above is', 'ごConfirmください', 'Best regards'],
+    'closing': ['That is all', 'The above is', 'Please confirm', 'Best regards'],
 }
 
 MARKERS = {

@@ -342,7 +342,7 @@ class SettingsPanel(QWidget):
     def delete_role_function(self):
         row = self.role_table.currentRow()
         if row >= 0:
-            # ★ v1.5: Function nameは列 1（変更None）
+            # v1.5: function name is column 1 (unchanged)
             name = self.role_table.item(row, 1).text().strip() if self.role_table.item(row, 1) else ""
             if name and name in self.sm.role_functions:
                 self.sm.remove_role_function(name)
@@ -380,7 +380,7 @@ class SettingsPanel(QWidget):
                     self.sm.add_state(State(name, type=StateType(type_str), description=desc,
                                              entry=entry, exit=exit_, do=do))
 
-        # === Role functionテーブルの反映 ===
+        # === Reflect role function table ===
         self.sm.role_functions.clear()
         for row in range(self.role_table.rowCount()):
             # New column order: 0=title, 1=function name, 2=namespace, 3=description,

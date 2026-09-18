@@ -58,20 +58,20 @@ class FlowNodeItem(QGraphicsRectItem):
         # Prevent text items from receiving mouse events
         self.text_item.setAcceptedMouseButtons(Qt.NoButton)
 
-        # ノードのSizeと表示内容を設定
+        # Set node size and displayed content
         if item_type == "transition":
-            # 常に3Row表示（Event name・Condition・Target）に固定
+            # Fixed to always show 3 lines (event name, condition, target)
             lines = []
             lines.append(f"{self.ICONS.get(item_type, '')} {text}")
             if flow_item:
                 condition = flow_item.params.get('condition', '')
                 target = flow_item.params.get('target', '')
-                # Condition式が空なら「Condition: none」を表示
+                # If the condition expression is empty, show "Condition: none"
                 if condition:
                     lines.append(f"条件: {condition}")
                 else:
                     lines.append("Condition: none")
-                # Targetが空なら「-> (not set)」を表示
+                # If target is empty, show "-> (not set)"
                 if target:
                     lines.append(f"→ {target}")
                 else:
@@ -173,13 +173,13 @@ class FlowNodeItem(QGraphicsRectItem):
         if self.item_type == "transition":
             return "Transition condition node\n- Drop a role function on top to add pre-action\n- Double-click to edit the condition\n- Right-click for various operations"
         elif self.item_type == "function":
-            return "Role functionノード\n・ダブルクリックでFunction nameを変更"
+            return "Role function node\n- Double-click to rename the function"
         elif self.item_type == "pre_action":
             return "Pre-transition processing\n- Reorder via ordered list"
         elif self.item_type == "else":
             return "else condition\n- Drop a function on top to add else action"
         elif self.item_type == "else_action":
-            return "elseAction\n・順序リストで並べ替え"
+            return "else action\n- Reorder via ordered list"
         return ""
 
 

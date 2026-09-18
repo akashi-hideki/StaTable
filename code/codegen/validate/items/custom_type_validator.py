@@ -1,6 +1,6 @@
 # codegen/validate/items/custom_type_validator.py
 """
-カスタムType検証
+Custom type validation
 """
 
 import sys
@@ -16,7 +16,7 @@ from validate.items.base_validator import BaseValidator
 
 
 class CustomTypeValidator(BaseValidator):
-    """カスタムType検証クラス"""
+    """Custom type validator class"""
     
     category = "custom_type"
     

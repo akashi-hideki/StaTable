@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 
 
 class ValidationSeverity(Enum):
-    """検証Severity"""
+    """Validation severity"""
     ERROR = "error"
     WARNING = "warning"
     INFO = "info"

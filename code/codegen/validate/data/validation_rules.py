@@ -11,12 +11,12 @@ VALIDATION_RULES = {
         'STATE_UNREACHABLE': {
             'severity': 'warning',
             'message': 'State \"{name}\" is unreachable',
-            'suggestion': 'TransitionをAddするか、StateをDeleteしてください',
+            'suggestion': 'Add a transition or delete the state',
         },
         'STATE_NO_TRANSITION': {
             'severity': 'warning',
-            'message': 'State「{name}」からのTransitionがYesません',
-            'suggestion': 'TransitionをAddするか、終端Stateとして明示してください',
+            'message': 'State "{name}" has no outgoing transition',
+            'suggestion': 'Add a transition or mark this as a terminal state',
         },
         'STATE_DUPLICATE': {
             'severity': 'warning',
@@ -28,19 +28,19 @@ VALIDATION_RULES = {
         'EVENT_UNUSED': {
             'severity': 'warning',
             'message': 'Event \"{name}\" is not used',
-            'suggestion': 'TransitionをAddするか、EventをDeleteしてください',
+            'suggestion': 'Add a transition or delete the event',
         },
         'EVENT_NO_TRANSITION': {
             'severity': 'warning',
             'message': 'No transition defined for event \"{name}\"',
-            'suggestion': 'TransitionをAddしてください',
+            'suggestion': 'Please add a transition',
         },
     },
     'transition': {
         'TRANSITION_TARGET_UNDEFINED': {
             'severity': 'error',
-            'message': 'Target「{target}」が定義されていません',
-            'suggestion': 'TargetのStateを定義してください',
+            'message': 'Target "{target}" is not defined',
+            'suggestion': 'Please define the target state',
         },
         'TRANSITION_EVENT_UNDEFINED': {
             'severity': 'error',
@@ -55,53 +55,53 @@ VALIDATION_RULES = {
         'TRANSITION_DUPLICATE': {
             'severity': 'warning',
             'message': 'Transition \"{source} --[{event}]--> {target}\" is duplicated',
-            'suggestion': '重複したTransitionをDeleteしてください',
+            'suggestion': 'Please delete the duplicate transition',
         },
         'TRANSITION_SELF_LOOP': {
             'severity': 'info',
             'message': 'Self transition \"{source} --[{event}]--> {source}\"',
-            'suggestion': '自己Transitionが意図的かConfirmしてください',
+            'suggestion': 'Please confirm whether the self transition is intentional',
         },
     },
     'role_function': {
         'ROLE_FUNC_NO_RETURN_TYPE': {
             'severity': 'error',
-            'message': 'Role function「{name}」のReturn typeが未定義is',
-            'suggestion': 'Return typeを設定してください',
+            'message': 'Role function "{name}" has no return type defined',
+            'suggestion': 'Please set the return type',
         },
         'ROLE_FUNC_ARG_MISMATCH': {
             'severity': 'error',
-            'message': 'Role function「{name}」の引数定義が不完全is',
-            'suggestion': '引数名と引数Typeを正しく設定してください',
+            'message': 'Role function "{name}" has incomplete argument definitions',
+            'suggestion': 'Please set argument names and types correctly',
         },
         'ROLE_FUNC_UNUSED': {
             'severity': 'warning',
-            'message': 'Role function「{name}」は使用されていません',
-            'suggestion': '使用するかDeleteしてください',
+            'message': 'Role function "{name}" is not used',
+            'suggestion': 'Please use it or delete it',
         },
     },
     'variable': {
         'VAR_DUPLICATE_NAME': {
             'severity': 'error',
-            'message': 'Variable name「{name}」が重複していdoes',
-            'suggestion': 'Variable nameを変更してください',
+            'message': 'Variable name "{name}" is duplicated',
+            'suggestion': 'Please change the variable name',
         },
         'VAR_INVALID_TYPE': {
             'severity': 'warning',
-            'message': 'Variable「{name}」のType「{type}」がDisabledis',
-            'suggestion': '正しいTypeを指定してください',
+            'message': 'Variable "{name}" has invalid type "{type}"',
+            'suggestion': 'Please specify a valid type',
         },
         'VAR_INVALID_ARRAY_SIZE': {
             'severity': 'error',
-            'message': 'Variable「{name}」のArray sizeが不正is',
-            'suggestion': 'Array sizeを0より大きいValueにしてください',
+            'message': 'Variable "{name}" has an invalid array size',
+            'suggestion': 'Array size must be greater than 0',
         },
     },
     'flag': {
         'FLAG_DUPLICATE_NAME': {
             'severity': 'error',
-            'message': 'Flag name「{name}」が重複していdoes',
-            'suggestion': 'Flag nameを変更してください',
+            'message': 'Flag name "{name}" is duplicated',
+            'suggestion': 'Please change the flag name',
         },
         'FLAG_INVALID_RANGE': {
             'severity': 'warning',
@@ -112,49 +112,49 @@ VALIDATION_RULES = {
     'queue': {
         'QUEUE_INVALID_SIZE': {
             'severity': 'error',
-            'message': 'Queue「{name}」のSizeが不正is',
-            'suggestion': 'Sizeを0より大きいValueにしてください',
+            'message': 'Queue "{name}" has an invalid size',
+            'suggestion': 'Size must be greater than 0',
         },
         'QUEUE_UNDEFINED_EVENT': {
             'severity': 'warning',
             'message': 'Queue \"{name}\" contains undefined events',
-            'suggestion': 'Event definitionsをConfirmしてください',
+            'suggestion': 'Please confirm the event definitions',
         },
     },
     'interrupt': {
         'INTERRUPT_DUPLICATE_NAME': {
             'severity': 'error',
-            'message': 'Interrupt name「{name}」が重複していdoes',
-            'suggestion': 'Interrupt nameを変更してください',
+            'message': 'Interrupt name "{name}" is duplicated',
+            'suggestion': 'Please change the interrupt name',
         },
         'INTERRUPT_UNDEFINED_EVENT': {
             'severity': 'warning',
             'message': 'Interrupt \"{name}\" contains undefined events',
-            'suggestion': 'Event definitionsをConfirmしてください',
+            'suggestion': 'Please confirm the event definitions',
         },
     },
     'timer': {
         'TIMER_DUPLICATE_VARIABLE': {
             'severity': 'error',
-            'message': 'TimerVariable「{name}」が既存のVariableと重複していdoes',
-            'suggestion': 'Variable nameを変更してください',
+            'message': 'Timer variable "{name}" duplicates an existing variable',
+            'suggestion': 'Please change the variable name',
         },
         'TIMER_INVALID_MULTIPLIER': {
             'severity': 'error',
-            'message': 'Timer「{name}」の乗数が不正is',
+            'message': 'Timer "{name}" has an invalid multiplier',
             'suggestion': 'Multiplier must be > 0',
         },
     },
     'custom_type': {
         'TYPE_DUPLICATE_NAME': {
             'severity': 'error',
-            'message': 'Type name「{name}」が重複していdoes',
-            'suggestion': 'Type nameを変更してください',
+            'message': 'Type name "{name}" is duplicated',
+            'suggestion': 'Please change the type name',
         },
         'TYPE_NO_MEMBERS': {
             'severity': 'warning',
-            'message': 'Type「{name}」にメンバーが定義されていません',
-            'suggestion': 'メンバーをAddしてください',
+            'message': 'Type "{name}" has no members defined',
+            'suggestion': 'Please add a member',
         },
     },
 }

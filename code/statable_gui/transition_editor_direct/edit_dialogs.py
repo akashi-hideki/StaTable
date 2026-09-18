@@ -69,7 +69,7 @@ class TransitionEditDialog(BaseEditDialog):
         self.cond_edit = QLineEdit(item.params.get('condition', ''))
         h1.addWidget(self.cond_edit)
 
-        cond_builder_btn = QPushButton("ConditionをEdit...")
+        cond_builder_btn = QPushButton("Edit condition...")
         cond_builder_btn.clicked.connect(self._open_condition_builder)
         h1.addWidget(cond_builder_btn)
         layout.addLayout(h1)

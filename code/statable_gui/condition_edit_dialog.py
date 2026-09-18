@@ -13,7 +13,7 @@ from .logger import StaTableLogger
 
 
 class ConditionEditDialog(QDialog):
-    """State transition conditionをEditするダイアログ"""
+    """Dialog to edit the state transition condition"""
 
     def __init__(self, parent=None, condition_text="", title="", global_defs=None, role_functions=None):
         super().__init__(parent)
@@ -29,11 +29,11 @@ class ConditionEditDialog(QDialog):
 
         main_layout = QVBoxLayout(self)
 
-        # Title入力ウィジェット
+        # Title input widget
         self.title_widget = TitleEditWidget(self, title=title)
         main_layout.addWidget(self.title_widget)
 
-        # Role functionSelection・Insertバー
+        # Role function select / insert bar
         role_bar = QHBoxLayout()
         role_bar.addWidget(QLabel("Role function:"))
         self.role_combo = QComboBox()
@@ -56,7 +56,7 @@ class ConditionEditDialog(QDialog):
         self.symbol_picker.insert_requested.connect(self.insert_symbol)
         splitter.addWidget(self.symbol_picker)
 
-        # 右側:Condition式Edit
+        # Right pane: condition expression edit
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
         right_layout.addWidget(QLabel("Condition:"))
@@ -104,7 +104,7 @@ class ConditionEditDialog(QDialog):
         """OK button: auto-set provisional title if title is empty"""
         condition_text = self.condition_edit.toPlainText().strip()
         if condition_text:
-            # Condition式の先頭20文字を仮Titleに
+            # Use first 20 chars of condition as provisional title
             first_line = condition_text.split('\n')[0].strip()
             auto_title = first_line[:20] + ("..." if len(first_line) > 20 else "")
         else:

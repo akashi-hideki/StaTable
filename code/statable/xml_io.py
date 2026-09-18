@@ -1,13 +1,13 @@
 # statable/xml_io.py
 """
-XML入出力（Project settings・レイヤPriority・Layer name・NamespaceCorresponds版）
-- プロジェクトSave/読込で共有ライブラリをSave
-- Transitionのpre_actions/else_actions/has_else/else_targetもSave
-- 文字列→リスト正規化、1文字分解の自動結合
-- レイヤPriority・Description・Layer name（layer_name）・プロジェクト名のSave/復元
-- RoleFunction の namespace Save/復元
-- InterruptHandlerDef の used_role_functions / used_variables Save/復元
-- レガシー XML（namespace 無し）の自動移Row
+XML I/O (project settings / layer priority / layer name / namespace support)
+- Save shared libraries on project save / load
+- Also save Transition's pre_actions / else_actions / has_else / else_target
+- String-to-list normalization, auto-merge of single-character splits
+- Save / restore layer priority, description, layer_name, project name
+- Save / restore RoleFunction namespace
+- Save / restore InterruptHandlerDef's used_role_functions / used_variables
+- Auto-migrate legacy XML (without namespace)
 """
 
 import xml.etree.ElementTree as ET
@@ -37,7 +37,7 @@ except ImportError:
     RoleFunctionLibrary = ConditionLibrary = LiteralLibrary = None
     LibRoleFunction = ConditionTemplate = LiteralDefinition = None
 # ======================================================================
-# Helpers: 文字列/リストの正規化
+# Helpers: string / list normalization
 # ======================================================================
 def _normalize_actions(value) -> List[str]:
     """\n    Always normalize pre_actions / else_actions to List[str].\n"""
@@ -108,7 +108,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
         }
         ET.SubElement(events_elem, "Event", **attrs)
 
-    # ★ RoleFunctions に namespace 属性をAdd
+    # Add namespace attribute to RoleFunctions
     roles_elem = ET.SubElement(root, "RoleFunctions")
     for rf in sm.role_functions.values():
         attrs = {
@@ -380,7 +380,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
                 ET.SubElement(intr_child, "Action", **{
                     "condition": act.condition, "action": act.action,
                 })
-            # ★ 使用Role function・Variableを記録
+            # Record used role functions and variables
             for ref in getattr(intr, 'used_role_functions', []):
                 ET.SubElement(intr_child, "UsedRoleFunction", ref=ref)
             for var in getattr(intr, 'used_variables', []):
@@ -485,7 +485,7 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                     condition=act_elem.get("condition", ""),
                     action=act_elem.get("action", ""),
                 ))
-            # ★ 使用Role function・Variableを復元
+            # Restore used role functions and variables
             used_rfs = [r.get("ref", "")
                         for r in intr_elem.findall("UsedRoleFunction")
                         if r.get("ref")]
@@ -575,8 +575,8 @@ def role_function_library_to_element(lib) -> Optional[ET.Element]:
 
 def role_function_library_from_element(elem: Optional[ET.Element]):
     """
-    libcntrl.RoleFunction は name/title/description のみ受け付けるため、
-    それ以外の属性は hasattr でConfirmしてから setattr する。
+    libcntrl.RoleFunction accepts only name/title/description,
+    so other attributes are set via setattr after checking with hasattr.
     """
     if elem is None:
         return RoleFunctionLibrary() if RoleFunctionLibrary else None
@@ -587,7 +587,7 @@ def role_function_library_from_element(elem: Optional[ET.Element]):
         namespace = rf_elem.get("namespace", "")
         try:
             # Generate only with accepted arguments
-            # namespace は keyword 引数としてAdd
+            # namespace added as a keyword argument
             try:
                 rf = LibRoleFunction(
                     name=name,
@@ -604,7 +604,7 @@ def role_function_library_from_element(elem: Optional[ET.Element]):
                 )
                 if hasattr(rf, 'namespace'):
                     rf.namespace = namespace
-            # Add属性は存在する場合のみ設定
+            # Set additional attributes only if they exist
             for attr in ('return_type', 'arg1_type', 'arg1_name',
                          'arg2_type', 'arg2_name'):
                 if hasattr(rf, attr):
@@ -769,7 +769,7 @@ def _project_settings_from_element(elem: Optional[ET.Element]) -> dict:
 
 
 # ======================================================================
-# プロジェクトSave/読込
+# Project save / load
 # ======================================================================
 def project_to_xml(
         tabs: List[Tuple[str, StateMachine]],

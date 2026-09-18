@@ -62,7 +62,7 @@ DEFAULT_SETTINGS_FILE = os.path.join(
 
 
 # ============================================================
-# Warning収集クラス
+# Warning collector class
 # ============================================================
 class WarningCollector(logging.Handler):
     """\n    Handler that collects logs at WARNING level or higher\n\n    usage:\n        collector = WarningCollector()\n        root = logging.getLogger()\n        root.addHandler(collector)\n        try:\n            ... processing ...\n        finally:\n            root.removeHandler(collector)\n\n        if collector.records:\n            show_message_box(collector.records)\n    """
@@ -84,7 +84,7 @@ class WarningCollector(logging.Handler):
 # CodeGenerationDialog
 # ============================================================
 class CodeGenerationDialog(QDialog):
-    """CCode generationダイアログ（複数層Corresponds）"""
+    """C code generation dialog (multi-layer support)"""
 
     def __init__(self, state_machine=None,
                  global_defs=None,
@@ -137,7 +137,7 @@ class CodeGenerationDialog(QDialog):
             logger.warning(f"設定読み込みに失敗: {e}")
 
     def _save_settings(self):
-        """現在の設定をSave"""
+        """Save current settings"""
         try:
             config = self.config_manager.get_config()
             data = {
@@ -164,11 +164,11 @@ class CodeGenerationDialog(QDialog):
         """Build UI"""
         main_layout = QVBoxLayout(self)
         
-        # 設定InfoGroup
+        # Settings info group
         info_group = QGroupBox("Generation settingsInfo")
         info_layout = QFormLayout(info_group)
         
-        # Output先
+        # Output destination
         self.output_dir_edit = QLineEdit()
         self.output_dir_edit.setPlaceholderText(
             "Select output directory")
@@ -193,7 +193,7 @@ class CodeGenerationDialog(QDialog):
             self._on_style_changed)
         info_layout.addRow("Generation style:", self.style_combo)
         
-        # OS typeラベル
+        # OS type label
         self.os_label = QLabel("NonRTOS")
         info_layout.addRow("OS type:", self.os_label)
         
@@ -209,7 +209,7 @@ class CodeGenerationDialog(QDialog):
         
         main_layout.addWidget(info_group)
         
-        # Actionボタン
+        # Action buttons
         button_layout = QHBoxLayout()
 
         self.generate_btn = QPushButton("Code generation")
@@ -271,7 +271,7 @@ class CodeGenerationDialog(QDialog):
         self._update_info_labels(config)
 
     def _update_info_labels(self, config):
-        """設定Infoラベルを更新"""
+        """Update the settings info label"""
         os_names = {
             'non_rtos': 'NonRTOS (bare metal)',
             'freertos': 'FreeRTOS',
@@ -317,11 +317,11 @@ class CodeGenerationDialog(QDialog):
             self._load_config_to_ui()
             self._save_settings()
 
-    # ---- Warning表示 ----
+    # ---- Warning display ----
     def _show_warnings(self, records):
         if not records:
             return
-        # Deduplication（順序保持）
+        # Deduplication (order-preserving)
         seen = set()
         unique = []
         for r in records:
@@ -337,7 +337,7 @@ class CodeGenerationDialog(QDialog):
 
     # ---- ★ Code generation ----
     def _generate_code(self):
-        """Code generationを実Row"""
+        """Execute code generation"""
         if self.state_machine is None or \
            self.global_defs is None:
             QMessageBox.warning(
@@ -366,7 +366,7 @@ class CodeGenerationDialog(QDialog):
         self.progress_bar.setVisible(True)
         self.progress_bar.setRange(0, 0)
 
-        # ★ Warning収集ハンドラをアタッチ
+        # Attach warning collection handler
         collector = WarningCollector()
         root_logger = logging.getLogger()
         root_logger.addHandler(collector)
@@ -421,7 +421,7 @@ class CodeGenerationDialog(QDialog):
             f"{len(self.generated_files)}ファイルを"
             f"生成しました。\n出力先: {output_dir}")
 
-        # ★ Warningがあれば最後に表示
+        # Show warnings last if any
         self._show_warnings(collector.records)
 
     def _update_preview(self):
@@ -434,11 +434,11 @@ class CodeGenerationDialog(QDialog):
             self.preview_text.clear()
 
     def _save_code(self):
-        """生成CodeをSave"""
+        """Save generated code"""
         if not self.generated_files:
             QMessageBox.warning(
                 self, "Warning",
-                "生成されたCodeがYesません。")
+                "No code was generated.")
             return
         
         output_dir = self.output_dir_edit.text().strip()
@@ -472,7 +472,7 @@ class CodeGenerationDialog(QDialog):
                 f"保存に失敗しました:\n{e}")
 
     def _on_close(self):
-        """Close時の処理"""
+        """Handler on close"""
         self._save_settings()
         self.reject()
 

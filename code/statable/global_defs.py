@@ -1,4 +1,4 @@
-"""Global variables・Event flags・Interrupt handler, device resources,Timer設定・ユーザー定義Typeのデータモデル"""
+"""Data model for global variables, event flags, interrupt handlers, device resources, timer settings, and user-defined types"""
 
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -26,7 +26,7 @@ class StructMemberDef:
 
 @dataclass
 class CustomTypeDef:
-    """ユーザー定義Type（Structなど）"""
+    """User-defined types (structs, etc.)"""
     name: str
     description: str = ""
     members: List[StructMemberDef] = field(default_factory=list)
@@ -89,13 +89,13 @@ class InterruptAction:
 class InterruptHandlerDef:
     """Interrupt handler definition
 
-    used_role_functions: 使用Role functionの qualified_name リスト（自動抽出）
-      - 例: ["Driver.Init", "Application.HandleTick"]
-      - ISR の action Save時に更新
-      - 生成Codeのコメントにも使用
+    used_role_functions: list of used role functions' qualified_name (auto-extracted)
+      - e.g. ["Driver.Init", "Application.HandleTick"]
+      - Updated when the ISR action is saved
+      - Also used in generated code comments
 
-    used_variables: 使用Global variables名のリスト（自動抽出）
-      - 例: ["counter", "g_system_tick"]
+    used_variables: list of used global variable names (auto-extracted)
+      - e.g. ["counter", "g_system_tick"]
     """
     name: str
     description: str = ""
@@ -103,7 +103,7 @@ class InterruptHandlerDef:
     is_timer: bool = False
     actions: List[InterruptAction] = field(default_factory=list)
     title: str = ""
-    # ★ Add: 使用記録
+    # Added: usage record
     used_role_functions: List[str] = field(default_factory=list)
     used_variables: List[str] = field(default_factory=list)
 
@@ -172,7 +172,7 @@ class EventQueueDef:
 
 
 class GlobalDefinitions:
-    """Global variables・Event flags・Interrupt handler, device resources,Timer設定・EventQueue・ユーザー定義Typeの管理クラス"""
+    """Management class for global variables, event flags, interrupt handlers, device resources, timer settings, event queues, and user-defined types"""
 
     def __init__(self):
         self.variables: List[SystemVariable] = []
@@ -185,13 +185,13 @@ class GlobalDefinitions:
         self.custom_types: List[CustomTypeDef] = []
 
     def add_timer_variables(self):
-        """Timer base variable・派生TimerVariableをGlobal variablesとして登録する。
+        """Timer base variables and derived timer variables are registered as global variables.
 
-        - 既存Variable（XML 読込 or GUI Edit済）は description / title を保持
-        - type / unit のみTimer定義側と同期
-        - 存在しないVariableのみ新規Add
+        - Existing variables (loaded from XML or edited in GUI) preserve description / title
+        - Only type / unit are synchronized with the timer definition
+        - Only non-existing variables are newly added
 
-        これにより round-trip で description / title がSaveされる。
+        This ensures description / title are preserved across round-trips.
         """
         existing_by_name = {v.name: v for v in self.variables}
 
@@ -199,7 +199,7 @@ class GlobalDefinitions:
                          default_desc, default_title):
             if name in existing_by_name:
                 v = existing_by_name[name]
-                # Timer定義を正とする（Type・Unit）
+                # Treat timer definition as authoritative (type, unit)
                 v.type = type_
                 v.unit = unit
                 # Preserve existing description / title
@@ -207,7 +207,7 @@ class GlobalDefinitions:
                     v.description = default_desc
                 if not v.title:
                     v.title = default_title
-                # GroupがNot setなら補完
+                # If group is unset, fill in
                 if not v.group:
                     v.group = group
             else:
@@ -223,7 +223,7 @@ class GlobalDefinitions:
 
         all_timers = [self.timer_base] + self.extra_timers
         for timer in all_timers:
-            # 基準TimerVariable
+            # Base timer variable
             _sync_or_add(
                 name=timer.variable_name,
                 type_=timer.data_type,
@@ -233,7 +233,7 @@ class GlobalDefinitions:
                 default_desc="Timer base variable",
                 default_title=timer.title or f"タイマ基準: {timer.variable_name}",
             )
-            # 派生TimerVariable
+            # Derived timer variable
             for d in timer.derived:
                 _sync_or_add(
                     name=d.variable_name,
@@ -245,7 +245,7 @@ class GlobalDefinitions:
                     default_title=d.title or f"タイマ: {d.variable_name}",
                 )
 
-    # Group名の取得
+    # Get group name
     def variable_groups(self) -> List[str]:
         return sorted({v.group for v in self.variables if v.group})
 

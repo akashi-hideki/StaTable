@@ -33,8 +33,8 @@ class ConditionBuilderDialog(QDialog):
                  state_machine: StateMachine = None,
                  literal_library: LiteralLibrary = None,
                  states: list = None,
-                 target_state: str = "",          # Add:現在のTarget
-                 else_target_state: str = "",     # Add:現在のelseTarget
+                 target_state: str = "",          # Added: current target
+                 else_target_state: str = "",     # Added: current else target
                  parent=None):
         super().__init__(parent)
         self.setWindowTitle("Transition condition builder")
@@ -69,14 +69,14 @@ class ConditionBuilderDialog(QDialog):
         main_layout.setContentsMargins(4, 4, 4, 4)
         main_layout.setSpacing(4)
 
-        # Event nameEdit欄
+        # Event name edit field
         event_layout = QHBoxLayout()
         event_layout.addWidget(QLabel("Event name:"))
         self.event_name_edit = QLineEdit()
         event_layout.addWidget(self.event_name_edit)
         main_layout.addLayout(event_layout)
 
-        # TargetステートSelection
+        # Target state selection
         target_layout = QHBoxLayout()
         target_layout.addWidget(QLabel("Target:"))
         self.target_combo = QComboBox()
@@ -85,7 +85,7 @@ class ConditionBuilderDialog(QDialog):
         target_layout.addWidget(self.target_combo)
         main_layout.addLayout(target_layout)
 
-        # elseTargetステートSelection
+        # else target state selection
         else_target_layout = QHBoxLayout()
         else_target_layout.addWidget(QLabel("else target:"))
         self.else_target_combo = QComboBox()
@@ -97,7 +97,7 @@ class ConditionBuilderDialog(QDialog):
         main_splitter = QSplitter(Qt.Horizontal)
 
         # Left pane
-        left_widget = QGroupBox("Insertするシンボル")
+        left_widget = QGroupBox("Symbol to insert")
         left_layout = QVBoxLayout(left_widget)
         left_layout.setContentsMargins(4, 4, 4, 4)
         left_layout.setSpacing(2)
@@ -124,7 +124,7 @@ class ConditionBuilderDialog(QDialog):
         right_layout.setContentsMargins(4, 4, 4, 4)
         right_layout.setSpacing(2)
 
-        # Literalizeボタン
+        # Literalize button
         literal_btn = QPushButton("Literalize")
         literal_btn.clicked.connect(self._open_literalization)
         right_layout.addWidget(literal_btn, alignment=Qt.AlignLeft)
@@ -176,7 +176,7 @@ class ConditionBuilderDialog(QDialog):
         main_layout.addWidget(buttons)
 
     def set_current_targets(self):
-        """現在のTargetをコンボボックスに反映する"""
+        """Reflect the current target in the combo box"""
         if self.target_state in self.states:
             idx = self.target_combo.findText(self.target_state)
             if idx >= 0:
@@ -187,7 +187,7 @@ class ConditionBuilderDialog(QDialog):
                 self.else_target_combo.setCurrentIndex(idx)
 
     def _populate_tree(self):
-        """利用可能なシンボルをCategory別にツリーへAdd"""
+        """Add available symbols to the tree by category"""
         self.symbol_tree.clear()
 
         # Global variables
@@ -220,8 +220,8 @@ class ConditionBuilderDialog(QDialog):
                 event_vars_item.addChild(child)
         self.symbol_tree.addTopLevelItem(event_vars_item)
 
-        # Role function（bool）
-        role_funcs_item = QTreeWidgetItem(["Role function（bool）"])
+        # Role function (bool)
+        role_funcs_item = QTreeWidgetItem(["Role function (bool)"])
         for rf in self.state_machine.role_functions.values():
             if getattr(rf, 'return_type', '') == 'bool':
                 symbol = f"RoleFunc_{rf.name}(...)"
@@ -371,7 +371,7 @@ class ConditionBuilderDialog(QDialog):
 
 
 class LiteralizationDialog(QDialog):
-    """Condition式中のNumericをLiteralizeするダイアログ"""
+    """Dialog to literalize numeric values in condition expressions"""
 
     def __init__(self, condition_text: str, literal_library: LiteralLibrary, parent=None):
         super().__init__(parent)

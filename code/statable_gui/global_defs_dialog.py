@@ -1,4 +1,4 @@
-"""Global variables・Event flag definition管理画面"""
+"""Global variables / event flag definition management screen"""
 
 from typing import Optional, List
 
@@ -57,7 +57,7 @@ class InsertableTable(QTableWidget):
 
     def _show_context_menu(self, pos):
         menu = QMenu(self)
-        add_action = menu.addAction("RowをAdd")
+        add_action = menu.addAction("Add row")
         add_action.triggered.connect(self.insert_requested.emit)
         menu.exec(self.viewport().mapToGlobal(pos))
 
@@ -215,13 +215,13 @@ class FlagEditDialog(QDialog):
 
 
 class BulkVariableDialog(QDialog):
-    """Global variables 一括登録ダイアログ"""
+    """Bulk registration dialog for global variables"""
 
     def __init__(self, parent=None, groups=None, global_defs=None):
         super().__init__(parent)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.groups = groups or []
-        self.setWindowTitle("Global variables 一括登録")
+        self.setWindowTitle("Bulk registration of global variables")
         self.setMinimumSize(900, 400)
 
         layout = QVBoxLayout(self)
@@ -335,12 +335,12 @@ class BulkVariableDialog(QDialog):
 
 
 class BulkFlagDialog(QDialog):
-    """Event flags 一括登録ダイアログ"""
+    """Bulk registration dialog for event flags"""
 
     def __init__(self, parent=None, groups=None):
         super().__init__(parent)
         self.groups = groups or []
-        self.setWindowTitle("Event flags 一括登録")
+        self.setWindowTitle("Bulk registration of event flags")
         self.setMinimumSize(900, 400)
 
         layout = QVBoxLayout(self)
@@ -479,7 +479,7 @@ class GlobalDefinitionsDialog(QDialog):
         search_layout = QHBoxLayout()
         search_layout.addWidget(QLabel("Search (prefix match):"))
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Title・Member name・Group名")
+        self.search_edit.setPlaceholderText("Title, member name, group name")
         self.search_edit.textChanged.connect(self.on_search_changed)
         search_layout.addWidget(self.search_edit)
         layout.addLayout(search_layout)

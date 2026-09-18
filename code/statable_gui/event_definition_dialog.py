@@ -1,4 +1,4 @@
-"""StateTransitionEvent definitionsダイアログ"""
+"""State transition event definition dialog"""
 
 from typing import Optional, List
 
@@ -35,7 +35,7 @@ class DoubleClickTable(QTableWidget):
 
 
 class EventEditDialog(QDialog):
-    """Edit state transition eventダイアログ"""
+    """Edit state transition event dialog"""
 
     def __init__(self, parent=None, event: Optional[Event] = None, global_defs=None):
         super().__init__(parent)
@@ -76,7 +76,7 @@ class EventEditDialog(QDialog):
                 self.kind_combo.setCurrentIndex(idx)
         form.addRow("Event kind", self.kind_combo)
 
-        # Sourceレイヤ
+        # Source layer
         self.layer_driver = QRadioButton("Driver layer")
         self.layer_middleware = QRadioButton("Middle layer")
         group = QButtonGroup(self)
@@ -90,7 +90,7 @@ class EventEditDialog(QDialog):
         layer_layout.addWidget(self.layer_driver)
         layer_layout.addWidget(self.layer_middleware)
         layer_layout.addStretch()
-        form.addRow("Sourceレイヤ", layer_layout)
+        form.addRow("Source layer", layer_layout)
 
         # Delivery type
         self.delivery_combo = QComboBox()
@@ -111,10 +111,10 @@ class EventEditDialog(QDialog):
         self.data_type_combo = TypeComboBox(self, global_defs=self.global_defs)
         if event:
             self.data_type_combo.set_current_text(event.data_type)
-        form.addRow("データType", self.data_type_combo)
+        form.addRow("Data type", self.data_type_combo)
 
         self.data_name_edit = QLineEdit(event.data_name if event else "")
-        form.addRow("データVariable name", self.data_name_edit)
+        form.addRow("Data variable name", self.data_name_edit)
 
         self.data_check.toggled.connect(self._on_data_check_toggled)
         self._on_data_check_toggled(self.data_check.isChecked())
@@ -155,7 +155,7 @@ class EventEditDialog(QDialog):
 
 
 class EventDefinitionDialog(QDialog):
-    """StateTransitionEvent definitions一覧ダイアログ"""
+    """State transition event definition list dialog"""
 
     def __init__(self, sm: StateMachine, global_defs: Optional[GlobalDefinitions] = None, parent=None):
         super().__init__(parent)
@@ -170,7 +170,7 @@ class EventDefinitionDialog(QDialog):
         search_layout = QHBoxLayout()
         search_layout.addWidget(QLabel("Search (prefix match):"))
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Title・Event name・Description")
+        self.search_edit.setPlaceholderText("Title, event name, description")
         self.search_edit.textChanged.connect(self.refresh_table)
         search_layout.addWidget(self.search_edit)
         layout.addLayout(search_layout)
@@ -215,9 +215,9 @@ class EventDefinitionDialog(QDialog):
             row = self.table.rowCount()
             self.table.insertRow(row)
 
-            # Title（直接Edit可能）
+            # Title (directly editable)
             title_item = QTableWidgetItem(title)
-            title_item.setToolTip("このEventのTitle。直接Editできdoes。")
+            title_item.setToolTip("Title of this event. Can be edited directly.")
             self.table.setItem(row, 0, title_item)
 
             self.table.setItem(row, 1, QTableWidgetItem(name))
@@ -262,7 +262,7 @@ class EventDefinitionDialog(QDialog):
             if not new_event.name:
                 QMessageBox.warning(self, "Warning", "Please enter an event name.")
                 return
-            # Nameが変わった場合の処理
+            # Handler when the name changes
             old_name = event.name
             if old_name != new_event.name:
                 if new_event.name in self.sm.events:
@@ -313,7 +313,7 @@ class EventDefinitionDialog(QDialog):
             msg = f"イベント '{event.title}' は削除できません。\n\n以下の遷移で使用されています：\n\n"
             for trans in transitions:
                 msg += f"  - {trans.source} → {trans.target}\n"
-            msg += "\n先にこれらのTransitionをDeleteしてください。"
+            msg += "\nPlease delete these transitions first."
             QMessageBox.warning(self, "Warning", msg)
             return
 

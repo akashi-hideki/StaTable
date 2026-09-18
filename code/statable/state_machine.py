@@ -12,8 +12,8 @@ class StateMachine:
         self.initial_state: Optional[str] = None
 
         # ★ Layer settings
-        self.layer_priority: int = 5          # 実RowPriority（1〜9）
-        self.layer_description: str = ""      # 層のDescription（任意）
+        self.layer_priority: int = 5          # Execution priority (1-9)
+        self.layer_description: str = ""      # Layer description (optional)
         self.layer_name: str = ""             # Layer name (e.g., \"Driver\")
 
     def add_state(self, state: State):

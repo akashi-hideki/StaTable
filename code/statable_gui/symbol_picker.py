@@ -23,7 +23,7 @@ class SymbolPickerWidget(QWidget):
         layout = QVBoxLayout(self)
 
         # Title
-        title = QLabel("Global variables・Event flags・戻りValue一覧")
+        title = QLabel("Global variables, event flags, and return values")
         title.setFont(QFont("sans-serif", 10, QFont.Bold))
         layout.addWidget(title)
 
@@ -31,7 +31,7 @@ class SymbolPickerWidget(QWidget):
         search_label = QLabel("Search (prefix match):")
         layout.addWidget(search_label)
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Title・Member name・Group名を入力")
+        self.search_edit.setPlaceholderText("Enter title, member name, and group name")
         self.search_edit.textChanged.connect(self.refresh_list)
         layout.addWidget(self.search_edit)
 
@@ -102,7 +102,7 @@ class SymbolPickerWidget(QWidget):
                 )
                 self.list_widget.addItem(item)
 
-        # Role function戻りValue（一時Variable）
+        # Role function return value (temp variable)
         for func_name in self.role_functions.keys():
             temp_var = f"rv_{func_name}"
             if self._matches(temp_var, func_name, "", query):

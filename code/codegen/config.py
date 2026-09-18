@@ -1,7 +1,7 @@
 # codegen/config.py
 """
-Code generation settings管理モジュール
-生成オプションを一元管理する
+Code generation settings management module
+Centralizes generation options
 """
 
 from dataclasses import dataclass, field
@@ -32,7 +32,7 @@ class CodeGenerationConfig:
     enable_info_logs: bool = True
     enable_error_logs: bool = True
     
-    # ===== comment生成 =====
+    # ===== Comment generation =====
     enable_comments: bool = True
     enable_doxygen: bool = True
     
@@ -146,7 +146,7 @@ class ConfigManager:
     def get_available_table_types(self) -> Dict[str, str]:
         """Available table styles"""
         return {
-            'array': 'Array方式',
+            'array': 'Array style',
             'switch': 'switch-case style',
             'dictionary': 'Dictionary style (deprecated)',
         }

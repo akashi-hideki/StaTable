@@ -97,7 +97,7 @@ class TimerBaseDef:
     data_type: str = "volatile uint32_t"
     derived: List[TimerDerivedDef] = field(default_factory=list)
     title: str = ""
-    interrupt_name: str = ""   # ★ このTimerを駆動するInterrupt name
+    interrupt_name: str = ""   # Interrupt name driving this timer
 
     def __post_init__(self):
         if not self.title:
@@ -131,7 +131,7 @@ class GlobalDefinitions:
         self.interrupts: List[InterruptHandlerDef] = []
         self.placeholders: List[DevicePlaceholderDef] = []
         self.timer_base: TimerBaseDef = TimerBaseDef()
-        self.extra_timers: List[TimerBaseDef] = []   # ★ AddTimer基準
+        self.extra_timers: List[TimerBaseDef] = []   # Add timer base
         self.event_queues: List[EventQueueDef] = []
 
     def add_timer_variables(self):

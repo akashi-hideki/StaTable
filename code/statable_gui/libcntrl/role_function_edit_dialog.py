@@ -1,6 +1,6 @@
 # statable_gui/libcntrl/role_function_edit_dialog.py
 """
-Edit role functionダイアログ
+Edit role function dialog
 """
 
 from typing import List
@@ -15,7 +15,7 @@ from .role_function_library import RoleFunction
 
 
 class RoleFunctionEditDialog(QDialog):
-    """共有Role functionのEditダイアログ"""
+    """Shared role function edit dialog"""
 
     def __init__(self, role_function: RoleFunction,
                  global_vars: List[str] = None,
@@ -46,8 +46,8 @@ class RoleFunctionEditDialog(QDialog):
         form.addRow("Description:", self.desc_edit)
         main_layout.addLayout(form)
 
-        # 使用Global variables
-        global_group = QGroupBox("使用Global variables")
+        # Used global variables
+        global_group = QGroupBox("Used global variables")
         global_layout = QVBoxLayout(global_group)
         self.global_list = QListWidget()
         self.global_list.setSelectionMode(QListWidget.NoSelection)
@@ -73,7 +73,7 @@ class RoleFunctionEditDialog(QDialog):
         main_layout.addWidget(event_group)
 
         # Used literals
-        literal_group = QGroupBox("使用Literal（既存からSelection）")
+        literal_group = QGroupBox("Used literals (select from existing)")
         literal_layout = QVBoxLayout(literal_group)
         self.literal_list = QListWidget()
         self.literal_list.setSelectionMode(QListWidget.NoSelection)

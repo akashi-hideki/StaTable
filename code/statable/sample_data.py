@@ -29,15 +29,15 @@ def create_sample_state_machine() -> StateMachine:
                        delivery_type=EventDeliveryType.DIRECT,
                        source_layer=EventSourceLayer.MIDDLEWARE,
                        title="Stop request"))
-    sm.add_event(Event(name="ERROR", id=3, description="Error通知",
+    sm.add_event(Event(name="ERROR", id=3, description="Error notification",
                        delivery_type=EventDeliveryType.QUEUE,
                        source_layer=EventSourceLayer.DRIVER,
                        data_type="uint8_t", data_name="err_code",
-                       title="Error通知"))
-    sm.add_event(Event(name="TIMER0_OVERFLOW", id=4, description="1msTimer満了",
+                       title="Error notification"))
+    sm.add_event(Event(name="TIMER0_OVERFLOW", id=4, description="1ms timer expired",
                        delivery_type=EventDeliveryType.DOUBLE,
                        source_layer=EventSourceLayer.DRIVER,
-                       title="Timer満了"))
+                       title="Timer expired"))
     sm.add_event(Event(name="", id=0, kind=EventKind.SIGNAL, description="Completion transition",
                        delivery_type=EventDeliveryType.DIRECT,
                        source_layer=EventSourceLayer.MIDDLEWARE,
@@ -70,7 +70,7 @@ def create_sample_state_machine() -> StateMachine:
         condition="err_code != 0",
         pre_actions=["log()"],
         target="Error",
-        title="Errorへ",
+        title="To error",
     ))
     sm.add_transition(Transition(
         source="Error",
@@ -111,13 +111,13 @@ def create_sample_state_machine() -> StateMachine:
     sm.add_role_function(RoleFunction(
         name="Error_Log",
         namespace="",
-        description="Errorログ出力",
+        description="Error log output",
         return_type="void",
         arg1_type="int",
         arg1_name="err_code",
         arg2_type="int",
         arg2_name="level",
-        title="Errorログ出力",
+        title="Error log output",
     ))
 
     return sm
@@ -126,7 +126,7 @@ def create_sample_state_machine() -> StateMachine:
 def create_sample_global_defs() -> GlobalDefinitions:
     defs = GlobalDefinitions()
 
-    # ユーザー定義Type（Struct＋ビットフィールド＋Array）
+    # User-defined type (struct + bit field + array)
     defs.custom_types.append(CustomTypeDef(
         name="SystemStatus_t",
         description="System status struct",
@@ -147,14 +147,14 @@ def create_sample_global_defs() -> GlobalDefinitions:
         title="Data packet",
         members=[
             StructMemberDef(name="data", data_type="uint8_t",
-                            description="データArray", title="データArray",
+                            description="Data array", title="Data array",
                             array_size=64),
             StructMemberDef(name="length", data_type="uint16_t",
                             description="Data length", title="Data length"),
         ]
     ))
 
-    # Global variables（ArrayCorresponds）
+    # Global variables (array support)
     defs.variables.append(SystemVariable(name="battery_voltage", type="uint16_t", unit="mV",
                                          default_value="0", group="Power",
                                          description="Battery voltage", title="Battery voltage"))
@@ -174,7 +174,7 @@ def create_sample_global_defs() -> GlobalDefinitions:
                                 title="Mode indication flag"))
 
     defs.interrupts.append(InterruptHandlerDef(
-        name="TIMER0", description="1ms周期Timer",
+        name="TIMER0", description="1ms period timer",
         event_names=["TIMER0_OVERFLOW"], is_timer=True,
         actions=[
             InterruptAction(condition="g_tick_100ms >= 5", action="StateMachine_EnqueueEvent(EVENT_TICK);"),
@@ -184,7 +184,7 @@ def create_sample_global_defs() -> GlobalDefinitions:
     ))
 
     defs.placeholders.append(DevicePlaceholderDef(name="TIMER0_IRQ_FLAG",
-                                                  description="Timer0InterruptFlagClear用レジスタ",
+                                                  description="Timer0 interrupt flag clear register",
                                                   title="Timer0 IRQFlag"))
 
     defs.timer_base = TimerBaseDef(
@@ -197,7 +197,7 @@ def create_sample_global_defs() -> GlobalDefinitions:
             TimerDerivedDef(period_name="1s", multiplier=1000, variable_name="g_tick_1s",
                             data_type="uint16_t", title="1sTimer"),
         ],
-        title="システムTimer基準",
+        title="System timer base",
         interrupt_name="TIMER0"
     )
 
@@ -205,9 +205,9 @@ def create_sample_global_defs() -> GlobalDefinitions:
         variable_name="g_high_speed_tick", unit="100us", data_type="volatile uint32_t",
         derived=[
             TimerDerivedDef(period_name="1ms", multiplier=10, variable_name="g_hs_1ms",
-                            data_type="uint16_t", title="高速1msTimer"),
+                            data_type="uint16_t", title="High-speed 1ms timer"),
         ],
-        title="高速Timer基準",
+        title="High-speed timer base",
         interrupt_name="TIMER1"
     ))
 
@@ -218,7 +218,7 @@ def create_sample_global_defs() -> GlobalDefinitions:
         description="UART receive queue", title="UART receive queue"
     ))
 
-    # TimerVariableをGlobal variablesとして自動登録
+    # Auto-register timer variables as global variables
     defs.add_timer_variables()
 
     return defs

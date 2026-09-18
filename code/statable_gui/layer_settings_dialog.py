@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class LayerSettingsDialog(QDialog):
-    """Layer settingsダイアログ"""
+    """Layer settings dialog"""
 
     def __init__(self, layers: List[Tuple[str, StateMachine]],
                  parent=None):
@@ -92,26 +92,26 @@ class LayerSettingsDialog(QDialog):
     def _load_layers(self):
         self.table.setRowCount(len(self.layers))
 
-        # Priorityの昇順でソート
+        # Sort by priority ascending
         sorted_layers = sorted(
             self.layers,
             key=lambda x: getattr(x[1], 'layer_priority', 5)
         )
 
         for row, (tab_name, sm) in enumerate(sorted_layers):
-            # Tab名（Edit不可）
+            # Tab name (not editable)
             tab_item = QTableWidgetItem(tab_name)
             tab_item.setFlags(
                 tab_item.flags() & ~Qt.ItemIsEditable
             )
             self.table.setItem(row, 0, tab_item)
 
-            # Layer name（Edit可）
+            # Layer name (editable)
             layer_name = getattr(sm, 'layer_name', '')
             name_item = QTableWidgetItem(layer_name)
             self.table.setItem(row, 1, name_item)
 
-            # Priority（スピンボックス）
+            # Priority (spin box)
             priority = getattr(sm, 'layer_priority', 5)
             priority_spin = QSpinBox()
             priority_spin.setRange(1, 9)
@@ -126,7 +126,7 @@ class LayerSettingsDialog(QDialog):
         self.table.resizeRowsToContents()
 
     def _on_ok(self):
-        # Priorityの重複チェック
+        # Priority duplicate check
         priorities = []
         for row in range(self.table.rowCount()):
             spin = self.table.cellWidget(row, 2)
@@ -136,7 +136,7 @@ class LayerSettingsDialog(QDialog):
         if len(priorities) != len(set(priorities)):
             reply = QMessageBox.question(
                 self, "Confirm",
-                "Priorityが重複していdoes。このまま続けdoesか？",
+                "Priority is duplicated. Continue anyway?",
                 QMessageBox.Yes | QMessageBox.No
             )
             if reply == QMessageBox.No:

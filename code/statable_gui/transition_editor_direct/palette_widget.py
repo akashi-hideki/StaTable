@@ -83,7 +83,7 @@ class PaletteListWidget(QListWidget):
 
 
 class PaletteWidget(QWidget):
-    """Category別折りたたみパレット（EventSelection画面）"""
+    """Collapsible palette by category (event selection screen)"""
 
     edit_function_requested = Signal(str)
     edit_transition_requested = Signal(str)
@@ -102,12 +102,12 @@ class PaletteWidget(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
 
-        title_label = QLabel("EventSelection画面")
+        title_label = QLabel("Event selection screen")
         title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         title_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(title_label)
 
-        # Role functionセクション
+        # Role function section
         func_group = QGroupBox("Role function")
         v1 = QVBoxLayout(func_group)
         v1.setContentsMargins(4, 4, 4, 4)

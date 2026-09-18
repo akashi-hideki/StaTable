@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class CodeGenerationSettingsDialog(QDialog):
-    """Code generation settingsダイアログ"""
+    """Code generation settings dialog"""
     
     def __init__(self, config_manager: Optional[ConfigManager] = None, parent=None):
         super().__init__(parent)
@@ -54,12 +54,12 @@ class CodeGenerationSettingsDialog(QDialog):
         self._setup_basic_tab()
         self.tab_widget.addTab(self.basic_tab, "Basic settings")
         
-        # Log設定タブ
+        # Log settings tab
         self.log_tab = QWidget()
         self._setup_log_tab()
         self.tab_widget.addTab(self.log_tab, "Log settings")
         
-        # Output settingsタブ
+        # Output settings tab
         self.include_tab = QWidget()
         self._setup_include_tab()
         self.tab_widget.addTab(self.include_tab, "External include")
@@ -111,7 +111,7 @@ class CodeGenerationSettingsDialog(QDialog):
         style_layout.addRow("Generation style:", style_value_label)
         
         # Table style: fixed
-        table_value_label = QLabel("Array方式（2次元Array + O(1) アクセス）")
+        table_value_label = QLabel("Array style (2D array + O(1) access)")
         table_value_label.setStyleSheet("font-weight: bold;")
         style_layout.addRow("Table style:", table_value_label)
         
@@ -123,7 +123,7 @@ class CodeGenerationSettingsDialog(QDialog):
         note_label.setStyleSheet("color: gray; font-size: 10px; margin-left: 10px;")
         style_layout.addRow("", note_label)
         
-        # OS type（これは意味があるのでSelection可能）
+        # OS type (this is meaningful, so it is selectable)
         self.os_type_combo = QComboBox()
         self.os_type_combo.addItem("NonRTOS (bare metal)", "non_rtos")
         self.os_type_combo.addItem("FreeRTOS", "freertos")
@@ -137,7 +137,7 @@ class CodeGenerationSettingsDialog(QDialog):
         naming_layout = QFormLayout(naming_group)
         
         self.naming_prefix_edit = QLineEdit()
-        self.naming_prefix_edit.setPlaceholderText("Function nameのプレフィックス（任意）")
+        self.naming_prefix_edit.setPlaceholderText("Function name prefix (optional)")
         naming_layout.addRow("Prefix:", self.naming_prefix_edit)
         
         self.state_prefix_edit = QLineEdit()
@@ -151,7 +151,7 @@ class CodeGenerationSettingsDialog(QDialog):
         
         layout.addWidget(naming_group)
         
-        # comment設定
+        # Comment settings
         comment_group = QGroupBox("Comment settings")
         comment_layout = QVBoxLayout(comment_group)
         
@@ -185,7 +185,7 @@ class CodeGenerationSettingsDialog(QDialog):
         
         layout.addWidget(log_group)
         
-        # Pending event制限
+        # Pending event limit
         pending_group = QGroupBox("Pending event settings")
         pending_layout = QFormLayout(pending_group)
         
@@ -205,7 +205,7 @@ class CodeGenerationSettingsDialog(QDialog):
         """External include settings tab"""
         layout = QVBoxLayout(self.include_tab)
         
-        # External includeファイル
+        # External include file
         include_group = QGroupBox("External include file")
         include_layout = QVBoxLayout(include_group)
         
@@ -244,14 +244,14 @@ class CodeGenerationSettingsDialog(QDialog):
         
         layout.addWidget(include_group)
         
-        # Insert先
-        target_group = QGroupBox("Insert先")
+        # Insertion target
+        target_group = QGroupBox("Insertion target")
         target_layout = QVBoxLayout(target_group)
         
         self.include_in_super_check = QCheckBox("statable_all.h (for user main.c)")
         target_layout.addWidget(self.include_in_super_check)
         
-        self.include_in_role_check = QCheckBox("Role function .c ファイル")
+        self.include_in_role_check = QCheckBox("Role function .c file")
         target_layout.addWidget(self.include_in_role_check)
         
         self.include_in_transitions_check = QCheckBox("transitions .c file")
@@ -264,7 +264,7 @@ class CodeGenerationSettingsDialog(QDialog):
         layout.addStretch()
     
     def _setup_output_tab(self):
-        """Output settingsタブ"""
+        """Output settings tab"""
         layout = QVBoxLayout(self.output_tab)
         
         # Output settings
@@ -330,7 +330,7 @@ class CodeGenerationSettingsDialog(QDialog):
         merge_group = QGroupBox("Merge settings")
         merge_layout = QVBoxLayout(merge_group)
         
-        self.save_with_merge_check = QCheckBox("既存ファイルとマージしてSave（ユーザーCode保持）")
+        self.save_with_merge_check = QCheckBox("Save by merging with existing file (preserve user code)")
         merge_layout.addWidget(self.save_with_merge_check)
         
         layout.addWidget(merge_group)
@@ -480,10 +480,10 @@ class CodeGenerationSettingsDialog(QDialog):
         if dir_path:
             self.output_dir_edit.setText(dir_path)
     
-    # ===== External include操作 =====
+    # ===== External include operations =====
     def _on_add_include(self):
         files, _ = QFileDialog.getOpenFileNames(
-            self, "External include fileをSelection", "",
+            self, "Select external include file", "",
             "Header files (*.h);;All files (*)"
         )
         if files:
