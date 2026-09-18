@@ -1,11 +1,11 @@
 /**
  * @file    osal.c
- * @brief   OSAL（OS抽象化レイヤ）- NonRTOS
+ * @brief   OSAL (OS Abstraction Layer) - NonRTOS
  */
 #include <stdint.h>
 #include <stdbool.h>
 
-/* ミューテックス実装 */
+/* Mutex implementation */
 OSAL_Status_t OSAL_Mutex_Create(OSAL_Mutex_t *mutex)
 {
     if (mutex == NULL) {
@@ -17,7 +17,7 @@ OSAL_Status_t OSAL_Mutex_Create(OSAL_Mutex_t *mutex)
 
 OSAL_Status_t OSAL_Mutex_Lock(OSAL_Mutex_t *mutex, uint32_t timeout_ms)
 {
-    (void)timeout_ms;  /* NonRTOSでは使用しない */
+    (void)timeout_ms;  /* Not used in NonRTOS */
     if (mutex == NULL) {
         return OSAL_ERROR;
     }
@@ -37,7 +37,7 @@ OSAL_Status_t OSAL_Mutex_Unlock(OSAL_Mutex_t *mutex)
     return OSAL_OK;
 }
 
-/* セマフォ実装 */
+/* Semaphore implementation */
 OSAL_Status_t OSAL_Semaphore_Create(OSAL_Semaphore_t *sem, uint32_t max_count, uint32_t initial_count)
 {
     if (sem == NULL) {
@@ -73,7 +73,7 @@ OSAL_Status_t OSAL_Semaphore_Give(OSAL_Semaphore_t *sem)
     return OSAL_OK;
 }
 
-/* キュー実装 */
+/* Queue implementation */
 OSAL_Status_t OSAL_Queue_Create(OSAL_Queue_t *queue, void *buffer, uint32_t size, uint32_t item_size)
 {
     if (queue == NULL || buffer == NULL) {
@@ -126,15 +126,15 @@ OSAL_Status_t OSAL_Queue_Receive(OSAL_Queue_t *queue, void *item, uint32_t timeo
     return OSAL_OK;
 }
 
-/* クリティカルセクション実装 */
+/* Critical section implementation */
 void OSAL_Critical_Enter(void)
 {
-    /* NonRTOSでは割り込み禁止 */
+    /* Disable interrupts in NonRTOS */
     __disable_irq();
 }
 
 void OSAL_Critical_Exit(void)
 {
-    /* 割り込み許可 */
+    /* Enable interrupts */
     __enable_irq();
 }

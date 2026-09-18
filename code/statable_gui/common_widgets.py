@@ -269,7 +269,7 @@ class TypeManagerDialog(QDialog):
                 QMessageBox.warning(self, "Warning", "Please enter a type name.")
                 return
             if any(t.name == new_type.name for t in self.global_defs.custom_types):
-                QMessageBox.warning(self, "Warning", f"型 '{new_type.name}' already exists.")
+                QMessageBox.warning(self, "Warning", f"Type '{new_type.name}' already exists.")
                 return
             self.global_defs.custom_types.append(new_type)
             self._refresh_table()
@@ -297,7 +297,7 @@ class TypeManagerDialog(QDialog):
         if not target:
             return
         reply = QMessageBox.question(
-            self, "Confirm", f"型 '{target.title}': confirm delete?",
+            self, "Confirm", f"Type '{target.title}': confirm delete?",
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
@@ -385,7 +385,7 @@ class TypeEditDialog(QDialog):
                 QMessageBox.warning(self, "Warning", "Please enter a member name.")
                 return
             if any(m.name == member.name for m in self.custom_type.members):
-                QMessageBox.warning(self, "Warning", f"メンバ '{member.name}' already exists.")
+                QMessageBox.warning(self, "Warning", f"Member '{member.name}' already exists.")
                 return
             self.custom_type.members.append(member)
             self._refresh_member_table()

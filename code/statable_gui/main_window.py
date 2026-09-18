@@ -1080,7 +1080,7 @@ class MainWindow(QMainWindow):
         QMessageBox.information(
             self, "Save complete",
             f"{len(saved_files)} files saved.\n"
-            f"層数: {len(layers)}\n\n"
+            f"Layers: {len(layers)}\n\n"
             f"Output: {output_dir}")
 
         if collector.records:

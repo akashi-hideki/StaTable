@@ -749,7 +749,7 @@ class InterruptHandlerEditDialog(QDialog):
             timer = all_timers[index]
             reply = QMessageBox.question(
                 self, "Confirm",
-                f"基準タイマ '{timer.title}': confirm delete?",
+                f"Base timer '{timer.title}': confirm delete?",
                 QMessageBox.Yes | QMessageBox.No
             )
             if reply == QMessageBox.Yes:

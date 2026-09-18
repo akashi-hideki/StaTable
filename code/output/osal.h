@@ -1,6 +1,6 @@
 /**
  * @file    osal.h
- * @brief   OSAL（OS抽象化レイヤ）- NonRTOS
+ * @brief   OSAL (OS Abstraction Layer) - NonRTOS
  */
 #ifndef OSAL_H
 #define OSAL_H
@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* OSAL型定義 */
+/* OSAL type definitions */
 typedef enum {
     OSAL_OK = 0,
     OSAL_ERROR,

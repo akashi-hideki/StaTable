@@ -111,7 +111,7 @@ class SymbolPickerWidget(QWidget):
                 item.setToolTip(
                     f"Kind: Role function return value\n"
                     f"Function: {func_name}\n"
-                    f"一時Variable: {temp_var}"
+                    f"Temp variable: {temp_var}"
                 )
                 self.list_widget.addItem(item)
 
