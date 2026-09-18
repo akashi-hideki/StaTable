@@ -1,10 +1,10 @@
 # codegen/enum_generator.py
 """
-C列挙型コード生成モジュール（多層ステートマシン対応版）
+C enum code generation module (multi-layer state machine support)
 
-【v1.5 修正】
-  - generate_event_enum: 空名イベントを本体ループから除外
-    （NONE として先頭で処理済みのため、重複定義を防ぐ）
+[v1.5 fix]
+  - generate_event_enum: filter out empty-name events from the main loop
+    (NONE is already handled at the top, preventing duplicate definitions)
 """
 
 import sys
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class CEnumGenerator:
-    """C列挙型コード生成クラス（多層ステートマシン対応）"""
+    """C enum code generation class (multi-layer state machine support)"""
 
     ENUM_TEMPLATES = {
         'section_comment': Template(
@@ -43,7 +43,7 @@ class CEnumGenerator:
             '    $name = $value,\n'
         ),
         'max_value': Template(
-            '    $name           /* 要素数（システム用） */\n'
+            '    $name           /* element count (for system use) */\n'
         ),
         'enum_end': Template(
             '} $type_name;\n'
@@ -219,7 +219,7 @@ class CEnumGenerator:
         T = self.ENUM_TEMPLATES
         parts = []
 
-        desc = f"{self.layer_name}層の状態定義" if self.layer_name else "状態定義"
+        desc = f"{self.layer_name} layer state definitions" if self.layer_name else "State definitions"
         parts.append(T['section_comment'].substitute(description=desc))
 
         parts.append(T['enum_start'])
@@ -240,17 +240,17 @@ class CEnumGenerator:
 
     def generate_event_enum(self, events: List[Event]) -> str:
         """
-        イベント enum を生成（NONE = 0 を含む）
+        Generate event enum (including NONE = 0).
 
-        【v1.5 修正】
-          空名イベント（完了遷移用の `name=""`）は NONE として
-          先頭で定義されるため、本体ループから除外する。
-          これにより EVENT_<Layer>_NONE の重複定義を防ぐ。
+        [v1.5 fix]
+          Empty-name events (used for completion transitions, `name=""`)
+          are already handled as NONE at the top, so exclude them from
+          the main loop. This prevents duplicate EVENT_<Layer>_NONE.
         """
         if not events:
             return ''
 
-        # ★ v1.5 修正: 空名イベントを除外
+        # v1.5 fix: exclude empty-name events
         non_empty_events = [
             e for e in events if getattr(e, 'name', '')
         ]
@@ -258,7 +258,7 @@ class CEnumGenerator:
         if filtered:
             self._log_debug(
                 f"generate_event_enum: filtered out {filtered} empty-name "
-                f"event(s) (NONE として処理済み)"
+                f"event(s) (already processed as NONE)"
             )
 
         self._log_debug(f"=== generate_event_enum START: "
@@ -266,17 +266,17 @@ class CEnumGenerator:
         T = self.ENUM_TEMPLATES
         parts = []
 
-        desc = f"{self.layer_name}層のイベント定義" if self.layer_name else "イベント定義"
+        desc = f"{self.layer_name} layer event definitions" if self.layer_name else "Event definitions"
         parts.append(T['section_comment'].substitute(description=desc))
 
         parts.append(T['enum_start'])
 
         parts.append(self._generate_enum_values(
-            items=non_empty_events,   # ★ 空名除外後を渡す
+            items=non_empty_events,
             value_name_func=self._event_value_name,
             comment_func=self._generate_event_comment,
             none_value="NONE",
-            none_comment="完了遷移",
+            none_comment="completion transition",
         ))
 
         parts.append(T['max_value'].substitute(name=self._event_max_name()))
@@ -294,7 +294,7 @@ class CEnumGenerator:
         T = self.ENUM_TEMPLATES
         parts = []
 
-        parts.append(T['section_comment'].substitute(description="イベントフラグ定義"))
+        parts.append(T['section_comment'].substitute(description="Event flag definitions"))
         parts.append(T['enum_start'])
 
         parts.append(self._generate_enum_values(
@@ -345,8 +345,8 @@ class CEnumGenerator:
         T = self.ENUM_TEMPLATES
         parts = []
 
-        parts.append('/* イベントフラグビットマスク定義 */\n')
-        parts.append('/* ビット単位でフラグを管理する場合に使用 */\n')
+        parts.append('/* Event flag bitmask definitions */\n')
+        parts.append('/* Used when managing flags as individual bits */\n')
         parts.append(T['enum_start'])
 
         for i, flag in enumerate(flags):

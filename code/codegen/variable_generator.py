@@ -1,23 +1,23 @@
 # codegen/variable_generator.py
 """
-変数・フラグ生成モジュール（多層ステートマシン対応版）
+Variable and flag generation module (multi-layer state machine support)
 
-【v1.5 修正】
-  - _generate_normal_init でカスタム構造体変数を memset で初期化
-    （v1.4 までは `ctx->data.system_status = 0;` でコンパイルエラー）
+[v1.5 fix]
+  - _generate_normal_init initializes custom struct variables with memset
+    (v1.4 used `ctx->data.system_status = 0;` which caused compile errors)
 
-【v1.6 §9.8 #92 修正】
-  - アクセスマクロのフィールド名を修正
-    DATA_COUNTER(ctx) ((ctx)->data.COUNTER)  → バグ
-    DATA_COUNTER(ctx) ((ctx)->data.counter)  → 修正後
-    マクロ名は大文字（to_upper_snake）、フィールド名は sanitize_identifier を使用
+[v1.6 sec 9.8 #92 fix]
+  - Fix access macro field name
+    DATA_COUNTER(ctx) ((ctx)->data.COUNTER)  -> bug
+    DATA_COUNTER(ctx) ((ctx)->data.counter)  -> fixed
+    Macro name is uppercase (to_upper_snake); field name uses sanitize_identifier.
 
-【v2.0 修正】
-  - `_t` サフィックス付き標準型（uint32_t / uint8_t 等）を正しく認識
-    旧: DEFAULT_INIT_VALUES に 'uint32' はあるが 'uint32_t' がない
-        → 標準型がカスタム型扱いされて冗長な memset を生成
-    新: DEFAULT_INIT_VALUES に _t 付き型を追加
-        _normalize_type_for_init で volatile / const 修飾子を除去してから判定
+[v2.0 fix]
+  - Correctly recognize standard types with `_t` suffix (uint32_t / uint8_t, etc.)
+    Old: DEFAULT_INIT_VALUES had 'uint32' but not 'uint32_t'
+        -> standard types were treated as custom types, generating redundant memset
+    New: added _t-suffixed types to DEFAULT_INIT_VALUES
+        _normalize_type_for_init strips volatile / const qualifiers before lookup
 """
 
 import sys
@@ -47,13 +47,13 @@ logger = logging.getLogger(__name__)
 
 
 class VariableGenerator:
-    """変数・フラグ生成クラス（多層ステートマシン対応）"""
+    """Variable and flag generation class (multi-layer state machine support)"""
 
     INIT_TEMPLATES = {
         'comment': (
             '/**\n'
-            ' * @brief  システムコンテキスト初期化\n'
-            ' * @param  ctx  システムコンテキストポインタ\n'
+            ' * @brief  System context initialization\n'
+            ' * @param  ctx  System context pointer\n'
             ' */\n'
         ),
         'signature': Template(
@@ -61,7 +61,7 @@ class VariableGenerator:
         ),
         'function_open': '{\n',
         'null_check': Template(
-            '    /* NULLチェック */\n'
+            '    /* NULL check */\n'
             '    if (ctx == NULL) {\n'
             '        $log_error("NULL pointer: ctx");\n'
             '        return;\n'
@@ -71,13 +71,13 @@ class VariableGenerator:
             '    $log_debug("Enter $func_name");\n'
         ),
         'variables_comment': (
-            '    /* グローバル変数の初期化 */\n'
+            '    /* Initialize global variables */\n'
         ),
         'flags_comment': (
-            '    /* イベントフラグの初期化 */\n'
+            '    /* Initialize event flags */\n'
         ),
         'pending_event_comment': (
-            '    /* 保留イベントの初期化 */\n'
+            '    /* Initialize pending event */\n'
         ),
         'pending_event_init': (
             '    ctx->pending_event = 0;\n'
@@ -115,31 +115,31 @@ class VariableGenerator:
     ]
 
     # ================================================================
-    # ★ v2.0 修正: _t サフィックス付き標準型を追加
-    #   type_mapper.py の TYPE_MAPPING と整合:
-    #     'uint32' → 'uint32_t' に変換されるため、
-    #     生成コード側でも 'uint32_t' を標準型として扱う必要がある
+    # v2.0 fix: add standard types with _t suffix
+    #   Consistent with type_mapper.py TYPE_MAPPING:
+    #     'uint32' -> 'uint32_t' is converted, so
+    #     generated code must treat 'uint32_t' as a standard type
     # ================================================================
     DEFAULT_INIT_VALUES = {
-        # ---- 符号付き整数 ----
+        # ---- Signed integers ----
         'int': '0', 'int8': '0', 'int16': '0', 'int32': '0', 'int64': '0',
         'int8_t': '0', 'int16_t': '0', 'int32_t': '0', 'int64_t': '0',
         'short': '0', 'long': '0',
-        # ---- 符号なし整数 ----
+        # ---- Unsigned integers ----
         'uint': '0', 'uint8': '0', 'uint16': '0', 'uint32': '0', 'uint64': '0',
         'uint8_t': '0', 'uint16_t': '0', 'uint32_t': '0', 'uint64_t': '0',
         'unsigned': '0', 'unsigned int': '0', 'size_t': '0',
-        # ---- 浮動小数 ----
+        # ---- Floating point ----
         'float': '0.0f', 'double': '0.0',
-        # ---- 真偽 / 文字 ----
+        # ---- Boolean / character ----
         'bool': 'false', '_Bool': 'false',
         'char': '0', 'string': 'NULL',
     }
 
-    # 型修飾子（先頭に付く可能性があるもの）
+    # Type qualifiers (may appear at the beginning)
     _TYPE_QUALIFIERS = ('volatile', 'const', 'static')
 
-    # ★ v1.6 §9.8 #92: マクロ名とフィールド名を分離
+    # v1.6 sec 9.8 #92: separate macro name and field name
     MACRO_TEMPLATES = {
         'data_macro': Template(
             '#define DATA_$macro_name(ctx)    ((ctx)->data.$field_name)\n'
@@ -245,15 +245,16 @@ class VariableGenerator:
         return [r for r in results if r]
 
     # ================================================================
-    # ★ v1.6 §9.8 #92: マクロ生成（マクロ名 = 大文字、フィールド名 = 元のまま）
+    # v1.6 sec 9.8 #92: macro generation (macro name = uppercase,
+    # field name = original)
     # ================================================================
     def _generate_data_macro(self, var) -> str:
         """
-        データアクセスマクロを生成
+        Generate data access macro.
 
-        【v1.6 修正】
-          旧: DATA_COUNTER(ctx) ((ctx)->data.COUNTER)   → フィールド名が大文字（バグ）
-          新: DATA_COUNTER(ctx) ((ctx)->data.counter)   → フィールド名を元のまま
+        [v1.6 fix]
+          Old: DATA_COUNTER(ctx) ((ctx)->data.COUNTER)   -> uppercase field (bug)
+          New: DATA_COUNTER(ctx) ((ctx)->data.counter)   -> original field
         """
         raw_name = getattr(var, 'name', 'unnamed')
         macro_name = self.naming.to_upper_snake(raw_name)
@@ -264,12 +265,12 @@ class VariableGenerator:
 
     def _generate_flag_macro(self, flag) -> str:
         """
-        フラグアクセスマクロを生成
+        Generate flag access macro.
 
-        【v1.6 修正】
-          旧: FLAG_EVT_INIT_DONE(ctx) ((ctx)->flags.EVT_INIT_DONE)   → バグ
-          新: FLAG_EVT_INIT_DONE(ctx) ((ctx)->flags.EVT_INIT_DONE)   → 一致（元々OK）
-          ※ フィールド名は struct 側で sanitize_identifier されてない場合あり
+        [v1.6 fix]
+          Old: FLAG_EVT_INIT_DONE(ctx) ((ctx)->flags.EVT_INIT_DONE)   -> bug
+          New: FLAG_EVT_INIT_DONE(ctx) ((ctx)->flags.EVT_INIT_DONE)   -> matches
+          * Field name may not be sanitize_identifier-ed on the struct side
         """
         raw_name = getattr(flag, 'name', 'unnamed')
         macro_name = self.naming.to_upper_snake(raw_name)
@@ -287,31 +288,30 @@ class VariableGenerator:
         return ""
 
     # ================================================================
-    # ★ v2.0 追加: 型名の正規化
+    # v2.0 addition: normalize type name
     # ================================================================
     def _normalize_type_for_init(self, var_type: str) -> str:
         """
-        型名を正規化して DEFAULT_INIT_VALUES で引けるようにする。
+        Normalize type name so it can be looked up in DEFAULT_INIT_VALUES.
 
-        例:
-          'volatile uint32_t' → 'uint32_t'
-          'uint32_t'          → 'uint32_t'
-          'const uint8_t'     → 'uint8_t'
-          'MyCustomType'      → 'MyCustomType'（変更なし）
+        Examples:
+          'volatile uint32_t' -> 'uint32_t'
+          'uint32_t'          -> 'uint32_t'
+          'const uint8_t'     -> 'uint8_t'
+          'MyCustomType'      -> 'MyCustomType' (unchanged)
         """
         if not var_type:
             return ''
         tokens = var_type.strip().split()
-        # 先頭の修飾子を除去
+        # Strip leading qualifiers
         while tokens and tokens[0] in self._TYPE_QUALIFIERS:
             tokens.pop(0)
-        # 符号修飾子は 'unsigned int' などの複合型を保持するため、
-        # 'unsigned' 単独の場合はそのまま、それ以外はそのまま
+        # Sign qualifiers such as 'unsigned int' are preserved
         normalized = ' '.join(tokens)
         return normalized
 
     # ================================================================
-    # 初期化コード生成
+    # Initialization code generation
     # ================================================================
     def _generate_array_init(self, var) -> str:
         var_name = self.naming.sanitize_identifier(getattr(var, 'name', 'unnamed'))
@@ -321,31 +321,31 @@ class VariableGenerator:
 
     def _generate_normal_init(self, var) -> str:
         """
-        【v1.5 修正】
-          - カスタム型（DEFAULT_INIT_VALUES に無い型）は memset を使用
-          - プリミティブ型は直接代入 = 0 などの数値代入
+        [v1.5 fix]
+          - Custom types (not in DEFAULT_INIT_VALUES) use memset
+          - Primitive types use direct assignment (= 0 etc.)
 
-        【v2.0 修正】
-          - _t サフィックス付き標準型（uint32_t 等）を正しく認識
-          - volatile / const 等の修飾子を除去してから判定
-          - これにより冗長な memset の生成を防ぐ
+        [v2.0 fix]
+          - Correctly recognize standard types with _t suffix (uint32_t etc.)
+          - Strip volatile / const qualifiers before lookup
+          - Prevents redundant memset generation
         """
         var_name = self.naming.sanitize_identifier(getattr(var, 'name', 'unnamed'))
         raw_type = getattr(var, 'type', 'void')
         normalized_type = self._normalize_type_for_init(raw_type)
 
-        # ★ v2.0: カスタム型判定（正規化後の型名で）
+        # v2.0: custom type check (using normalized type name)
         if normalized_type not in self.DEFAULT_INIT_VALUES:
             self._log_debug(
                 f"_generate_normal_init: '{var_name}' "
-                f"(type='{raw_type}' → '{normalized_type}') "
-                f"is a custom type → using memset"
+                f"(type='{raw_type}' -> '{normalized_type}') "
+                f"is a custom type -> using memset"
             )
             return self.INIT_CODE_TEMPLATES['struct_init'].substitute(
                 var_name=var_name
             ).rstrip('\n')
 
-        # 標準型: = 0 / = false / = 0.0f など
+        # Standard type: = 0 / = false / = 0.0f etc.
         init_value = getattr(var, 'default_value', '') or \
             self.DEFAULT_INIT_VALUES.get(normalized_type, '0')
         return self.INIT_CODE_TEMPLATES['normal_init'].substitute(
@@ -371,7 +371,7 @@ class VariableGenerator:
         return ""
 
     # ================================================================
-    # 公開 API
+    # Public API
     # ================================================================
     def generate_init_function(self, global_defs: GlobalDefinitions) -> str:
         self._log_debug("=== generate_init_function START ===")

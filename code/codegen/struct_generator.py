@@ -1,20 +1,21 @@
 # codegen/struct_generator.py
 """
-C構造体コード生成モジュール（多層ステートマシン対応版）
+C struct code generation module (multi-layer state machine support)
 
-生成する構造体:
-  1. custom_type              : ユーザー定義型（変更なし）
-  2. system_data              : グローバル変数（変更なし）
-  3. event_flags              : イベントフラグ（変更なし）
-  4. system_context           : SystemContext_t（★ pending_event 追加）
-  5. transition_context       : 共通 TransitionContext_t（★ 新規・基底型）
-  6. layer_transition_context : TransitionContext_<Layer>_t（★ 新規・層ごと）
-  7. pending_event_macros     : FIRE_EVENT / MAX_CONSECUTIVE_PENDING_EVENTS マクロ（★ 新規）
+Generated structs:
+  1. custom_type              : user-defined types (unchanged)
+  2. system_data              : global variables (unchanged)
+  3. event_flags              : event flags (unchanged)
+  4. system_context           : SystemContext_t (pending_event added)
+  5. transition_context       : common TransitionContext_t (new base type)
+  6. layer_transition_context : TransitionContext_<Layer>_t (new, per-layer)
+  7. pending_event_macros     : FIRE_EVENT / MAX_CONSECUTIVE_PENDING_EVENTS macros (new)
 
-設計方針:
-  - テンプレートは string.Template でデータテーブル化
-  - pending_event は uint16_t（層の enum 値を汎用保持）
-  - 層ごとの TransitionContext_<Layer>_t と、共通の基底型 TransitionContext_t を両方提供
+Design policy:
+  - Templates are data-tabled using string.Template
+  - pending_event is uint16_t (holds each layer's enum value generically)
+  - Provides both per-layer TransitionContext_<Layer>_t and
+    the common base type TransitionContext_t
 """
 
 import sys
@@ -40,73 +41,73 @@ logger = logging.getLogger(__name__)
 
 
 class CStructGenerator:
-    """C構造体コード生成クラス（多層ステートマシン対応）"""
+    """C struct code generation class (multi-layer state machine support)"""
 
     # ==================================================================
-    # 【データテーブル①】共通構造体テンプレート（SystemContext_t 等）
+    # [Data Table 1] Common struct templates (SystemContext_t etc.)
     # ==================================================================
     CONTEXT_TEMPLATES = {
-        # --- セクションコメント ---
+        # --- Section comment ---
         'section_comment': Template(
             '/* $title */\n'
             '/* $description */\n'
         ),
 
-        # --- struct 開始 ---
+        # --- struct start ---
         'struct_start': (
             'typedef struct {\n'
         ),
 
-        # --- data / flags メンバー ---
+        # --- data / flags members ---
         'member_data': Template(
-            '    $system_data_type data;     /* グローバル変数 */\n'
+            '    $system_data_type data;     /* global variables */\n'
         ),
         'member_flags': Template(
-            '    $event_flags_type flags;    /* イベントフラグ */\n'
+            '    $event_flags_type flags;    /* event flags */\n'
         ),
 
-        # --- ★ pending_event メンバー ---
+        # --- pending_event members ---
         'member_pending_event': (
-            '    uint16_t pending_event;         /* 保留中のイベント */\n'
+            '    uint16_t pending_event;         /* pending event */\n'
         ),
         'member_pending_event_valid': (
-            '    bool pending_event_valid;       /* 保留イベント有効フラグ */\n'
+            '    bool pending_event_valid;       /* pending event valid flag */\n'
         ),
 
-        # --- struct 終了（★ }} → } に修正） ---
+        # --- struct end ---
         'struct_end': Template(
             '} $type_name;\n'
         ),
     }
 
     # ==================================================================
-    # 【データテーブル②】共通マクロテンプレート
+    # [Data Table 2] Common macro templates
     # ==================================================================
     MACRO_TEMPLATES = {
-        # --- セクションコメント ---
+        # --- Section comment ---
         'section_comment': (
             '\n'
             '/* ============================================================== */\n'
-            '/*  保留イベント制御                                              */\n'
+            '/*  Pending event control                                         */\n'
             '/* ============================================================== */\n'
         ),
 
-        # --- FIRE_EVENT マクロ ---
+        # --- FIRE_EVENT macro ---
         'fire_event_macro': (
             '\n'
-            '/* イベント発火マクロ */\n'
-            '/* ロール関数内で使用: FIRE_EVENT(ctx, EVENT_XXX_YYY); */\n'
+            '/* Event fire macro */\n'
+            '/* Used within role functions: FIRE_EVENT(ctx, EVENT_XXX_YYY); */\n'
             '#define FIRE_EVENT(ctx, evt)  do { \\\n'
             '    (ctx)->pending_event = (uint16_t)(evt); \\\n'
             '    (ctx)->pending_event_valid = true; \\\n'
             '} while(0)\n'
         ),
 
-        # --- MAX_CONSECUTIVE_PENDING_EVENTS マクロ ---
+        # --- MAX_CONSECUTIVE_PENDING_EVENTS macro ---
         'max_consecutive_macro': (
             '\n'
-            '/* 保留イベント連続処理の上限 */\n'
-            '/* 無限ループ防止用。ビルド時に -D で上書き可能 */\n'
+            '/* Upper limit for consecutive pending event processing */\n'
+            '/* Infinite loop prevention. Can be overridden at build time via -D */\n'
             '#ifndef MAX_CONSECUTIVE_PENDING_EVENTS\n'
             '#define MAX_CONSECUTIVE_PENDING_EVENTS 16\n'
             '#endif\n'
@@ -114,21 +115,21 @@ class CStructGenerator:
     }
 
     # ==================================================================
-    # 【データテーブル③】共通 TransitionContext_t テンプレート
+    # [Data Table 3] Common TransitionContext_t template
     # ==================================================================
     COMMON_TRANSITION_CONTEXT_TEMPLATES = {
         'comment': (
-            '/* 汎用遷移コンテキスト（層を問わない共通ロール関数用） */\n'
-            '/* 各層の TransitionContext_<Layer>_t と同じレイアウト */\n'
+            '/* Generic transition context (for common role functions across layers) */\n'
+            '/* Same layout as each layer\'s TransitionContext_<Layer>_t */\n'
         ),
         'struct_start': (
             'typedef struct {\n'
         ),
         'member_from_state': (
-            '    uint16_t from_state;   /* 遷移元状態（層の enum 値をキャスト） */\n'
+            '    uint16_t from_state;   /* source state (cast from layer enum) */\n'
         ),
         'member_event': (
-            '    uint16_t event;        /* 発生イベント（層の enum 値をキャスト） */\n'
+            '    uint16_t event;        /* event (cast from layer enum) */\n'
         ),
         'struct_end': (
             '} TransitionContext_t;\n'
@@ -136,29 +137,28 @@ class CStructGenerator:
     }
 
     # ==================================================================
-    # 【データテーブル④】層ごとの TransitionContext_<Layer>_t
+    # [Data Table 4] Per-layer TransitionContext_<Layer>_t
     # ==================================================================
     LAYER_TRANSITION_CONTEXT_TEMPLATES = {
         'comment': Template(
-            '/* $layer層の遷移コンテキスト */\n'
+            '/* Transition context for $layer layer */\n'
         ),
         'struct_start': (
             'typedef struct {\n'
         ),
         'member_from_state': Template(
-            '    $state_type from_state;   /* 遷移元状態 */\n'
+            '    $state_type from_state;   /* source state */\n'
         ),
         'member_event': Template(
-            '    $event_type event;        /* 発生イベント */\n'
+            '    $event_type event;        /* event */\n'
         ),
-        # ★ }} → } に修正
         'struct_end': Template(
             '} $type_name;\n'
         ),
     }
 
     # ==================================================================
-    # 【データテーブル⑤】メンバー種別検出
+    # [Data Table 5] Member type detection
     # ==================================================================
     MEMBER_TYPE_DETECTORS = {
         'bit_field': lambda m: getattr(m, 'bit_width', 0) > 0,
@@ -167,7 +167,7 @@ class CStructGenerator:
     }
 
     # ==================================================================
-    # 【データテーブル⑥】メンバー生成テンプレート
+    # [Data Table 6] Member generation templates
     # ==================================================================
     MEMBER_TEMPLATES = {
         'bit_field': Template(
@@ -182,7 +182,7 @@ class CStructGenerator:
     }
 
     # ==================================================================
-    # コンストラクタ
+    # Constructor
     # ==================================================================
     def __init__(self):
         self.mapper = CTypeMapper()
@@ -193,7 +193,7 @@ class CStructGenerator:
         self.layer_name: str = ""
 
     def set_layer(self, layer_name: str):
-        """層名を設定（層ごとの TransitionContext 生成用）"""
+        """Set layer name (for per-layer TransitionContext generation)"""
         self.layer_name = layer_name
         logger.debug(f"CStructGenerator.set_layer: layer_name='{layer_name}'")
 
@@ -202,7 +202,7 @@ class CStructGenerator:
         log_func(message)
 
     # ==================================================================
-    # ヘルパー
+    # Helpers
     # ==================================================================
     def _detect_member_type(self, member) -> str:
         for member_type, detector in self.MEMBER_TYPE_DETECTORS.items():
@@ -211,7 +211,7 @@ class CStructGenerator:
         return 'normal'
 
     def _generate_member(self, member) -> str:
-        """1メンバーを生成"""
+        """Generate one member"""
         member_type = self._detect_member_type(member)
         template = self.MEMBER_TEMPLATES[member_type]
         member_name = self.naming.sanitize_identifier(getattr(member, 'name', 'unnamed'))
@@ -236,19 +236,19 @@ class CStructGenerator:
             )
 
     # ==================================================================
-    # 1. ユーザー定義型（custom_type）
+    # 1. Custom type
     # ==================================================================
     def _generate_custom_type(self, struct_def: CustomTypeDef) -> str:
         self._log_debug(f"Generating custom type: {getattr(struct_def, 'name', 'unknown')}")
         lines = []
 
-        # コメント
+        # Comment
         if getattr(struct_def, 'description', ''):
             lines.append(f"/* {struct_def.description} */")
         if getattr(struct_def, 'title', '') and struct_def.title != getattr(struct_def, 'name', ''):
             lines.append(f"/* Title: {struct_def.title} */")
 
-        # struct 本体
+        # struct body
         lines.append("typedef struct {")
         for member in getattr(struct_def, 'members', []):
             if getattr(member, 'description', ''):
@@ -271,25 +271,25 @@ class CStructGenerator:
         self._log_debug("Generating system data struct")
         lines = []
 
-        # コメント
+        # Comment
         comment = self.templates.STRUCT_COMMENTS.get('system_data', {})
         lines.append(f"/* {comment.get('title', '')} */")
         lines.append(f"/* {comment.get('description', '')} */")
 
-        # struct 本体
+        # struct body
         lines.append("typedef struct {")
         current_group = None
         indent = self.strings['indent_1']
 
         for var in getattr(global_defs, 'variables', []):
-            # グループコメント
+            # Group comment
             if getattr(var, 'group', '') and var.group != current_group:
                 if current_group is not None:
                     lines.append("")
                 lines.append(f"{indent}/* === {var.group} === */")
                 current_group = var.group
 
-            # 説明・単位
+            # Description / unit
             comments = []
             if getattr(var, 'description', ''):
                 comments.append(var.description)
@@ -298,7 +298,7 @@ class CStructGenerator:
             if comments:
                 lines.append(f"{indent}/* {' '.join(comments)} */")
 
-            # 変数本体
+            # Variable body
             var_name = self.naming.sanitize_identifier(getattr(var, 'name', 'unnamed'))
             c_type = self.mapper.map_type(getattr(var, 'type', 'void'))
 
@@ -317,29 +317,29 @@ class CStructGenerator:
         self._log_debug("Generating event flags struct")
         lines = []
 
-        # コメント
+        # Comment
         comment = self.templates.STRUCT_COMMENTS.get('event_flags', {})
         lines.append(f"/* {comment.get('title', '')} */")
         lines.append(f"/* {comment.get('description', '')} */")
 
-        # struct 本体
+        # struct body
         lines.append("typedef struct {")
         current_group = None
         indent = self.strings['indent_1']
 
         for flag in getattr(global_defs, 'flags', []):
-            # グループコメント
+            # Group comment
             if getattr(flag, 'group', '') and flag.group != current_group:
                 if current_group is not None:
                     lines.append("")
                 lines.append(f"{indent}/* === {flag.group} === */")
                 current_group = flag.group
 
-            # 説明
+            # Description
             if getattr(flag, 'description', ''):
                 lines.append(f"{indent}/* {flag.description} */")
 
-            # フラグ本体
+            # Flag body
             flag_name = self.naming.sanitize_identifier(getattr(flag, 'name', 'unnamed'))
             lines.append(f"{indent}uint8_t {flag_name};")
 
@@ -347,34 +347,34 @@ class CStructGenerator:
         return '\n'.join(lines)
 
     # ==================================================================
-    # 4. SystemContext_t（★ pending_event 追加）
+    # 4. SystemContext_t (pending_event added)
     # ==================================================================
     def _generate_system_context(self, global_defs: GlobalDefinitions) -> str:
         """
-        SystemContext_t を生成（pending_event / pending_event_valid 追加）
+        Generate SystemContext_t (with pending_event / pending_event_valid).
 
-        生成例:
-            /* システム全体構造体 */
-            /* グローバル変数とイベントフラグを統合管理 */
+        Example output:
+            /* System context struct */
+            /* Integrates global variables and event flags */
             typedef struct {
-                SystemData_t data;              /* グローバル変数 */
-                EventFlags_t flags;             /* イベントフラグ */
-                uint16_t pending_event;         /* 保留中のイベント */
-                bool pending_event_valid;       /* 保留イベント有効フラグ */
+                SystemData_t data;              /* global variables */
+                EventFlags_t flags;             /* event flags */
+                uint16_t pending_event;         /* pending event */
+                bool pending_event_valid;       /* pending event valid flag */
             } SystemContext_t;
         """
         self._log_debug("Generating system context struct (with pending_event)")
         T = self.CONTEXT_TEMPLATES
         lines = []
 
-        # コメント
+        # Comment
         comment = self.templates.STRUCT_COMMENTS.get('system_context', {})
         lines.append(T['section_comment'].substitute(
-            title=comment.get('title', 'システム全体構造体'),
-            description=comment.get('description', 'グローバル変数とイベントフラグを統合管理'),
+            title=comment.get('title', 'System context struct'),
+            description=comment.get('description', 'Integrates global variables and event flags'),
         ).rstrip('\n'))
 
-        # struct 本体
+        # struct body
         lines.append(T['struct_start'].rstrip('\n'))
         lines.append(T['member_data'].substitute(
             system_data_type=self.templates.TYPE_NAMES['system_data'],
@@ -383,11 +383,11 @@ class CStructGenerator:
             event_flags_type=self.templates.TYPE_NAMES['event_flags'],
         ).rstrip('\n'))
 
-        # ★ pending_event / pending_event_valid
+        # pending_event / pending_event_valid
         lines.append(T['member_pending_event'].rstrip('\n'))
         lines.append(T['member_pending_event_valid'].rstrip('\n'))
 
-        # struct 終了
+        # struct end
         lines.append(T['struct_end'].substitute(
             type_name=self.templates.TYPE_NAMES['system_context'],
         ).rstrip('\n'))
@@ -395,18 +395,18 @@ class CStructGenerator:
         return '\n'.join(lines)
 
     # ==================================================================
-    # 5. 共通 TransitionContext_t（基底型）
+    # 5. Common TransitionContext_t (base type)
     # ==================================================================
     def generate_common_transition_context(self) -> str:
         """
-        共通の基底型 TransitionContext_t を生成
+        Generate the common base type TransitionContext_t.
 
-        生成例:
-            /* 汎用遷移コンテキスト（層を問わない共通ロール関数用） */
-            /* 各層の TransitionContext_<Layer>_t と同じレイアウト */
+        Example output:
+            /* Generic transition context (for common role functions across layers) */
+            /* Same layout as each layer's TransitionContext_<Layer>_t */
             typedef struct {
-                uint16_t from_state;   /* 遷移元状態（層の enum 値をキャスト） */
-                uint16_t event;        /* 発生イベント（層の enum 値をキャスト） */
+                uint16_t from_state;   /* source state (cast from layer enum) */
+                uint16_t event;        /* event (cast from layer enum) */
             } TransitionContext_t;
         """
         self._log_debug("Generating common TransitionContext_t")
@@ -421,22 +421,22 @@ class CStructGenerator:
         return '\n'.join(lines)
 
     # ==================================================================
-    # 6. 層ごとの TransitionContext_<Layer>_t
+    # 6. Per-layer TransitionContext_<Layer>_t
     # ==================================================================
     def generate_layer_transition_context(self, state_type: str,
                                           event_type: str) -> str:
         """
-        層ごとの TransitionContext_<Layer>_t を生成
+        Generate per-layer TransitionContext_<Layer>_t.
 
         Args:
-            state_type: 層の状態型（例: 'STATE_Driver_t'）
-            event_type: 層のイベント型（例: 'EVENT_Driver_t'）
+            state_type: layer state type (e.g. 'STATE_Driver_t')
+            event_type: layer event type (e.g. 'EVENT_Driver_t')
 
-        生成例:
-            /* Driver層の遷移コンテキスト */
+        Example output:
+            /* Transition context for Driver layer */
             typedef struct {
-                STATE_Driver_t from_state;   /* 遷移元状態 */
-                EVENT_Driver_t event;        /* 発生イベント */
+                STATE_Driver_t from_state;   /* source state */
+                EVENT_Driver_t event;        /* event */
             } TransitionContext_Driver_t;
         """
         if not self.layer_name:
@@ -458,26 +458,26 @@ class CStructGenerator:
         return '\n'.join(lines)
 
     # ==================================================================
-    # 7. pending_event マクロ（FIRE_EVENT / MAX_CONSECUTIVE_PENDING_EVENTS）
+    # 7. Pending event macros (FIRE_EVENT / MAX_CONSECUTIVE_PENDING_EVENTS)
     # ==================================================================
     def generate_pending_event_macros(self) -> str:
         """
-        保留イベント制御マクロを生成
+        Generate pending event control macros.
 
-        生成例:
+        Example output:
             /* ============================================================== */
-            /*  保留イベント制御                                              */
+            /*  Pending event control                                         */
             /* ============================================================== */
 
-            /* イベント発火マクロ */
-            /* ロール関数内で使用: FIRE_EVENT(ctx, EVENT_XXX_YYY); */
-            #define FIRE_EVENT(ctx, evt)  do { \
-                (ctx)->pending_event = (uint16_t)(evt); \
-                (ctx)->pending_event_valid = true; \
+            /* Event fire macro */
+            /* Used within role functions: FIRE_EVENT(ctx, EVENT_XXX_YYY); */
+            #define FIRE_EVENT(ctx, evt)  do { \\
+                (ctx)->pending_event = (uint16_t)(evt); \\
+                (ctx)->pending_event_valid = true; \\
             } while(0)
 
-            /* 保留イベント連続処理の上限 */
-            /* 無限ループ防止用。ビルド時に -D で上書き可能 */
+            /* Upper limit for consecutive pending event processing */
+            /* Infinite loop prevention. Can be overridden at build time via -D */
             #ifndef MAX_CONSECUTIVE_PENDING_EVENTS
             #define MAX_CONSECUTIVE_PENDING_EVENTS 16
             #endif
@@ -492,13 +492,14 @@ class CStructGenerator:
         return ''.join(parts)
 
     # ==================================================================
-    # 8. 一括生成
+    # 8. Batch generation
     # ==================================================================
     def generate_all_structs(self, global_defs: GlobalDefinitions) -> str:
         """
-        全構造体を一括生成（custom_type + system_data + event_flags + system_context）
+        Generate all structs in bulk
+        (custom_type + system_data + event_flags + system_context).
 
-        注意: TransitionContext_t と pending_event マクロは別メソッド
+        Note: TransitionContext_t and pending_event macros are separate methods.
         """
         lines = []
 
@@ -527,15 +528,15 @@ class CStructGenerator:
 
     def generate_all(self, global_defs: GlobalDefinitions) -> Dict[str, str]:
         """
-        全ての生成物を辞書で返す
+        Return all generated artifacts as a dictionary.
 
         Returns:
             {
-                'custom_types': str,               # ユーザー定義型
+                'custom_types': str,               # user-defined types
                 'system_data': str,                # SystemData_t
                 'event_flags': str,                # EventFlags_t
-                'system_context': str,             # SystemContext_t（pending_event 付き）
-                'common_transition_context': str,  # 共通 TransitionContext_t（基底型）
+                'system_context': str,             # SystemContext_t (with pending_event)
+                'common_transition_context': str,  # common TransitionContext_t (base)
                 'pending_event_macros': str,       # FIRE_EVENT / MAX_CONSECUTIVE
             }
         """
@@ -555,10 +556,10 @@ class CStructGenerator:
         return result
 
     # ==================================================================
-    # 後方互換 API
+    # Backward-compatible API
     # ==================================================================
     def generate_struct(self, struct_type: str, item) -> str:
-        """後方互換: 単一構造体を生成"""
+        """Backward compat: generate a single struct"""
         if struct_type == 'custom_type':
             return self._generate_custom_type(item)
         elif struct_type == 'system_data':

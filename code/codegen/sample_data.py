@@ -1,13 +1,13 @@
 # codegen/sample_data.py
 """
-コード生成テスト用サンプルデータ
-GUIとは独立したテストデータを提供する
+Sample data for code generation tests.
+Provides test data independent of the GUI.
 
-【v1.5 修正】
-  - Transition の action= を pre_actions=[] に移行（バグ #87）
-    action フィールドは v1.4 §2.2 で「互換用・未使用」と定義され、
-    role_function_generator は pre_actions のみ参照するため、
-    action= では呼び出しがコード生成に反映されない
+[v1.5 fix]
+  - Transition action= migrated to pre_actions=[] (bug #87)
+    The action field is defined as "compat / unused" in v1.4 sec 2.2,
+    and role_function_generator only references pre_actions,
+    so action= does not reflect calls in code generation.
 """
 
 import sys
@@ -26,7 +26,7 @@ from statable.global_defs import (
 
 
 class SampleDataGenerator:
-    """サンプルデータ生成クラス"""
+    """Sample data generator class"""
 
     def __init__(self):
         self.state_machine = None
@@ -35,26 +35,26 @@ class SampleDataGenerator:
     def create_sample_state_machine(self):
         sm = StateMachine()
 
-        sm.add_state(State(name="INIT", type=StateType.INITIAL, description="初期状態"))
-        sm.add_state(State(name="IDLE", type=StateType.NORMAL, description="アイドル状態"))
-        sm.add_state(State(name="RUNNING", type=StateType.NORMAL, description="実行状態"))
-        sm.add_state(State(name="ERROR", type=StateType.NORMAL, description="エラー状態"))
+        sm.add_state(State(name="INIT", type=StateType.INITIAL, description="Initial state"))
+        sm.add_state(State(name="IDLE", type=StateType.NORMAL, description="Idle state"))
+        sm.add_state(State(name="RUNNING", type=StateType.NORMAL, description="Running state"))
+        sm.add_state(State(name="ERROR", type=StateType.NORMAL, description="Error state"))
         sm.set_initial("INIT")
 
-        sm.add_event(Event(name="POWER_ON", kind=EventKind.SIGNAL, description="電源ONイベント"))
-        sm.add_event(Event(name="START", kind=EventKind.SIGNAL, description="開始イベント"))
-        sm.add_event(Event(name="STOP", kind=EventKind.SIGNAL, description="停止イベント"))
-        sm.add_event(Event(name="ERROR_DETECTED", kind=EventKind.SIGNAL, description="エラー検出イベント"))
+        sm.add_event(Event(name="POWER_ON", kind=EventKind.SIGNAL, description="Power-on event"))
+        sm.add_event(Event(name="START", kind=EventKind.SIGNAL, description="Start event"))
+        sm.add_event(Event(name="STOP", kind=EventKind.SIGNAL, description="Stop event"))
+        sm.add_event(Event(name="ERROR_DETECTED", kind=EventKind.SIGNAL, description="Error detected event"))
 
         # ==============================================================
-        # 【v1.5 修正】action= → pre_actions=[]
+        # [v1.5 fix] action= -> pre_actions=[]
         # ==============================================================
         sm.add_transition(Transition(
             source="INIT",
             event="POWER_ON",
             target="IDLE",
             pre_actions=["PowerOn"],
-            title="電源ON",
+            title="Power on",
         ))
         sm.add_transition(Transition(
             source="IDLE",
@@ -62,48 +62,48 @@ class SampleDataGenerator:
             target="RUNNING",
             condition="StartOk",
             pre_actions=["Start"],
-            title="開始",
+            title="Start",
         ))
         sm.add_transition(Transition(
             source="RUNNING",
             event="STOP",
             target="IDLE",
             pre_actions=["Stop"],
-            title="停止",
+            title="Stop",
         ))
         sm.add_transition(Transition(
             source="RUNNING",
             event="ERROR_DETECTED",
             target="ERROR",
             pre_actions=["HandleError"],
-            title="エラー処理",
+            title="Error handling",
         ))
 
         sm.add_role_function(RoleFunction(
             name="PowerOn", return_type="void",
-            description="電源ON処理",
+            description="Power-on processing",
         ))
         sm.add_role_function(RoleFunction(
             name="StartOk", return_type="bool",
-            description="開始条件チェック",
+            description="Start condition check",
         ))
         sm.add_role_function(RoleFunction(
             name="Start", return_type="void",
-            description="開始処理",
+            description="Start processing",
         ))
         sm.add_role_function(RoleFunction(
             name="Stop", return_type="void",
-            description="停止処理",
+            description="Stop processing",
         ))
         sm.add_role_function(RoleFunction(
             name="HandleError", return_type="void",
-            description="エラー処理",
+            description="Error handling",
         ))
         sm.add_role_function(RoleFunction(
             name="ProcessData", return_type="int",
             arg1_type="uint8_t*", arg1_name="data",
             arg2_type="uint16_t", arg2_name="len",
-            description="データ処理",
+            description="Data processing",
         ))
 
         self.state_machine = sm
@@ -114,45 +114,45 @@ class SampleDataGenerator:
 
         gd.variables = [
             SystemVariable(name="battery_voltage", type="uint16", unit="mV",
-                           group="Power", description="バッテリー電圧"),
+                           group="Power", description="Battery voltage"),
             SystemVariable(name="system_tick", type="uint32", unit="ms",
-                           group="Timer", description="システムタイマ"),
-            SystemVariable(name="temperature", type="int16", unit="0.1℃",
-                           group="Sensor", description="温度センサ値"),
+                           group="Timer", description="System timer"),
+            SystemVariable(name="temperature", type="int16", unit="0.1C",
+                           group="Sensor", description="Temperature sensor value"),
             SystemVariable(name="data_buffer", type="uint8",
-                           group="Data", description="データバッファ",
+                           group="Data", description="Data buffer",
                            array_size=64),
         ]
 
         gd.flags = [
             EventFlag(name="EVT_POWER_ON_REQ", min_value=0, max_value=1,
-                      group="System", description="電源ON要求"),
+                      group="System", description="Power-on request"),
             EventFlag(name="EVT_START_REQ", min_value=0, max_value=1,
-                      group="System", description="開始要求"),
+                      group="System", description="Start request"),
             EventFlag(name="EVT_STOP_REQ", min_value=0, max_value=1,
-                      group="System", description="停止要求"),
+                      group="System", description="Stop request"),
             EventFlag(name="EVT_ERROR_FLAG", min_value=0, max_value=1,
-                      group="Error", description="エラーフラグ"),
+                      group="Error", description="Error flag"),
         ]
 
         gd.custom_types = [
-            CustomTypeDef(name="SystemStatus", description="システム状態管理構造体", members=[
+            CustomTypeDef(name="SystemStatus", description="System status management struct", members=[
                 StructMemberDef(name="power_on", data_type="bool", bit_width=1,
-                                description="電源ON状態"),
+                                description="Power-on state"),
                 StructMemberDef(name="initialized", data_type="bool", bit_width=1,
-                                description="初期化完了フラグ"),
+                                description="Initialization completed flag"),
                 StructMemberDef(name="error_code", data_type="uint8",
-                                description="エラーコード"),
+                                description="Error code"),
                 StructMemberDef(name="mode", data_type="uint8",
-                                description="動作モード"),
+                                description="Operation mode"),
             ]),
-            CustomTypeDef(name="SensorData", description="センサーデータ構造体", members=[
+            CustomTypeDef(name="SensorData", description="Sensor data struct", members=[
                 StructMemberDef(name="temperature", data_type="int16",
-                                description="温度値"),
+                                description="Temperature value"),
                 StructMemberDef(name="humidity", data_type="uint8",
-                                description="湿度値"),
+                                description="Humidity value"),
                 StructMemberDef(name="pressure", data_type="uint16",
-                                description="気圧値"),
+                                description="Pressure value"),
             ]),
         ]
 
@@ -165,7 +165,7 @@ class SampleDataGenerator:
                 priority_enabled=False,
                 interrupt_safe=True,
                 rtos_enabled=False,
-                description="メインイベントキュー",
+                description="Main event queue",
             ),
             EventQueueDef(
                 name="HighPriorityQueue",
@@ -175,14 +175,14 @@ class SampleDataGenerator:
                 priority_enabled=True,
                 interrupt_safe=True,
                 rtos_enabled=False,
-                description="高優先度イベントキュー",
+                description="High-priority event queue",
             ),
         ]
 
         gd.interrupts = [
             InterruptHandlerDef(
                 name="UART_RX",
-                description="UART受信割り込み",
+                description="UART receive interrupt",
                 event_names=["START", "STOP"],
                 is_timer=False,
                 actions=[
@@ -195,7 +195,7 @@ class SampleDataGenerator:
             ),
             InterruptHandlerDef(
                 name="TimerTick",
-                description="タイマ割り込み",
+                description="Timer interrupt",
                 event_names=[],
                 is_timer=True,
                 actions=[
@@ -205,8 +205,8 @@ class SampleDataGenerator:
         ]
 
         gd.placeholders = [
-            DevicePlaceholderDef(name="UART0", description="UART通信ポート"),
-            DevicePlaceholderDef(name="ADC0", description="ADコンバータ"),
+            DevicePlaceholderDef(name="UART0", description="UART communication port"),
+            DevicePlaceholderDef(name="ADC0", description="AD converter"),
         ]
 
         gd.timer_base = TimerBaseDef(

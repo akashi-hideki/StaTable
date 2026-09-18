@@ -1,21 +1,21 @@
 # codegen/role_function_generator.py
 """
-ロール関数生成モジュール（多層ステートマシン対応・ISR 対応版）
+Role function generation module (multi-layer state machine / ISR support)
 
-版: 3.0（2026-09-13 / Stage 4: 遷移側 Namespace.Name 対応）
-  - _normalize_func_ref が qualified_name を保持
-  - _extract_func_names_from_condition が 'Driver.Init' 形式を検出
-  - _get_call_sites_for_func で qualified / bare 両対応の検索
+Version: 3.0 (2026-09-13 / Stage 4: transition-side Namespace.Name support)
+  - _normalize_func_ref preserves qualified_name
+  - _extract_func_names_from_condition detects 'Driver.Init' form
+  - _get_call_sites_for_func supports both qualified / bare search
 
-【v1.5 追加】
-  - _VALID_C_IDENTIFIER ガードを _normalize_func_ref に追加
-    → 'retry_count++' 等の C 演算子混入参照を弾く
-  - generate_all_implementations に未定義参照の警告ログを追加
+[v1.5 addition]
+  - _VALID_C_IDENTIFIER guard added to _normalize_func_ref
+    -> rejects C-operator-contaminated refs like 'retry_count++'
+  - Added warning log for undefined references in generate_all_implementations
 
-【v1.6 追加】
-  - _should_emit_implementation を追加（層フィルタ・案 A）
-  - generate_all_implementations で自層の関数と呼び出し元ありの関数のみ
-    実装を出力するようフィルタ（空スタブ削減）
+[v1.6 addition]
+  - _should_emit_implementation added (layer filter / Option A)
+  - generate_all_implementations filters so only self-layer functions
+    and functions with callers are emitted (empty stub reduction)
 """
 
 import sys
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 # ======================================================================
-# 【v1.5 追加】C 識別子検証用正規表現
+# v1.5 addition: C identifier validation regex
 # ======================================================================
 _VALID_C_IDENTIFIER = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
 _VALID_QUALIFIED = re.compile(
@@ -53,7 +53,7 @@ _VALID_QUALIFIED = re.compile(
 
 
 # ======================================================================
-# ヘルパー
+# Helpers
 # ======================================================================
 def ensure_list(value) -> List[str]:
     if value is None:
@@ -78,7 +78,7 @@ _C_KEYWORDS = {
 
 
 class RoleFuncCallSite:
-    """1つのロール関数呼び出しサイト（from_state × event）"""
+    """One role function call site (from_state x event)"""
     __slots__ = ('func_name', 'kind', 'from_state', 'event', 'target')
 
     def __init__(self, func_name, kind, from_state, event, target):
@@ -97,27 +97,27 @@ class RoleFuncCallSite:
 
 
 class RoleFunctionGenerator:
-    """ロール関数生成クラス（多層ステートマシン対応・ISR 対応）"""
+    """Role function generation class (multi-layer state machine / ISR support)"""
 
     # ================================================================
-    # 【テーブル①】宣言用テンプレート
+    # [Table 1] Declaration templates
     # ================================================================
     DECLARATION_TEMPLATES = {
         'comment_with_desc': Template(
             '/**\n'
-            ' * @brief  ロール関数: $title\n'
+            ' * @brief  Role function: $title\n'
             ' * @note   $description\n'
-            ' * @param  transition  遷移コンテキスト（NULL 可: ISR から呼ばれる場合）\n'
-            ' * @param  ctx         システムコンテキストポインタ\n'
-            ' * @return 0: 成功, 0以外: エラー（条件判定にも使用可）\n'
+            ' * @param  transition  Transition context (may be NULL: called from ISR)\n'
+            ' * @param  ctx         System context pointer\n'
+            ' * @return 0: success, non-zero: error (can also be used for condition checks)\n'
             ' */\n'
         ),
         'comment_no_desc': Template(
             '/**\n'
-            ' * @brief  ロール関数: $title\n'
-            ' * @param  transition  遷移コンテキスト（NULL 可: ISR から呼ばれる場合）\n'
-            ' * @param  ctx         システムコンテキストポインタ\n'
-            ' * @return 0: 成功, 0以外: エラー（条件判定にも使用可）\n'
+            ' * @brief  Role function: $title\n'
+            ' * @param  transition  Transition context (may be NULL: called from ISR)\n'
+            ' * @param  ctx         System context pointer\n'
+            ' * @return 0: success, non-zero: error (can also be used for condition checks)\n'
             ' */\n'
         ),
         'signature_open': Template('int $func_name(\n'),
@@ -129,19 +129,19 @@ class RoleFunctionGenerator:
     }
 
     # ================================================================
-    # 【テーブル②】実装用テンプレート（NULL ガード付き）
+    # [Table 2] Implementation templates (with NULL guard)
     # ================================================================
     IMPLEMENTATION_TEMPLATES = {
         'comment_with_desc': Template(
             '/**\n'
-            ' * @brief  ロール関数: $title\n'
+            ' * @brief  Role function: $title\n'
             ' * @note   $description\n'
             '$call_sites'
             ' */\n'
         ),
         'comment_no_desc': Template(
             '/**\n'
-            ' * @brief  ロール関数: $title\n'
+            ' * @brief  Role function: $title\n'
             '$call_sites'
             ' */\n'
         ),
@@ -153,7 +153,7 @@ class RoleFunctionGenerator:
         'body_open': ')\n{\n',
 
         'null_guard_header': (
-            '    /* ===== transition NULL ガード（ISR からの呼び出し対応） ===== */\n'
+            '    /* ===== transition NULL guard (supports ISR calls) ===== */\n'
         ),
         'null_guard_decl': Template(
             '    $c_type $member_name = $max_value;\n'
@@ -168,21 +168,21 @@ class RoleFunctionGenerator:
             '    }\n'
         ),
         'null_guard_suppress': Template(
-            '    (void)$member_name;   /* 未使用警告抑制 */\n'
+            '    (void)$member_name;   /* suppress unused warning */\n'
         ),
 
-        'unused_ctx': '    (void)ctx;         /* 未使用引数の警告抑制 */\n',
+        'unused_ctx': '    (void)ctx;         /* suppress unused argument warning */\n',
         'blank': '\n',
 
         'local_transition_id_header': (
-            '    /* ===== transition ID（call_sites 内のインデックス） ===== */\n'
+            '    /* ===== transition ID (index within call_sites) ===== */\n'
         ),
         'local_transition_id_decl': Template(
             '    const uint16_t transition_id = Transition_GetId(\n'
             '        transition, $table_arg, $count_arg);\n'
         ),
 
-        'local_data_header': '    /* ===== ctx->data へのローカルポインタ ===== */\n',
+        'local_data_header': '    /* ===== local pointer to ctx->data ===== */\n',
         'local_data_pointer': Template(
             '    $c_type *const $var_name = &ctx->data.$var_name;'
             '  /* $comment */\n'
@@ -192,14 +192,14 @@ class RoleFunctionGenerator:
             '  /* $comment */\n'
         ),
 
-        'local_ret_header': '    /* ===== 戻り値 ===== */\n',
-        'local_ret_decl': '    int ret = 0;   /* ユーザーコード内で書き換え可 */\n',
+        'local_ret_header': '    /* ===== return value ===== */\n',
+        'local_ret_decl': '    int ret = 0;   /* can be modified in user code */\n',
 
         'todo_comment': Template('    /* $todo */\n'),
         'user_marker_start': Template(
             '    /* [[STABLE_USER_CODE_START:$marker_name]] */\n'
         ),
-        'user_marker_hint': '    /* ユーザー実装コードをここに記述 */\n',
+        'user_marker_hint': '    /* Write user implementation code here */\n',
         'user_marker_end': Template(
             '    /* [[STABLE_USER_CODE_END:$marker_name]] */\n'
         ),
@@ -209,44 +209,44 @@ class RoleFunctionGenerator:
     }
 
     # ================================================================
-    # 【テーブル③】TRANSITION_ID_NONE 定数
+    # [Table 3] TRANSITION_ID_NONE constant
     # ================================================================
     NONE_DEFINE_TEMPLATES = {
         'section_comment': (
             '\n'
             '/* ============================================================== */\n'
-            '/*  Transition ID 定数                                            */\n'
+            '/*  Transition ID constant                                        */\n'
             '/* ============================================================== */\n'
         ),
         'define': '#define TRANSITION_ID_NONE   ((uint16_t)0xFFFF)\n',
     }
 
     # ================================================================
-    # 【テーブル④】呼び出し元テーブル用 共通構造体
+    # [Table 4] Common struct for call site tables
     # ================================================================
     ENTRY_STRUCT_TEMPLATES = {
         'section_comment': (
             '\n'
             '/* ============================================================== */\n'
-            '/*  ロール関数 呼び出し元テーブル（共通構造体）                    */\n'
-            '/*  {from_state, event} の組でセルを識別                          */\n'
+            '/*  Role function call site table (common struct)                 */\n'
+            '/*  Identify cells by {from_state, event} pair                    */\n'
             '/* ============================================================== */\n'
         ),
         'struct_typedef': Template(
             'typedef struct {\n'
-            '    $state_type from_state;   /* 遷移元状態 */\n'
-            '    $event_type event;        /* 発生イベント */\n'
+            '    $state_type from_state;   /* source state */\n'
+            '    $event_type event;        /* event */\n'
             '} $entry_type;\n'
         ),
     }
 
     # ================================================================
-    # 【テーブル⑤】Transition_GetId
+    # [Table 5] Transition_GetId
     # ================================================================
     TRANSITION_ID_FUNC_TEMPLATES = {
         'prototype_comment': (
             '\n'
-            '/* Transition_GetId 前方宣言（本体はファイル末尾） */\n'
+            '/* Transition_GetId forward declaration (body at end of file) */\n'
         ),
         'prototype': Template(
             'static uint16_t Transition_GetId(\n'
@@ -257,18 +257,17 @@ class RoleFunctionGenerator:
         'definition_comment': (
             '\n\n'
             '/* ============================================================== */\n'
-            '/*  Transition ID 変換（ファイル末尾）                            */\n'
-            '/*  ロール関数ごとの call_sites テーブルを線形探索し、             */\n'
-            '/*  一致したエントリのインデックスを返す。                        */\n'
-            '/*  一致なし / transition==NULL の場合は TRANSITION_ID_NONE を    */\n'
-            '/*  返す。                                                        */\n'
+            '/*  Transition ID conversion (end of file)                        */\n'
+            '/*  Linearly scans the per-function call_sites table and          */\n'
+            '/*  returns the index of the matching entry.                      */\n'
+            '/*  Returns TRANSITION_ID_NONE if no match / transition==NULL.    */\n'
             '/* ============================================================== */\n'
             '/**\n'
-            ' * @brief  transition 情報を一意な ID に変換する\n'
-            ' * @param  transition  遷移コンテキスト（NULL 可）\n'
-            ' * @param  table       呼び出し元テーブル（NULL 可）\n'
-            ' * @param  table_size  テーブルの要素数\n'
-            ' * @return テーブル内のインデックス（一致なしは TRANSITION_ID_NONE）\n'
+            ' * @brief  Convert transition info to a unique ID\n'
+            ' * @param  transition  Transition context (may be NULL)\n'
+            ' * @param  table       Call site table (may be NULL)\n'
+            ' * @param  table_size  Number of entries in the table\n'
+            ' * @return Index in the table (TRANSITION_ID_NONE if no match)\n'
             ' */\n'
         ),
         'definition': Template(
@@ -295,11 +294,11 @@ class RoleFunctionGenerator:
     }
 
     # ================================================================
-    # 【テーブル⑥】各関数の call_sites テーブル
+    # [Table 6] Per-function call_sites table
     # ================================================================
     CALL_SITE_TABLE_TEMPLATES = {
         'table_header': Template(
-            '\n/* --- $func_name の呼び出し元テーブル --- */\n'
+            '\n/* --- call site table for $func_name --- */\n'
         ),
         'table_open': Template(
             'static const $struct_type $table_name[] = {\n'
@@ -315,35 +314,35 @@ class RoleFunctionGenerator:
     }
 
     # ================================================================
-    # 【テーブル⑦】呼び出し元コメント
+    # [Table 7] Call site comments
     # ================================================================
     CALL_SITES_COMMENT_TEMPLATES = {
-        'header': ' *\n * @note   呼び出し元:\n',
+        'header': ' *\n * @note   Call sites:\n',
         'line': Template(
             ' *         - [$kind]$kind_pad  $from_state$from_pad'
             ' -[$event]-> $target\n'
         ),
-        'none': ' *\n * @note   呼び出し元: （なし）\n',
+        'none': ' *\n * @note   Call sites: (none)\n',
     }
 
     # ================================================================
-    # 【テーブル⑧】ファイル末尾のユーザー追加領域
+    # [Table 8] User-added area at end of file
     # ================================================================
     TAIL_USER_SECTION_TEMPLATES = {
         'section_comment': (
             '\n\n'
             '/* ============================================================== */\n'
-            '/*  ユーザー追加領域                                              */\n'
-            '/*  ここに追加したコードは再生成時も保持されます                  */\n'
+            '/*  User-added area                                               */\n'
+            '/*  Code added here is preserved across regenerations             */\n'
             '/* ============================================================== */\n'
         ),
         'marker_start': '/* [[STABLE_USER_CODE_TAIL_START]] */\n',
-        'default_hint': '/* ユーザー追加コードをここに記述（ヘルパー関数など） */\n',
+        'default_hint': '/* Write user-added code here (helper functions, etc.) */\n',
         'marker_end': '/* [[STABLE_USER_CODE_TAIL_END]] */\n',
     }
 
     # ================================================================
-    # コンストラクタ
+    # Constructor
     # ================================================================
     def __init__(self):
         self.mapper = CTypeMapper()
@@ -362,7 +361,7 @@ class RoleFunctionGenerator:
         log_func(message)
 
     # ================================================================
-    # 名前生成（namespace 対応）
+    # Name generation (namespace support)
     # ================================================================
     def _resolve_name_and_namespace(self, func) -> tuple:
         name = getattr(func, 'name', 'unnamed')
@@ -419,7 +418,7 @@ class RoleFunctionGenerator:
                 if self.layer_name else "RoleFuncCallSiteEntry_t")
 
     # ================================================================
-    # 重複除去
+    # Deduplication
     # ================================================================
     def _dedupe_by_name(self, funcs: Iterable) -> List:
         seen = set()
@@ -447,13 +446,13 @@ class RoleFunctionGenerator:
         title = getattr(func, 'title', '')
         name = getattr(func, 'name', 'unnamed')
         qualified = getattr(func, 'qualified_name', name)
-        if title and title != f"ロール関数: {name}" \
-                and title != f"ロール関数: {qualified}":
+        if title and title != f"Role function: {name}" \
+                and title != f"Role function: {qualified}":
             return title
         return qualified
 
     # ================================================================
-    # ★ v1.5: 参照文字列の正規化（識別子検証付き）
+    # v1.5: reference normalization (with identifier validation)
     # ================================================================
     def _normalize_func_ref(self, ref: str) -> str:
         if not ref:
@@ -462,11 +461,11 @@ class RoleFunctionGenerator:
         if not name:
             return ""
 
-        # 1. 引数部分を除去
+        # 1. Strip argument part
         if '(' in name:
             name = name.split('(', 1)[0].strip()
 
-        # 2. RoleFunc_ プレフィックスを処理
+        # 2. Handle RoleFunc_ prefix
         if name.startswith("RoleFunc_"):
             rest = name[len("RoleFunc_"):]
             if self.layer_name:
@@ -490,7 +489,7 @@ class RoleFunctionGenerator:
             )
             return ""
 
-        # 3. ★ v1.5 追加: 識別子検証
+        # 3. v1.5 addition: identifier validation
         if not _VALID_QUALIFIED.match(name):
             self._log_debug(
                 f"_normalize_func_ref: reject invalid identifier: "
@@ -502,34 +501,34 @@ class RoleFunctionGenerator:
         return name
 
     # ================================================================
-    # 条件式からの関数抽出
+    # Extract function names from condition expression
     # ================================================================
     def _extract_func_names_from_condition(self, condition: str) -> List[str]:
         if not condition:
             return []
         names = set()
 
-        # 1. RoleFunc_XXX 形式
+        # 1. RoleFunc_XXX form
         for m in re.finditer(r'\bRoleFunc_\w+', condition):
             names.add(m.group(0))
 
-        # 2. Namespace.Name 形式
+        # 2. Namespace.Name form
         for m in re.finditer(r'\b([A-Z]\w*)\.([A-Za-z_]\w*)\b', condition):
             names.add(f"{m.group(1)}.{m.group(2)}")
 
-        # 3. function_name(...) 形式
+        # 3. function_name(...) form
         for m in re.finditer(r'\b([A-Za-z_][A-Za-z0-9_]*)\s*\(', condition):
             n = m.group(1)
             if n not in _C_KEYWORDS:
                 names.add(n)
 
-        # 4. 文字列全体が bare identifier
+        # 4. Whole string is a bare identifier
         stripped = condition.strip()
         if re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', stripped):
             if stripped not in _C_KEYWORDS:
                 names.add(stripped)
 
-        # 5. 式中の bare identifier（PascalCase のみ）
+        # 5. Bare identifiers within the expression (PascalCase only)
         for m in re.finditer(r'(?<![.\w])([A-Z]\w*)(?![.\w])', condition):
             n = m.group(1)
             if n not in _C_KEYWORDS:
@@ -538,7 +537,7 @@ class RoleFunctionGenerator:
         return [self._normalize_func_ref(n) for n in names if n]
 
     # ================================================================
-    # 呼び出しサイト収集
+    # Call site collection
     # ================================================================
     def _collect_call_sites(self, state_machine
                             ) -> Dict[str, List[RoleFuncCallSite]]:
@@ -628,7 +627,7 @@ class RoleFunctionGenerator:
             from_str = self._state_enum(cs.from_state)
             event_str = self._event_enum(cs.event)
             target_str = (self._state_enum(cs.target)
-                          if cs.target else '(未設定)')
+                          if cs.target else '(not set)')
             parts.append(T['line'].substitute(
                 kind=cs.kind,
                 kind_pad=' ' * (kind_width - len(cs.kind)),
@@ -640,26 +639,28 @@ class RoleFunctionGenerator:
         return ''.join(parts)
 
     # ================================================================
-    # ★ v1.6 §9.6 #90 案 A: 層フィルタ判定
+    # v1.6 sec 9.6 #90 Option A: layer filter decision
     # ================================================================
     def _should_emit_implementation(self, func, call_map) -> bool:
         """
-        この層のファイルに関数の実装を出すか判定（v1.6 §9.6 #90 案 A）
+        Decide whether to emit this function's implementation in this
+        layer's file (v1.6 sec 9.6 #90 Option A).
 
-        実装を出す条件:
-          1. 自層の関数（namespace == self.layer_name）
-          2. 自層の遷移から呼ばれている関数（call_map にエントリがある）
+        Conditions for emission:
+          1. Self-layer function (namespace == self.layer_name)
+          2. Function called from this layer's transitions
+             (has an entry in call_map)
 
-        それ以外（他層の関数で呼び出し元なし）はスキップする。
-        これにより、他層の空スタブが大量に出力されるのを防ぐ。
+        Otherwise (other-layer function with no caller) is skipped.
+        This prevents emitting many empty stubs for other layers.
         """
         namespace = getattr(func, 'namespace', '') or ''
 
-        # 1. 自層の関数
+        # 1. Self-layer function
         if namespace == self.layer_name:
             return True
 
-        # 2. 自層の遷移から呼ばれている関数
+        # 2. Function called from this layer's transitions
         qn = getattr(func, 'qualified_name', None) or ''
         if qn and call_map.get(qn):
             return True
@@ -670,7 +671,7 @@ class RoleFunctionGenerator:
         return False
 
     # ================================================================
-    # 生成メソッド群
+    # Generation methods
     # ================================================================
     def generate_none_define(self) -> str:
         T = self.NONE_DEFINE_TEMPLATES
@@ -968,21 +969,21 @@ class RoleFunctionGenerator:
                                      state_machine=None,
                                      global_defs=None) -> str:
         """
-        この層のファイル用の実装群を生成する。
+        Generate the implementation set for this layer's file.
 
-        【v1.6 §9.6 #90 案 A】
-          - 自層の関数（namespace == self.layer_name）
-          - 自層の遷移から呼ばれている関数
-          のみを実装として出力する。
-          他層の関数で呼び出し元がないものはスキップされ、
-          空スタブが大量に出力されるのを防ぐ。
+        [v1.6 sec 9.6 #90 Option A]
+          - Self-layer functions (namespace == self.layer_name)
+          - Functions called from this layer's transitions
+          Only these are emitted.
+          Other-layer functions with no caller are skipped, preventing
+          massive empty stubs from being output.
         """
         unique_funcs = self._dedupe_by_name(role_functions)
         include_transition_id = state_machine is not None
         call_map = self._collect_call_sites(state_machine) \
             if include_transition_id else {}
 
-        # ★ v1.5 追加: 未定義参照の検出（フィルタ前の全関数で判定）
+        # v1.5 addition: detect undefined references (before filtering)
         if call_map:
             defined_keys = set()
             for f in unique_funcs:
@@ -998,7 +999,7 @@ class RoleFunctionGenerator:
                         'warning',
                     )
 
-        # ★ v1.6 §9.6 #90 案 A: 層フィルタ
+        # v1.6 sec 9.6 #90 Option A: layer filter
         filtered_funcs = [
             f for f in unique_funcs
             if self._should_emit_implementation(f, call_map)
@@ -1054,7 +1055,7 @@ class RoleFunctionGenerator:
                 'transition',
                 f'const TransitionContext_{self.layer_name}_t *'
                 if self.layer_name else 'const TransitionContext_t *',
-                '遷移コンテキスト',
+                'transition context',
             ),
-            ('ctx', 'SystemContext_t *', 'システムコンテキストポインタ'),
+            ('ctx', 'SystemContext_t *', 'system context pointer'),
         ]

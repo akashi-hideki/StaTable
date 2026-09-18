@@ -1,11 +1,11 @@
 # codegen/timer_generator.py
 """
-タイマ変数生成モジュール（完全データ駆動版）
+Timer variable generation module (fully data-driven version)
 
-【v1.5 修正】
-  - generate_struct: TimerVariables_t を廃止
-    タイマ変数は SystemData_t 内に add_timer_variables() 経由で
-    既に展開されているため、未使用の typedef を出力しない。
+[v1.5 fix]
+  - generate_struct: TimerVariables_t removed
+    Timer variables are already expanded into SystemData_t via
+    add_timer_variables(), so the unused typedef is no longer emitted.
 """
 
 import sys
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class TimerGenerator:
-    """タイマ変数生成クラス（完全データ駆動）"""
+    """Timer variable generation class (fully data-driven)"""
 
     def __init__(self):
         self.mapper = CTypeMapper()
@@ -114,7 +114,7 @@ class TimerGenerator:
         return derived_timers
 
     def _execute_struct_comment(self, step, context):
-        return ["/* タイマ変数構造体 */", "/* システム全体で使用するタイマ変数を管理 */"]
+        return ["/* Timer variable struct */", "/* Manages timer variables used across the system */"]
 
     def _execute_struct_start(self, step, context):
         return ["typedef struct {"]
@@ -146,8 +146,8 @@ class TimerGenerator:
     def _execute_init_comment(self, step, context):
         return [
             "/**",
-            " * @brief  タイマ変数初期化",
-            " * @param  ctx  システムコンテキストポインタ",
+            " * @brief  Timer variable initialization",
+            " * @param  ctx  System context pointer",
             " */",
         ]
 
@@ -201,8 +201,8 @@ class TimerGenerator:
     def _execute_update_comment(self, step, context):
         return [
             "/**",
-            " * @brief  タイマ更新処理",
-            " * @param  ctx  システムコンテキストポインタ",
+            " * @brief  Timer update processing",
+            " * @param  ctx  System context pointer",
             " */",
         ]
 
@@ -229,12 +229,13 @@ class TimerGenerator:
 
     def generate_struct(self, global_defs: GlobalDefinitions) -> str:
         """
-        タイマ変数構造体生成
+        Generate timer variable struct.
 
-        【v1.5 変更】
-          タイマ変数は SystemData_t 内に既に展開されており、
-          TimerVariables_t は使用されていなかった（v1.5 §9.6 #83）。
-          後方互換のため関数自体は残すが、空文字列を返すように変更。
+        [v1.5 change]
+          Timer variables are already expanded into SystemData_t;
+          TimerVariables_t is no longer used (v1.5 sec 9.6 #83).
+          The function is retained for backward compatibility but
+          now returns an empty string.
         """
         self._log_debug(
             "generate_struct: TimerVariables_t is unused, returning empty"
