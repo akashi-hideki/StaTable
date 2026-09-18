@@ -17,7 +17,7 @@ class SystemVariable:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"変数: {self.name}"
+            self.title = f"Variable: {self.name}"
 
 
 @dataclass
@@ -32,7 +32,7 @@ class EventFlag:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"フラグ: {self.name}"
+            self.title = f"Flag: {self.name}"
 
     @property
     def bit_width(self) -> int:
@@ -60,7 +60,7 @@ class InterruptHandlerDef:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"割り込み: {self.name}"
+            self.title = f"Interrupt: {self.name}"
 
 
 @dataclass
@@ -72,7 +72,7 @@ class DevicePlaceholderDef:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"デバイス: {self.name}"
+            self.title = f"Device: {self.name}"
 
 
 @dataclass
@@ -86,7 +86,7 @@ class TimerDerivedDef:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"タイマ: {self.variable_name}"
+            self.title = f"Timer: {self.variable_name}"
 
 
 @dataclass
@@ -101,7 +101,7 @@ class TimerBaseDef:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"タイマ基準: {self.variable_name}"
+            self.title = f"Timer base: {self.variable_name}"
 
 
 @dataclass
@@ -119,7 +119,7 @@ class EventQueueDef:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"キュー: {self.name}"
+            self.title = f"Queue: {self.name}"
 
 
 class GlobalDefinitions:
@@ -156,7 +156,7 @@ class GlobalDefinitions:
                     unit=d.period_name,
                     default_value="0",
                     group="Timer",
-                    description=f"派生タイマ変数（{d.period_name}）",
+                    description=f"Derived timer variable ({d.period_name})",
                     title=d.title,
                 ))
 

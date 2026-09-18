@@ -100,7 +100,7 @@ class EventQueueEditDialog(QDialog):
 
     def _on_accept(self):
         """OK button: auto-set provisional title if title is empty"""
-        auto_title = f"キュー: {self.name_edit.text().strip() or '(unnamed)'}"
+        auto_title = f"Queue: {self.name_edit.text().strip() or '(unnamed)'}"
         self.title_widget.ensure_title(auto_title)
         self.accept()
 
@@ -210,7 +210,7 @@ class EventQueueDefsDialog(QDialog):
             if name_item and row < len(self.global_defs.event_queues):
                 for q in self.global_defs.event_queues:
                     if q.name == name_item.text():
-                        q.title = item.text().strip() or f"キュー: {q.name}"
+                        q.title = item.text().strip() or f"Queue: {q.name}"
                         break
 
     def on_double_clicked(self, row, col):

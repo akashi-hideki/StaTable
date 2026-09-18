@@ -152,7 +152,7 @@ class CodeWidget(QPlainTextEdit):
                 func_name = self._role_func_name(ref)
                 if not func_name:
                     lines.append(
-                        f"/* 未定義参照（無効な識別子）: {ref} */"
+                        f"/* Undefined reference (invalid identifier): {ref} */"
                     )
                     continue
                 lines.append(
@@ -190,7 +190,7 @@ class CodeWidget(QPlainTextEdit):
                             )
                         else:
                             lines.append(
-                                f"    /* 不正な参照: {p} */"
+                                f"    /* Invalid reference: {p} */"
                             )
                     if target:
                         lines.append(f"    next_state = {target};")
@@ -207,7 +207,7 @@ class CodeWidget(QPlainTextEdit):
                                 )
                             else:
                                 lines.append(
-                                    f"    /* 不正な参照: {ea} */"
+                                    f"    /* Invalid reference: {ea} */"
                                 )
                         if else_target:
                             lines.append(f"    next_state = {else_target};")
@@ -225,7 +225,7 @@ class CodeWidget(QPlainTextEdit):
                 if func_name:
                     lines.append(f"{func_name}(transition, ctx);")
                 else:
-                    lines.append(f"/* 不正な参照: {item.name} */")
+                    lines.append(f"/* Invalid reference: {item.name} */")
 
         # Debug log
         generated = "\n".join(lines)

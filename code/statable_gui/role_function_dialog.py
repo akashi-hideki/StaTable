@@ -70,7 +70,7 @@ class RoleFunctionDialog(QDialog):
     def _on_accept(self):
         """OK button: auto-set provisional title if title is empty"""
         if not self.title_edit.text().strip():
-            auto_title = f"ロール関数: {self.name_edit.text().strip() or '(unnamed)'}"
+            auto_title = f"Role function: {self.name_edit.text().strip() or '(unnamed)'}"
             self.title_edit.setText(auto_title)
             StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
         self.accept()

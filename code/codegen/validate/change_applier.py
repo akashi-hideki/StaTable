@@ -52,7 +52,7 @@ class ChangeApplier:
         handler = self._handlers.get(action_value)
         if handler is None:
             logger.warning(f"Unsupported action: {action_value}")
-            return False, f"未対応のアクション: {action_value}"
+            return False, f"Unsupported action: {action_value}"
 
         try:
             result = handler(change.params)
@@ -91,9 +91,9 @@ class ChangeApplier:
         state = params.get('state', '')
         logger.debug(f"_set_initial: state={state}, available={list(self.sm.states.keys())}")
         if state not in self.sm.states:
-            return False, f"状態「{state}」が存在しません"
+            return False, f"State '{state}' does not exist"
         self.sm.set_initial(state)
-        return True, f"初期状態を「{state}」に設定しました"
+        return True, f"Initial state set to '{state}'"
 
     def _add_transition(self, params: Dict) -> Tuple[bool, str]:
         from statable.model import Transition
@@ -114,7 +114,7 @@ class ChangeApplier:
 
         try:
             self.sm.add_transition(transition)
-            return True, f"遷移「{source} --[{event}]--> {target}」を追加しました"
+            return True, f"Transition '{source} --[{event}]--> {target}' added"
         except ValueError as e:
             return False, str(e)
 
@@ -125,7 +125,7 @@ class ChangeApplier:
         if not name:
             return False, "State name is not specified"
         if name in self.sm.states:
-            return False, f"状態「{name}」は既に存在します"
+            return False, f"State '{name}' already exists"
 
         # v1.6: fall back to NORMAL
         type_name = params.get('type', 'NORMAL')
@@ -144,7 +144,7 @@ class ChangeApplier:
             parent=parent,
             description=params.get('description', ''),
         ))
-        return True, f"状態「{name}」を追加しました (type={state_type.name})"
+        return True, f"State '{name}' added (type={state_type.name})"
 
     def _add_event(self, params: Dict) -> Tuple[bool, str]:
         from statable.model import Event, EventKind
@@ -153,11 +153,11 @@ class ChangeApplier:
         if not name:
             return False, "Event name is not specified"
         if name in self.sm.events:
-            return False, f"イベント「{name}」は既に存在します"
+            return False, f"Event '{name}' already exists"
 
         kind = getattr(EventKind, params.get('kind', 'SIGNAL'), EventKind.SIGNAL)
         self.sm.add_event(Event(name=name, kind=kind, description=params.get('description', '')))
-        return True, f"イベント「{name}」を追加しました"
+        return True, f"Event '{name}' added"
 
     def _remove_transition(self, params: Dict) -> Tuple[bool, str]:
         source = params.get('source', '')
@@ -167,7 +167,7 @@ class ChangeApplier:
         for t in self.sm.transitions:
             if t.source == source and t.event == event and t.target == target:
                 self.sm.remove_transition(t)
-                return True, f"遷移「{source} --[{event}]--> {target}」を削除しました"
+                return True, f"Transition '{source} --[{event}]--> {target}' deleted"
 
         return False, "No matching transition found"
 
@@ -183,7 +183,7 @@ class ChangeApplier:
                     t.condition = params['new_condition']
                 if 'new_action' in params:
                     t.action = params['new_action']
-                return True, f"遷移「{source} --[{event}]-->」を更新しました"
+                return True, f"Transition '{source} --[{event}]-->' updated"
 
         return False, "No matching transition found"
 
@@ -194,7 +194,7 @@ class ChangeApplier:
         if not name:
             return False, "Function name is not specified"
         if name in self.sm.role_functions:
-            return False, f"関数「{name}」は既に存在します"
+            return False, f"Function '{name}' already exists"
 
         rf = RoleFunction(
             name=name,
@@ -203,7 +203,7 @@ class ChangeApplier:
             description=params.get('description', ''),
         )
         self.sm.add_role_function(rf)
-        return True, f"ロール関数「{name}」を追加しました"
+        return True, f"Role function '{name}' added"
 
     def _remove_role_function(self, params: Dict) -> Tuple[bool, str]:
         """
@@ -225,22 +225,22 @@ class ChangeApplier:
         # Exact match
         if name in self.sm.role_functions:
             self.sm.remove_role_function(name)
-            return True, f"ロール関数「{name}」を削除しました"
+            return True, f"Role function '{name}' deleted"
 
         # Match by qualified_name
         for key, rf in list(self.sm.role_functions.items()):
             qn = getattr(rf, 'qualified_name', None) or key
             if qn == name:
                 self.sm.remove_role_function(key)
-                return True, f"ロール関数「{name}」を削除しました"
+                return True, f"Role function '{name}' deleted"
 
         # Match by bare name
         for key, rf in list(self.sm.role_functions.items()):
             if getattr(rf, 'name', '') == name:
                 self.sm.remove_role_function(key)
-                return True, f"ロール関数「{name}」を削除しました"
+                return True, f"Role function '{name}' deleted"
 
-        return False, f"関数「{name}」が見つかりません"
+        return False, f"Function '{name}' not found"
 
     def _add_variable(self, params: Dict) -> Tuple[bool, str]:
         from statable.global_defs import SystemVariable
@@ -249,7 +249,7 @@ class ChangeApplier:
         var = SystemVariable(name=name, type=params.get('type', 'uint8'),
                             group=params.get('group', ''), description=params.get('description', ''))
         self.gd.variables.append(var)
-        return True, f"変数「{name}」を追加しました"
+        return True, f"Variable '{name}' added"
 
     def _add_flag(self, params: Dict) -> Tuple[bool, str]:
         from statable.global_defs import EventFlag
@@ -258,4 +258,4 @@ class ChangeApplier:
         flag = EventFlag(name=name, min_value=params.get('min_value', 0),
                         max_value=params.get('max_value', 1), group=params.get('group', ''))
         self.gd.flags.append(flag)
-        return True, f"フラグ「{name}」を追加しました"
+        return True, f"Flag '{name}' added"

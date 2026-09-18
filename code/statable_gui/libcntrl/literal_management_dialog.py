@@ -119,7 +119,7 @@ class LiteralManagementDialog(QDialog):
         ret = QMessageBox.warning(
             self,
             "Confirm",
-            f"リテラル '{name}' を削除しますか？\n"
+            f"リテラル '{name}': confirm delete?\n"
             "If any transition condition uses this literal,\n"
             "It must also be removed from the relevant condition expression.",
             QMessageBox.Yes | QMessageBox.No

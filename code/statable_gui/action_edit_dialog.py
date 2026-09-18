@@ -157,8 +157,8 @@ class ActionEditDialog(QDialog):
         if not selected_text:
             return
         menu = QMenu(self)
-        add_var_action = menu.addAction(f"'{selected_text}' をグローバル変数として登録")
-        add_flag_action = menu.addAction(f"'{selected_text}' をイベントフラグとして登録")
+        add_var_action = menu.addAction(f"'{selected_text}' as global variable")
+        add_flag_action = menu.addAction(f"'{selected_text}' as event flag")
         chosen = menu.exec(self.action_edit.viewport().mapToGlobal(pos))
         if chosen == add_var_action:
             self.register_selected_as_variable(selected_text)

@@ -767,7 +767,7 @@ class MainWindow(QMainWindow):
                         self.condition_library.add(ConditionTemplate(
                             name=_name,
                             condition=_cond,
-                            description=f"自動収集 ({_tab_name})",
+                            description=f"Auto-collected ({_tab_name})",
                         ))
                         existing_cond_exprs.add(_cond)
                         existing_cond_names.add(_name)
@@ -1070,7 +1070,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(
                 self, "Error",
-                f"コード生成に失敗しました:\n{e}")
+                f"Code generation failed:\n{e}")
             StaTableLogger.error(
                 f"Code generation failed: {e}")
             return
@@ -1079,9 +1079,9 @@ class MainWindow(QMainWindow):
 
         QMessageBox.information(
             self, "Save complete",
-            f"{len(saved_files)}ファイルを保存しました。\n"
+            f"{len(saved_files)} files saved.\n"
             f"層数: {len(layers)}\n\n"
-            f"出力先: {output_dir}")
+            f"Output: {output_dir}")
 
         if collector.records:
             seen = set()
@@ -1093,4 +1093,4 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(
                 self, "Warnings during generation",
                 "The following warnings occurred:\n\n"
-                + "\n".join(f"・{m}" for m in unique))
+                + "\n".join(f"- {m}" for m in unique))

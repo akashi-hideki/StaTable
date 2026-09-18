@@ -176,9 +176,9 @@ class ValidationDialog(QDialog):
         self.validation_result = self.validator.validate(self.sm, self.gd)
         
         # Summary update
-        summary = (f"エラー: {self.validation_result.error_count} | "
-                  f"警告: {self.validation_result.warning_count} | "
-                  f"情報: {self.validation_result.info_count}")
+        summary = (f"Error: {self.validation_result.error_count} | "
+                  f"Warning: {self.validation_result.warning_count} | "
+                  f"Info: {self.validation_result.info_count}")
         self.summary_label.setText(summary)
         
         # Problem list update
@@ -254,7 +254,7 @@ class ValidationDialog(QDialog):
         self.tab_widget.setCurrentIndex(3)
         
         QMessageBox.information(self, "Parse complete",
-            f"{len(self.parsed_changes)}件の変更を抽出しました。")
+            f"{len(self.parsed_changes)} change(s) extracted.")
     
     def _apply_changes(self):
         """Apply selected changes"""
@@ -272,8 +272,8 @@ class ValidationDialog(QDialog):
         result = applier.apply_all(selected_changes)
         
         QMessageBox.information(self, "Apply complete",
-            f"{result['applied']}件の変更を反映しました。\n"
-            f"失敗: {result['failed']}件")
+            f"{result['applied']} change(s) applied.\n"
+            f"Failed: {result['failed']} item(s)")
         
         # Re-validate
         self._run_validation()

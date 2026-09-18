@@ -21,7 +21,7 @@ class StructMemberDef:
             elif self.array_size > 0:
                 self.title = f"{self.name}[{self.array_size}]"
             else:
-                self.title = f"メンバ: {self.name}"
+                self.title = f"Member: {self.name}"
 
 
 @dataclass
@@ -34,7 +34,7 @@ class CustomTypeDef:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"型: {self.name}"
+            self.title = f"Type: {self.name}"
 
 
 @dataclass
@@ -54,7 +54,7 @@ class SystemVariable:
             if self.array_size > 0:
                 self.title = f"{self.name}[{self.array_size}]"
             else:
-                self.title = f"変数: {self.name}"
+                self.title = f"Variable: {self.name}"
 
 
 @dataclass
@@ -69,7 +69,7 @@ class EventFlag:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"フラグ: {self.name}"
+            self.title = f"Flag: {self.name}"
 
     @property
     def bit_width(self) -> int:
@@ -109,7 +109,7 @@ class InterruptHandlerDef:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"割り込み: {self.name}"
+            self.title = f"Interrupt: {self.name}"
 
 
 @dataclass
@@ -121,7 +121,7 @@ class DevicePlaceholderDef:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"デバイス: {self.name}"
+            self.title = f"Device: {self.name}"
 
 
 @dataclass
@@ -135,7 +135,7 @@ class TimerDerivedDef:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"タイマ: {self.variable_name}"
+            self.title = f"Timer: {self.variable_name}"
 
 
 @dataclass
@@ -150,7 +150,7 @@ class TimerBaseDef:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"タイマ基準: {self.variable_name}"
+            self.title = f"Timer base: {self.variable_name}"
 
 
 @dataclass
@@ -168,7 +168,7 @@ class EventQueueDef:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"キュー: {self.name}"
+            self.title = f"Queue: {self.name}"
 
 
 class GlobalDefinitions:
@@ -231,7 +231,7 @@ class GlobalDefinitions:
                 default="0",
                 group="Timer",
                 default_desc="Timer base variable",
-                default_title=timer.title or f"タイマ基準: {timer.variable_name}",
+                default_title=timer.title or f"Timer base: {timer.variable_name}",
             )
             # Derived timer variable
             for d in timer.derived:
@@ -241,8 +241,8 @@ class GlobalDefinitions:
                     unit=d.period_name,
                     default="0",
                     group="Timer",
-                    default_desc=f"派生タイマ変数（{d.period_name}）",
-                    default_title=d.title or f"タイマ: {d.variable_name}",
+                    default_desc=f"Derived timer variable ({d.period_name})",
+                    default_title=d.title or f"Timer: {d.variable_name}",
                 )
 
     # Get group name

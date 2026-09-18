@@ -201,7 +201,7 @@ class InterruptEditDialog(QDialog):
 
     def _on_accept(self):
         if not self.title_edit.text().strip():
-            auto_title = f"割り込み: {self.name_edit.text().strip() or '(unnamed)'}"
+            auto_title = f"Interrupt: {self.name_edit.text().strip() or '(unnamed)'}"
             self.title_edit.setText(auto_title)
             StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
         self.accept()
@@ -283,7 +283,7 @@ class DevicePlaceholderEditDialog(QDialog):
 
     def _on_accept(self):
         if not self.title_edit.text().strip():
-            auto_title = f"デバイス: {self.name_edit.text().strip() or '(unnamed)'}"
+            auto_title = f"Device: {self.name_edit.text().strip() or '(unnamed)'}"
             self.title_edit.setText(auto_title)
         self.accept()
 
@@ -337,7 +337,7 @@ class TimerBaseEditDialog(QDialog):
 
     def _on_accept(self):
         if not self.title_edit.text().strip():
-            auto_title = f"タイマ基準: {self.var_edit.text().strip() or '(unnamed)'}"
+            auto_title = f"Timer base: {self.var_edit.text().strip() or '(unnamed)'}"
             self.title_edit.setText(auto_title)
         self.accept()
 
@@ -393,7 +393,7 @@ class TimerDerivedEditDialog(QDialog):
 
     def _on_accept(self):
         if not self.title_edit.text().strip():
-            auto_title = f"タイマ: {self.var_edit.text().strip() or '(unnamed)'}"
+            auto_title = f"Timer: {self.var_edit.text().strip() or '(unnamed)'}"
             self.title_edit.setText(auto_title)
         self.accept()
 
@@ -690,7 +690,7 @@ class InterruptHandlerEditDialog(QDialog):
             table.setItem(row, 4, QTableWidgetItem(d.data_type))
 
     def _on_timer_title_changed(self, timer: TimerBaseDef, text: str):
-        timer.title = text.strip() or f"タイマ基準: {timer.variable_name}"
+        timer.title = text.strip() or f"Timer base: {timer.variable_name}"
         all_timers = [self.global_defs.timer_base] + self.global_defs.extra_timers
         for i, t in enumerate(all_timers):
             if t is timer:
@@ -749,7 +749,7 @@ class InterruptHandlerEditDialog(QDialog):
             timer = all_timers[index]
             reply = QMessageBox.question(
                 self, "Confirm",
-                f"基準タイマ '{timer.title}' を削除しますか？",
+                f"基準タイマ '{timer.title}': confirm delete?",
                 QMessageBox.Yes | QMessageBox.No
             )
             if reply == QMessageBox.Yes:

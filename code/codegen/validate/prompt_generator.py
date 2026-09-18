@@ -42,13 +42,13 @@ class AIPromptGenerator:
             for t in sm.transitions:
                 line = f"- {t.source} --[{t.event}]--> {t.target}"
                 if t.condition:
-                    line += f" [条件: {t.condition}]"
+                    line += f" [condition: {t.condition}]"
                 if t.action:
-                    line += f" [アクション: {t.action}]"
+                    line += f" [action: {t.action}]"
                 lines.append(line)
         else:
             lines.append("- TransitionNone")
-        lines.append(f"\n### 初期状態\n{sm.initial_state or 'Not set'}")
+        lines.append(f"\n### Initial state\n{sm.initial_state or 'Not set'}")
         return '\n'.join(lines)
 
     def _format_validation(self, validation_result) -> str:

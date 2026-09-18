@@ -36,14 +36,14 @@ def _truncate_text(text: str, max_chars: int = 40) -> str:
 
 def _build_transition_tooltip(trans: Transition) -> str:
     parts = []
-    parts.append(f"タイトル: {trans.title}")
-    parts.append(f"遷移先: {trans.target if trans.target else '(internal)'}")
+    parts.append(f"Title: {trans.title}")
+    parts.append(f"Target: {trans.target if trans.target else '(internal)'}")
     if trans.event:
-        parts.append(f"イベント: {trans.event}")
+        parts.append(f"Event: {trans.event}")
     else:
         parts.append("Event: Completion transition")
     if trans.condition:
-        parts.append(f"状態遷移条件:\n{trans.condition}")
+        parts.append(f"State transition condition:\n{trans.condition}")
     return "\n".join(parts)
 
 

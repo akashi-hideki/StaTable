@@ -218,7 +218,7 @@ class InterruptGenerator:
 
         lines = [
             "/**",
-            f" * @brief  {display} 割り込みハンドラ",
+            f" * @brief  {display} interrupt handler",
         ]
         if description:
             lines.append(f" * @note   {description}")

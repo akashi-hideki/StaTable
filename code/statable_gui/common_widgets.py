@@ -269,7 +269,7 @@ class TypeManagerDialog(QDialog):
                 QMessageBox.warning(self, "Warning", "Please enter a type name.")
                 return
             if any(t.name == new_type.name for t in self.global_defs.custom_types):
-                QMessageBox.warning(self, "Warning", f"型 '{new_type.name}' は既に存在します。")
+                QMessageBox.warning(self, "Warning", f"型 '{new_type.name}' already exists.")
                 return
             self.global_defs.custom_types.append(new_type)
             self._refresh_table()
@@ -297,7 +297,7 @@ class TypeManagerDialog(QDialog):
         if not target:
             return
         reply = QMessageBox.question(
-            self, "Confirm", f"型 '{target.title}' を削除しますか？",
+            self, "Confirm", f"型 '{target.title}': confirm delete?",
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
@@ -385,7 +385,7 @@ class TypeEditDialog(QDialog):
                 QMessageBox.warning(self, "Warning", "Please enter a member name.")
                 return
             if any(m.name == member.name for m in self.custom_type.members):
-                QMessageBox.warning(self, "Warning", f"メンバ '{member.name}' は既に存在します。")
+                QMessageBox.warning(self, "Warning", f"メンバ '{member.name}' already exists.")
                 return
             self.custom_type.members.append(member)
             self._refresh_member_table()
@@ -420,7 +420,7 @@ class TypeEditDialog(QDialog):
 
     def _on_accept(self):
         if not self.title_edit.text().strip():
-            self.title_edit.setText(f"型: {self.name_edit.text().strip() or '(unnamed)'}")
+            self.title_edit.setText(f"Type: {self.name_edit.text().strip() or '(unnamed)'}")
         if not self.name_edit.text().strip():
             QMessageBox.warning(self, "Warning", "Please enter a type name.")
             return
@@ -521,7 +521,7 @@ class StructMemberEditDialog(QDialog):
             elif self.array_check.isChecked():
                 self.title_edit.setText(f"{self.name_edit.text().strip() or '(unnamed)'}[{self.array_size_spin.value()}]")
             else:
-                self.title_edit.setText(f"メンバ: {self.name_edit.text().strip() or '(unnamed)'}")
+                self.title_edit.setText(f"Member: {self.name_edit.text().strip() or '(unnamed)'}")
         self.accept()
 
     def get_member(self) -> StructMemberDef:

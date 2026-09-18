@@ -61,7 +61,7 @@ class Event:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"イベント: {self.name}" if self.name else "Event: (completion)"
+            self.title = f"Event: {self.name}" if self.name else "Event: (completion)"
 
 
 @dataclass(kw_only=True)
@@ -145,7 +145,7 @@ class RoleFunction:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"ロール関数: {self.qualified_name}"
+            self.title = f"Role function: {self.qualified_name}"
 
     @property
     def qualified_name(self) -> str:

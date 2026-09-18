@@ -132,9 +132,9 @@ class CodeGenerationDialog(QDialog):
                     self.config_manager.update(
                         save_with_merge=data['save_with_merge'])
                 logger.info(
-                    f"前回の設定を読み込みました: {data}")
+                    f"Loaded previous settings: {data}")
         except Exception as e:
-            logger.warning(f"設定読み込みに失敗: {e}")
+            logger.warning(f"Failed to load settings: {e}")
 
     def _save_settings(self):
         """Save current settings"""
@@ -155,9 +155,9 @@ class CodeGenerationDialog(QDialog):
                       encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False,
                           indent=2)
-            logger.info(f"設定を保存しました: {data}")
+            logger.info(f"Settings saved: {data}")
         except Exception as e:
-            logger.warning(f"設定保存に失敗: {e}")
+            logger.warning(f"Failed to save settings: {e}")
 
     # ---- UI ----
     def _setup_ui(self):
@@ -332,7 +332,7 @@ class CodeGenerationDialog(QDialog):
             self,
             "Warnings during generation",
             "The following warnings occurred:\n\n"
-            + "\n".join(f"・{m}" for m in unique),
+            + "\n".join(f"- {m}" for m in unique),
         )
 
     # ---- ★ Code generation ----
@@ -399,7 +399,7 @@ class CodeGenerationDialog(QDialog):
             self.progress_bar.setVisible(False)
             QMessageBox.critical(
                 self, "Error",
-                f"コード生成に失敗しました:\n{e}")
+                f"Code generation failed:\n{e}")
             return
         finally:
             root_logger.removeHandler(collector)
@@ -418,8 +418,8 @@ class CodeGenerationDialog(QDialog):
         # CompletionMessage
         QMessageBox.information(
             self, "Completion",
-            f"{len(self.generated_files)}ファイルを"
-            f"生成しました。\n出力先: {output_dir}")
+            f"{len(self.generated_files)} files "
+            f"generated.\nOutput: {output_dir}")
 
         # Show warnings last if any
         self._show_warnings(collector.records)
@@ -463,13 +463,13 @@ class CodeGenerationDialog(QDialog):
             self._save_settings()
             QMessageBox.information(
                 self, "Save complete",
-                f"{len(saved_files)}ファイルを"
-                f"保存しました。\n\n"
-                f"出力先: {output_dir}")
+                f"{len(saved_files)} files "
+                f"saved.\n\n"
+                f"Output: {output_dir}")
         except Exception as e:
             QMessageBox.critical(
                 self, "Error",
-                f"保存に失敗しました:\n{e}")
+                f"Save failed:\n{e}")
 
     def _on_close(self):
         """Handler on close"""

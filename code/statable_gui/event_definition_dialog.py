@@ -133,7 +133,7 @@ class EventEditDialog(QDialog):
 
     def _on_accept(self):
         """OK button: auto-set provisional title if title is empty"""
-        auto_title = f"イベント: {self.name_edit.text().strip() or '(unnamed)'}"
+        auto_title = f"Event: {self.name_edit.text().strip() or '(unnamed)'}"
         self.title_widget.ensure_title(auto_title)
         self.accept()
 
@@ -238,7 +238,7 @@ class EventDefinitionDialog(QDialog):
                 if name == "(completion)":
                     name = ""
                 if name in self.sm.events:
-                    new_title = item.text().strip() or f"イベント: {name or '(Completion)'}"
+                    new_title = item.text().strip() or f"Event: {name or '(Completion)'}"
                     self.sm.events[name].title = new_title
 
     def _find_event_by_row(self, row: int) -> Optional[Event]:
@@ -266,7 +266,7 @@ class EventDefinitionDialog(QDialog):
             old_name = event.name
             if old_name != new_event.name:
                 if new_event.name in self.sm.events:
-                    QMessageBox.warning(self, "Warning", f"イベント '{new_event.name}' は既に存在します。")
+                    QMessageBox.warning(self, "Warning", f"Event '{new_event.name}' already exists.")
                     return
                 #Rebuild dict preserving original positions
                 new_events = {}
@@ -293,7 +293,7 @@ class EventDefinitionDialog(QDialog):
                 QMessageBox.warning(self, "Warning", "Please enter an event name.")
                 return
             if event.name in self.sm.events:
-                QMessageBox.warning(self, "Warning", f"イベント '{event.name}' は既に存在します。")
+                QMessageBox.warning(self, "Warning", f"Event '{event.name}' already exists.")
                 return
             self.sm.add_event(event)
             self.refresh_table()
@@ -310,7 +310,7 @@ class EventDefinitionDialog(QDialog):
         # Dependency check
         transitions = self.sm.get_transitions_for_event(event.name)
         if transitions:
-            msg = f"イベント '{event.title}' は削除できません。\n\n以下の遷移で使用されています：\n\n"
+            msg = f"Event '{event.title}'  cannot be deleted.\n\nUsed by the following transitions:\n\n"
             for trans in transitions:
                 msg += f"  - {trans.source} → {trans.target}\n"
             msg += "\nPlease delete these transitions first."
@@ -320,9 +320,9 @@ class EventDefinitionDialog(QDialog):
         # Interrupt handler check
         for intr in self.global_defs.interrupts:
             if event.name in intr.event_names:
-                QMessageBox.warning(self, "Warning", f"イベント '{event.title}' は割り込み処理 '{intr.title}' で使用されています。")
+                QMessageBox.warning(self, "Warning", f"Event '{event.title}' is used by interrupt handler '{intr.title}'.")
                 return
-        reply = QMessageBox.question(self, "Confirm", f"イベント '{event.title}' を削除しますか？", QMessageBox.Yes | QMessageBox.No)
+        reply = QMessageBox.question(self, "Confirm", f"Event '{event.title}': confirm delete?", QMessageBox.Yes | QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.sm.remove_event(event.name)
             self.refresh_table()

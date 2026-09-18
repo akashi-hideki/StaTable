@@ -104,7 +104,7 @@ class EventQueueGenerator:
         queue = context.get('queue')
         name = getattr(queue, 'name', 'unknown')
         desc = getattr(queue, 'description', '')
-        lines = [f"/* イベントキュー: {name} */"]
+        lines = [f"/* Event queue: {name} */"]
         if desc:
             lines.append(f"/* {desc} */")
         return lines
@@ -143,7 +143,7 @@ class EventQueueGenerator:
         name = getattr(queue, 'name', 'unknown')
         return [
             "/**",
-            f" * @brief  イベントをエンキューする（{name}）",
+            f" * @brief  Enqueue event ({name})",
             " * @param  queue  Queue",
             " * @param  event  Event",
             " * @return success: true, failure: false",
@@ -161,7 +161,7 @@ class EventQueueGenerator:
         name = getattr(queue, 'name', 'unknown')
         return [
             "/**",
-            f" * @brief  イベントをデキューする（{name}）",
+            f" * @brief  Dequeue event ({name})",
             " * @param  queue  Queue",
             " * @param  event  Dequeued event",
             " * @return success: true, failure: false",
@@ -194,7 +194,7 @@ class EventQueueGenerator:
         indent = self.strings['indent_1']
         lines = []
         lines.append(f"{indent}if (queue->count >= {size}) {{")
-        lines.append(f"{indent}{indent}return false;  /* キュー満杯 */")
+        lines.append(f"{indent}{indent}return false;  /* Queue full */")
         lines.append(f"{indent}}}")
         return lines
     
@@ -202,7 +202,7 @@ class EventQueueGenerator:
         indent = self.strings['indent_1']
         lines = []
         lines.append(f"{indent}if (queue->count == 0) {{")
-        lines.append(f"{indent}{indent}return false;  /* キュー空 */")
+        lines.append(f"{indent}{indent}return false;  /* Queue empty */")
         lines.append(f"{indent}}}")
         return lines
     

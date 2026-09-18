@@ -71,34 +71,34 @@ class SymbolPickerWidget(QWidget):
         # Global variables
         for var in self.global_defs.variables:
             if self._matches(var.title, var.name, var.group, query):
-                item = QListWidgetItem(f"変数: {var.title}")
+                item = QListWidgetItem(f"Variable: {var.title}")
                 item.setData(Qt.UserRole, var.name)
                 item.setToolTip(
-                    f"種別: グローバル変数\n"
-                    f"タイトル: {var.title}\n"
-                    f"名前: {var.name}\n"
-                    f"型: {var.type}\n"
-                    f"単位: {var.unit}\n"
-                    f"初期値: {var.default_value}\n"
-                    f"グループ: {var.group}\n"
-                    f"説明: {var.description}"
+                    f"Kind: Global variable\n"
+                    f"Title: {var.title}\n"
+                    f"Name: {var.name}\n"
+                    f"Type: {var.type}\n"
+                    f"Unit: {var.unit}\n"
+                    f"Initial value: {var.default_value}\n"
+                    f"Group: {var.group}\n"
+                    f"Description: {var.description}"
                 )
                 self.list_widget.addItem(item)
 
         # Event flags
         for flag in self.global_defs.flags:
             if self._matches(flag.title, flag.name, flag.group, query):
-                item = QListWidgetItem(f"フラグ: {flag.title}")
+                item = QListWidgetItem(f"Flag: {flag.title}")
                 item.setData(Qt.UserRole, flag.name)
                 item.setToolTip(
-                    f"種別: イベントフラグ\n"
-                    f"タイトル: {flag.title}\n"
-                    f"名前: {flag.name}\n"
-                    f"最小値: {flag.min_value}\n"
-                    f"最大値: {flag.max_value}\n"
-                    f"ビット幅: {flag.bit_width} bit\n"
-                    f"グループ: {flag.group}\n"
-                    f"説明: {flag.description}"
+                    f"Kind: Event flag\n"
+                    f"Title: {flag.title}\n"
+                    f"Name: {flag.name}\n"
+                    f"Min value: {flag.min_value}\n"
+                    f"Max value: {flag.max_value}\n"
+                    f"Bit width: {flag.bit_width} bit\n"
+                    f"Group: {flag.group}\n"
+                    f"Description: {flag.description}"
                 )
                 self.list_widget.addItem(item)
 
@@ -106,12 +106,12 @@ class SymbolPickerWidget(QWidget):
         for func_name in self.role_functions.keys():
             temp_var = f"rv_{func_name}"
             if self._matches(temp_var, func_name, "", query):
-                item = QListWidgetItem(f"戻り値: {temp_var}")
+                item = QListWidgetItem(f"Return value: {temp_var}")
                 item.setData(Qt.UserRole, temp_var)
                 item.setToolTip(
-                    f"種別: ロール関数戻り値\n"
-                    f"関数: {func_name}\n"
-                    f"一時変数: {temp_var}"
+                    f"Kind: Role function return value\n"
+                    f"Function: {func_name}\n"
+                    f"一時Variable: {temp_var}"
                 )
                 self.list_widget.addItem(item)
 

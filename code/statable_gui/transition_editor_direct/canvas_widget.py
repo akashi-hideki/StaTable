@@ -68,7 +68,7 @@ class FlowNodeItem(QGraphicsRectItem):
                 target = flow_item.params.get('target', '')
                 # If the condition expression is empty, show "Condition: none"
                 if condition:
-                    lines.append(f"条件: {condition}")
+                    lines.append(f"Condition: {condition}")
                 else:
                     lines.append("Condition: none")
                 # If target is empty, show "-> (not set)"

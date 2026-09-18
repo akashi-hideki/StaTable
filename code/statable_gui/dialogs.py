@@ -58,7 +58,7 @@ class TransitionListDialog(QDialog):
         self.state_machine = state_machine
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel(f"イベント: {event_name if event_name else 'Completion transition'}"))
+        layout.addWidget(QLabel(f"Event: {event_name if event_name else 'Completion transition'}"))
 
         self.table = TransitionTable(0, 5)
         self.table.setHorizontalHeaderLabels(["Title", "State transition condition", "Action", "Target", "Display title"])

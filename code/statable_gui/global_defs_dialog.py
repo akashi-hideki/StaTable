@@ -123,7 +123,7 @@ class VariableEditDialog(QDialog):
         self.array_size_spin.setEnabled(checked)
 
     def _on_accept(self):
-        auto_title = f"変数: {self.name_edit.text().strip() or '(unnamed)'}"
+        auto_title = f"Variable: {self.name_edit.text().strip() or '(unnamed)'}"
         if self.array_check.isChecked():
             auto_title = f"{self.name_edit.text().strip() or '(unnamed)'}[{self.array_size_spin.value()}]"
         self.title_widget.ensure_title(auto_title)
@@ -199,7 +199,7 @@ class FlagEditDialog(QDialog):
             self.bit_width_label.setStyleSheet("")
 
     def _on_accept(self):
-        auto_title = f"フラグ: {self.name_edit.text().strip() or '(unnamed)'}"
+        auto_title = f"Flag: {self.name_edit.text().strip() or '(unnamed)'}"
         self.title_widget.ensure_title(auto_title)
         self.accept()
 
@@ -305,7 +305,7 @@ class BulkVariableDialog(QDialog):
                 if arr_str:
                     title_item.setText(f"{name_item.text().strip()}[{arr_str}]")
                 else:
-                    title_item.setText(f"変数: {name_item.text().strip()}")
+                    title_item.setText(f"Variable: {name_item.text().strip()}")
         self.accept()
 
     def get_variables(self) -> List[SystemVariable]:
@@ -329,7 +329,7 @@ class BulkVariableDialog(QDialog):
                 if arr > 0:
                     title = f"{name}[{arr}]"
                 else:
-                    title = f"変数: {name}"
+                    title = f"Variable: {name}"
             variables.append(SystemVariable(name, typ, unit, default, group, desc, title, arr))
         return variables
 
@@ -441,7 +441,7 @@ class BulkFlagDialog(QDialog):
             title_item = self.table.item(row, 0)
             name_item = self.table.item(row, 1)
             if title_item and name_item and not title_item.text().strip() and name_item.text().strip():
-                title_item.setText(f"フラグ: {name_item.text().strip()}")
+                title_item.setText(f"Flag: {name_item.text().strip()}")
         self.accept()
 
     def get_flags(self) -> List[EventFlag]:
@@ -461,7 +461,7 @@ class BulkFlagDialog(QDialog):
             group = self.table.item(row, 5).text().strip() if self.table.item(row, 5) else ""
             desc = self.table.item(row, 6).text().strip() if self.table.item(row, 6) else ""
             if not title:
-                title = f"フラグ: {name}"
+                title = f"Flag: {name}"
             flags.append(EventFlag(name, min_val, max_val, group, desc, title))
         return flags
 
@@ -621,7 +621,7 @@ class GlobalDefinitionsDialog(QDialog):
                 if var.array_size > 0:
                     var.title = f"{var.name}[{var.array_size}]"
                 else:
-                    var.title = f"変数: {var.name}"
+                    var.title = f"Variable: {var.name}"
         else:
             row = item.row()
             name_item = self.var_table.item(row, 1)
@@ -650,7 +650,7 @@ class GlobalDefinitionsDialog(QDialog):
             if arr > 0:
                 title = f"{name}[{arr}]"
             else:
-                title = f"変数: {name}"
+                title = f"Variable: {name}"
         return SystemVariable(name, typ, unit, default, group, desc, title, arr)
 
     def add_empty_variable_row(self):
@@ -727,7 +727,7 @@ class GlobalDefinitionsDialog(QDialog):
             flag.group = self.flag_table.item(row, 5).text().strip() if self.flag_table.item(row, 5) else ""
             flag.description = self.flag_table.item(row, 6).text().strip() if self.flag_table.item(row, 6) else ""
             if not flag.title and flag.name:
-                flag.title = f"フラグ: {flag.name}"
+                flag.title = f"Flag: {flag.name}"
             width_item = self.flag_table.item(row, 4)
             if width_item:
                 width_item.setText(str(flag.bit_width))
@@ -755,7 +755,7 @@ class GlobalDefinitionsDialog(QDialog):
         group = self.flag_table.item(row, 5).text().strip() if self.flag_table.item(row, 5) else ""
         desc = self.flag_table.item(row, 6).text().strip() if self.flag_table.item(row, 6) else ""
         if not title:
-            title = f"フラグ: {name}"
+            title = f"Flag: {name}"
         return EventFlag(name, min_val, max_val, group, desc, title)
 
     def add_empty_flag_row(self):

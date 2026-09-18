@@ -144,7 +144,7 @@ class TransitionEditDialog(BaseEditDialog):
 
         edited = f"{self.event_label.text()}: {condition} → {target}"
         if pre_actions:
-            edited += f" (直前:{', '.join(pre_actions)})"
+            edited += f" (pre: {', '.join(pre_actions)})"
         if has_else:
             edited += f" [else→{else_target}]" if else_target else " [else]"
 
