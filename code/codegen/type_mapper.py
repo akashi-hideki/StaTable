@@ -1,6 +1,6 @@
 # codegen/type_mapper.py
 """
-C言語型マッピングモジュール（辞書駆動版）
+C言語Typeマッピングモジュール（辞書駆動版）
 """
 
 import sys
@@ -16,7 +16,7 @@ except ImportError:
 
 
 class CTypeMapper:
-    """StaTableの型をC言語の型にマッピングするクラス"""
+    """StaTableのTypeをC言語のTypeにマッピングするクラス"""
     
     TYPE_MAPPING = {
         'int': 'int', 'int8': 'int8_t', 'int16': 'int16_t',

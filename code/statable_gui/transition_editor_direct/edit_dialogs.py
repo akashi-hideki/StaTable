@@ -1,7 +1,5 @@
 # statable_gui/transition_editor_direct/edit_dialogs.py
-"""
-ノード編集ダイアログ（else有無チェックボックス対応、条件ビルダー対応）
-"""
+"""\nNode edit dialog (else checkbox support, condition builder support)\n"""
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
@@ -19,7 +17,7 @@ class BaseEditDialog(QDialog):
     def _add_buttons(self, layout):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
-        cancel_btn = QPushButton("キャンセル")
+        cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(self.reject)
         btn_layout.addWidget(cancel_btn)
         ok_btn = QPushButton("OK")
@@ -31,12 +29,12 @@ class BaseEditDialog(QDialog):
 class FunctionEditDialog(BaseEditDialog):
     def __init__(self, item, role_functions=None, parent=None):
         super().__init__(item, parent)
-        self.setWindowTitle("ロール関数編集")
+        self.setWindowTitle("Edit role function")
         self.role_functions = role_functions or []
 
         layout = QVBoxLayout(self)
         h1 = QHBoxLayout()
-        h1.addWidget(QLabel("関数名:"))
+        h1.addWidget(QLabel("Function name:"))
         self.func_combo = QComboBox()
         self.func_combo.setEditable(True)
         self.func_combo.addItems(self.role_functions)
@@ -52,7 +50,7 @@ class FunctionEditDialog(BaseEditDialog):
 class TransitionEditDialog(BaseEditDialog):
     def __init__(self, item, states=None, role_functions=None, global_defs=None, state_machine=None, parent=None):
         super().__init__(item, parent)
-        self.setWindowTitle("状態遷移イベント編集")
+        self.setWindowTitle("Edit state transition event")
         self.states = states or []
         self.role_functions = role_functions or []
         self.global_defs = global_defs
@@ -67,11 +65,11 @@ class TransitionEditDialog(BaseEditDialog):
         layout.addLayout(h0)
 
         h1 = QHBoxLayout()
-        h1.addWidget(QLabel("条件式:"))
+        h1.addWidget(QLabel("Condition:"))
         self.cond_edit = QLineEdit(item.params.get('condition', ''))
         h1.addWidget(self.cond_edit)
 
-        cond_builder_btn = QPushButton("条件を編集...")
+        cond_builder_btn = QPushButton("条件をEdit...")
         cond_builder_btn.clicked.connect(self._open_condition_builder)
         h1.addWidget(cond_builder_btn)
         layout.addLayout(h1)
@@ -85,10 +83,10 @@ class TransitionEditDialog(BaseEditDialog):
         layout.addWidget(self.pre_list)
 
         pre_btn = QHBoxLayout()
-        add_pre_btn = QPushButton("追加")
+        add_pre_btn = QPushButton("Add")
         add_pre_btn.clicked.connect(self._add_pre)
         pre_btn.addWidget(add_pre_btn)
-        del_pre_btn = QPushButton("削除")
+        del_pre_btn = QPushButton("Delete")
         del_pre_btn.clicked.connect(self._del_pre)
         pre_btn.addWidget(del_pre_btn)
         layout.addLayout(pre_btn)
@@ -98,7 +96,7 @@ class TransitionEditDialog(BaseEditDialog):
         layout.addWidget(self.has_else_check)
 
         h3 = QHBoxLayout()
-        h3.addWidget(QLabel("else遷移先:"))
+        h3.addWidget(QLabel("else target:"))
         self.else_target_combo = QComboBox()
         self.else_target_combo.setEditable(True)
         self.else_target_combo.addItems(self.states)
@@ -107,7 +105,7 @@ class TransitionEditDialog(BaseEditDialog):
         layout.addLayout(h3)
 
         h2 = QHBoxLayout()
-        h2.addWidget(QLabel("遷移先:"))
+        h2.addWidget(QLabel("Target:"))
         self.target_combo = QComboBox()
         self.target_combo.setEditable(True)
         self.target_combo.addItems(self.states)

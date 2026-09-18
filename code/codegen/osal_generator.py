@@ -1,7 +1,5 @@
 # codegen/osal_generator.py
-"""
-OSAL（OS抽象化レイヤ）コード生成モジュール（テンプレート分離版）
-"""
+"""\nOSAL (OS abstraction layer) code generation module (template-split version)\n"""
 
 import sys
 import os
@@ -21,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class OSALGenerator:
-    """OSALコード生成クラス（テンプレート分離版）"""
+    """OSAL code generation class (template-split version)"""
     
     def __init__(self):
         self.templates = CodeTemplates()
@@ -30,7 +28,7 @@ class OSALGenerator:
         self.osal_templates = self.templates.OSAL
         self.naming = CNamingConvention()
         
-        # ヘッダ生成ステップ
+        # Header generation step
         self.header_steps = [
             {'action': 'file_comment'},
             {'action': 'include_guard_start'},
@@ -43,7 +41,7 @@ class OSALGenerator:
             {'action': 'include_guard_end'},
         ]
         
-        # ソース生成ステップ
+        # Source generation step
         self.source_steps = [
             {'action': 'file_comment'},
             {'action': 'includes'},
@@ -53,7 +51,7 @@ class OSALGenerator:
             {'action': 'critical_impl'},
         ]
         
-        # ステップ実行辞書
+        # Step execution dictionary
         self.step_executors: Dict[str, Callable] = {
             'file_comment': self._execute_file_comment,
             'include_guard_start': self._execute_include_guard_start,
@@ -74,7 +72,7 @@ class OSALGenerator:
         log_func = getattr(logger, level, logger.debug)
         log_func(message)
     
-    # ===== ステップ実行関数 =====
+    # ===== Step execution function =====
     def _execute_file_comment(self, step, context):
         os_type = context.get('os_type', 'non_rtos')
         os_info = self.osal_templates['os_types'].get(os_type, {})
@@ -193,9 +191,9 @@ class OSALGenerator:
         
         return lines
     
-    # ===== 公開メソッド =====
+    # ===== Public methods =====
     def generate_header(self, os_type='non_rtos') -> str:
-        """OSALヘッダ生成"""
+        """OSAL header generation"""
         self._log_debug(f"Generating OSAL header for: {os_type}")
         
         os_info = self.osal_templates['os_types'].get(os_type, {})
@@ -214,7 +212,7 @@ class OSALGenerator:
         return '\n'.join(lines)
     
     def generate_source(self, os_type='non_rtos') -> str:
-        """OSALソース生成"""
+        """OSAL source generation"""
         self._log_debug(f"Generating OSAL source for: {os_type}")
         
         os_info = self.osal_templates['os_types'].get(os_type, {})
@@ -232,7 +230,7 @@ class OSALGenerator:
         return '\n'.join(lines)
     
     def generate_all(self, os_type='non_rtos') -> Dict[str, str]:
-        """OSAL全コード生成"""
+        """Generate all OSAL code"""
         os_info = self.osal_templates['os_types'].get(os_type, {})
         return {
             os_info.get('header', 'osal.h'): self.generate_header(os_type),
@@ -240,5 +238,5 @@ class OSALGenerator:
         }
     
     def get_available_os_types(self) -> Dict[str, str]:
-        """利用可能なOS種別を取得"""
+        """Get available OS types"""
         return {key: value['description'] for key, value in self.osal_templates['os_types'].items()}

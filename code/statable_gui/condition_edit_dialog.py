@@ -13,11 +13,11 @@ from .logger import StaTableLogger
 
 
 class ConditionEditDialog(QDialog):
-    """状態遷移条件を編集するダイアログ"""
+    """State transition conditionをEditするダイアログ"""
 
     def __init__(self, parent=None, condition_text="", title="", global_defs=None, role_functions=None):
         super().__init__(parent)
-        self.setWindowTitle("状態遷移条件編集")
+        self.setWindowTitle("State transition conditionEdit")
         self.setMinimumSize(900, 650)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.role_functions = role_functions if role_functions is not None else {}
@@ -29,17 +29,17 @@ class ConditionEditDialog(QDialog):
 
         main_layout = QVBoxLayout(self)
 
-        # タイトル入力ウィジェット
+        # Title入力ウィジェット
         self.title_widget = TitleEditWidget(self, title=title)
         main_layout.addWidget(self.title_widget)
 
-        # ロール関数選択・挿入バー
+        # Role functionSelection・Insertバー
         role_bar = QHBoxLayout()
-        role_bar.addWidget(QLabel("ロール関数:"))
+        role_bar.addWidget(QLabel("Role function:"))
         self.role_combo = QComboBox()
         self.refresh_role_combo()
         role_bar.addWidget(self.role_combo)
-        insert_role_btn = QPushButton("挿入")
+        insert_role_btn = QPushButton("Insert")
         insert_role_btn.clicked.connect(self.insert_role_function)
         role_bar.addWidget(insert_role_btn)
         main_layout.addLayout(role_bar)
@@ -56,10 +56,10 @@ class ConditionEditDialog(QDialog):
         self.symbol_picker.insert_requested.connect(self.insert_symbol)
         splitter.addWidget(self.symbol_picker)
 
-        # 右側：条件式編集
+        # 右側：条件式Edit
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
-        right_layout.addWidget(QLabel("条件式:"))
+        right_layout.addWidget(QLabel("Condition:"))
         self.condition_edit = QPlainTextEdit()
         self.condition_edit.setPlainText(condition_text)
         self.condition_edit.setFont(QFont("Consolas", 10))
@@ -101,10 +101,10 @@ class ConditionEditDialog(QDialog):
         self.condition_edit.insertPlainText(text)
 
     def _on_accept(self):
-        """OKボタン：タイトルが空なら仮タイトルを自動設定"""
+        """OK button: auto-set provisional title if title is empty"""
         condition_text = self.condition_edit.toPlainText().strip()
         if condition_text:
-            # 条件式の先頭20文字を仮タイトルに
+            # 条件式の先頭20文字を仮Titleに
             first_line = condition_text.split('\n')[0].strip()
             auto_title = first_line[:20] + ("..." if len(first_line) > 20 else "")
         else:

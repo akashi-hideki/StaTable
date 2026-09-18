@@ -3,8 +3,8 @@
 イベント検証
 
 【v1.8 §11.2 #6】
-  - StateValidator と logger 出力を統一
-  - __init__ / validate の開始・完了ログを追加
+  - StateValidator と logger Outputを統一
+  - __init__ / validate の開始・CompletionログをAdd
   - ルール実行を try/except で囲み、失敗時は logger.error で記録
 """
 

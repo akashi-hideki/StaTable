@@ -1,19 +1,5 @@
 # codegen/interrupt_generator.py
-"""
-割り込み処理ISR生成モジュール（H3: ISR コンテキスト対応版）
-
-機能:
-  1. ctx ポインタの自動挿入（SystemContext_t *ctx = &g_ctx;）
-  2. アクションの Namespace.Name → RoleFunc_<NS>_<Name>(NULL, ctx) 変換
-  3. 旧形式 identifier(args) → RoleFunc_<Layer>_<Pascal>(NULL, ctx) 変換
-  4. ユーザーマーカー [[STABLE_USER_CODE_START:<Marker>]]
-  5. used_role_functions / used_variables の自動抽出
-  6. 入場・退場ログ
-
-マーカー命名規則:
-  handler.name = "TIMER0"  → ISR_TIMER0  / Marker "TIMER0"
-  handler.name = "UART_RX" → ISR_UARTRX  / Marker "UARTRX"
-"""
+"""\nInterrupt handler ISR generation module (H3: ISR context support)\n\nFeatures:\n  1. Automatic ctx pointer insertion (SystemContext_t *ctx = &g_ctx;)\n  2. Action Namespace.Name -> RoleFunc_<NS>_<Name>(NULL, ctx) conversion\n  3. Legacy identifier(args) -> RoleFunc_<Layer>_<Pascal>(NULL, ctx) conversion\n  4. User marker [[STABLE_USER_CODE_START:<Marker>]]\n  5. Automatic extraction of used_role_functions / used_variables\n  6. Entry / exit logging\n\nMarker naming convention:\n  handler.name = \"TIMER0\"  -> ISR_TIMER0  / Marker \"TIMER0\"\n  handler.name = \"UART_RX\" -> ISR_UARTRX  / Marker \"UARTRX\"\n"""
 
 import sys
 import os
@@ -37,7 +23,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-# C 予約語（関数呼び出し形式で誤変換しないよう除外）
+# C reserved words (excluded to avoid mis-converting function-call forms)
 _C_KEYWORDS = {
     'if', 'else', 'for', 'while', 'do', 'switch', 'case',
     'default', 'break', 'continue', 'return', 'goto',
@@ -49,10 +35,10 @@ _C_KEYWORDS = {
 
 
 class InterruptGenerator:
-    """割り込み処理ISR生成クラス（H3: コンテキスト対応）"""
+    """Interrupt handler ISR generation class (H3: context support)"""
 
     # ================================================================
-    # クラス定数
+    # Class constants
     # ================================================================
     AUTO_INSERT_CTX = True
     CTX_VAR_NAME = 'ctx'
@@ -66,7 +52,7 @@ class InterruptGenerator:
         self.layer_name: str = ''
 
         # ============================================================
-        # 生成ステップ
+        # Generation step
         # ============================================================
         self.isr_steps = [
             {'action': 'comment'},
@@ -93,7 +79,7 @@ class InterruptGenerator:
         }
 
     def set_layer(self, layer_name: str):
-        """層名を設定（旧形式 identifier(args) の RoleFunc 名生成に使用）"""
+        """Set layer name (used for RoleFunc name generation in legacy identifier(args) form)"""
         self.layer_name = layer_name or ''
 
     def _log_debug(self, message, level='debug'):
@@ -101,7 +87,7 @@ class InterruptGenerator:
         log_func(message)
 
     # ================================================================
-    # 名前生成
+    # Name generation
     # ================================================================
     def _get_isr_function_name(self, handler) -> str:
         """ISR_<PascalCase(handler.name)>"""
@@ -114,27 +100,14 @@ class InterruptGenerator:
         return self.naming.to_pascal_case(name)
 
     def _get_handler_display_name(self, handler) -> str:
-        """ログ用表示名（元の名前そのまま）"""
+        """Log display name (original name as-is)"""
         return getattr(handler, 'name', '') or 'unnamed'
 
     # ================================================================
-    # アクション パース
+    # Action parsing
     # ================================================================
     def _parse_action(self, action_text: str) -> Tuple[str, List[str]]:
-        """
-        アクション文字列を C コードに変換
-
-        Args:
-            action_text: 入力アクション文字列
-
-        Returns:
-            (c_code, used_role_functions)
-
-        変換規則:
-          1. Namespace.Name [(args)] → RoleFunc_Namespace_Name(NULL, ctx)
-          2. identifier(args)          → RoleFunc_<Layer>_PascalId(NULL, ctx)
-          3. それ以外                  → そのまま
-        """
+        """\n        Convert action string to C code\n\n        Args:\n            action_text: Input action string\n\n        Returns:\n            (c_code, used_role_functions)\n\n        Conversion rules:\n          1. Namespace.Name [(args)] -> RoleFunc_Namespace_Name(NULL, ctx)\n          2. identifier(args)          -> RoleFunc_<Layer>_PascalId(NULL, ctx)\n          3. otherwise                 -> as-is\n        """
         if not action_text:
             return "", []
         text = action_text.strip()
@@ -143,7 +116,7 @@ class InterruptGenerator:
 
         used: List[str] = []
 
-        # --- 1. Namespace.Name 形式 ---
+        # --- 1. Namespace.Name form ---
         m = re.fullmatch(
             r'([A-Z]\w*)\.([A-Za-z_]\w*)\s*(\(.*\))?',
             text, re.DOTALL,
@@ -156,20 +129,20 @@ class InterruptGenerator:
             used.append(qualified)
             return f"RoleFunc_{ns}_{pascal}(NULL, ctx)", used
 
-        # --- 2. 関数呼び出し形式 ---
+        # --- 2. Function call form ---
         m = re.fullmatch(
             r'([A-Za-z_]\w*)\s*(\(.*\))',
             text, re.DOTALL,
         )
         if m:
             fname = m.group(1)
-            # 既に RoleFunc_ / ISR_ で始まるものはそのまま
+            # Names already starting with RoleFunc_ / ISR_ are kept as-is
             if fname.startswith('RoleFunc_') or fname.startswith('ISR_'):
                 return text, used
-            # C キーワードはそのまま
+            # C keywords kept as-is
             if fname in _C_KEYWORDS:
                 return text, used
-            # RoleFunc 名に変換（引数は破棄）
+            # Convert to RoleFunc name (arguments discarded)
             pascal = self.naming.to_pascal_case(fname)
             if self.layer_name:
                 call = f"RoleFunc_{self.layer_name}_{pascal}(NULL, ctx)"
@@ -180,17 +153,17 @@ class InterruptGenerator:
             used.append(qualified)
             return call, used
 
-        # --- 3. そのまま ---
+        # --- 3. Otherwise ---
         return text, used
 
     def _parse_action_with_semicolon(
         self, action: InterruptAction,
     ) -> Tuple[str, List[str]]:
-        """condition 付きアクションを 1 行の C コードに変換"""
+        """Convert condition-attached action to a single line of C code"""
         body, used = self._parse_action(getattr(action, 'action', ''))
         if not body:
             return "", used
-        # 末尾セミコロンを正規化
+        # Normalize trailing semicolon
         body = body.rstrip(';').rstrip()
         condition = (getattr(action, 'condition', '') or '').strip()
         if condition:
@@ -198,19 +171,12 @@ class InterruptGenerator:
         return f"{body};", used
 
     # ================================================================
-    # 使用シンボル抽出
+    # Used symbol extraction
     # ================================================================
     def extract_used_symbols(
         self, handler: InterruptHandlerDef,
     ) -> Tuple[List[str], List[str]]:
-        """
-        handler から使用ロール関数と使用変数を抽出
-
-        Returns:
-            (used_role_functions, used_variables)
-            used_role_functions: ["Driver.Init", "Application.HandleTick"]
-            used_variables:      ["counter", "EVT_START"]
-        """
+        """\n        Extract used role functions and used variables from handler\n\n        Returns:\n            (used_role_functions, used_variables)\n            used_role_functions: [\"Driver.Init\", \"Application.HandleTick\"]\n            used_variables:      [\"counter\", \"EVT_START\"]\n        """
         used_rfs: List[str] = []
         used_vars: List[str] = []
         seen_rf = set()
@@ -236,13 +202,13 @@ class InterruptGenerator:
         return used_rfs, used_vars
 
     def update_handler_symbols(self, handler: InterruptHandlerDef):
-        """handler の used_role_functions / used_variables を再計算して書き戻す"""
+        """Recompute handler's used_role_functions / used_variables and write back"""
         used_rfs, used_vars = self.extract_used_symbols(handler)
         handler.used_role_functions = used_rfs
         handler.used_variables = used_vars
 
     # ================================================================
-    # ステップ実行
+    # Step execution
     # ================================================================
     def _execute_comment_step(self, step, context):
         handler = context['handler']
@@ -257,7 +223,7 @@ class InterruptGenerator:
         if description:
             lines.append(f" * @note   {description}")
         if used_rfs:
-            lines.append(" * @note   使用ロール関数:")
+            lines.append(" * @note   Used role functions:")
             for r in used_rfs:
                 lines.append(f" *         - {r}")
         lines.append(" */")
@@ -276,7 +242,7 @@ class InterruptGenerator:
             return []
         return [
             "",
-            "    /* ===== コンテキスト参照（自動生成） ===== */",
+            "    /* ===== Context reference (auto-generated) ===== */",
             f"    SystemContext_t *{self.CTX_VAR_NAME} = &{self.G_CTX_NAME};",
             f"    (void){self.CTX_VAR_NAME};",
         ]
@@ -286,7 +252,7 @@ class InterruptGenerator:
         display = self._get_handler_display_name(handler)
         return [
             "",
-            "    /* ===== 入場ログ ===== */",
+            "    /* ===== Entry log ===== */",
             f'    LOG_DEBUG("Enter ISR: {display}");',
         ]
 
@@ -298,7 +264,7 @@ class InterruptGenerator:
 
         lines = [
             "",
-            "    /* ===== アクション（自動生成） ===== */",
+            "    /* ===== Actions (auto-generated) ===== */",
         ]
         has_action = False
         for action in actions:
@@ -307,7 +273,7 @@ class InterruptGenerator:
                 lines.append(f"    {body}")
                 has_action = True
         if not has_action:
-            lines.append("    /* （アクション未定義） */")
+            lines.append("    /* (action undefined) */")
         return lines
 
     def _execute_user_section_step(self, step, context):
@@ -315,9 +281,9 @@ class InterruptGenerator:
         marker = self._get_marker_name(handler)
         return [
             "",
-            "    /* ===== ユーザー追加領域 ===== */",
+            "    /* ===== User extension area ===== */",
             f"    /* [[STABLE_USER_CODE_START:{marker}]] */",
-            "    /* ユーザー追加コードをここに記述 */",
+            "    /* Add user code here */",
             f"    /* [[STABLE_USER_CODE_END:{marker}]] */",
         ]
 
@@ -326,7 +292,7 @@ class InterruptGenerator:
         display = self._get_handler_display_name(handler)
         return [
             "",
-            "    /* ===== 退場ログ ===== */",
+            "    /* ===== Exit log ===== */",
             f'    LOG_DEBUG("Exit ISR: {display}");',
         ]
 
@@ -334,19 +300,13 @@ class InterruptGenerator:
         return ["}"]
 
     # ================================================================
-    # 公開 API
+    # Public API
     # ================================================================
     def generate_isr(
         self, handler: InterruptHandlerDef,
         update_handler: bool = False,
     ) -> str:
-        """
-        ISR 生成
-
-        Args:
-            handler: 割り込みハンドラ定義
-            update_handler: True なら used_* を handler に書き戻す
-        """
+        """\n        Generate ISR\n\n        Args:\n            handler: Interrupt handler definition\n            update_handler: If True, write used_* back to handler\n        """
         self._log_debug(f"Generating ISR for: {handler.name}")
 
         used_rfs, used_vars = self.extract_used_symbols(handler)
@@ -374,7 +334,7 @@ class InterruptGenerator:
         self, global_defs: GlobalDefinitions,
         update_handlers: bool = False,
     ) -> str:
-        """全 ISR 生成"""
+        """Generate all ISRs"""
         lines: List[str] = []
         for handler in getattr(global_defs, 'interrupts', []):
             lines.append(self.generate_isr(

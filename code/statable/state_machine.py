@@ -11,9 +11,9 @@ class StateMachine:
         self.role_functions: Dict[str, RoleFunction] = {}
         self.initial_state: Optional[str] = None
 
-        # ★ レイヤ設定
-        self.layer_priority: int = 5          # 実行優先度（1〜9）
-        self.layer_description: str = ""      # 層の説明（任意）
+        # ★ Layer settings
+        self.layer_priority: int = 5          # 実行Priority（1〜9）
+        self.layer_description: str = ""      # 層のDescription（任意）
         self.layer_name: str = ""             # ★ 層名（例: "Driver"）
 
     def add_state(self, state: State):

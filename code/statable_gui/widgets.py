@@ -1,9 +1,7 @@
 # statable_gui/widgets.py
-"""
-StaTable メインウィジェット（共有ライブラリ対応版）
-"""
+"""\nStaTable main widget (shared library support)\n"""
 
-import os                    # ★ A1: STATABLE_DISABLE_MERMAID 判定用
+import os                    # A1: for STATABLE_DISABLE_MERMAID check
 import tempfile
 from typing import Optional, List
 
@@ -16,9 +14,9 @@ from PySide6.QtWidgets import (
 )
 
 # ============================================================
-# ★ A1: WebEngine import 自体を環境変数で分岐
-#   - STATABLE_DISABLE_MERMAID=1 のとき: import しない
-#     → Qt WebEngine ランタイムが初期化されず、リーク警告が出ない
+# A1: branch WebEngine import itself by environment variable
+#   - When STATABLE_DISABLE_MERMAID=1: do not import
+#     -> Qt WebEngine runtime is not initialized, so no leak warning is emitted
 #   - 通常時: 従来通り import
 # ============================================================
 _DISABLE_MERMAID = os.environ.get("STATABLE_DISABLE_MERMAID") == "1"
@@ -57,12 +55,7 @@ from statable_gui.libcntrl.condition_library import ConditionLibrary
 from statable_gui.libcntrl.literal_library import LiteralLibrary
 
 class MermaidWidget(QWidget):
-    """
-    Mermaid 図のプレビューウィジェット
-
-    環境変数 STATABLE_DISABLE_MERMAID=1 で WebEngine を無効化できる。
-    （テスト時に Qt の WebEngine リーク警告を避けるため）
-    """
+    """\n    Mermaid diagram preview widget\n\n    WebEngine can be disabled via the environment variable STATABLE_DISABLE_MERMAID=1.\n    (To avoid Qt WebEngine leak warnings during tests)\n    """
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -73,7 +66,7 @@ class MermaidWidget(QWidget):
             os.environ.get("STATABLE_DISABLE_MERMAID") == "1"
         )
 
-        # ---- テストモード: WebEngine を生成しない ----
+        # ---- Test mode: do not generate WebEngine ----
         if self._disabled:
             placeholder = QLabel(
                 "Mermaid rendering disabled (test mode)"
@@ -102,8 +95,8 @@ class MermaidWidget(QWidget):
             self.text_view.setReadOnly(True)
             layout.addWidget(self.text_view)
             self.text_view.setPlainText(
-                "QWebEngineViewが利用できません。\n"
-                "PySide6-Addonsをインストールしてください。\n"
+                "QWebEngineView is not available.\n"
+                "Please install PySide6-Addons.\n"
                 "pip install PySide6-Addons"
             )
             StaTableLogger.warning(
@@ -193,14 +186,14 @@ class SettingsPanel(QWidget):
         state_tab = QWidget()
         state_layout = QVBoxLayout(state_tab)
         self.state_table = QTableWidget(0, 6)
-        self.state_table.setHorizontalHeaderLabels(["名称", "説明", "entry関数", "exit関数", "do関数", "タイプ"])
+        self.state_table.setHorizontalHeaderLabels(["名称", "Description", "entry関数", "exit関数", "do関数", "タイプ"])
         self.state_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.state_table.setFont(QFont("Consolas", 10))
         state_layout.addWidget(self.state_table)
         btn_state = QHBoxLayout()
-        add_state_btn = QPushButton("追加")
+        add_state_btn = QPushButton("Add")
         add_state_btn.clicked.connect(self.add_state)
-        del_state_btn = QPushButton("削除")
+        del_state_btn = QPushButton("Delete")
         del_state_btn.clicked.connect(self.delete_state)
         btn_state.addWidget(add_state_btn)
         btn_state.addWidget(del_state_btn)
@@ -209,29 +202,29 @@ class SettingsPanel(QWidget):
 
         role_tab = QWidget()
         role_layout = QVBoxLayout(role_tab)
-        # ★ v1.5 変更: 8 列 → 9 列（名前空間列を挿入）
+        # v1.5 change: 8 columns -> 9 columns (insert namespace column)
         self.role_table = QTableWidget(0, 9)
         self.role_table.setHorizontalHeaderLabels([
-            "タイトル", "関数名", "名前空間", "説明", "戻り値型",
-            "引数1型", "引数1名", "引数2型", "引数2名"
+            "Title", "Function name", "Namespace", "Description", "Return type",
+            "Arg 1 type", "Arg 1 name", "Arg 2 type", "Arg 2 name"
         ])
         self.role_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.role_table.setFont(QFont("Consolas", 10))
         role_layout.addWidget(self.role_table)
         btn_role = QHBoxLayout()
-        add_role_btn = QPushButton("追加")
+        add_role_btn = QPushButton("Add")
         add_role_btn.clicked.connect(self.add_role_function)
-        del_role_btn = QPushButton("削除")
+        del_role_btn = QPushButton("Delete")
         del_role_btn.clicked.connect(self.delete_role_function)
         btn_role.addWidget(add_role_btn)
         btn_role.addWidget(del_role_btn)
         role_layout.addLayout(btn_role)
 
-        event_btn = QPushButton("イベント定義...")
+        event_btn = QPushButton("Event definitions...")
         event_btn.clicked.connect(self.open_event_definition)
         role_layout.addWidget(event_btn)
 
-        self.tab.addTab(role_tab, "ロール関数")
+        self.tab.addTab(role_tab, "Role function")
 
         self.state_table.itemChanged.connect(self.on_state_table_item_changed)
         self.role_table.itemChanged.connect(self.on_role_table_item_changed)
@@ -253,13 +246,13 @@ class SettingsPanel(QWidget):
             self.state_table.setItem(row, 0, QTableWidgetItem(state.name))
             self.state_table.setItem(row, 1, QTableWidgetItem(state.description))
             entry_item = QTableWidgetItem(state.entry)
-            entry_item.setToolTip("ダブルクリックで編集")
+            entry_item.setToolTip("Double-click to edit")
             self.state_table.setItem(row, 2, entry_item)
             exit_item = QTableWidgetItem(state.exit)
-            exit_item.setToolTip("ダブルクリックで編集")
+            exit_item.setToolTip("Double-click to edit")
             self.state_table.setItem(row, 3, exit_item)
             do_item = QTableWidgetItem(state.do)
-            do_item.setToolTip("ダブルクリックで編集")
+            do_item.setToolTip("Double-click to edit")
             self.state_table.setItem(row, 4, do_item)
             self.state_table.setItem(row, 5, QTableWidgetItem(state.type.value))
 
@@ -269,19 +262,7 @@ class SettingsPanel(QWidget):
         StaTableLogger.debug(f"Settings populated: {len(states)} states, {len(self.sm.role_functions)} roles")
 
     def populate_role_table(self):
-        """
-        ★ v1.5 変更: 名前空間列 (index 2) を追加
-          旧 8 列 → 新 9 列
-            0: タイトル
-            1: 関数名
-            2: 名前空間   ★ 新規
-            3: 説明
-            4: 戻り値型
-            5: 引数1型
-            6: 引数1名
-            7: 引数2型
-            8: 引数2名
-        """
+        """\n         v1.5 change: added namespace column (index 2)\n          Old 8 columns -> New 9 columns\n            0: Title\n            1: Function name\n            2: Namespace    new\n            3: Description\n            4: Return type\n            5: Arg1 type\n            6: Arg1 name\n            7: Arg2 type\n            8: Arg2 name\n        """
         roles = list(self.sm.role_functions.values())
         self.role_table.setRowCount(len(roles))
         for row, rf in enumerate(roles):
@@ -352,7 +333,7 @@ class SettingsPanel(QWidget):
         if dlg.exec() == QDialog.Accepted:
             rf = dlg.get_role_function()
             if rf.name in self.sm.role_functions:
-                QMessageBox.warning(self, "警告", "同名のロール関数が既に存在します。")
+                QMessageBox.warning(self, "Warning", "A role function with the same name already exists.")
                 return
             self.sm.add_role_function(rf)
             self.populate_role_table()
@@ -361,7 +342,7 @@ class SettingsPanel(QWidget):
     def delete_role_function(self):
         row = self.role_table.currentRow()
         if row >= 0:
-            # ★ v1.5: 関数名は列 1（変更なし）
+            # ★ v1.5: Function nameは列 1（変更None）
             name = self.role_table.item(row, 1).text().strip() if self.role_table.item(row, 1) else ""
             if name and name in self.sm.role_functions:
                 self.sm.remove_role_function(name)
@@ -378,17 +359,7 @@ class SettingsPanel(QWidget):
         self._debounce_timer.start()
 
     def apply_changes(self):
-        """
-        ★ v1.5 変更: RoleFunction を kwarg で構築し、namespace を保持
-
-        旧コード（v1.4 まで）:
-            RoleFunction(name, desc, ret, a1t, a1n, a2t, a2n, title)  ← 位置引数
-              → model.py の namespace 挿入により全フィールドが 1 つずつずれ、
-                 namespace に description が混入するバグ（v1.4 §9.6 #76）
-
-        新コード（v1.5）:
-            RoleFunction(name=..., namespace=..., description=..., ...)  ← kwarg
-        """
+        """\n         v1.5 change: construct RoleFunction with kwargs, preserving namespace\n\n        Old code (up to v1.4):\n            RoleFunction(name, desc, ret, a1t, a1n, a2t, a2n, title)  <- positional args\n              -> inserting namespace in model.py shifted all fields by one,\n                 causing description to leak into namespace (v1.4 section 9.6 #76)\n\n        New code (v1.5):\n            RoleFunction(name=..., namespace=..., description=..., ...)  <- kwargs\n        """
         # === 状態テーブルの反映 ===
         for row in range(self.state_table.rowCount()):
             name = self.state_table.item(row, 0).text().strip() if self.state_table.item(row, 0) else ""
@@ -409,11 +380,11 @@ class SettingsPanel(QWidget):
                     self.sm.add_state(State(name, type=StateType(type_str), description=desc,
                                              entry=entry, exit=exit_, do=do))
 
-        # === ロール関数テーブルの反映 ===
+        # === Role functionテーブルの反映 ===
         self.sm.role_functions.clear()
         for row in range(self.role_table.rowCount()):
-            # ★ 新列順: 0=タイトル, 1=関数名, 2=名前空間, 3=説明,
-            #          4=戻り値型, 5=引数1型, 6=引数1名, 7=引数2型, 8=引数2名
+            # New column order: 0=title, 1=function name, 2=namespace, 3=description,
+            #          4=return type, 5=arg1 type, 6=arg1 name, 7=arg2 type, 8=arg2 name
             title     = self.role_table.item(row, 0).text().strip() if self.role_table.item(row, 0) else ""
             name      = self.role_table.item(row, 1).text().strip() if self.role_table.item(row, 1) else ""
             if name:
@@ -425,7 +396,7 @@ class SettingsPanel(QWidget):
                 a2t       = self.role_table.item(row, 7).text().strip() if self.role_table.item(row, 7) else "int"
                 a2n       = self.role_table.item(row, 8).text().strip() if self.role_table.item(row, 8) else "arg2"
 
-                # ★ 全 kwarg で構築（kw_only=True 対応 + namespace 保持）
+                # Construct with all kwargs (kw_only=True support + namespace preserved)
                 self.sm.add_role_function(RoleFunction(
                     name=name,
                     namespace=namespace,

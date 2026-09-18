@@ -1,8 +1,8 @@
 # codegen package
 """
-StaTable コード生成層
+StaTable Code generation層
 
-【v1.5 追加】
+【v1.5 Add】
   - 再エクスポートは最小限に留める
   - CCodeGenerator は生成時に多数のサブモジュールを読み込むため、
     トップレベルで再エクスポートしない（起動時間短縮のため）

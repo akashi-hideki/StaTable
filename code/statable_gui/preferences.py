@@ -6,11 +6,7 @@ from .preference_keys import PREFERENCE_DEFINITIONS
 
 
 class Preferences:
-    """アプリケーション設定をJSONファイルで保持する（キー名は別ファイルで定義）
-
-    preference_keys.py の PREFERENCE_DEFINITIONS に登録されたキーは、
-    prefs.last_project_dir のように属性アクセスで読み書きできる。
-    """
+    """Store application settings in a JSON file (key names defined in a separate file)\n\n    Keys registered in preference_keys.py's PREFERENCE_DEFINITIONS can be\n    read/written via attribute access such as prefs.last_project_dir.\n    """
 
     DEFAULT_FILE = Path.home() / ".statable" / "preferences.json"
 
@@ -21,7 +17,7 @@ class Preferences:
         self._apply_defaults()
 
     def _apply_defaults(self):
-        """定義されたキーが未保存ならデフォルト値を設定"""
+        """定義されたキーが未Saveならデフォルト値を設定"""
         changed = False
         for key, default in PREFERENCE_DEFINITIONS.items():
             if key not in self.data:
@@ -40,7 +36,7 @@ class Preferences:
                 self.data = {}
 
     def save(self):
-        """現在の設定をJSONファイルに保存する"""
+        """現在の設定をJSONファイルにSaveする"""
         try:
             self.filepath.parent.mkdir(parents=True, exist_ok=True)
             with open(self.filepath, "w", encoding="utf-8") as f:
@@ -54,22 +50,22 @@ class Preferences:
         return self.data.get(key, default)
 
     def set(self, key: str, value: Any):
-        """設定値をキー名で更新し、即座に保存する"""
+        """設定値をキー名で更新し、即座にSaveする"""
         self.data[key] = value
         self.save()
 
     # ------------------------------------------------------------------
-    # 属性アクセス（prefs.last_project_dir など）
+    # Attribute access (prefs.last_project_dir etc.)
     # ------------------------------------------------------------------
     def __getattr__(self, name: str) -> Any:
         # 定義済みキーなら値を返す
         if name in PREFERENCE_DEFINITIONS:
             return self.data.get(name, PREFERENCE_DEFINITIONS[name])
-        # 未定義の属性は通常のエラー
+        # 未定義の属性は通常のError
         raise AttributeError(f"'Preferences' object has no attribute '{name}'")
 
     def __setattr__(self, name: str, value: Any):
-        # 定義済みキーなら設定と保存を行う
+        # 定義済みキーなら設定とSaveを行う
         if name in PREFERENCE_DEFINITIONS:
             self.data[name] = value
             self.save()

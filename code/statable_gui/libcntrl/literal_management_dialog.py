@@ -1,6 +1,6 @@
 # statable_gui/libcntrl/literal_management_dialog.py
 """
-リテラル管理ダイアログ（表形式・編集修正版）
+リテラル管理ダイアログ（表形式・Edit修正版）
 """
 
 from PySide6.QtWidgets import (
@@ -30,7 +30,7 @@ class LiteralManagementDialog(QDialog):
         main_layout = QVBoxLayout(self)
 
         self.table = QTableWidget(0, 4)
-        self.table.setHorizontalHeaderLabels(["名前", "値", "型", "説明"])
+        self.table.setHorizontalHeaderLabels(["Name", "値", "Type", "Description"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
@@ -38,18 +38,18 @@ class LiteralManagementDialog(QDialog):
         main_layout.addWidget(self.table)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("追加")
+        add_btn = QPushButton("Add")
         add_btn.clicked.connect(self._add_literal)
-        edit_btn = QPushButton("編集")
+        edit_btn = QPushButton("Edit")
         edit_btn.clicked.connect(self._edit_literal)
-        delete_btn = QPushButton("削除")
+        delete_btn = QPushButton("Delete")
         delete_btn.clicked.connect(self._delete_literal)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(edit_btn)
         btn_layout.addWidget(delete_btn)
         main_layout.addLayout(btn_layout)
 
-        close_btn = QPushButton("閉じる")
+        close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.accept)
         main_layout.addWidget(close_btn)
 
@@ -84,12 +84,12 @@ class LiteralManagementDialog(QDialog):
                 self.literal_library.add(lit)
                 self._load_table()
             except ValueError as e:
-                QMessageBox.warning(self, "警告", str(e))
+                QMessageBox.warning(self, "Warning", str(e))
 
     def _edit_literal(self):
         name = self._get_selected_literal_name()
         if name is None:
-            QMessageBox.information(self, "情報", "編集するリテラルを選択してください。")
+            QMessageBox.information(self, "Info", "EditするリテラルをSelectionしてください。")
             return
 
         lit = self.literal_library.get(name)
@@ -100,7 +100,7 @@ class LiteralManagementDialog(QDialog):
         if dialog.exec() == QDialog.Accepted:
             new_lit = dialog.get_literal()
 
-            # 編集時は常に旧エントリを削除してから追加する
+            # Edit時は常に旧エントリをDeleteしてからAddする
             self.literal_library.remove(name)
             try:
                 self.literal_library.add(new_lit)
@@ -108,20 +108,20 @@ class LiteralManagementDialog(QDialog):
             except ValueError as e:
                 # 失敗した場合は元に戻す
                 self.literal_library.add(lit)
-                QMessageBox.warning(self, "警告", str(e))
+                QMessageBox.warning(self, "Warning", str(e))
 
     def _delete_literal(self):
         name = self._get_selected_literal_name()
         if name is None:
-            QMessageBox.information(self, "情報", "削除するリテラルを選択してください。")
+            QMessageBox.information(self, "Info", "DeleteするリテラルをSelectionしてください。")
             return
 
         ret = QMessageBox.warning(
             self,
-            "確認",
+            "Confirm",
             f"リテラル '{name}' を削除しますか？\n"
-            "このリテラルを使用している遷移条件がある場合は、\n"
-            "該当の条件式からも削除する必要があります。",
+            "If any transition condition uses this literal,\n"
+            "該当の条件式からもDeleteする必要がYesます。",
             QMessageBox.Yes | QMessageBox.No
         )
         if ret == QMessageBox.Yes:
@@ -130,13 +130,13 @@ class LiteralManagementDialog(QDialog):
 
 
 class LiteralEditDialog(QDialog):
-    """リテラルの追加・編集用ダイアログ"""
+    """リテラルのAdd・Edit用ダイアログ"""
 
     def __init__(self, literal: LiteralDefinition = None, parent=None):
         super().__init__(parent)
         self.literal = literal
 
-        self.setWindowTitle("リテラル編集" if literal else "リテラル追加")
+        self.setWindowTitle("リテラルEdit" if literal else "リテラルAdd")
         self.setMinimumWidth(350)
 
         layout = QVBoxLayout(self)
@@ -145,7 +145,7 @@ class LiteralEditDialog(QDialog):
         self.name_edit = QLineEdit()
         if literal:
             self.name_edit.setText(literal.name)
-        form.addRow("名前:", self.name_edit)
+        form.addRow("Name:", self.name_edit)
 
         self.value_edit = QLineEdit()
         if literal:
@@ -155,12 +155,12 @@ class LiteralEditDialog(QDialog):
         self.type_edit = QLineEdit("int")
         if literal:
             self.type_edit.setText(literal.literal_type)
-        form.addRow("型:", self.type_edit)
+        form.addRow("Type:", self.type_edit)
 
         self.desc_edit = QLineEdit()
         if literal:
             self.desc_edit.setText(literal.description)
-        form.addRow("説明:", self.desc_edit)
+        form.addRow("Description:", self.desc_edit)
 
         layout.addLayout(form)
 
@@ -172,7 +172,7 @@ class LiteralEditDialog(QDialog):
     def _on_accept(self):
         name = self.name_edit.text().strip()
         if not name:
-            QMessageBox.warning(self, "警告", "名前を入力してください。")
+            QMessageBox.warning(self, "Warning", "Nameを入力してください。")
             return
         self.accept()
 

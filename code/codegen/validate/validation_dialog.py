@@ -1,8 +1,5 @@
 # statable_gui/validation_dialog.py
-"""
-検証・AI連携ダイアログ
-PySide6対応
-"""
+"""\nValidation / AI integration dialog\nPySide6 compatible\n"""
 
 import sys
 import os
@@ -32,7 +29,7 @@ logger = logging.getLogger("validation_dialog")
 
 
 class ValidationDialog(QDialog):
-    """検証・AI連携ダイアログ"""
+    """Validation / AI integration dialog"""
     
     def __init__(self, sm, gd, parent=None):
         super().__init__(parent)
@@ -45,60 +42,60 @@ class ValidationDialog(QDialog):
         self.validation_result = None
         self.parsed_changes = []
         
-        self.setWindowTitle("コード生成前検証・AI診断")
+        self.setWindowTitle("Pre-generation validation / AI diagnosis")
         self.setMinimumSize(900, 700)
         
         self._setup_ui()
         self._run_validation()
     
     def _setup_ui(self):
-        """UIを構築"""
+        """Build UI"""
         main_layout = QVBoxLayout(self)
         
-        # タブウィジェット
+        # Tab widget
         self.tab_widget = QTabWidget()
         main_layout.addWidget(self.tab_widget)
         
-        # ===== 検証結果タブ =====
+        # ===== Validation result tab =====
         self.validation_tab = QWidget()
         self._setup_validation_tab()
-        self.tab_widget.addTab(self.validation_tab, "① 検証結果")
+        self.tab_widget.addTab(self.validation_tab, "1) Validation result")
         
-        # ===== AIプロンプトタブ =====
+        # ===== AI prompt tab =====
         self.prompt_tab = QWidget()
         self._setup_prompt_tab()
-        self.tab_widget.addTab(self.prompt_tab, "② AIプロンプト")
+        self.tab_widget.addTab(self.prompt_tab, "2) AI prompt")
         
-        # ===== AI回答タブ =====
+        # ===== AI answer tab =====
         self.response_tab = QWidget()
         self._setup_response_tab()
-        self.tab_widget.addTab(self.response_tab, "③ AI回答取り込み")
+        self.tab_widget.addTab(self.response_tab, "3) AI answer intake")
         
-        # ===== 変更一覧タブ =====
+        # ===== Change list tab =====
         self.changes_tab = QWidget()
         self._setup_changes_tab()
-        self.tab_widget.addTab(self.changes_tab, "④ 変更一覧・反映")
+        self.tab_widget.addTab(self.changes_tab, "4) Change list / apply")
         
-        # 閉じるボタン
+        # Close button
         button_layout = QHBoxLayout()
-        close_btn = QPushButton("閉じる")
+        close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.accept)
         button_layout.addStretch()
         button_layout.addWidget(close_btn)
         main_layout.addLayout(button_layout)
     
     def _setup_validation_tab(self):
-        """検証結果タブのセットアップ"""
+        """Set up the validation result tab"""
         layout = QVBoxLayout(self.validation_tab)
         
-        # サマリーラベル
+        # Summary label
         self.summary_label = QLabel("")
         self.summary_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         layout.addWidget(self.summary_label)
         
-        # 問題リスト
+        # Problem list
         self.issue_tree = QTreeWidget()
-        self.issue_tree.setHeaderLabels(["重大度", "カテゴリ", "メッセージ", "対象", "修正提案"])
+        self.issue_tree.setHeaderLabels(["Severity", "Category", "Message", "Target", "Suggested fix"])
         self.issue_tree.setColumnWidth(0, 80)
         self.issue_tree.setColumnWidth(1, 100)
         self.issue_tree.setColumnWidth(2, 300)
@@ -106,85 +103,85 @@ class ValidationDialog(QDialog):
         self.issue_tree.setColumnWidth(4, 300)
         layout.addWidget(self.issue_tree)
         
-        # 再検証ボタン
-        revalidate_btn = QPushButton("再検証")
+        # Re-validate button
+        revalidate_btn = QPushButton("Re-validate")
         revalidate_btn.clicked.connect(self._run_validation)
         layout.addWidget(revalidate_btn)
     
     def _setup_prompt_tab(self):
-        """AIプロンプトタブのセットアップ"""
+        """Set up the AI prompt tab"""
         layout = QVBoxLayout(self.prompt_tab)
         
-        # 説明ラベル
+        # Description label
         info_label = QLabel(
-            "以下の手順でAI診断を行います：\n"
-            "1. 「コピー」ボタンでプロンプトをクリップボードにコピー\n"
-            "2. ChatGPT等に貼り付けて質問\n"
-            "3. AIの回答をコピー\n"
-            "4. 「AI回答取り込み」タブで回答を貼り付け"
+            "Perform AI diagnosis with the following steps:\n"
+            "1. Click \"Copy\" button to copy the prompt to the clipboard\n"
+            "2. Paste into ChatGPT or similar and ask\n"
+            "3. Copy the AI answer\n"
+            "4. Paste the answer in the \"AI answer intake\" tab"
         )
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
         
-        # コピーボタン
-        copy_btn = QPushButton("プロンプトをコピー")
+        # Copy button
+        copy_btn = QPushButton("Copy prompt")
         copy_btn.clicked.connect(self._copy_prompt)
         layout.addWidget(copy_btn)
         
-        # プロンプトプレビュー
+        # Prompt preview
         self.prompt_preview = QTextEdit()
         self.prompt_preview.setReadOnly(True)
         layout.addWidget(self.prompt_preview)
     
     def _setup_response_tab(self):
-        """AI回答タブのセットアップ"""
+        """Set up the AI answer tab"""
         layout = QVBoxLayout(self.response_tab)
         
-        # 貼り付けボタン
-        paste_btn = QPushButton("クリップボードから貼り付け")
+        # Paste button
+        paste_btn = QPushButton("Paste from clipboard")
         paste_btn.clicked.connect(self._paste_response)
         layout.addWidget(paste_btn)
         
-        # 回答入力
+        # Answer input
         self.response_edit = QTextEdit()
-        self.response_edit.setPlaceholderText("AIの回答をここに貼り付けてください")
+        self.response_edit.setPlaceholderText("Paste the AI answer here")
         layout.addWidget(self.response_edit)
         
-        # 解析ボタン
-        parse_btn = QPushButton("回答を解析して変更一覧を生成")
+        # Parse button
+        parse_btn = QPushButton("Parse the answer and generate a change list")
         parse_btn.clicked.connect(self._parse_response)
         layout.addWidget(parse_btn)
     
     def _setup_changes_tab(self):
-        """変更一覧タブのセットアップ"""
+        """Set up the change list tab"""
         layout = QVBoxLayout(self.changes_tab)
         
-        # 変更一覧
+        # Change list
         self.change_tree = QTreeWidget()
-        self.change_tree.setHeaderLabels(["選択", "アクション", "パラメータ", "理由"])
+        self.change_tree.setHeaderLabels(["Selection", "Action", "Parameter", "Reason"])
         self.change_tree.setColumnWidth(0, 50)
         self.change_tree.setColumnWidth(1, 150)
         self.change_tree.setColumnWidth(2, 400)
         self.change_tree.setColumnWidth(3, 250)
         layout.addWidget(self.change_tree)
         
-        # 反映ボタン
-        apply_btn = QPushButton("選択した変更を反映")
+        # Apply button
+        apply_btn = QPushButton("Apply selected changes")
         apply_btn.clicked.connect(self._apply_changes)
         layout.addWidget(apply_btn)
     
     def _run_validation(self):
-        """検証を実行"""
+        """Run validation"""
         logger.debug("_run_validation started")
         self.validation_result = self.validator.validate(self.sm, self.gd)
         
-        # サマリー更新
+        # Summary update
         summary = (f"エラー: {self.validation_result.error_count} | "
                   f"警告: {self.validation_result.warning_count} | "
                   f"情報: {self.validation_result.info_count}")
         self.summary_label.setText(summary)
         
-        # 問題リスト更新
+        # Problem list update
         self.issue_tree.clear()
         severity_colors = {
             'error': Qt.red,
@@ -200,12 +197,12 @@ class ValidationDialog(QDialog):
                 issue.target,
                 issue.suggestion,
             ])
-            # 重大度に応じた色付け
+            # Severity-based coloring
             color = severity_colors.get(issue.severity.value, Qt.black)
             item.setForeground(0, color)
             self.issue_tree.addTopLevelItem(item)
         
-        # プロンプト生成
+        # Prompt generation
         prompt = self.prompt_generator.generate_diagnosis_prompt(
             self.sm, self.gd, self.validation_result
         )
@@ -214,35 +211,35 @@ class ValidationDialog(QDialog):
         logger.debug(f"_run_validation completed: {summary}")
     
     def _copy_prompt(self):
-        """プロンプトをクリップボードにコピー"""
+        """Copy prompt to clipboard"""
         prompt = self.prompt_generator.generate_diagnosis_prompt(
             self.sm, self.gd, self.validation_result
         )
         if self.clipboard.copy_to_clipboard(prompt):
-            QMessageBox.information(self, "コピー完了",
-                "プロンプトをクリップボードにコピーしました。\n"
-                "ChatGPT等に貼り付けて質問してください。")
+            QMessageBox.information(self, "Copy complete",
+                "Prompt copied to clipboard.\n"
+                "Please paste into ChatGPT or similar and ask.")
         else:
-            QMessageBox.warning(self, "エラー", "クリップボードへのコピーに失敗しました。")
+            QMessageBox.warning(self, "Error", "Failed to copy to clipboard.")
     
     def _paste_response(self):
-        """クリップボードからAI回答を貼り付け"""
+        """Paste AI answer from clipboard"""
         text = self.clipboard.get_from_clipboard()
         if text:
             self.response_edit.setPlainText(text)
         else:
-            QMessageBox.warning(self, "警告", "クリップボードが空です。")
+            QMessageBox.warning(self, "Warning", "Clipboard is empty.")
     
     def _parse_response(self):
-        """AI回答を解析"""
+        """Parse AI answer"""
         text = self.response_edit.toPlainText()
         if not text.strip():
-            QMessageBox.warning(self, "警告", "AI回答が入力されていません。")
+            QMessageBox.warning(self, "Warning", "AI answer is empty.")
             return
         
         self.parsed_changes = self.response_parser.parse(text)
         
-        # 変更一覧を表示
+        # Show change list
         self.change_tree.clear()
         for change in self.parsed_changes:
             item = QTreeWidgetItem()
@@ -253,14 +250,14 @@ class ValidationDialog(QDialog):
             item.setText(3, change.reason)
             self.change_tree.addTopLevelItem(item)
         
-        # タブを変更一覧に切り替え
+        # Switch the tab to the change list
         self.tab_widget.setCurrentIndex(3)
         
-        QMessageBox.information(self, "解析完了",
+        QMessageBox.information(self, "Parse complete",
             f"{len(self.parsed_changes)}件の変更を抽出しました。")
     
     def _apply_changes(self):
-        """選択した変更を反映"""
+        """Apply selected changes"""
         selected_changes = []
         for i in range(self.change_tree.topLevelItemCount()):
             item = self.change_tree.topLevelItem(i)
@@ -268,21 +265,21 @@ class ValidationDialog(QDialog):
                 selected_changes.append(self.parsed_changes[i])
         
         if not selected_changes:
-            QMessageBox.warning(self, "警告", "反映する変更が選択されていません。")
+            QMessageBox.warning(self, "Warning", "No changes selected for applying.")
             return
         
         applier = ChangeApplier(self.sm, self.gd)
         result = applier.apply_all(selected_changes)
         
-        QMessageBox.information(self, "反映完了",
+        QMessageBox.information(self, "Apply complete",
             f"{result['applied']}件の変更を反映しました。\n"
             f"失敗: {result['failed']}件")
         
-        # 再検証
+        # Re-validate
         self._run_validation()
 
 
 def show_validation_dialog(sm, gd, parent=None):
-    """検証ダイアログを表示するヘルパー関数"""
+    """Helper function to show the validation dialog"""
     dialog = ValidationDialog(sm, gd, parent)
     dialog.exec()

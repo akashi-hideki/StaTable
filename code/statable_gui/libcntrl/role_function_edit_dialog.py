@@ -1,6 +1,6 @@
 # statable_gui/libcntrl/role_function_edit_dialog.py
 """
-ロール関数編集ダイアログ
+Edit role functionダイアログ
 """
 
 from typing import List
@@ -15,7 +15,7 @@ from .role_function_library import RoleFunction
 
 
 class RoleFunctionEditDialog(QDialog):
-    """共有ロール関数の編集ダイアログ"""
+    """共有Role functionのEditダイアログ"""
 
     def __init__(self, role_function: RoleFunction,
                  global_vars: List[str] = None,
@@ -28,7 +28,7 @@ class RoleFunctionEditDialog(QDialog):
         self.events = events or []
         self.literals = literals or []
 
-        self.setWindowTitle("ロール関数編集")
+        self.setWindowTitle("Edit role function")
         self.setMinimumWidth(500)
 
         self._setup_ui()
@@ -39,15 +39,15 @@ class RoleFunctionEditDialog(QDialog):
 
         form = QFormLayout()
         self.name_edit = QLineEdit()
-        form.addRow("関数名:", self.name_edit)
+        form.addRow("Function name:", self.name_edit)
         self.title_edit = QLineEdit()
         form.addRow("表示名:", self.title_edit)
         self.desc_edit = QLineEdit()
-        form.addRow("説明:", self.desc_edit)
+        form.addRow("Description:", self.desc_edit)
         main_layout.addLayout(form)
 
-        # 使用グローバル変数
-        global_group = QGroupBox("使用グローバル変数")
+        # 使用Global variables
+        global_group = QGroupBox("使用Global variables")
         global_layout = QVBoxLayout(global_group)
         self.global_list = QListWidget()
         self.global_list.setSelectionMode(QListWidget.NoSelection)
@@ -73,7 +73,7 @@ class RoleFunctionEditDialog(QDialog):
         main_layout.addWidget(event_group)
 
         # 使用リテラル
-        literal_group = QGroupBox("使用リテラル（既存から選択）")
+        literal_group = QGroupBox("使用リテラル（既存からSelection）")
         literal_layout = QVBoxLayout(literal_group)
         self.literal_list = QListWidget()
         self.literal_list.setSelectionMode(QListWidget.NoSelection)

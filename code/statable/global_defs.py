@@ -1,4 +1,4 @@
-"""グローバル変数・イベントフラグ・割り込み処理・デバイスリソース・タイマ設定・ユーザー定義型のデータモデル"""
+"""Global variables・Event flags・割り込み処理・デバイスリソース・Timer設定・ユーザー定義Typeのデータモデル"""
 
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -26,7 +26,7 @@ class StructMemberDef:
 
 @dataclass
 class CustomTypeDef:
-    """ユーザー定義型（構造体など）"""
+    """ユーザー定義Type（構造体など）"""
     name: str
     description: str = ""
     members: List[StructMemberDef] = field(default_factory=list)
@@ -39,7 +39,7 @@ class CustomTypeDef:
 
 @dataclass
 class SystemVariable:
-    """システム全体で共有するグローバル変数"""
+    """Global variables shared across the system"""
     name: str
     type: str
     unit: str = ""
@@ -59,7 +59,7 @@ class SystemVariable:
 
 @dataclass
 class EventFlag:
-    """ビットフィールドで扱うイベントフラグ"""
+    """Event flags managed as bit fields"""
     name: str
     min_value: int
     max_value: int
@@ -80,7 +80,7 @@ class EventFlag:
 
 @dataclass
 class InterruptAction:
-    """割り込み処理内の条件付きアクション"""
+    """Conditional actions inside an interrupt handler"""
     condition: str = ""
     action: str = ""
 
@@ -89,12 +89,12 @@ class InterruptAction:
 class InterruptHandlerDef:
     """割り込み処理定義
 
-    used_role_functions: 使用ロール関数の qualified_name リスト（自動抽出）
+    used_role_functions: 使用Role functionの qualified_name リスト（自動抽出）
       - 例: ["Driver.Init", "Application.HandleTick"]
-      - ISR の action 保存時に更新
+      - ISR の action Save時に更新
       - 生成コードのコメントにも使用
 
-    used_variables: 使用グローバル変数名のリスト（自動抽出）
+    used_variables: 使用Global variables名のリスト（自動抽出）
       - 例: ["counter", "g_system_tick"]
     """
     name: str
@@ -103,7 +103,7 @@ class InterruptHandlerDef:
     is_timer: bool = False
     actions: List[InterruptAction] = field(default_factory=list)
     title: str = ""
-    # ★ 追加: 使用記録
+    # ★ Add: 使用記録
     used_role_functions: List[str] = field(default_factory=list)
     used_variables: List[str] = field(default_factory=list)
 
@@ -114,7 +114,7 @@ class InterruptHandlerDef:
 
 @dataclass
 class DevicePlaceholderDef:
-    """デバイスリソース仮定義"""
+    """Device resource placeholder definition"""
     name: str
     description: str = ""
     title: str = ""
@@ -126,7 +126,7 @@ class DevicePlaceholderDef:
 
 @dataclass
 class TimerDerivedDef:
-    """派生タイマ変数定義"""
+    """Derived timer variable definition"""
     period_name: str
     multiplier: int
     variable_name: str
@@ -140,7 +140,7 @@ class TimerDerivedDef:
 
 @dataclass
 class TimerBaseDef:
-    """タイマ刻み変数定義"""
+    """Timer tick variable definition"""
     variable_name: str = "g_system_tick"
     unit: str = "1ms"
     data_type: str = "volatile uint32_t"
@@ -155,7 +155,7 @@ class TimerBaseDef:
 
 @dataclass
 class EventQueueDef:
-    """イベントキュー定義"""
+    """Event queue definition"""
     name: str
     size: int
     element_type: str
@@ -172,7 +172,7 @@ class EventQueueDef:
 
 
 class GlobalDefinitions:
-    """グローバル変数・イベントフラグ・割り込み処理・デバイスリソース・タイマ設定・イベントキュー・ユーザー定義型の管理クラス"""
+    """Global variables・Event flags・割り込み処理・デバイスリソース・Timer設定・イベントキュー・ユーザー定義Typeの管理クラス"""
 
     def __init__(self):
         self.variables: List[SystemVariable] = []
@@ -185,13 +185,13 @@ class GlobalDefinitions:
         self.custom_types: List[CustomTypeDef] = []
 
     def add_timer_variables(self):
-        """タイマ基準変数・派生タイマ変数をグローバル変数として登録する。
+        """Timer base variable・派生Timer変数をGlobal variablesとして登録する。
 
-        - 既存変数（XML 読込 or GUI 編集済）は description / title を保持
-        - type / unit のみタイマ定義側と同期
-        - 存在しない変数のみ新規追加
+        - 既存変数（XML 読込 or GUI Edit済）は description / title を保持
+        - type / unit のみTimer定義側と同期
+        - 存在しない変数のみ新規Add
 
-        これにより round-trip で description / title が保存される。
+        これにより round-trip で description / title がSaveされる。
         """
         existing_by_name = {v.name: v for v in self.variables}
 
@@ -199,7 +199,7 @@ class GlobalDefinitions:
                          default_desc, default_title):
             if name in existing_by_name:
                 v = existing_by_name[name]
-                # タイマ定義を正とする（型・単位）
+                # Timer定義を正とする（Type・Unit）
                 v.type = type_
                 v.unit = unit
                 # description / title は既存を尊重、空なら既定値
@@ -207,7 +207,7 @@ class GlobalDefinitions:
                     v.description = default_desc
                 if not v.title:
                     v.title = default_title
-                # グループが未設定なら補完
+                # Groupが未設定なら補完
                 if not v.group:
                     v.group = group
             else:
@@ -223,17 +223,17 @@ class GlobalDefinitions:
 
         all_timers = [self.timer_base] + self.extra_timers
         for timer in all_timers:
-            # 基準タイマ変数
+            # 基準Timer変数
             _sync_or_add(
                 name=timer.variable_name,
                 type_=timer.data_type,
                 unit=timer.unit,
                 default="0",
                 group="Timer",
-                default_desc="タイマ基準変数",
+                default_desc="Timer base variable",
                 default_title=timer.title or f"タイマ基準: {timer.variable_name}",
             )
-            # 派生タイマ変数
+            # 派生Timer変数
             for d in timer.derived:
                 _sync_or_add(
                     name=d.variable_name,
@@ -245,7 +245,7 @@ class GlobalDefinitions:
                     default_title=d.title or f"タイマ: {d.variable_name}",
                 )
 
-    # グループ名の取得
+    # Group名の取得
     def variable_groups(self) -> List[str]:
         return sorted({v.group for v in self.variables if v.group})
 

@@ -1,15 +1,5 @@
 # statable_gui/transition_editor_direct/canvas_widget.py
-"""
-キャンバスウィジェット（案C：順序リスト方式対応版）
-- ノードのドラッグ移動を無効化
-- ドラッグ試行時にメッセージ表示
-- フローアイテムの順序に基づく自動整列（子ノード込み）
-- transitionノードは常に3行表示（イベント名・条件・遷移先）
-- 未定義項目は「条件: なし」「→ 未設定」と明示
-- テキスト色を白に変更し視認性向上
-- ドロップ時のターゲット検出を改善（テキストアイテムを透過）
-- ★ pre_action / else_action の上へのドロップも親 transition に追加
-"""
+"""\nCanvas widget (plan C: ordered-list support)\n- Node drag move disabled\n- Message shown on drag attempt\n- Auto-layout based on flow item order (including children)\n- transition nodes always shown as 3 lines (event name, condition, target)\n- Undefined items shown as \"Condition: none\" / \"-> (not set)\"\n- Text color changed to white for better visibility\n- Improved drop target detection (transparent text items)\n-  pre_action / else_action drops on top also added to parent transition\n"""
 
 import json
 import logging
@@ -65,31 +55,31 @@ class FlowNodeItem(QGraphicsRectItem):
         self.text_item = QGraphicsTextItem(self)
         self.text_item.setDefaultTextColor(Qt.white)
         self.text_item.setFont(QFont("Arial", 10))
-        # テキストアイテムがマウスイベントを受け取らないようにする
+        # Prevent text items from receiving mouse events
         self.text_item.setAcceptedMouseButtons(Qt.NoButton)
 
-        # ノードのサイズと表示内容を設定
+        # ノードのSizeと表示内容を設定
         if item_type == "transition":
-            # 常に3行表示（イベント名・条件・遷移先）に固定
+            # 常に3行表示（Event name・条件・Target）に固定
             lines = []
             lines.append(f"{self.ICONS.get(item_type, '')} {text}")
             if flow_item:
                 condition = flow_item.params.get('condition', '')
                 target = flow_item.params.get('target', '')
-                # 条件式が空なら「条件: なし」を表示
+                # 条件式が空なら「Condition: none」を表示
                 if condition:
                     lines.append(f"条件: {condition}")
                 else:
-                    lines.append("条件: なし")
-                # 遷移先が空なら「→ 未設定」を表示
+                    lines.append("Condition: none")
+                # Targetが空なら「-> (not set)」を表示
                 if target:
                     lines.append(f"→ {target}")
                 else:
-                    lines.append("→ 未設定")
+                    lines.append("-> (not set)")
             else:
                 # flow_item が無い場合も3行を維持
-                lines.append("条件: なし")
-                lines.append("→ 未設定")
+                lines.append("Condition: none")
+                lines.append("-> (not set)")
 
             label = "\n".join(lines)
             height = 20 * 3 + 8
@@ -106,7 +96,7 @@ class FlowNodeItem(QGraphicsRectItem):
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsRectItem.ItemIsSelectable, True)
 
-        # ★ キャンバス内でのドラッグ移動を完全に無効化（案C）
+        # Completely disable canvas drag move (plan C)
         self.setFlag(QGraphicsRectItem.ItemIsMovable, False)
 
         self.setFlag(QGraphicsRectItem.ItemSendsGeometryChanges, True)
@@ -121,7 +111,7 @@ class FlowNodeItem(QGraphicsRectItem):
         if event.button() == Qt.LeftButton:
             self._drag_start_pos = event.scenePos()
             logger.debug(f"FlowNodeItem.mousePressEvent: type={self.item_type}, pos={self._drag_start_pos}")
-        # ダブルクリックを正しく処理するため、accept はしない
+        # Do not accept, to handle double-click correctly
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
@@ -131,7 +121,7 @@ class FlowNodeItem(QGraphicsRectItem):
                 QMessageBox.information(
                     None,
                     "操作不可",
-                    "キャンバス内でのノード移動はできません。\n順序リストで並べ替えてください。"
+                    "Nodes cannot be moved inside the canvas.\nPlease reorder using the ordered list."
                 )
                 self._drag_start_pos = None
                 event.ignore()
@@ -159,21 +149,21 @@ class FlowNodeItem(QGraphicsRectItem):
 
     def contextMenuEvent(self, event):
         menu = QMenu()
-        edit_action = QAction("編集", menu)
+        edit_action = QAction("Edit", menu)
         edit_action.triggered.connect(lambda: self.edit_callback(self) if self.edit_callback else None)
         menu.addAction(edit_action)
         menu.addSeparator()
-        up_action = QAction("上へ", menu)
+        up_action = QAction("Move up", menu)
         up_action.triggered.connect(lambda: self.move_up_callback(self) if self.move_up_callback else None)
         menu.addAction(up_action)
-        down_action = QAction("下へ", menu)
+        down_action = QAction("Move down", menu)
         down_action.triggered.connect(lambda: self.move_down_callback(self) if self.move_down_callback else None)
         menu.addAction(down_action)
         menu.addSeparator()
         duplicate_action = QAction("複製", menu)
         duplicate_action.triggered.connect(lambda: self.duplicate_callback(self) if self.duplicate_callback else None)
         menu.addAction(duplicate_action)
-        delete_action = QAction("削除", menu)
+        delete_action = QAction("Delete", menu)
         delete_action.triggered.connect(lambda: self.delete_callback(self) if self.delete_callback else None)
         menu.addAction(delete_action)
         menu.exec(event.screenPos())
@@ -181,15 +171,15 @@ class FlowNodeItem(QGraphicsRectItem):
 
     def get_guidance_text(self):
         if self.item_type == "transition":
-            return "遷移条件ノード\n・上にロール関数をドロップで直前処理追加\n・ダブルクリックで条件を編集\n・右クリックで各種操作"
+            return "Transition condition node\n- Drop a role function on top to add pre-action\n- Double-click to edit the condition\n- Right-click for various operations"
         elif self.item_type == "function":
-            return "ロール関数ノード\n・ダブルクリックで関数名を変更"
+            return "Role functionノード\n・ダブルクリックでFunction nameを変更"
         elif self.item_type == "pre_action":
             return "遷移直前処理\n・順序リストで並べ替え"
         elif self.item_type == "else":
-            return "else条件\n・上に関数をドロップでelseアクション追加"
+            return "else condition\n- Drop a function on top to add else action"
         elif self.item_type == "else_action":
-            return "elseアクション\n・順序リストで並べ替え"
+            return "elseAction\n・順序リストで並べ替え"
         return ""
 
 
@@ -227,10 +217,7 @@ class FlowCanvas(QGraphicsView):
         logger.debug("=== FlowCanvas init end ===")
 
     def _find_flow_node_at(self, scene_pos):
-        """
-        指定シーン座標にある FlowNodeItem を探す。
-        QGraphicsTextItem などの子アイテムを透過して、親の FlowNodeItem を返す。
-        """
+        """\n        Find the FlowNodeItem at the given scene coordinates.\n        Traverse through child items such as QGraphicsTextItem and return the parent FlowNodeItem.\n        """
         items = self.scene.items(scene_pos, Qt.IntersectsItemShape,
                                  Qt.DescendingOrder, self.transform())
         for item in items:
@@ -310,7 +297,7 @@ class FlowCanvas(QGraphicsView):
         self.scene.setSceneRect(self.scene.itemsBoundingRect().adjusted(-20, -20, 20, 40))
         self.draft_updated.emit()
 
-        # ★ デバッグログ: シーン矩形とビューポート情報
+        # Debug log: scene rect and viewport info
         logger.debug(f"Scene rect after rebuild: {self.scene.sceneRect()}")
         logger.debug(f"Viewport size: {self.viewport().size()}")
 
@@ -436,14 +423,14 @@ class FlowCanvas(QGraphicsView):
                         target_type = target_item.item_type
                         target_flow_item = target_item.flow_item
 
-                        # ★ transition または pre_action → pre_actions に追加
+                        # transition or pre_action -> added to pre_actions
                         if target_type in ("transition", "pre_action"):
                             if target_flow_item:
                                 target_flow_item.params.setdefault('pre_actions', []).append(name)
                                 logger.debug(f"Added pre_action '{name}' to transition "
                                              f"'{target_flow_item.name}' (via {target_type})")
                                 handled = True
-                        # ★ else または else_action → else_actions に追加
+                        # else or else_action -> added to else_actions
                         elif target_type in ("else", "else_action"):
                             if target_flow_item:
                                 target_flow_item.params.setdefault('else_actions', []).append(name)
@@ -451,7 +438,7 @@ class FlowCanvas(QGraphicsView):
                                              f"'{target_flow_item.name}' (via {target_type})")
                                 handled = True
 
-                    # どこにも追加されなかった場合は standalone function
+                    # If not added anywhere, it becomes a standalone function
                     if not handled:
                         new_item = FlowItem(item_type="function", name=name)
                         new_item.pos_x = scene_pos.x()

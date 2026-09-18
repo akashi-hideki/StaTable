@@ -15,12 +15,12 @@ from .logger import StaTableLogger
 
 
 class ActionEditDialog(QDialog):
-    """遷移の動作を編集するダイアログ（H3: qualified_name 挿入対応）"""
+    """Dialog to edit the action of a transition (H3: qualified_name insertion support)"""
 
     def __init__(self, parent=None, action_text="", title="",
                  role_functions=None, global_defs=None):
         super().__init__(parent)
-        self.setWindowTitle("動作編集")
+        self.setWindowTitle("動作Edit")
         self.setMinimumSize(900, 650)
         self.role_functions = role_functions if role_functions is not None else {}
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
@@ -38,14 +38,14 @@ class ActionEditDialog(QDialog):
         main_layout.addWidget(self.title_widget)
 
         role_bar = QHBoxLayout()
-        role_bar.addWidget(QLabel("ロール関数:"))
+        role_bar.addWidget(QLabel("Role function:"))
         self.role_combo = QComboBox()
         self.refresh_role_combo()
         role_bar.addWidget(self.role_combo)
-        insert_role_btn = QPushButton("挿入")
+        insert_role_btn = QPushButton("Insert")
         insert_role_btn.clicked.connect(self.insert_role_function)
         role_bar.addWidget(insert_role_btn)
-        new_role_btn = QPushButton("新規ロール関数...")
+        new_role_btn = QPushButton("新規Role function...")
         new_role_btn.clicked.connect(self.add_new_role_function)
         role_bar.addWidget(new_role_btn)
         main_layout.addLayout(role_bar)
@@ -113,14 +113,9 @@ class ActionEditDialog(QDialog):
                 return
         self.signature_label.setText("")
 
-    # ★ 変更: qualified_name を使用
+    # change: use qualified_name
     def insert_role_function(self):
-        """
-        ロール関数を動作欄に挿入
-
-        - namespace あり: "Driver.Init" の参照形式（引数なし）
-        - namespace なし: 旧形式 "Sensor_Init(arg1, arg2);" を維持
-        """
+        """\n        Insert a role function into the action field\n\n        - With namespace: \"Driver.Init\" reference form (no arguments)\n        - Without namespace: preserve legacy form \"Sensor_Init(arg1, arg2);\"\n        """
         func_name = self.role_combo.currentText()
         StaTableLogger.debug(f"insert_role_function: '{func_name}'")
         if not func_name:
@@ -132,7 +127,7 @@ class ActionEditDialog(QDialog):
         qualified = getattr(rf, 'qualified_name', func_name)
 
         if '.' in qualified:
-            # ★ Namespace.Name 形式: 参照のみ挿入
+            # Namespace.Name form: insert reference only
             call = qualified
         else:
             # ★ 旧形式: 引数付き呼び出しを維持
@@ -148,7 +143,7 @@ class ActionEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             rf = dlg.get_role_function()
             if rf.name in self.role_functions:
-                QMessageBox.warning(self, "警告", "同名のロール関数が既に存在します。")
+                QMessageBox.warning(self, "Warning", "A role function with the same name already exists.")
                 return
             self.role_functions[rf.name] = rf
             self.refresh_role_combo()

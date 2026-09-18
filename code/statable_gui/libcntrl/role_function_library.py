@@ -1,6 +1,6 @@
 # statable_gui/libcntrl/role_function_library.py
 """
-共有ロール関数ライブラリ
+共有Role functionライブラリ
 """
 
 from dataclasses import dataclass, field
@@ -9,14 +9,9 @@ from typing import List, Dict, Optional
 
 @dataclass
 class RoleFunction:
-    """共有ロール関数定義
-
-    namespace: 層名・機能グループ名（例: "Driver"）
-      - `Driver.Init` のように参照可能
-      - 空文字の場合は層なし扱い
-    """
-    name: str                       # 純粋名（例: "Init"）
-    namespace: str = ""             # 名前空間（例: "Driver"）
+    """Shared role function definition\n\n    namespace: layer name / feature group name (e.g., \"Driver\")\n      - Referenceable as `Driver.Init`\n      - Empty string means no layer\n    """
+    name: str                       # Bare name (e.g., \"Init\")
+    namespace: str = ""             # Namespace (e.g., \"Driver\")
     description: str = ""
     title: str = ""
     used_global_vars: List[str] = field(default_factory=list)
@@ -29,7 +24,7 @@ class RoleFunction:
 
     @property
     def qualified_name(self) -> str:
-        """GUI 表示用: 'Driver.Init' または 'Init'"""
+        """GUI display name: 'Driver.Init' or 'Init'"""
         if self.namespace:
             return f"{self.namespace}.{self.name}"
         return self.name
@@ -59,13 +54,13 @@ class RoleFunction:
 
 
 class RoleFunctionLibrary:
-    """プロジェクト全体で共有するロール関数ライブラリ"""
+    """プロジェクト全体で共有するRole functionライブラリ"""
 
     def __init__(self):
         self.role_functions: Dict[str, RoleFunction] = {}
 
     def _key(self, rf: RoleFunction) -> str:
-        """ライブラリ内での一意キー: 'Driver.Init'"""
+        """Unique key in the library: 'Driver.Init'"""
         return rf.qualified_name
 
     def add(self, rf: RoleFunction):
@@ -75,7 +70,7 @@ class RoleFunctionLibrary:
         self.role_functions[key] = rf
 
     def remove(self, name: str):
-        """name は qualified_name でも純粋名でもOK"""
+        """name can be either qualified_name or a bare name"""
         if name in self.role_functions:
             del self.role_functions[name]
             return
@@ -86,7 +81,7 @@ class RoleFunctionLibrary:
                 return
 
     def get(self, name: str) -> Optional[RoleFunction]:
-        """name は qualified_name でも純粋名でもOK"""
+        """name can be either qualified_name or a bare name"""
         if name in self.role_functions:
             return self.role_functions[name]
         for rf in self.role_functions.values():
@@ -110,5 +105,5 @@ class RoleFunctionLibrary:
             try:
                 lib.add(rf)
             except ValueError:
-                pass  # 重複は無視
+                pass  # Duplicates ignored
         return lib

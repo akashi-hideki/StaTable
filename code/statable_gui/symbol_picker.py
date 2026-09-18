@@ -11,7 +11,7 @@ from .logger import StaTableLogger
 
 
 class SymbolPickerWidget(QWidget):
-    """グローバル変数・イベントフラグ・ロール関数戻り値を選択する共通ウィジェット"""
+    """Common widget for selecting global variables, event flags, and role function return values"""
 
     insert_requested = Signal(str)
 
@@ -22,16 +22,16 @@ class SymbolPickerWidget(QWidget):
 
         layout = QVBoxLayout(self)
 
-        # タイトル
-        title = QLabel("グローバル変数・イベントフラグ・戻り値一覧")
+        # Title
+        title = QLabel("Global variables・Event flags・戻り値一覧")
         title.setFont(QFont("sans-serif", 10, QFont.Bold))
         layout.addWidget(title)
 
-        # 検索
-        search_label = QLabel("検索（前方一致）:")
+        # Search
+        search_label = QLabel("Search (prefix match):")
         layout.addWidget(search_label)
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("タイトル・メンバ名・グループ名を入力")
+        self.search_edit.setPlaceholderText("Title・Member name・Group名を入力")
         self.search_edit.textChanged.connect(self.refresh_list)
         layout.addWidget(self.search_edit)
 
@@ -68,7 +68,7 @@ class SymbolPickerWidget(QWidget):
 
         self.list_widget.clear()
 
-        # グローバル変数
+        # Global variables
         for var in self.global_defs.variables:
             if self._matches(var.title, var.name, var.group, query):
                 item = QListWidgetItem(f"変数: {var.title}")
@@ -85,7 +85,7 @@ class SymbolPickerWidget(QWidget):
                 )
                 self.list_widget.addItem(item)
 
-        # イベントフラグ
+        # Event flags
         for flag in self.global_defs.flags:
             if self._matches(flag.title, flag.name, flag.group, query):
                 item = QListWidgetItem(f"フラグ: {flag.title}")
@@ -102,7 +102,7 @@ class SymbolPickerWidget(QWidget):
                 )
                 self.list_widget.addItem(item)
 
-        # ロール関数戻り値（一時変数）
+        # Role function戻り値（一時変数）
         for func_name in self.role_functions.keys():
             temp_var = f"rv_{func_name}"
             if self._matches(temp_var, func_name, "", query):

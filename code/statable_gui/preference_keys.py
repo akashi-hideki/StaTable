@@ -1,14 +1,10 @@
-"""StaTable 環境設定の定義（キー名とデフォルト値）
-
-設定項目を追加・変更する場合は、このファイルの PREFERENCE_DEFINITIONS に
-エントリを追加/編集するだけでよい。
-"""
+"""StaTable preference definitions (key names and default values)\n\nTo add or change a setting, just add/edit an entry in\nPREFERENCE_DEFINITIONS in this file.\n"""
 
 from pathlib import Path
 
 # ----------------------------------------------------------------------
 # 設定項目の定義（キー名 -> デフォルト値）
-# ここに項目を追加するだけで、Preferences クラスから属性アクセス可能になる。
+# Adding an entry here is enough to enable attribute access from the Preferences class.
 # ----------------------------------------------------------------------
 PREFERENCE_DEFINITIONS = {
     # 最終使用フォルダ
@@ -17,6 +13,6 @@ PREFERENCE_DEFINITIONS = {
     "last_spec_doc_dir": str(Path.home()),      # 仕様書類の場所
     "last_export_dir": str(Path.home()),        # エクスポート先
 
-    # ★ イベント配送設定
-    "auto_convert_isr_direct_to_double": True,  # ISRで使われるDIRECTをDOUBLEへ自動変換
+    # ★ Event delivery settings
+    "auto_convert_isr_direct_to_double": True,  # Automatically convert ISR-used DIRECT to DOUBLE
 }

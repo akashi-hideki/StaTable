@@ -1,14 +1,5 @@
 # statable_gui/transition_editor_direct/palette_widget.py
-"""
-カテゴリ別折りたたみパレット
-（共有ライブラリ対応・ダブルクリック編集対応・ドラッグ開始対応）
-
-【v1.5 修正】
-  - refresh_lists: rf.name → rf.qualified_name（バグ #88）
-    Driver.Init と App.Init が同じ "Init" で表示され、
-    編集対象が誤る問題を解消
-  - _generate_unique_name: namespace 衝突チェックを追加
-"""
+"""\nCollapsible palette by category\n(shared library support / double-click edit / drag start support)\n\n[v1.5 fix]\n  - refresh_lists: rf.name -> rf.qualified_name (bug #88)\n    Driver.Init and App.Init were both shown as \"Init\",\n    causing wrong edit target; fixed\n  - _generate_unique_name: added namespace collision check\n"""
 
 import json
 import logging
@@ -50,7 +41,7 @@ class PaletteListWidget(QListWidget):
         return mime
 
     def startDrag(self, supported_actions):
-        """ドラッグ開始をオーバーライドして確実にQDragを実行"""
+        """Override drag start to reliably execute QDrag"""
         item = self.currentItem()
         if item is None:
             logger.debug("PaletteListWidget.startDrag: no current item")
@@ -92,7 +83,7 @@ class PaletteListWidget(QListWidget):
 
 
 class PaletteWidget(QWidget):
-    """カテゴリ別折りたたみパレット（イベント選択画面）"""
+    """Category別折りたたみパレット（イベントSelection画面）"""
 
     edit_function_requested = Signal(str)
     edit_transition_requested = Signal(str)
@@ -111,13 +102,13 @@ class PaletteWidget(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
 
-        title_label = QLabel("イベント選択画面")
+        title_label = QLabel("イベントSelection画面")
         title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         title_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(title_label)
 
-        # ロール関数セクション
-        func_group = QGroupBox("ロール関数")
+        # Role functionセクション
+        func_group = QGroupBox("Role function")
         v1 = QVBoxLayout(func_group)
         v1.setContentsMargins(4, 4, 4, 4)
         v1.setSpacing(2)
@@ -128,7 +119,7 @@ class PaletteWidget(QWidget):
         )
         v1.addWidget(self.function_list)
 
-        add_func_btn = QPushButton("+ ロール関数追加")
+        add_func_btn = QPushButton("+ Role functionAdd")
         add_func_btn.clicked.connect(self._add_function)
         v1.addWidget(add_func_btn)
 
@@ -144,7 +135,7 @@ class PaletteWidget(QWidget):
         )
         v2.addWidget(self.transition_list)
 
-        add_transition_btn = QPushButton("+ 遷移条件追加")
+        add_transition_btn = QPushButton("+ 遷移条件Add")
         add_transition_btn.clicked.connect(self._add_transition)
         v2.addWidget(add_transition_btn)
 
@@ -153,14 +144,7 @@ class PaletteWidget(QWidget):
         layout.addStretch()
 
     def _generate_unique_name(self, base_name: str, library) -> str:
-        """
-        一意名を生成
-
-        【v1.5 改善】
-          RoleFunctionLibrary.role_functions は qualified_name で
-          キー管理されているため、既存キーとの衝突チェックは
-          base_name（純粋名）と qualified_name の両方で行う。
-        """
+        """\n        Generate a unique name\n\n        [v1.5 improvement]\n          RoleFunctionLibrary.role_functions is keyed by qualified_name,\n          so collision checks against existing keys must be done with both\n          base_name (bare name) and qualified_name.\n        """
         existing_names = set()
         if hasattr(library, 'role_functions'):
             existing_names = set(library.role_functions.keys())
@@ -170,7 +154,7 @@ class PaletteWidget(QWidget):
         def _collides(name: str) -> bool:
             if name in existing_names:
                 return True
-            # 'Namespace.Name' の末尾一致も検出
+            # Also detect suffix match of 'Namespace.Name'
             return any(k.endswith('.' + name) for k in existing_names)
 
         if not _collides(base_name):
@@ -212,15 +196,7 @@ class PaletteWidget(QWidget):
         self.refresh_lists()
 
     def _on_function_item_edit_requested(self, name: str):
-        """
-        ロール関数の編集要求
-
-        【v1.5 修正】
-          name は qualified_name ('Driver.Init') または
-          純粋名 ('Init')。後段の ActionEditorDialog は
-          RoleFunctionLibrary.get(name) で解決するため、
-          どちらでも正しく動作する。
-        """
+        """\n        Role function edit request\n\n        [v1.5 fix]\n          name can be qualified_name ('Driver.Init') or\n          bare name ('Init'). ActionEditorDialog downstream resolves\n          via RoleFunctionLibrary.get(name), so both work correctly.\n        """
         logger.debug(
             f"PaletteWidget._on_function_item_edit_requested: "
             f"name='{name}'"
@@ -235,13 +211,7 @@ class PaletteWidget(QWidget):
         self.edit_transition_requested.emit(name)
 
     def refresh_lists(self):
-        """
-        ロール関数・遷移条件リストを再構築
-
-        【v1.5 修正】
-          ロール関数は qualified_name ('Driver.Init') で表示。
-          純粋名のみだと namespace 衝突で編集対象が誤るため。
-        """
+        """\n        Rebuild the role function / transition condition list\n\n        [v1.5 fix]\n          Role functions shown by qualified_name ('Driver.Init').\n          With bare names only, namespace collisions cause wrong edit target.\n        """
         logger.debug("PaletteWidget.refresh_lists called")
         if self.role_function_library:
             self.function_list.clear()

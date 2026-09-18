@@ -1,12 +1,5 @@
 # statable_gui/transition_editor_direct/draft.py
-"""
-動作編集用ドラフトモデル（ノード位置保存対応）
-
-【v1.6 変更】
-  - ActionDraft に layer_name 属性を追加（§11.2 #4）
-    code_widget._get_layer_name() がこれを最優先で参照する。
-    従来の「namespace 最頻値推定」はフォールバックとして残る。
-"""
+"""\nAction edit draft model (node position saving support)\n\n[v1.6 change]\n  - Added layer_name attribute to ActionDraft (section 11.2 #4)\n    code_widget._get_layer_name() gives this the highest priority.\n    The old \"namespace mode inference\" remains as fallback.\n"""
 
 import logging
 from dataclasses import dataclass, field
@@ -16,12 +9,7 @@ logger = logging.getLogger("transition_editor_direct.draft")
 
 
 def ensure_list(value) -> List[str]:
-    """
-    値がリストでなければリストに変換して返す。
-    - None や空文字列は空リスト
-    - 文字列が来た場合は単一要素のリストとして扱う
-    - リストならそのまま返す
-    """
+    """\n    Convert a value to a list if it isn't one.\n    - None or empty string -> empty list\n    - A string is treated as a single-element list\n    - A list is returned as-is\n    """
     if isinstance(value, list):
         return value
     if value is None:
@@ -78,7 +66,7 @@ class FlowItem:
     edited_text: str = ""
     params: Dict[str, Any] = field(default_factory=dict)
 
-    # ★ ノード位置保存用（Canvasで自由移動を保持）
+    # For node position saving (preserve free movement on Canvas)
     pos_x: Optional[float] = None
     pos_y: Optional[float] = None
 
@@ -112,9 +100,9 @@ class ActionDraft:
     source: str = ""
     event: str = ""
 
-    # ★ v1.6 追加: 層名（code_widget._get_layer_name の第一候補）
-    #   - matrix_table.py 等の生成側で sm.layer_name を渡す
-    #   - 空文字の場合は code_widget 側で namespace 最頻値フォールバックが動く
+    # v1.6 added: layer name (first candidate for code_widget._get_layer_name)
+    #   - Pass sm.layer_name from generators such as matrix_table.py
+    #   - If empty, code_widget falls back to the most frequent namespace
     layer_name: str = ""
 
     flow_items: List[FlowItem] = field(default_factory=list)
@@ -133,8 +121,8 @@ class ActionDraft:
         self.generated_code = ""
         self.role_func_map = {}
         self.user_code = {}
-        # ★ layer_name は「この draft が属する層」を表すため、
-        #   clear() では保持する（リセットしない）
+        # layer_name represents \"the layer this draft belongs to\",
+        #   clear() preserves it (does not reset)
 
     def get_role_func_name(self, base_name: str, phase: str) -> str:
         key = f"{self.source}|{self.event}|{phase}|{base_name}"
@@ -147,7 +135,7 @@ class ActionDraft:
         return {
             'source': self.source,
             'event': self.event,
-            'layer_name': self.layer_name,   # ★ v1.6 追加
+            'layer_name': self.layer_name,   # v1.6 added
             'flow_items': [i.to_dict() for i in self.flow_items],
             'default_target': self.default_target,
             'system_globals': [g.to_dict() for g in self.system_globals],
@@ -161,7 +149,7 @@ class ActionDraft:
         return cls(
             source=data.get('source', ''),
             event=data.get('event', ''),
-            layer_name=data.get('layer_name', ''),   # ★ v1.6 追加
+            layer_name=data.get('layer_name', ''),   # v1.6 added
             flow_items=[FlowItem.from_dict(i) for i in data.get('flow_items', [])],
             default_target=data.get('default_target', ''),
             system_globals=[SystemGlobal.from_dict(g) for g in data.get('system_globals', [])],
@@ -172,7 +160,7 @@ class ActionDraft:
 
 
 def transition_to_flow_item(trans) -> FlowItem:
-    """Transition → FlowItem (type=transition) 変換"""
+    """Transition -> FlowItem (type=transition) conversion"""
     pre_actions = ensure_list(getattr(trans, 'pre_actions', []))
     else_actions = ensure_list(getattr(trans, 'else_actions', []))
     condition = getattr(trans, 'condition', '')
@@ -180,7 +168,7 @@ def transition_to_flow_item(trans) -> FlowItem:
         logger.error(f"Condition is not str: {type(condition)}. Using empty string.")
         condition = ""
 
-    # イベント名が空の場合は「NewEvent」をデフォルトにする
+    # If event name is empty, default to \"NewEvent\"
     event_name = trans.event if trans.event else "NewEvent"
 
     logger.debug(f"transition_to_flow_item: event='{event_name}', condition='{condition}', pre_actions={pre_actions}, else_actions={else_actions}")
@@ -188,7 +176,7 @@ def transition_to_flow_item(trans) -> FlowItem:
     return FlowItem(
         item_type="transition",
         name=event_name,
-        edited_text=trans.title if trans.title != "(無題遷移)" else event_name,
+        edited_text=trans.title if trans.title != "(untitled transition)" else event_name,
         params={
             "event": event_name,
             "condition": condition,
@@ -225,5 +213,5 @@ def flow_item_to_transition(item: FlowItem, source: str, event: str):
         else_actions=else_actions,
         action="",
         transition_type="external",
-        title=item.edited_text if item.edited_text and item.edited_text != item.name else "(無題遷移)",
+        title=item.edited_text if item.edited_text and item.edited_text != item.name else "(untitled transition)",
     )

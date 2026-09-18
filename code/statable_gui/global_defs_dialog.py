@@ -1,4 +1,4 @@
-"""グローバル変数・イベントフラグ定義管理画面"""
+"""Global variables・Event flag definition管理画面"""
 
 from typing import Optional, List
 
@@ -57,7 +57,7 @@ class InsertableTable(QTableWidget):
 
     def _show_context_menu(self, pos):
         menu = QMenu(self)
-        add_action = menu.addAction("行を追加")
+        add_action = menu.addAction("行をAdd")
         add_action.triggered.connect(self.insert_requested.emit)
         menu.exec(self.viewport().mapToGlobal(pos))
 
@@ -72,7 +72,7 @@ class VariableEditDialog(QDialog):
         super().__init__(parent)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.groups = groups or []
-        self.setWindowTitle("グローバル変数編集")
+        self.setWindowTitle("Global variablesEdit")
         self.setMinimumWidth(500)
 
         layout = QFormLayout(self)
@@ -81,38 +81,38 @@ class VariableEditDialog(QDialog):
         layout.addRow("", self.title_widget)
 
         self.name_edit = QLineEdit(variable.name if variable else "")
-        layout.addRow("名前", self.name_edit)
+        layout.addRow("Name", self.name_edit)
 
         self.type_combo = TypeComboBox(self, global_defs=self.global_defs)
         if variable:
             self.type_combo.set_current_text(variable.type)
-        layout.addRow("型", self.type_combo)
+        layout.addRow("Type", self.type_combo)
 
-        self.array_check = QCheckBox("配列を使用する")
+        self.array_check = QCheckBox("Use array")
         self.array_check.setChecked(variable.array_size > 0 if variable else False)
         layout.addRow("", self.array_check)
 
         self.array_size_spin = QSpinBox()
         self.array_size_spin.setRange(1, 65536)
         self.array_size_spin.setValue(variable.array_size if variable and variable.array_size > 0 else 1)
-        layout.addRow("配列サイズ", self.array_size_spin)
+        layout.addRow("Array size", self.array_size_spin)
 
         self.array_check.toggled.connect(self._on_array_toggled)
         self._on_array_toggled(self.array_check.isChecked())
 
         self.unit_edit = QLineEdit(variable.unit if variable else "")
-        layout.addRow("単位", self.unit_edit)
+        layout.addRow("Unit", self.unit_edit)
 
         self.default_edit = QLineEdit(variable.default_value if variable else "")
-        layout.addRow("初期値", self.default_edit)
+        layout.addRow("Initial value", self.default_edit)
 
         self.group_combo = GroupComboBox(self, groups=self.groups)
         if variable:
             self.group_combo.set_current_text(variable.group)
-        layout.addRow("グループ", self.group_combo)
+        layout.addRow("Group", self.group_combo)
 
         self.desc_edit = QLineEdit(variable.description if variable else "")
-        layout.addRow("説明", self.desc_edit)
+        layout.addRow("Description", self.desc_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._on_accept)
@@ -123,9 +123,9 @@ class VariableEditDialog(QDialog):
         self.array_size_spin.setEnabled(checked)
 
     def _on_accept(self):
-        auto_title = f"変数: {self.name_edit.text().strip() or '(無名)'}"
+        auto_title = f"変数: {self.name_edit.text().strip() or '(unnamed)'}"
         if self.array_check.isChecked():
-            auto_title = f"{self.name_edit.text().strip() or '(無名)'}[{self.array_size_spin.value()}]"
+            auto_title = f"{self.name_edit.text().strip() or '(unnamed)'}[{self.array_size_spin.value()}]"
         self.title_widget.ensure_title(auto_title)
         self.accept()
 
@@ -147,7 +147,7 @@ class FlagEditDialog(QDialog):
     def __init__(self, parent=None, groups=None, flag: Optional[EventFlag] = None):
         super().__init__(parent)
         self.groups = groups or []
-        self.setWindowTitle("イベントフラグ編集")
+        self.setWindowTitle("Event flagsEdit")
         self.setMinimumWidth(500)
 
         layout = QFormLayout(self)
@@ -156,31 +156,31 @@ class FlagEditDialog(QDialog):
         layout.addRow("", self.title_widget)
 
         self.name_edit = QLineEdit(flag.name if flag else "")
-        layout.addRow("フラグ名", self.name_edit)
+        layout.addRow("Flag name", self.name_edit)
 
         self.min_spin = QSpinBox()
         self.min_spin.setRange(0, 2**31 - 1)
         self.min_spin.setValue(flag.min_value if flag else 0)
-        layout.addRow("最小値", self.min_spin)
+        layout.addRow("Min value", self.min_spin)
 
         self.max_spin = QSpinBox()
         self.max_spin.setRange(0, 2**31 - 1)
         self.max_spin.setValue(flag.max_value if flag else 3)
-        layout.addRow("最大値", self.max_spin)
+        layout.addRow("Max value", self.max_spin)
 
         self.bit_width_label = QLabel()
         self.update_bit_width_label()
         self.min_spin.valueChanged.connect(self.update_bit_width_label)
         self.max_spin.valueChanged.connect(self.update_bit_width_label)
-        layout.addRow("ビット幅", self.bit_width_label)
+        layout.addRow("Bit width", self.bit_width_label)
 
         self.group_combo = GroupComboBox(self, groups=self.groups)
         if flag:
             self.group_combo.set_current_text(flag.group)
-        layout.addRow("グループ", self.group_combo)
+        layout.addRow("Group", self.group_combo)
 
         self.desc_edit = QLineEdit(flag.description if flag else "")
-        layout.addRow("説明", self.desc_edit)
+        layout.addRow("Description", self.desc_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._on_accept)
@@ -191,7 +191,7 @@ class FlagEditDialog(QDialog):
         min_val = self.min_spin.value()
         max_val = self.max_spin.value()
         if max_val < min_val:
-            self.bit_width_label.setText("エラー: 最大値 < 最小値")
+            self.bit_width_label.setText("Error: Max value < Min value")
             self.bit_width_label.setStyleSheet("color: red;")
         else:
             width = (max_val - min_val).bit_length()
@@ -199,7 +199,7 @@ class FlagEditDialog(QDialog):
             self.bit_width_label.setStyleSheet("")
 
     def _on_accept(self):
-        auto_title = f"フラグ: {self.name_edit.text().strip() or '(無名)'}"
+        auto_title = f"フラグ: {self.name_edit.text().strip() or '(unnamed)'}"
         self.title_widget.ensure_title(auto_title)
         self.accept()
 
@@ -215,18 +215,18 @@ class FlagEditDialog(QDialog):
 
 
 class BulkVariableDialog(QDialog):
-    """グローバル変数 一括登録ダイアログ"""
+    """Global variables 一括登録ダイアログ"""
 
     def __init__(self, parent=None, groups=None, global_defs=None):
         super().__init__(parent)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.groups = groups or []
-        self.setWindowTitle("グローバル変数 一括登録")
+        self.setWindowTitle("Global variables 一括登録")
         self.setMinimumSize(900, 400)
 
         layout = QVBoxLayout(self)
         self.table = InsertableTable(0, 8)
-        self.table.setHorizontalHeaderLabels(["タイトル", "名前", "型", "配列", "単位", "初期値", "グループ", "説明"])
+        self.table.setHorizontalHeaderLabels(["Title", "Name", "Type", "Array", "Unit", "Initial value", "Group", "Description"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
         layout.addWidget(self.table)
@@ -238,9 +238,9 @@ class BulkVariableDialog(QDialog):
         self.table.setItemDelegateForColumn(6, self.group_delegate)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("行追加")
+        add_btn = QPushButton("Add row")
         add_btn.clicked.connect(self.add_empty_row)
-        del_btn = QPushButton("行削除")
+        del_btn = QPushButton("Delete row")
         del_btn.clicked.connect(self.delete_row)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
@@ -335,17 +335,17 @@ class BulkVariableDialog(QDialog):
 
 
 class BulkFlagDialog(QDialog):
-    """イベントフラグ 一括登録ダイアログ"""
+    """Event flags 一括登録ダイアログ"""
 
     def __init__(self, parent=None, groups=None):
         super().__init__(parent)
         self.groups = groups or []
-        self.setWindowTitle("イベントフラグ 一括登録")
+        self.setWindowTitle("Event flags 一括登録")
         self.setMinimumSize(900, 400)
 
         layout = QVBoxLayout(self)
         self.table = InsertableTable(0, 7)
-        self.table.setHorizontalHeaderLabels(["タイトル", "フラグ名", "最小値", "最大値", "ビット幅", "グループ", "説明"])
+        self.table.setHorizontalHeaderLabels(["Title", "Flag name", "Min value", "Max value", "Bit width", "Group", "Description"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
         layout.addWidget(self.table)
@@ -355,9 +355,9 @@ class BulkFlagDialog(QDialog):
         self.table.setItemDelegateForColumn(4, ReadOnlyDelegate(self.table))
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("行追加")
+        add_btn = QPushButton("Add row")
         add_btn.clicked.connect(self.add_empty_row)
-        del_btn = QPushButton("行削除")
+        del_btn = QPushButton("Delete row")
         del_btn.clicked.connect(self.delete_row)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
@@ -427,7 +427,7 @@ class BulkFlagDialog(QDialog):
             min_val = int(min_item.text())
             max_val = int(max_item.text())
             if max_val < min_val:
-                width = "エラー"
+                width = "Error"
             else:
                 width = str((max_val - min_val).bit_length())
         except ValueError:
@@ -471,15 +471,15 @@ class GlobalDefinitionsDialog(QDialog):
         super().__init__(parent)
         self.defs = defs
         self._updating = False
-        self.setWindowTitle("グローバル変数 & イベントフラグ定義")
+        self.setWindowTitle("Global variables & Event flag definition")
         self.setMinimumSize(900, 600)
 
         layout = QVBoxLayout(self)
 
         search_layout = QHBoxLayout()
-        search_layout.addWidget(QLabel("検索（前方一致）:"))
+        search_layout.addWidget(QLabel("Search (prefix match):"))
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("タイトル・メンバ名・グループ名")
+        self.search_edit.setPlaceholderText("Title・Member name・Group名")
         self.search_edit.textChanged.connect(self.on_search_changed)
         search_layout.addWidget(self.search_edit)
         layout.addLayout(search_layout)
@@ -487,10 +487,10 @@ class GlobalDefinitionsDialog(QDialog):
         self.tab = QTabWidget()
         layout.addWidget(self.tab)
 
-        self.tab.addTab(self._create_variable_tab(), "グローバル変数")
-        self.tab.addTab(self._create_flag_tab(), "イベントフラグ")
+        self.tab.addTab(self._create_variable_tab(), "Global variables")
+        self.tab.addTab(self._create_flag_tab(), "Event flags")
 
-        close_btn = QPushButton("閉じる")
+        close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn, alignment=Qt.AlignRight)
 
@@ -503,7 +503,7 @@ class GlobalDefinitionsDialog(QDialog):
         layout = QVBoxLayout(widget)
 
         self.var_table = InsertableTable(0, 8)
-        self.var_table.setHorizontalHeaderLabels(["タイトル", "名前", "型", "配列", "単位", "初期値", "グループ", "説明"])
+        self.var_table.setHorizontalHeaderLabels(["Title", "Name", "Type", "Array", "Unit", "Initial value", "Group", "Description"])
         self.var_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.var_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.var_table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
@@ -516,9 +516,9 @@ class GlobalDefinitionsDialog(QDialog):
         self.var_table.setItemDelegateForColumn(6, self.group_delegate)
 
         btn_layout = QHBoxLayout()
-        del_btn = QPushButton("削除")
+        del_btn = QPushButton("Delete")
         del_btn.clicked.connect(self.delete_variable)
-        bulk_btn = QPushButton("一括登録...")
+        bulk_btn = QPushButton("Register in bulk...")
         bulk_btn.clicked.connect(self.bulk_variables)
         btn_layout.addWidget(del_btn)
         btn_layout.addStretch()
@@ -535,7 +535,7 @@ class GlobalDefinitionsDialog(QDialog):
         layout = QVBoxLayout(widget)
 
         self.flag_table = InsertableTable(0, 7)
-        self.flag_table.setHorizontalHeaderLabels(["タイトル", "フラグ名", "最小値", "最大値", "ビット幅", "グループ", "説明"])
+        self.flag_table.setHorizontalHeaderLabels(["Title", "Flag name", "Min value", "Max value", "Bit width", "Group", "Description"])
         self.flag_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.flag_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.flag_table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
@@ -546,9 +546,9 @@ class GlobalDefinitionsDialog(QDialog):
         self.flag_table.setItemDelegateForColumn(5, self.flag_group_delegate)
 
         btn_layout = QHBoxLayout()
-        del_btn = QPushButton("削除")
+        del_btn = QPushButton("Delete")
         del_btn.clicked.connect(self.delete_flag)
-        bulk_btn = QPushButton("一括登録...")
+        bulk_btn = QPushButton("Register in bulk...")
         bulk_btn.clicked.connect(self.bulk_flags)
         btn_layout.addWidget(del_btn)
         btn_layout.addStretch()

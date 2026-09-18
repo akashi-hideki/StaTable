@@ -1,7 +1,5 @@
 # codegen/event_queue_generator.py
-"""
-イベントキューコード生成モジュール（完全データ駆動版）
-"""
+"""\nEvent queue code generation module (fully data-driven)\n"""
 
 import sys
 import os
@@ -25,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class EventQueueGenerator:
-    """イベントキューコード生成クラス（完全データ駆動）"""
+    """Event queue code generation class (fully data-driven)"""
     
     def __init__(self):
         self.mapper = CTypeMapper()
@@ -34,7 +32,7 @@ class EventQueueGenerator:
         self.strings = self.templates.STRINGS
         self.formats = self.templates.FORMATS
         
-        # 生成ステップ定義
+        # Generation step definition
         self.struct_steps = [
             {'action': 'comment'},
             {'action': 'struct_start'},
@@ -62,7 +60,7 @@ class EventQueueGenerator:
             {'action': 'close'},
         ]
         
-        # ステップ実行辞書
+        # Step execution dictionary
         self.struct_executors: Dict[str, Callable] = {
             'comment': self._execute_struct_comment,
             'struct_start': self._execute_struct_start,
@@ -94,14 +92,14 @@ class EventQueueGenerator:
         log_func = getattr(logger, level, logger.debug)
         log_func(message)
     
-    # ===== 名前生成 =====
+    # ===== Name generation =====
     def _generate_struct_name(self, queue):
         return self.naming.create_type_name(getattr(queue, 'name', 'EventQueue'))
     
     def _generate_func_prefix(self, queue):
         return f"EventQueue_{self.naming.to_pascal_case(getattr(queue, 'name', ''))}"
     
-    # ===== 構造体生成ステップ =====
+    # ===== Struct generation step =====
     def _execute_struct_comment(self, step, context):
         queue = context.get('queue')
         name = getattr(queue, 'name', 'unknown')
@@ -139,16 +137,16 @@ class EventQueueGenerator:
         type_name = self._generate_struct_name(queue)
         return [f"}} {type_name};"]
     
-    # ===== エンキュー生成ステップ =====
+    # ===== Enqueue generation step =====
     def _execute_enqueue_comment(self, step, context):
         queue = context.get('queue')
         name = getattr(queue, 'name', 'unknown')
         return [
             "/**",
             f" * @brief  イベントをエンキューする（{name}）",
-            " * @param  queue  キュー",
-            " * @param  event  イベント",
-            " * @return 成功: true, 失敗: false",
+            " * @param  queue  Queue",
+            " * @param  event  Event",
+            " * @return success: true, failure: false",
             " */",
         ]
     
@@ -164,9 +162,9 @@ class EventQueueGenerator:
         return [
             "/**",
             f" * @brief  イベントをデキューする（{name}）",
-            " * @param  queue  キュー",
-            " * @param  event  取り出したイベント",
-            " * @return 成功: true, 失敗: false",
+            " * @param  queue  Queue",
+            " * @param  event  Dequeued event",
+            " * @return success: true, failure: false",
             " */",
         ]
     
@@ -233,9 +231,9 @@ class EventQueueGenerator:
         lines.append(f"{indent}return true;")
         return lines
     
-    # ===== 公開メソッド =====
+    # ===== Public methods =====
     def generate_struct(self, queue: EventQueueDef) -> str:
-        """イベントキュー構造体生成"""
+        """Event queue struct generation"""
         self._log_debug(f"Generating struct for: {getattr(queue, 'name', 'unknown')}")
         context = {'queue': queue}
         lines = []
@@ -246,7 +244,7 @@ class EventQueueGenerator:
         return '\n'.join(lines)
     
     def generate_enqueue_function(self, queue: EventQueueDef) -> str:
-        """エンキュー関数生成"""
+        """Enqueue function generation"""
         self._log_debug(f"Generating enqueue for: {getattr(queue, 'name', 'unknown')}")
         context = {'queue': queue}
         lines = []
@@ -257,7 +255,7 @@ class EventQueueGenerator:
         return '\n'.join(lines)
     
     def generate_dequeue_function(self, queue: EventQueueDef) -> str:
-        """デキュー関数生成"""
+        """Dequeue function generation"""
         self._log_debug(f"Generating dequeue for: {getattr(queue, 'name', 'unknown')}")
         context = {'queue': queue}
         lines = []
@@ -268,7 +266,7 @@ class EventQueueGenerator:
         return '\n'.join(lines)
     
     def generate_all_code(self, queue: EventQueueDef) -> str:
-        """キュー関連の全コード生成"""
+        """Generate all event queue code"""
         self._log_debug(f"Generating all code for: {getattr(queue, 'name', 'unknown')}")
         lines = []
         lines.append(self.generate_struct(queue))
@@ -279,7 +277,7 @@ class EventQueueGenerator:
         return '\n'.join(lines)
     
     def generate_all_structs(self, global_defs: GlobalDefinitions) -> str:
-        """全イベントキュー構造体生成"""
+        """Generate all event queue structs"""
         lines = []
         for queue in getattr(global_defs, 'event_queues', []):
             lines.append(self.generate_struct(queue))
@@ -287,7 +285,7 @@ class EventQueueGenerator:
         return '\n'.join(lines)
     
     def generate_all_functions(self, global_defs: GlobalDefinitions) -> str:
-        """全イベントキュー関数生成"""
+        """Generate all event queue functions"""
         lines = []
         for queue in getattr(global_defs, 'event_queues', []):
             lines.append(self.generate_enqueue_function(queue))
@@ -297,7 +295,7 @@ class EventQueueGenerator:
         return '\n'.join(lines)
     
     def generate_all(self, global_defs: GlobalDefinitions) -> str:
-        """全イベントキューコード生成"""
+        """Generate all event queue code"""
         lines = []
         for queue in getattr(global_defs, 'event_queues', []):
             lines.append(self.generate_all_code(queue))

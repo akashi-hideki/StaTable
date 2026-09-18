@@ -1,7 +1,5 @@
 # statable_gui/matrix_table.py
-"""
-状態遷移表ウィジェット（D&Dエディタ直接起動対応）
-"""
+"""\nState transition table widget (D&D editor direct launch support)\n"""
 
 from typing import List
 
@@ -39,11 +37,11 @@ def _truncate_text(text: str, max_chars: int = 40) -> str:
 def _build_transition_tooltip(trans: Transition) -> str:
     parts = []
     parts.append(f"タイトル: {trans.title}")
-    parts.append(f"遷移先: {trans.target if trans.target else '(内部)'}")
+    parts.append(f"遷移先: {trans.target if trans.target else '(internal)'}")
     if trans.event:
         parts.append(f"イベント: {trans.event}")
     else:
-        parts.append("イベント: 完了遷移")
+        parts.append("イベント: Completion transition")
     if trans.condition:
         parts.append(f"状態遷移条件:\n{trans.condition}")
     return "\n".join(parts)
@@ -73,7 +71,7 @@ class MatrixTableWidget(QTableWidget):
         self.condition_library = condition_library if condition_library else ConditionLibrary()
         self.literal_library = literal_library if literal_library else LiteralLibrary()
 
-        # ★ デバッグログ: MatrixTableWidget 初期化時の共有ライブラリ内容
+        # Debug log: shared library content at MatrixTableWidget initialization
         StaTableLogger.debug(
             f"MatrixTableWidget.__init__: roles={len(self.role_function_library.list_all())}, "
             f"conditions={len(self.condition_library.list_all())}, "
@@ -106,7 +104,7 @@ class MatrixTableWidget(QTableWidget):
         for event_name in events:
             event_obj = self.sm.events.get(event_name)
             delivery = event_obj.delivery_type if event_obj else EventDeliveryType.DIRECT
-            event_labels.append(_event_header_label(event_name if event_name else "完了", delivery))
+            event_labels.append(_event_header_label(event_name if event_name else "Completion", delivery))
         self.setVerticalHeaderLabels(event_labels)
 
         for row, event in enumerate(events):
@@ -124,7 +122,7 @@ class MatrixTableWidget(QTableWidget):
                 else:
                     item = QTableWidgetItem("")
                     item.setData(Qt.UserRole, [])
-                    item.setToolTip("遷移なし")
+                    item.setToolTip("遷移None")
                     self.setItem(row, col, item)
 
         self.resizeColumnsToContents()
@@ -149,13 +147,13 @@ class MatrixTableWidget(QTableWidget):
 
     def _generate_cell_label(self, trans: Transition, event: str) -> str:
         parts = []
-        if trans.title and trans.title != "(無題遷移)":
+        if trans.title and trans.title != "(untitled transition)":
             parts.append(trans.title)
         else:
             if trans.target:
                 parts.append(trans.target)
             else:
-                parts.append("(内部)")
+                parts.append("(internal)")
         if event:
             parts.append(f"({event})")
         if trans.condition:
@@ -168,19 +166,13 @@ class MatrixTableWidget(QTableWidget):
         if trans.target:
             parts.append(trans.target)
         else:
-            parts.append("(内部)")
+            parts.append("(internal)")
         if trans.condition:
             condition_display = _truncate_text(trans.condition, 30)
             parts.append(f"[{condition_display}]")
         return " ".join(parts)
     def open_transition_dialog(self, row: int, col: int):
-        """
-        遷移編集ダイアログを開く
-
-        【v1.6 変更】ActionDraft に layer_name を渡す（§11.2 #4）
-          code_widget._get_layer_name() がこれを最優先で参照するため、
-          ここで SM の層名を明示的に引き継ぐ。
-        """
+        """\n        Open the transition edit dialog\n\n        [v1.6 change] pass layer_name to ActionDraft (section 11.2 #4)\n          code_widget._get_layer_name() gives this the highest priority,\n          so explicitly propagate the SM's layer name here.\n        """
         state = self.horizontalHeaderItem(col).text() if self.horizontalHeaderItem(col) else ""
         raw_event = self.verticalHeaderItem(row).text() if self.verticalHeaderItem(row) else ""
         event_name = raw_event
@@ -188,7 +180,7 @@ class MatrixTableWidget(QTableWidget):
             event_name = event_name[4:]
         elif event_name.startswith("[D] "):
             event_name = event_name[4:]
-        if event_name == "完了":
+        if event_name == "Completion":
             event_name = ""
 
         StaTableLogger.debug(f"=== MatrixTableWidget.open_transition_dialog ===")
@@ -199,22 +191,22 @@ class MatrixTableWidget(QTableWidget):
         for i, t in enumerate(existing_list):
             StaTableLogger.debug(f"  existing[{i}]: condition='{t.condition}', pre_actions={t.pre_actions}, target={t.target}, title={t.title}")
 
-        # ★ v1.6: SM の layer_name を取得（空なら code_widget 側のフォールバックに任せる）
+        # v1.6: get SM's layer_name (if empty, defer to code_widget's fallback)
         layer_name = getattr(self.sm, 'layer_name', '') or ''
 
         draft = ActionDraft(
             source=state,
             event=event_name,
-            layer_name=layer_name,   # ★ v1.6 追加
+            layer_name=layer_name,   # v1.6 added
         )
         for trans in existing_list:
             fi = transition_to_flow_item(trans)
             StaTableLogger.debug(f"  converted flow_item: {fi}")
             draft.flow_items.append(fi)
 
-        # ★ 共有ライブラリ + 現在の SM のロール関数をマージ
-        #    （共有ライブラリが空でも SM のローカル関数を選べるようにする）
-        #    Stage 1/4 以降、ロール関数は qualified_name（'Driver.Init' 等）で扱う
+        # Merge shared library and current SM role functions
+        #    (Allow selecting SM's local functions even when the shared library is empty)
+        #   From Stage 1/4, role functions are handled by qualified_name (e.g., 'Driver.Init')
         role_func_names = []
         _seen = set()
 
@@ -225,7 +217,7 @@ class MatrixTableWidget(QTableWidget):
                 _seen.add(qn)
                 role_func_names.append(qn)
 
-        # 2. 現在の SM のロール関数から
+        # 2. 現在の SM のRole functionから
         for rf in self.sm.role_functions.values():
             qn = getattr(rf, 'qualified_name', None) or rf.name
             if qn and qn not in _seen:
@@ -234,7 +226,7 @@ class MatrixTableWidget(QTableWidget):
 
         states = list(self.sm.states.keys())
 
-        # ★ デバッグログ: ActionEditorDialog に渡す内容
+        # Debug log: content passed to ActionEditorDialog
         StaTableLogger.debug(
             f"open_transition_dialog: merged roles={len(role_func_names)} "
             f"(library={len(self.role_function_library.list_all())}, "
@@ -273,7 +265,7 @@ class MatrixTableWidget(QTableWidget):
                 self.sm.add_transition(trans)
             self.populate()
             self.transition_changed.emit()
-            StaTableLogger.info(f"Transition updated: {state} -{event_name or '完了'}-> {len(new_transitions)} transition(s)")
+            StaTableLogger.info(f"Transition updated: {state} -{event_name or 'Completion'}-> {len(new_transitions)} transition(s)")
         else:
             StaTableLogger.debug("  -> D&D editor cancelled")
 

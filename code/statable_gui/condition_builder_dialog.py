@@ -1,13 +1,11 @@
 # statable_gui/condition_builder_dialog.py
-"""
-遷移条件ビルダーダイアログ（リテラル化対応・イベント名編集欄追加・遷移先ステート指定対応）
-"""
+"""\nTransition condition builder dialog (literal support / event name edit field / target state selection)\n"""
 
 import re
 import sys
 import os
 
-# パス設定
+# Path settings
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
@@ -35,8 +33,8 @@ class ConditionBuilderDialog(QDialog):
                  state_machine: StateMachine = None,
                  literal_library: LiteralLibrary = None,
                  states: list = None,
-                 target_state: str = "",          # 追加：現在の遷移先
-                 else_target_state: str = "",     # 追加：現在のelse遷移先
+                 target_state: str = "",          # Add：現在のTarget
+                 else_target_state: str = "",     # Add：現在のelseTarget
                  parent=None):
         super().__init__(parent)
         self.setWindowTitle("遷移条件ビルダー")
@@ -47,7 +45,7 @@ class ConditionBuilderDialog(QDialog):
         self.literal_library = literal_library if literal_library else LiteralLibrary()
         self.event_name = event_name
 
-        # 遷移先ステート選択肢（外部から渡されたリスト、なければステートマシンから取得）
+        # Target state choices (list passed from outside, or retrieved from state machine)
         self.states = states if states is not None else self._get_states_from_state_machine()
         self.target_state = target_state
         self.else_target_state = else_target_state
@@ -71,27 +69,27 @@ class ConditionBuilderDialog(QDialog):
         main_layout.setContentsMargins(4, 4, 4, 4)
         main_layout.setSpacing(4)
 
-        # イベント名編集欄
+        # Event nameEdit欄
         event_layout = QHBoxLayout()
-        event_layout.addWidget(QLabel("イベント名:"))
+        event_layout.addWidget(QLabel("Event name:"))
         self.event_name_edit = QLineEdit()
         event_layout.addWidget(self.event_name_edit)
         main_layout.addLayout(event_layout)
 
-        # 遷移先ステート選択
+        # TargetステートSelection
         target_layout = QHBoxLayout()
-        target_layout.addWidget(QLabel("遷移先:"))
+        target_layout.addWidget(QLabel("Target:"))
         self.target_combo = QComboBox()
-        self.target_combo.addItem("")           # 未設定用
+        self.target_combo.addItem("")           # Unset placeholder
         self.target_combo.addItems(self.states)
         target_layout.addWidget(self.target_combo)
         main_layout.addLayout(target_layout)
 
-        # else遷移先ステート選択
+        # elseTargetステートSelection
         else_target_layout = QHBoxLayout()
-        else_target_layout.addWidget(QLabel("else遷移先:"))
+        else_target_layout.addWidget(QLabel("else target:"))
         self.else_target_combo = QComboBox()
-        self.else_target_combo.addItem("")      # 未設定用
+        self.else_target_combo.addItem("")      # Unset placeholder
         self.else_target_combo.addItems(self.states)
         else_target_layout.addWidget(self.else_target_combo)
         main_layout.addLayout(else_target_layout)
@@ -99,7 +97,7 @@ class ConditionBuilderDialog(QDialog):
         main_splitter = QSplitter(Qt.Horizontal)
 
         # 左ペイン
-        left_widget = QGroupBox("挿入するシンボル")
+        left_widget = QGroupBox("Insertするシンボル")
         left_layout = QVBoxLayout(left_widget)
         left_layout.setContentsMargins(4, 4, 4, 4)
         left_layout.setSpacing(2)
@@ -112,7 +110,7 @@ class ConditionBuilderDialog(QDialog):
         num_layout = QHBoxLayout()
         self.num_input = QLineEdit()
         self.num_input.setPlaceholderText("数値リテラル")
-        num_insert_btn = QPushButton("挿入")
+        num_insert_btn = QPushButton("Insert")
         num_insert_btn.clicked.connect(self._insert_number)
         num_layout.addWidget(self.num_input)
         num_layout.addWidget(num_insert_btn)
@@ -126,8 +124,8 @@ class ConditionBuilderDialog(QDialog):
         right_layout.setContentsMargins(4, 4, 4, 4)
         right_layout.setSpacing(2)
 
-        # リテラル化ボタン
-        literal_btn = QPushButton("リテラル化")
+        # Literalizeボタン
+        literal_btn = QPushButton("Literalize")
         literal_btn.clicked.connect(self._open_literalization)
         right_layout.addWidget(literal_btn, alignment=Qt.AlignLeft)
 
@@ -178,7 +176,7 @@ class ConditionBuilderDialog(QDialog):
         main_layout.addWidget(buttons)
 
     def set_current_targets(self):
-        """現在の遷移先をコンボボックスに反映する"""
+        """現在のTargetをコンボボックスに反映する"""
         if self.target_state in self.states:
             idx = self.target_combo.findText(self.target_state)
             if idx >= 0:
@@ -189,11 +187,11 @@ class ConditionBuilderDialog(QDialog):
                 self.else_target_combo.setCurrentIndex(idx)
 
     def _populate_tree(self):
-        """利用可能なシンボルをカテゴリ別にツリーへ追加"""
+        """利用可能なシンボルをCategory別にツリーへAdd"""
         self.symbol_tree.clear()
 
-        # グローバル変数
-        global_vars_item = QTreeWidgetItem(["グローバル変数"])
+        # Global variables
+        global_vars_item = QTreeWidgetItem(["Global variables"])
         for var in getattr(self.global_defs, 'variables', []):
             child = QTreeWidgetItem([var.name])
             child.setData(0, Qt.UserRole, var.name)
@@ -201,8 +199,8 @@ class ConditionBuilderDialog(QDialog):
             global_vars_item.addChild(child)
         self.symbol_tree.addTopLevelItem(global_vars_item)
 
-        # イベントフラグ
-        flags_item = QTreeWidgetItem(["イベントフラグ"])
+        # Event flags
+        flags_item = QTreeWidgetItem(["Event flags"])
         for flag in getattr(self.global_defs, 'flags', []):
             child = QTreeWidgetItem([flag.name])
             child.setData(0, Qt.UserRole, flag.name)
@@ -222,8 +220,8 @@ class ConditionBuilderDialog(QDialog):
                 event_vars_item.addChild(child)
         self.symbol_tree.addTopLevelItem(event_vars_item)
 
-        # ロール関数（bool）
-        role_funcs_item = QTreeWidgetItem(["ロール関数（bool）"])
+        # Role function（bool）
+        role_funcs_item = QTreeWidgetItem(["Role function（bool）"])
         for rf in self.state_machine.role_functions.values():
             if getattr(rf, 'return_type', '') == 'bool':
                 symbol = f"RoleFunc_{rf.name}(...)"
@@ -346,7 +344,7 @@ class ConditionBuilderDialog(QDialog):
     def _open_literalization(self):
         text = self.condition_edit.toPlainText()
         if not text.strip():
-            QMessageBox.information(self, "情報", "条件式が入力されていません。")
+            QMessageBox.information(self, "Info", "条件式が入力されていません。")
             return
 
         dialog = LiteralizationDialog(text, self.literal_library, self)
@@ -373,7 +371,7 @@ class ConditionBuilderDialog(QDialog):
 
 
 class LiteralizationDialog(QDialog):
-    """条件式中の数値をリテラル化するダイアログ"""
+    """条件式中の数値をLiteralizeするダイアログ"""
 
     def __init__(self, condition_text: str, literal_library: LiteralLibrary, parent=None):
         super().__init__(parent)
@@ -381,7 +379,7 @@ class LiteralizationDialog(QDialog):
         self.literal_library = literal_library
         self.updated_condition_text = condition_text
 
-        self.setWindowTitle("リテラル化")
+        self.setWindowTitle("Literalize")
         self.setMinimumSize(600, 400)
 
         self._setup_ui()
@@ -389,7 +387,7 @@ class LiteralizationDialog(QDialog):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("条件式中の数値をリテラル化します。各行の数値に名前を付けてください。"))
+        layout.addWidget(QLabel("Literalize numeric values in the condition expression. Give each value a name."))
 
         self.table = QTableWidget(0, 3)
         self.table.setHorizontalHeaderLabels(["行", "数値", "リテラル名"])

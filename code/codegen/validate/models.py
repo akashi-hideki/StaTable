@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 
 
 class ValidationSeverity(Enum):
-    """検証重大度"""
+    """検証Severity"""
     ERROR = "error"
     WARNING = "warning"
     INFO = "info"
@@ -24,9 +24,9 @@ class ValidationSeverity(Enum):
             'ERROR': cls.ERROR,
             'WARNING': cls.WARNING,
             'INFO': cls.INFO,
-            'エラー': cls.ERROR,
-            '警告': cls.WARNING,
-            '情報': cls.INFO,
+            'Error': cls.ERROR,
+            'Warning': cls.WARNING,
+            'Info': cls.INFO,
         }
         return value_map.get(value, cls.INFO)
 

@@ -1,7 +1,5 @@
 # statable_gui/transition_editor_direct/flow_widget.py
-"""
-ビジュアル編集フローリスト（D&D + ダブルクリック編集）
-"""
+"""\nVisual edit flow list (D&D + double-click edit)\n"""
 
 import json
 from PySide6.QtCore import Qt, Signal
@@ -15,7 +13,7 @@ from .edit_dialogs import FunctionEditDialog, TransitionEditDialog
 
 
 class FlowListWidget(QListWidget):
-    """D&Dと行挿入をサポートするフローリスト"""
+    """D&Dと行Insertをサポートするフローリスト"""
     MIME_TYPE = "application/x-flow-item"
 
     def __init__(self, parent=None):
@@ -44,7 +42,7 @@ class FlowListWidget(QListWidget):
             item_type = data.get("item_type", "function")
             name = data.get("name", "")
 
-            # 挿入位置を決定
+            # Insert位置を決定
             drop_pos = event.position().toPoint()
             item_at_pos = self.itemAt(drop_pos)
             if item_at_pos is not None:
@@ -56,7 +54,7 @@ class FlowListWidget(QListWidget):
             else:
                 insert_row = self.count()
 
-            # FlowItemを作成して挿入
+            # FlowItemを作成してInsert
             flow_item = FlowItem(item_type=item_type, name=name)
             list_item = QListWidgetItem(name)
             list_item.setData(Qt.UserRole, flow_item)
@@ -76,7 +74,7 @@ class FlowListWidget(QListWidget):
 
 
 class FlowWidget(QWidget):
-    """ビジュアル編集ウィジェット"""
+    """ビジュアルEditウィジェット"""
 
     draft_updated = Signal()
 
@@ -91,7 +89,7 @@ class FlowWidget(QWidget):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("動作フロー（D&Dで配置・ダブルクリックで編集）"))
+        layout.addWidget(QLabel("動作フロー（D&Dで配置・Double-click to edit）"))
 
         # カスタムリスト
         self.flow_list = FlowListWidget()
@@ -99,9 +97,9 @@ class FlowWidget(QWidget):
         self.flow_list.itemDoubleClicked.connect(self._on_item_double_clicked)
         layout.addWidget(self.flow_list)
 
-        # デフォルト遷移先
+        # デフォルトTarget
         default_layout = QHBoxLayout()
-        default_layout.addWidget(QLabel("デフォルト遷移先:"))
+        default_layout.addWidget(QLabel("デフォルトTarget:"))
         self.default_target_combo = QComboBox()
         self.default_target_combo.setEditable(True)
         self.default_target_combo.addItems(self.states)
@@ -138,7 +136,7 @@ class FlowWidget(QWidget):
         self.draft.default_target = self.default_target_combo.currentText()
         self.draft_updated.emit()
 
-    # ===== ダブルクリック編集 =====
+    # ===== ダブルクリックEdit =====
     def _on_item_double_clicked(self, item):
         flow_item = item.data(Qt.UserRole)
         if not flow_item:

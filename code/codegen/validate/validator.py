@@ -29,7 +29,7 @@ from validate.items.custom_type_validator import CustomTypeValidator
 
 
 class CodeGenerationValidator:
-    """コード生成検証メインクラス"""
+    """Code generation検証メインクラス"""
     
     VALIDATORS: Dict[str, Type] = {
         'state': StateValidator,

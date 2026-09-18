@@ -1,17 +1,5 @@
 # statable_gui/transition_editor_direct/code_widget.py
-"""
-コード表示ウィジェット（読み取り専用、ActionDraft対応）
-- デバッグログ強化版
-- 各FlowItemの処理内容を詳細に出力
-
-【v1.5 修正】
-  - void RoleFunc_xxx(ctx, transition) という古い形式を廃止
-  - 実ファイル生成（role_function_generator.py）と整合する形式に統一:
-    * 戻り値: int（role_function_generator の規約に合わせる）
-    * 関数名: RoleFunc_<Namespace>_<PascalName>（ドットを _ に変換）
-    * 引数順: (const TransitionContext_<Layer>_t *transition, SystemContext_t *ctx)
-  - qualified_name（'Driver.Init'）から Namespace と Name を分離
-"""
+"""\nCode display widget (read-only, ActionDraft support)\n- Enhanced debug logging\n- Detailed output of each FlowItem's processing\n\n[v1.5 fix]\n  - Removed the old form `void RoleFunc_xxx(ctx, transition)`\n  - Unified to a form consistent with real file generation (role_function_generator.py):\n    * Return type: int (per role_function_generator convention)\n    * Function name: RoleFunc_<Namespace>_<PascalName> (dots replaced with _)\n    * Arg order: (const TransitionContext_<Layer>_t *transition, SystemContext_t *ctx)\n  - Split Namespace and Name from qualified_name ('Driver.Init')\n"""
 
 import logging
 import re
@@ -22,7 +10,7 @@ from .draft import ActionDraft, ensure_list
 logger = logging.getLogger("transition_editor_direct.code")
 
 
-# C 識別子として有効な形式（`retry_count++` などを弾く）
+# A valid C identifier form (rejects e.g. `retry_count++`)
 _VALID_C_IDENTIFIER = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
 
 
@@ -53,18 +41,11 @@ class CodeWidget(QPlainTextEdit):
         logger.debug(f"Code updated ({len(code)} chars)")
 
     # ==================================================================
-    # 層名と型名の解決
+    # 層名とType nameの解決
     # ==================================================================
     def _get_layer_name(self) -> str:
-        """
-        ActionDraft から層名を推定
-
-        - draft.role_func_map 等から推測できないため、
-          関数名に含まれる Namespace（'Middleware.HandleErr' の 'Middleware'）
-          を集計し、最頻値を採用する
-        - 判定不能なら空文字（層なし）
-        """
-        # 1. ActionDraft に layer_name 属性があればそれを使う（将来拡張）
+        """\n        Infer layer name from ActionDraft\n\n        - Cannot be inferred from draft.role_func_map etc.,\n          so collect the Namespace part of function names\n          (e.g., 'Middleware' from 'Middleware.HandleErr')\n          and use the most frequent value\n        - If undeterminable, empty string (no layer)\n        """
+        # 1. If ActionDraft has a layer_name attribute, use it (future extension)
         layer = getattr(self.draft, 'layer_name', '') or ''
         if layer:
             return layer
@@ -93,19 +74,10 @@ class CodeWidget(QPlainTextEdit):
         return f"TransitionContext_{layer}_t" if layer else "TransitionContext_t"
 
     # ==================================================================
-    # 参照名 → RoleFunc 関数名
+    # 参照名 → RoleFunc Function name
     # ==================================================================
     def _role_func_name(self, ref: str) -> str:
-        """
-        参照文字列を RoleFunc_<Namespace>_<PascalName> に変換
-
-        入力例:
-          'Middleware.HandleErr'  → 'RoleFunc_Middleware_HandleErr'
-          'Driver.Init'           → 'RoleFunc_Driver_Init'
-          'HandleError'           → 'RoleFunc_HandleError'
-          'RoleFunc_Xxx'          → 'RoleFunc_Xxx'（既にプレフィックス付き）
-          'retry_count++'         → ''（不正な識別子）
-        """
+        """\n        Convert reference string to RoleFunc_<Namespace>_<PascalName>\n\n        Input examples:\n          'Middleware.HandleErr'  -> 'RoleFunc_Middleware_HandleErr'\n          'Driver.Init'           -> 'RoleFunc_Driver_Init'\n          'HandleError'           -> 'RoleFunc_HandleError'\n          'RoleFunc_Xxx'          -> 'RoleFunc_Xxx' (already prefixed)\n          'retry_count++'         -> '' (invalid identifier)\n        """
         if not ref:
             return ""
         name = ref.strip()
@@ -116,7 +88,7 @@ class CodeWidget(QPlainTextEdit):
         if '(' in name:
             name = name.split('(', 1)[0].strip()
 
-        # 既に RoleFunc_ で始まる場合はそのまま
+        # If it already starts with RoleFunc_, keep as-is
         if name.startswith("RoleFunc_"):
             rest = name[len("RoleFunc_"):]
             rest = rest.replace('.', '_')
@@ -143,7 +115,7 @@ class CodeWidget(QPlainTextEdit):
         return f"RoleFunc_{pascal}"
 
     # ==================================================================
-    # コード生成
+    # Code generation
     # ==================================================================
     def _generate_code(self) -> str:
         logger.debug("=== _generate_code START ===")
@@ -157,7 +129,7 @@ class CodeWidget(QPlainTextEdit):
         if self.draft.system_globals:
             lines.append("")
 
-        # ロール関数プロトタイプ収集（重複除去）
+        # Role functionプロトタイプ収集（重複除去）
         proto_names = set()
         for item in self.draft.flow_items:
             logger.debug(
@@ -223,7 +195,7 @@ class CodeWidget(QPlainTextEdit):
                     if target:
                         lines.append(f"    next_state = {target};")
                     else:
-                        lines.append("    // 遷移先未設定")
+                        lines.append("    // Target未設定")
                     lines.append("}")
                     if has_else:
                         lines.append("else {")
@@ -240,13 +212,13 @@ class CodeWidget(QPlainTextEdit):
                         if else_target:
                             lines.append(f"    next_state = {else_target};")
                         else:
-                            lines.append("    // else遷移先（未設定）")
+                            lines.append("    // elseTarget（未設定）")
                         lines.append("}")
                 else:
                     if target:
                         lines.append(f"next_state = {target};")
                     else:
-                        lines.append("// 遷移先未設定")
+                        lines.append("// Target未設定")
 
             elif item.item_type == "function":
                 func_name = self._role_func_name(item.name)

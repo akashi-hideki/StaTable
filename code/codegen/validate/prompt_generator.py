@@ -3,7 +3,7 @@
 AIプロンプト生成クラス
 
 【v1.8 §11.2 #7】
-  - generate_review_prompt を削除（未使用・呼び出し元なし）
+  - generate_review_prompt をDelete（未使用・呼び出し元None）
 """
 
 import sys
@@ -47,13 +47,13 @@ class AIPromptGenerator:
                     line += f" [アクション: {t.action}]"
                 lines.append(line)
         else:
-            lines.append("- 遷移なし")
+            lines.append("- 遷移None")
         lines.append(f"\n### 初期状態\n{sm.initial_state or '未設定'}")
         return '\n'.join(lines)
 
     def _format_validation(self, validation_result) -> str:
         if not validation_result or not validation_result.issues:
-            return "### 内部検証結果\n問題なし"
+            return "### 内部検証結果\n問題None"
         lines = ["### 内部検証で検出された問題"]
         for issue in validation_result.issues:
             lines.append(f"- [{issue.severity.value.upper()}] {issue.message}")

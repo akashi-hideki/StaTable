@@ -1,6 +1,6 @@
 # statable_gui/transition_editor_direct/system_global_dialog.py
 """
-システムグローバル変数 別画面
+システムGlobal variables 別画面
 """
 
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QInputDialog
@@ -12,7 +12,7 @@ class SystemGlobalDialog(QDialog):
     def __init__(self, draft, parent=None):
         super().__init__(parent)
         self.draft = draft
-        self.setWindowTitle("システムグローバル変数")
+        self.setWindowTitle("システムGlobal variables")
         self.setMinimumSize(400, 300)
 
         layout = QVBoxLayout(self)
@@ -20,15 +20,15 @@ class SystemGlobalDialog(QDialog):
         layout.addWidget(self.list_widget)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("追加")
+        add_btn = QPushButton("Add")
         add_btn.clicked.connect(self._add)
         btn_layout.addWidget(add_btn)
-        del_btn = QPushButton("削除")
+        del_btn = QPushButton("Delete")
         del_btn.clicked.connect(self._delete)
         btn_layout.addWidget(del_btn)
         layout.addLayout(btn_layout)
 
-        close_btn = QPushButton("閉じる")
+        close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn)
 
@@ -40,7 +40,7 @@ class SystemGlobalDialog(QDialog):
             self.list_widget.addItem(f"{g.name} : {g.type} = {g.initial_value}")
 
     def _add(self):
-        name, ok = QInputDialog.getText(self, "追加", "変数名:")
+        name, ok = QInputDialog.getText(self, "Add", "Variable name:")
         if ok and name:
             self.draft.system_globals.append(SystemGlobal(name=name))
             self._load()

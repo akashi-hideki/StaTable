@@ -3,7 +3,7 @@
 変更適用エンジン（修正版）
 
 【v1.6 変更】
-  - _handlers に 'remove_role_function' を追加（ChangeActionType との不一致解消）
+  - _handlers に 'remove_role_function' をAdd（ChangeActionType との不一致解消）
   - _remove_role_function メソッドを実装
 """
 
@@ -35,7 +35,7 @@ class ChangeApplier:
             'remove_transition': self._remove_transition,
             'update_transition': self._update_transition,
             'add_role_function': self._add_role_function,
-            'remove_role_function': self._remove_role_function,   # ★ v1.6 追加
+            'remove_role_function': self._remove_role_function,   # v1.6 added
             'add_variable': self._add_variable,
             'add_flag': self._add_flag,
         }
@@ -104,7 +104,7 @@ class ChangeApplier:
         logger.debug(f"_add_transition: {source} --[{event}]--> {target}")
 
         if not all([source, event, target]):
-            return False, "遷移の情報が不足しています"
+            return False, "遷移のInfoが不足しています"
 
         transition = Transition(
             source=source, event=event, target=target,
@@ -135,7 +135,7 @@ class ChangeApplier:
                 f"_add_state: unknown type '{type_name}' -> NORMAL fallback"
             )
 
-        # ★ v1.6: parent パラメータを受理（REGION / CONCURRENT 用）
+        # ★ v1.6: parent Parameterを受理（REGION / CONCURRENT 用）
         parent = params.get('parent', None) or None
 
         self.sm.add_state(State(
@@ -151,7 +151,7 @@ class ChangeApplier:
 
         name = params.get('name', '')
         if not name:
-            return False, "イベント名が指定されていません"
+            return False, "Event nameが指定されていません"
         if name in self.sm.events:
             return False, f"イベント「{name}」は既に存在します"
 
@@ -192,7 +192,7 @@ class ChangeApplier:
 
         name = params.get('name', '')
         if not name:
-            return False, "関数名が指定されていません"
+            return False, "Function nameが指定されていません"
         if name in self.sm.role_functions:
             return False, f"関数「{name}」は既に存在します"
 
@@ -207,15 +207,15 @@ class ChangeApplier:
 
     def _remove_role_function(self, params: Dict) -> Tuple[bool, str]:
         """
-        ロール関数を削除する。
+        Role functionをDeleteする。
 
-        v1.6 追加。ChangeActionType.REMOVE_ROLE_FUNCTION と対応。
+        v1.6 Add。ChangeActionType.REMOVE_ROLE_FUNCTION と対応。
         params:
           name: 'HandleErr' または 'Middleware.HandleErr' のどちらでも可
         """
         name = params.get('name', '')
         if not name:
-            return False, "関数名が指定されていません"
+            return False, "Function nameが指定されていません"
 
         logger.debug(
             f"_remove_role_function: name='{name}', "

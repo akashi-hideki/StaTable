@@ -16,21 +16,21 @@ from .logger import StaTableLogger
 
 
 class TitleEditWidget(QWidget):
-    """タイトル入力ウィジェット"""
+    """Title入力ウィジェット"""
 
-    def __init__(self, parent=None, title="", placeholder="一覧に表示されるラベル（空なら自動設定）"):
+    def __init__(self, parent=None, title="", placeholder="Label shown in the list (auto-set if empty)"):
         super().__init__(parent)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.label = QLabel("タイトル *")
+        self.label = QLabel("Title *")
         self.label.setFont(QFont("sans-serif", 10, QFont.Bold))
         layout.addWidget(self.label)
 
         self.edit = QLineEdit()
         self.edit.setText(title)
         self.edit.setPlaceholderText(placeholder)
-        self.edit.setToolTip("この項目のタイトルを入力してください。空の場合は自動で仮タイトルが設定されます。")
+        self.edit.setToolTip("Enter the title of this item. If empty, a provisional title is set automatically.")
         layout.addWidget(self.edit, stretch=1)
 
     def get_title(self) -> str:
@@ -46,7 +46,7 @@ class TitleEditWidget(QWidget):
 
 
 class TypeComboBox(QWidget):
-    """型選択用コンボボックス"""
+    """TypeSelection用コンボボックス"""
 
     def __init__(self, parent=None, global_defs: Optional[GlobalDefinitions] = None):
         super().__init__(parent)
@@ -60,8 +60,8 @@ class TypeComboBox(QWidget):
         self._refresh_types()
         layout.addWidget(self.combo, stretch=1)
 
-        add_btn = QPushButton("追加...")
-        add_btn.setToolTip("ユーザー定義型を追加・編集")
+        add_btn = QPushButton("Add...")
+        add_btn.setToolTip("ユーザー定義TypeをAdd・Edit")
         add_btn.clicked.connect(self._open_type_manager)
         layout.addWidget(add_btn)
 
@@ -100,7 +100,7 @@ class TypeComboBox(QWidget):
 
 
 class GroupComboBox(QWidget):
-    """グループ選択用コンボボックス"""
+    """GroupSelection用コンボボックス"""
 
     def __init__(self, parent=None, groups: Optional[List[str]] = None):
         super().__init__(parent)
@@ -114,8 +114,8 @@ class GroupComboBox(QWidget):
         self._refresh_groups()
         layout.addWidget(self.combo, stretch=1)
 
-        add_btn = QPushButton("追加...")
-        add_btn.setToolTip("新しいグループを追加")
+        add_btn = QPushButton("Add...")
+        add_btn.setToolTip("新しいGroupをAdd")
         add_btn.clicked.connect(self._add_group)
         layout.addWidget(add_btn)
 
@@ -150,7 +150,7 @@ class GroupComboBox(QWidget):
 
 
 class EventComboBox(QComboBox):
-    """イベント選択用コンボボックス"""
+    """イベントSelection用コンボボックス"""
 
     def __init__(self, parent=None, event_names: Optional[List[str]] = None):
         super().__init__(parent)
@@ -162,7 +162,7 @@ class EventComboBox(QComboBox):
 
 
 class StateComboBox(QComboBox):
-    """状態選択用コンボボックス"""
+    """状態Selection用コンボボックス"""
 
     def __init__(self, parent=None, state_names: Optional[List[str]] = None):
         super().__init__(parent)
@@ -173,11 +173,11 @@ class StateComboBox(QComboBox):
 
 
 class GroupAddDialog(QDialog):
-    """グループ追加ダイアログ"""
+    """GroupAddダイアログ"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("グループ追加")
+        self.setWindowTitle("GroupAdd")
         self.setMinimumWidth(350)
 
         layout = QVBoxLayout(self)
@@ -185,8 +185,8 @@ class GroupAddDialog(QDialog):
         layout.addLayout(form)
 
         self.name_edit = QLineEdit()
-        self.name_edit.setPlaceholderText("新しいグループ名を入力")
-        form.addRow("グループ名", self.name_edit)
+        self.name_edit.setPlaceholderText("新しいGroup名を入力")
+        form.addRow("Group名", self.name_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._on_accept)
@@ -195,7 +195,7 @@ class GroupAddDialog(QDialog):
 
     def _on_accept(self):
         if not self.name_edit.text().strip():
-            QMessageBox.warning(self, "警告", "グループ名を入力してください。")
+            QMessageBox.warning(self, "Warning", "Group名を入力してください。")
             return
         self.accept()
 
@@ -204,18 +204,18 @@ class GroupAddDialog(QDialog):
 
 
 class TypeManagerDialog(QDialog):
-    """ユーザー定義型管理ダイアログ"""
+    """ユーザー定義Type管理ダイアログ"""
 
     def __init__(self, parent=None, global_defs: Optional[GlobalDefinitions] = None):
         super().__init__(parent)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
-        self.setWindowTitle("ユーザー定義型管理")
+        self.setWindowTitle("ユーザー定義Type管理")
         self.setMinimumSize(800, 500)
 
         layout = QVBoxLayout(self)
 
         self.table = QTableWidget(0, 3)
-        self.table.setHorizontalHeaderLabels(["タイトル", "型名", "メンバ数"])
+        self.table.setHorizontalHeaderLabels(["Title", "Type name", "メンバ数"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -224,11 +224,11 @@ class TypeManagerDialog(QDialog):
         layout.addWidget(self.table, stretch=1)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("追加")
+        add_btn = QPushButton("Add")
         add_btn.clicked.connect(self._add_type)
-        edit_btn = QPushButton("編集")
+        edit_btn = QPushButton("Edit")
         edit_btn.clicked.connect(self._edit_type)
-        del_btn = QPushButton("削除")
+        del_btn = QPushButton("Delete")
         del_btn.clicked.connect(self._delete_type)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(edit_btn)
@@ -236,7 +236,7 @@ class TypeManagerDialog(QDialog):
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
-        close_btn = QPushButton("閉じる")
+        close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn, alignment=Qt.AlignRight)
 
@@ -266,10 +266,10 @@ class TypeManagerDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             new_type = dlg.get_custom_type()
             if not new_type.name:
-                QMessageBox.warning(self, "警告", "型名を入力してください。")
+                QMessageBox.warning(self, "Warning", "Please enter a type name.")
                 return
             if any(t.name == new_type.name for t in self.global_defs.custom_types):
-                QMessageBox.warning(self, "警告", f"型 '{new_type.name}' は既に存在します。")
+                QMessageBox.warning(self, "Warning", f"型 '{new_type.name}' は既に存在します。")
                 return
             self.global_defs.custom_types.append(new_type)
             self._refresh_table()
@@ -283,7 +283,7 @@ class TypeManagerDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             new_type = dlg.get_custom_type()
             if not new_type.name:
-                QMessageBox.warning(self, "警告", "型名を入力してください。")
+                QMessageBox.warning(self, "Warning", "Please enter a type name.")
                 return
             target.name = new_type.name
             target.description = new_type.description
@@ -297,7 +297,7 @@ class TypeManagerDialog(QDialog):
         if not target:
             return
         reply = QMessageBox.question(
-            self, "確認", f"型 '{target.title}' を削除しますか？",
+            self, "Confirm", f"型 '{target.title}' を削除しますか？",
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
@@ -307,12 +307,12 @@ class TypeManagerDialog(QDialog):
 
 
 class TypeEditDialog(QDialog):
-    """ユーザー定義型編集ダイアログ"""
+    """ユーザー定義TypeEditダイアログ"""
 
     def __init__(self, parent=None, custom_type: Optional[CustomTypeDef] = None):
         super().__init__(parent)
         self.custom_type = custom_type if custom_type else CustomTypeDef(name="", title="")
-        self.setWindowTitle("ユーザー定義型編集")
+        self.setWindowTitle("ユーザー定義TypeEdit")
         self.setMinimumSize(700, 500)
 
         layout = QVBoxLayout(self)
@@ -320,18 +320,18 @@ class TypeEditDialog(QDialog):
         layout.addLayout(form)
 
         self.title_edit = QLineEdit(self.custom_type.title)
-        self.title_edit.setPlaceholderText("一覧に表示されるラベル（空なら自動設定）")
-        form.addRow("タイトル *", self.title_edit)
+        self.title_edit.setPlaceholderText("Label shown in the list (auto-set if empty)")
+        form.addRow("Title *", self.title_edit)
 
         self.name_edit = QLineEdit(self.custom_type.name)
-        form.addRow("型名", self.name_edit)
+        form.addRow("Type name", self.name_edit)
 
         self.desc_edit = QLineEdit(self.custom_type.description)
-        form.addRow("説明", self.desc_edit)
+        form.addRow("Description", self.desc_edit)
 
         layout.addWidget(QLabel("メンバ一覧:"))
         self.member_table = QTableWidget(0, 5)
-        self.member_table.setHorizontalHeaderLabels(["メンバ名", "型", "ビット幅", "配列", "説明"])
+        self.member_table.setHorizontalHeaderLabels(["Member name", "Type", "Bit width", "Array", "Description"])
         self.member_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.member_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.member_table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -340,11 +340,11 @@ class TypeEditDialog(QDialog):
         layout.addWidget(self.member_table, stretch=1)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("メンバ追加")
+        add_btn = QPushButton("メンバAdd")
         add_btn.clicked.connect(self._add_member)
-        edit_btn = QPushButton("メンバ編集")
+        edit_btn = QPushButton("メンバEdit")
         edit_btn.clicked.connect(self._edit_member)
-        del_btn = QPushButton("メンバ削除")
+        del_btn = QPushButton("メンバDelete")
         del_btn.clicked.connect(self._delete_member)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(edit_btn)
@@ -382,10 +382,10 @@ class TypeEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             member = dlg.get_member()
             if not member.name:
-                QMessageBox.warning(self, "警告", "メンバ名を入力してください。")
+                QMessageBox.warning(self, "Warning", "Please enter a member name.")
                 return
             if any(m.name == member.name for m in self.custom_type.members):
-                QMessageBox.warning(self, "警告", f"メンバ '{member.name}' は既に存在します。")
+                QMessageBox.warning(self, "Warning", f"メンバ '{member.name}' は既に存在します。")
                 return
             self.custom_type.members.append(member)
             self._refresh_member_table()
@@ -399,7 +399,7 @@ class TypeEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             new_member = dlg.get_member()
             if not new_member.name:
-                QMessageBox.warning(self, "警告", "メンバ名を入力してください。")
+                QMessageBox.warning(self, "Warning", "Please enter a member name.")
                 return
             target.name = new_member.name
             target.data_type = new_member.data_type
@@ -420,9 +420,9 @@ class TypeEditDialog(QDialog):
 
     def _on_accept(self):
         if not self.title_edit.text().strip():
-            self.title_edit.setText(f"型: {self.name_edit.text().strip() or '(無名)'}")
+            self.title_edit.setText(f"型: {self.name_edit.text().strip() or '(unnamed)'}")
         if not self.name_edit.text().strip():
-            QMessageBox.warning(self, "警告", "型名を入力してください。")
+            QMessageBox.warning(self, "Warning", "Please enter a type name.")
             return
         self.accept()
 
@@ -436,12 +436,12 @@ class TypeEditDialog(QDialog):
 
 
 class StructMemberEditDialog(QDialog):
-    """構造体メンバ編集ダイアログ"""
+    """構造体メンバEditダイアログ"""
 
     def __init__(self, parent=None, member: Optional[StructMemberDef] = None):
         super().__init__(parent)
         self.member = member if member else StructMemberDef(name="", data_type="uint8_t")
-        self.setWindowTitle("構造体メンバ編集")
+        self.setWindowTitle("構造体メンバEdit")
         self.setMinimumWidth(450)
 
         layout = QVBoxLayout(self)
@@ -449,11 +449,11 @@ class StructMemberEditDialog(QDialog):
         layout.addLayout(form)
 
         self.title_edit = QLineEdit(self.member.title)
-        self.title_edit.setPlaceholderText("一覧に表示されるラベル（空なら自動設定）")
-        form.addRow("タイトル *", self.title_edit)
+        self.title_edit.setPlaceholderText("Label shown in the list (auto-set if empty)")
+        form.addRow("Title *", self.title_edit)
 
         self.name_edit = QLineEdit(self.member.name)
-        form.addRow("メンバ名", self.name_edit)
+        form.addRow("Member name", self.name_edit)
 
         self.type_combo = QComboBox()
         self.type_combo.setEditable(True)
@@ -467,7 +467,7 @@ class StructMemberEditDialog(QDialog):
             self.type_combo.setCurrentIndex(idx)
         else:
             self.type_combo.setCurrentText(self.member.data_type)
-        form.addRow("型", self.type_combo)
+        form.addRow("Type", self.type_combo)
 
         # ビットフィールド
         self.bitfield_check = QCheckBox("ビットフィールドを使用する")
@@ -477,17 +477,17 @@ class StructMemberEditDialog(QDialog):
         self.bit_width_spin = QSpinBox()
         self.bit_width_spin.setRange(1, 64)
         self.bit_width_spin.setValue(self.member.bit_width if self.member.bit_width > 0 else 1)
-        form.addRow("ビット幅", self.bit_width_spin)
+        form.addRow("Bit width", self.bit_width_spin)
 
-        # 配列
-        self.array_check = QCheckBox("配列を使用する")
+        # Array
+        self.array_check = QCheckBox("Use array")
         self.array_check.setChecked(self.member.array_size > 0)
         form.addRow("", self.array_check)
 
         self.array_size_spin = QSpinBox()
         self.array_size_spin.setRange(1, 65536)
         self.array_size_spin.setValue(self.member.array_size if self.member.array_size > 0 else 1)
-        form.addRow("配列サイズ", self.array_size_spin)
+        form.addRow("Array size", self.array_size_spin)
 
         self.bitfield_check.toggled.connect(self._on_bitfield_toggled)
         self.array_check.toggled.connect(self._on_array_toggled)
@@ -495,7 +495,7 @@ class StructMemberEditDialog(QDialog):
         self._on_array_toggled(self.array_check.isChecked())
 
         self.desc_edit = QLineEdit(self.member.description)
-        form.addRow("説明", self.desc_edit)
+        form.addRow("Description", self.desc_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._on_accept)
@@ -517,11 +517,11 @@ class StructMemberEditDialog(QDialog):
     def _on_accept(self):
         if not self.title_edit.text().strip():
             if self.bitfield_check.isChecked():
-                self.title_edit.setText(f"{self.name_edit.text().strip() or '(無名)'}:{self.bit_width_spin.value()}")
+                self.title_edit.setText(f"{self.name_edit.text().strip() or '(unnamed)'}:{self.bit_width_spin.value()}")
             elif self.array_check.isChecked():
-                self.title_edit.setText(f"{self.name_edit.text().strip() or '(無名)'}[{self.array_size_spin.value()}]")
+                self.title_edit.setText(f"{self.name_edit.text().strip() or '(unnamed)'}[{self.array_size_spin.value()}]")
             else:
-                self.title_edit.setText(f"メンバ: {self.name_edit.text().strip() or '(無名)'}")
+                self.title_edit.setText(f"メンバ: {self.name_edit.text().strip() or '(unnamed)'}")
         self.accept()
 
     def get_member(self) -> StructMemberDef:

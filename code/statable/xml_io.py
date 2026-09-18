@@ -1,12 +1,12 @@
 # statable/xml_io.py
 """
-XML入出力（プロジェクト設定・レイヤ優先度・層名・名前空間対応版）
-- プロジェクト保存/読込で共有ライブラリを保存
-- Transitionのpre_actions/else_actions/has_else/else_targetも保存
+XML入出力（プロジェクト設定・レイヤPriority・層名・Namespace対応版）
+- プロジェクトSave/読込で共有ライブラリをSave
+- Transitionのpre_actions/else_actions/has_else/else_targetもSave
 - 文字列→リスト正規化、1文字分解の自動結合
-- レイヤ優先度・説明・層名（layer_name）・プロジェクト名の保存/復元
-- RoleFunction の namespace 保存/復元
-- InterruptHandlerDef の used_role_functions / used_variables 保存/復元
+- レイヤPriority・Description・層名（layer_name）・プロジェクト名のSave/復元
+- RoleFunction の namespace Save/復元
+- InterruptHandlerDef の used_role_functions / used_variables Save/復元
 - レガシー XML（namespace 無し）の自動移行
 """
 
@@ -37,7 +37,7 @@ except ImportError:
     RoleFunctionLibrary = ConditionLibrary = LiteralLibrary = None
     LibRoleFunction = ConditionTemplate = LiteralDefinition = None
 # ======================================================================
-# ヘルパー: 文字列/リストの正規化
+# Helpers: 文字列/リストの正規化
 # ======================================================================
 def _normalize_actions(value) -> List[str]:
     """
@@ -76,7 +76,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
     if sm.initial_state:
         root.set("initial", sm.initial_state)
 
-    # レイヤ設定
+    # Layer settings
     root.set("layer_priority", str(getattr(sm, 'layer_priority', 5)))
     root.set("layer_description", getattr(sm, 'layer_description', ''))
     root.set("layer_name", getattr(sm, 'layer_name', ''))
@@ -114,7 +114,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
         }
         ET.SubElement(events_elem, "Event", **attrs)
 
-    # ★ RoleFunctions に namespace 属性を追加
+    # ★ RoleFunctions に namespace 属性をAdd
     roles_elem = ET.SubElement(root, "RoleFunctions")
     for rf in sm.role_functions.values():
         attrs = {
@@ -166,7 +166,7 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
     sm = StateMachine()
     initial_state_name = elem.get("initial")
 
-    # レイヤ設定
+    # Layer settings
     try:
         sm.layer_priority = int(elem.get("layer_priority", "5"))
     except ValueError:
@@ -386,7 +386,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
                 ET.SubElement(intr_child, "Action", **{
                     "condition": act.condition, "action": act.action,
                 })
-            # ★ 使用ロール関数・変数を記録
+            # ★ 使用Role function・変数を記録
             for ref in getattr(intr, 'used_role_functions', []):
                 ET.SubElement(intr_child, "UsedRoleFunction", ref=ref)
             for var in getattr(intr, 'used_variables', []):
@@ -491,7 +491,7 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                     condition=act_elem.get("condition", ""),
                     action=act_elem.get("action", ""),
                 ))
-            # ★ 使用ロール関数・変数を復元
+            # ★ 使用Role function・変数を復元
             used_rfs = [r.get("ref", "")
                         for r in intr_elem.findall("UsedRoleFunction")
                         if r.get("ref")]
@@ -582,7 +582,7 @@ def role_function_library_to_element(lib) -> Optional[ET.Element]:
 def role_function_library_from_element(elem: Optional[ET.Element]):
     """
     libcntrl.RoleFunction は name/title/description のみ受け付けるため、
-    それ以外の属性は hasattr で確認してから setattr する。
+    それ以外の属性は hasattr でConfirmしてから setattr する。
     """
     if elem is None:
         return RoleFunctionLibrary() if RoleFunctionLibrary else None
@@ -593,7 +593,7 @@ def role_function_library_from_element(elem: Optional[ET.Element]):
         namespace = rf_elem.get("namespace", "")
         try:
             # libcntrl.RoleFunction が受け付ける引数のみで生成
-            # namespace は keyword 引数として追加
+            # namespace は keyword 引数としてAdd
             try:
                 rf = LibRoleFunction(
                     name=name,
@@ -610,7 +610,7 @@ def role_function_library_from_element(elem: Optional[ET.Element]):
                 )
                 if hasattr(rf, 'namespace'):
                     rf.namespace = namespace
-            # 追加属性は存在する場合のみ設定
+            # Add属性は存在する場合のみ設定
             for attr in ('return_type', 'arg1_type', 'arg1_name',
                          'arg2_type', 'arg2_name'):
                 if hasattr(rf, attr):
@@ -713,7 +713,7 @@ def _project_settings_to_element(settings: Optional[dict]) -> ET.Element:
         cg.set("max_consecutive_pending_events",
                str(settings.get('max_consecutive_pending_events', 16)))
 
-        # 外部インクルード
+        # External include
         ext_includes = settings.get('external_includes', [])
         if ext_includes:
             ext_elem = ET.SubElement(cg, "ExternalIncludes")
@@ -775,7 +775,7 @@ def _project_settings_from_element(elem: Optional[ET.Element]) -> dict:
 
 
 # ======================================================================
-# プロジェクト保存/読込
+# プロジェクトSave/読込
 # ======================================================================
 def project_to_xml(
         tabs: List[Tuple[str, StateMachine]],

@@ -3,8 +3,8 @@
 プロンプトテンプレート定義（データのみ）
 
 【v1.8 §11.2 #7】
-  - 未使用の 'review' キーを削除
-    （prompt_generator.generate_review_prompt と共に削除）
+  - 未使用の 'review' キーをDelete
+    （prompt_generator.generate_review_prompt と共にDelete）
 """
 
 PROMPT_TEMPLATES = {
@@ -16,7 +16,7 @@ PROMPT_TEMPLATES = {
 
 【出力形式】
 純粋なJSONのみを出力してください。
-挨拶、説明、補足、マーカー、コードブロック記号は一切不要です。
+挨拶、Description、補足、マーカー、コードブロック記号は一切不要です。
 
 【出力例】
 {example}
@@ -50,7 +50,7 @@ FEW_SHOT_EXAMPLE = """{
         "target": "IDLE",
         "action_name": "ResetError"
       },
-      "reason": "エラー状態からの回復遷移がないため"
+      "reason": "Error状態からの回復遷移がないため"
     }
   ]
 }"""
@@ -58,7 +58,7 @@ FEW_SHOT_EXAMPLE = """{
 VALIDATION_POINTS = """【検証観点】
 1. 初期状態が設定されているか
 2. すべての状態に遷移が定義されているか
-3. エラー状態からの回復遷移があるか
+3. Error状態からの回復遷移があるか
 4. 各状態で処理すべきイベントが網羅されているか
 5. 到達不能な状態がないか
 6. デッドロックの可能性がないか

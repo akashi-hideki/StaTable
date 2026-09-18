@@ -1,4 +1,4 @@
-"""グローバル変数・イベントフラグ・割り込み処理・デバイスリソース・タイマ設定のデータモデル"""
+"""Data model for global variables, event flags, interrupt handlers, device resources, and timer settings"""
 
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -6,7 +6,7 @@ from typing import List, Optional
 
 @dataclass
 class SystemVariable:
-    """システム全体で共有するグローバル変数"""
+    """Global variables shared across the system"""
     name: str
     type: str
     unit: str = ""
@@ -22,7 +22,7 @@ class SystemVariable:
 
 @dataclass
 class EventFlag:
-    """ビットフィールドで扱うイベントフラグ"""
+    """Event flags managed as bit fields"""
     name: str
     min_value: int
     max_value: int
@@ -43,7 +43,7 @@ class EventFlag:
 
 @dataclass
 class InterruptAction:
-    """割り込み処理内の条件付きアクション"""
+    """Conditional actions inside an interrupt handler"""
     condition: str = ""
     action: str = ""
 
@@ -65,7 +65,7 @@ class InterruptHandlerDef:
 
 @dataclass
 class DevicePlaceholderDef:
-    """デバイスリソース仮定義"""
+    """Device resource placeholder definition"""
     name: str
     description: str = ""
     title: str = ""
@@ -77,7 +77,7 @@ class DevicePlaceholderDef:
 
 @dataclass
 class TimerDerivedDef:
-    """派生タイマ変数定義"""
+    """Derived timer variable definition"""
     period_name: str
     multiplier: int
     variable_name: str
@@ -91,13 +91,13 @@ class TimerDerivedDef:
 
 @dataclass
 class TimerBaseDef:
-    """タイマ刻み変数定義"""
+    """Timer tick variable definition"""
     variable_name: str = "g_system_tick"
     unit: str = "1ms"
     data_type: str = "volatile uint32_t"
     derived: List[TimerDerivedDef] = field(default_factory=list)
     title: str = ""
-    interrupt_name: str = ""   # ★ このタイマを駆動する割り込み名
+    interrupt_name: str = ""   # ★ このTimerを駆動するInterrupt name
 
     def __post_init__(self):
         if not self.title:
@@ -106,7 +106,7 @@ class TimerBaseDef:
 
 @dataclass
 class EventQueueDef:
-    """イベントキュー定義"""
+    """Event queue definition"""
     name: str
     size: int
     element_type: str
@@ -123,7 +123,7 @@ class EventQueueDef:
 
 
 class GlobalDefinitions:
-    """グローバル変数・イベントフラグ・割り込み処理・デバイスリソース・タイマ設定・イベントキューの管理クラス"""
+    """Management class for global variables, event flags, interrupt handlers, device resources, timer settings, and event queues"""
 
     def __init__(self):
         self.variables: List[SystemVariable] = []
@@ -131,11 +131,11 @@ class GlobalDefinitions:
         self.interrupts: List[InterruptHandlerDef] = []
         self.placeholders: List[DevicePlaceholderDef] = []
         self.timer_base: TimerBaseDef = TimerBaseDef()
-        self.extra_timers: List[TimerBaseDef] = []   # ★ 追加タイマ基準
+        self.extra_timers: List[TimerBaseDef] = []   # ★ AddTimer基準
         self.event_queues: List[EventQueueDef] = []
 
     def add_timer_variables(self):
-        """全タイマ基準変数・派生タイマ変数をグローバル変数として登録する"""
+        """Register all timer base variables and derived timer variables as global variables"""
         self.variables = [v for v in self.variables if v.group != "Timer"]
 
         all_timers = [self.timer_base] + self.extra_timers
@@ -146,7 +146,7 @@ class GlobalDefinitions:
                 unit=timer.unit,
                 default_value="0",
                 group="Timer",
-                description="タイマ基準変数",
+                description="Timer base variable",
                 title=timer.title,
             ))
             for d in timer.derived:

@@ -1,12 +1,5 @@
 # statable_gui package
-"""
-StaTable GUI 層
-
-【v1.5 追加】
-  - 再エクスポートは最小限に留める
-  - Qt 依存の重いモジュール（main_window 等）は
-    明示的に import することを推奨
-"""
+"""\nStaTable GUI layer\n\n[v1.5 added]\n  - Keep re-exports minimal\n  - Qt-heavy modules (main_window etc.) should be\n    explicitly imported\n"""
 
 # 設定・環境
 from .config import WINDOW_WIDTH, WINDOW_HEIGHT
@@ -24,7 +17,7 @@ __all__ = [
 ]
 
 # 注意:
-#   MainWindow / StateMachineTab 等は再エクスポートしない。
-#   PySide6 の QApplication 生成前にロードするとエラーの原因になるため、
-#   利用側で `from statable_gui.main_window import MainWindow` と
+#   MainWindow / StateMachineTab etc. are not re-exported.
+#   Loading before creating the PySide6 QApplication causes errors, so
+#   On the caller side, use `from statable_gui.main_window import MainWindow` to
 #   明示的に import すること。

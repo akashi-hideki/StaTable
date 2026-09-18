@@ -28,7 +28,7 @@ class EventDeliveryType(Enum):
 
 
 class EventSourceLayer(Enum):
-    """イベントの発生源レイヤ"""
+    """イベントのSourceレイヤ"""
     DRIVER = "driver"
     MIDDLEWARE = "middleware"
 
@@ -61,7 +61,7 @@ class Event:
 
     def __post_init__(self):
         if not self.title:
-            self.title = f"イベント: {self.name}" if self.name else "イベント: （完了）"
+            self.title = f"イベント: {self.name}" if self.name else "イベント: (completion)"
 
 
 @dataclass(kw_only=True)
@@ -77,7 +77,7 @@ class Transition:
     新: Transition(source="Idle", event="START", pre_actions=["init()"], ...)  ← kwarg のみ
 
     v1.5 で sample_data.py / xml_io.py / dialogs.py / draft.py /
-    change_applier.py の全 14 箇所が kwarg 済みであることを AST 監査で確認済み。
+    change_applier.py の全 14 箇所が kwarg 済みであることを AST 監査でConfirm済み。
 
     【v2.0 既知の制約: transition_type は予約フィールド】
       - "external": 通常遷移（既定値、実装済み）
@@ -91,9 +91,9 @@ class Transition:
       影響:
         - GUI（matrix_table.py）に遷移種別列は表示されない
         - 生成コードで entry/exit 呼び分けは行われない
-        - XML 保存/読込では値が保持される（round-trip は維持）
+        - XML Save/読込では値が保持される（round-trip は維持）
 
-      予約理由:
+      予約Reason:
         entry/exit 呼び出し制御は state machine runner
         （c_code_generator.py / テンプレート群）に広く影響するため、
         v2.0 では仕様を凍結し、v2.x で段階的に実装する。
@@ -107,20 +107,20 @@ class Transition:
     target: str = ""
     has_else: bool = True
     else_target: str = ""
-    else_actions: List[str] = field(default_factory=list)  # elseアクション
+    else_actions: List[str] = field(default_factory=list)  # elseAction
     action: str = ""                   # 旧フィールド（互換用・未使用）
     transition_type: str = "external"  # ★ 予約フィールド（上記 docstring 参照）
     title: str = ""
 
     def __post_init__(self):
         if not self.title:
-            self.title = "(無題遷移)"
+            self.title = "(untitled transition)"
 
 
 @dataclass(kw_only=True)
 class RoleFunction:
     """
-    ロール関数（状態遷移条件・動作をまとめて実装する関数）
+    Role function（State transition condition・動作をまとめて実装する関数）
 
     【v1.5 変更】kw_only=True 化
       位置引数によるフィールド順序ずれ事故（v1.4 §9.6 #76）を
@@ -129,12 +129,12 @@ class RoleFunction:
     旧: RoleFunction(name, desc, ret, ...)  ← 位置引数（危険）
     新: RoleFunction(name=..., description=..., return_type=...)  ← kwarg のみ
 
-    namespace: 層名や機能グループ名（例: "Driver"）
+    namespace: 層名や機能Group名（例: "Driver"）
       - `Driver.Init` のように参照可能
-      - 空文字の場合は層なし扱い
+      - 空文字の場合は層None扱い
     """
-    name: str                               # 純粋名（例: "Init"）
-    namespace: str = ""                     # 名前空間（例: "Driver"）
+    name: str                               # Bare name (e.g., \"Init\")
+    namespace: str = ""                     # Namespace (e.g., \"Driver\")
     description: str = ""
     return_type: str = "void"
     arg1_type: str = ""

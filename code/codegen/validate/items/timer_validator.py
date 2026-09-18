@@ -1,6 +1,6 @@
 # codegen/validate/items/timer_validator.py
 """
-タイマ検証
+Timer検証
 """
 
 import sys
@@ -16,7 +16,7 @@ from validate.items.base_validator import BaseValidator
 
 
 class TimerValidator(BaseValidator):
-    """タイマ検証クラス"""
+    """Timer検証クラス"""
     
     category = "timer"
     

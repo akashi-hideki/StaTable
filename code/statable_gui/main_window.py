@@ -1,12 +1,5 @@
 # statable_gui/main_window.py
-"""
-StaTable メインウィンドウ
-コード生成機能・検証AI連携機能・共有ライブラリ管理を統合
-（複数層対応版）
-
-【v1.5 修正】
-  - __init__ の RoleFunction 登録で namespace を渡す（バグ #86）
-"""
+"""\nStaTable main window\nIntegrates code generation, validation/AI integration, and shared library management\n(multi-layer support)\n\n[v1.5 fix]\n  - Pass namespace in RoleFunction registration in __init__ (bug #86)\n"""
 
 import sys
 import os
@@ -42,14 +35,14 @@ from .event_delivery_settings_dialog import (
 from .common_widgets import TypeManagerDialog
 from .layer_settings_dialog import LayerSettingsDialog
 
-# 共有ライブラリ（v1.5: statable_gui/libcntrl に統合済）
+# Shared library (v1.5: integrated into statable_gui/libcntrl)
 from statable_gui.libcntrl.role_function_library import (
     RoleFunctionLibrary, RoleFunction)
 from statable_gui.libcntrl.condition_library import (
     ConditionLibrary, ConditionTemplate)
 from statable_gui.libcntrl.literal_library import (
     LiteralLibrary, LiteralDefinition)
-# コード生成モジュール
+# Code generationモジュール
 sys.path.append(
     os.path.dirname(
         os.path.dirname(os.path.abspath(__file__))))
@@ -93,11 +86,11 @@ class MainWindow(QMainWindow):
         # 環境設定
         self.prefs = Preferences()
 
-        # コード生成設定マネージャ
+        # Code generation settingsマネージャ
         self.config_manager = ConfigManager()
 
-        # グローバル変数・イベントフラグ・割り込み・
-        # デバイス・タイマ設定
+        # Global variables・Event flags・割り込み・
+        # デバイス・Timer設定
         self.global_defs = create_sample_global_defs()
         self.global_defs.add_timer_variables()
         StaTableLogger.debug(
@@ -114,12 +107,12 @@ class MainWindow(QMainWindow):
         self.condition_library = ConditionLibrary()
         self.literal_library = LiteralLibrary()
 
-        # サンプルステートマシンから共有ライブラリへデータ登録
+        # Register data from the sample state machine into the shared library
         sample_sm = create_sample_state_machine()
 
         # ==========================================================
-        # 【v1.5 修正】ロール関数を共有ライブラリへ登録
-        #   namespace も渡す（v1.4 §9.6 #69 / v1.5 #86）
+        # [v1.5 fix] register role function into shared library
+        #   Also pass namespace (v1.4 section 9.6 #69 / v1.5 #86)
         # ==========================================================
         for rf in sample_sm.role_functions.values():
             StaTableLogger.debug(
@@ -130,7 +123,7 @@ class MainWindow(QMainWindow):
             try:
                 lib_rf = RoleFunction(
                     name=rf.name,
-                    namespace=getattr(rf, 'namespace', '') or '',   # ★ v1.5 追加
+                    namespace=getattr(rf, 'namespace', '') or '',   # ★ v1.5 Add
                     title=rf.title,
                     description=getattr(rf, 'description', ''),
                 )
@@ -147,7 +140,7 @@ class MainWindow(QMainWindow):
             f"After role registration: "
             f"roles={len(self.role_function_library.list_all())}")
 
-        # 条件テンプレートを追加
+        # 条件テンプレートをAdd
         try:
             self.condition_library.add(ConditionTemplate(
                 name="ERROR",
@@ -162,7 +155,7 @@ class MainWindow(QMainWindow):
             StaTableLogger.warning(
                 f"Failed to register condition templates: {e}")
 
-        # リテラルを追加
+        # リテラルをAdd
         try:
             self.literal_library.add(LiteralDefinition(
                 name="RETRY_THRESHOLD", value="3",
@@ -192,7 +185,7 @@ class MainWindow(QMainWindow):
             self.close_tab)
         self.setCentralWidget(self.tab_widget)
 
-        # 「+」ボタン
+        # \"+\" button
         self.add_tab_button = QToolButton()
         self.add_tab_button.setText("+")
         self.add_tab_button.setToolTip(
@@ -232,28 +225,28 @@ class MainWindow(QMainWindow):
 
         global_defs_btn = QAction("グローバル定義", self)
         global_defs_btn.setToolTip(
-            "グローバル変数・イベントフラグ定義を開く")
+            "Global variables・Event flag definitionを開く")
         global_defs_btn.triggered.connect(
             self.open_global_defs_dialog)
         toolbar.addAction(global_defs_btn)
 
-        type_defs_btn = QAction("型定義", self)
+        type_defs_btn = QAction("Type定義", self)
         type_defs_btn.setToolTip(
-            "ユーザー定義型（構造体）を管理")
+            "ユーザー定義Type（構造体）を管理")
         type_defs_btn.triggered.connect(
             self.open_type_manager)
         toolbar.addAction(type_defs_btn)
 
-        event_defs_btn = QAction("イベント定義", self)
+        event_defs_btn = QAction("Event definitions", self)
         event_defs_btn.setToolTip(
-            "状態遷移イベント定義を開く")
+            "状態遷移Event definitionsを開く")
         event_defs_btn.triggered.connect(
             self.open_event_definition_dialog)
         toolbar.addAction(event_defs_btn)
 
-        delivery_btn = QAction("イベント配送設定", self)
+        delivery_btn = QAction("Event delivery settings", self)
         delivery_btn.setToolTip(
-            "イベント配送タイプ設定を開く")
+            "イベントDelivery type設定を開く")
         delivery_btn.triggered.connect(
             self.open_event_delivery_settings)
         toolbar.addAction(delivery_btn)
@@ -261,15 +254,15 @@ class MainWindow(QMainWindow):
         interrupt_btn = QAction("割り込み設定", self)
         interrupt_btn.setToolTip(
             "割り込み処理・デバイスリソース・"
-            "タイマ設定を開く")
+            "Timer設定を開く")
         interrupt_btn.triggered.connect(
             self.open_interrupt_settings)
         toolbar.addAction(interrupt_btn)
 
-        # レイヤ設定
-        layer_btn = QAction("レイヤ設定", self)
+        # Layer settings
+        layer_btn = QAction("Layer settings", self)
         layer_btn.setToolTip(
-            "層の実行優先度・初期化順序を設定")
+            "層の実行Priority・初期化順序を設定")
         layer_btn.triggered.connect(
             self.open_layer_settings)
         toolbar.addAction(layer_btn)
@@ -278,14 +271,14 @@ class MainWindow(QMainWindow):
 
         validate_btn = QAction("検証・AI診断", self)
         validate_btn.setToolTip(
-            "コード生成前検証・AI連携診断を開く")
+            "Code generation前検証・AI連携診断を開く")
         validate_btn.triggered.connect(
             self.open_validation_dialog)
         toolbar.addAction(validate_btn)
 
         toolbar.addSeparator()
 
-        generate_btn = QAction("コード生成", self)
+        generate_btn = QAction("Code generation", self)
         generate_btn.setToolTip("Cコードを生成")
         generate_btn.triggered.connect(
             self.open_code_generation_dialog)
@@ -293,14 +286,14 @@ class MainWindow(QMainWindow):
 
         gen_settings_btn = QAction("生成設定", self)
         gen_settings_btn.setToolTip(
-            "コード生成設定を変更")
+            "Code generation settingsを変更")
         gen_settings_btn.triggered.connect(
             self.open_code_generation_settings)
         toolbar.addAction(gen_settings_btn)
 
-        gen_save_btn = QAction("生成コード保存", self)
+        gen_save_btn = QAction("生成コードSave", self)
         gen_save_btn.setToolTip(
-            "生成コードを直接保存")
+            "生成コードを直接Save")
         gen_save_btn.triggered.connect(
             self.save_generated_code_direct)
         toolbar.addAction(gen_save_btn)
@@ -312,8 +305,8 @@ class MainWindow(QMainWindow):
         open_btn.triggered.connect(self.open_project)
         toolbar.addAction(open_btn)
 
-        save_btn = QAction("保存", self)
-        save_btn.setToolTip("プロジェクトを保存")
+        save_btn = QAction("Save", self)
+        save_btn.setToolTip("プロジェクトをSave")
         save_btn.triggered.connect(self.save_project)
         toolbar.addAction(save_btn)
 
@@ -321,7 +314,7 @@ class MainWindow(QMainWindow):
 
         new_tab_btn = QAction("新規タブ", self)
         new_tab_btn.setToolTip(
-            "新しい状態遷移タブを追加")
+            "新しい状態遷移タブをAdd")
         new_tab_btn.triggered.connect(self.add_new_tab)
         toolbar.addAction(new_tab_btn)
 
@@ -401,7 +394,7 @@ class MainWindow(QMainWindow):
             self.open_interrupt_settings)
         edit_menu.addAction(interrupt_action)
 
-        # レイヤ設定
+        # Layer settings
         layer_settings_action = QAction(
             "Layer Settings...", self)
         layer_settings_action.triggered.connect(
@@ -416,9 +409,9 @@ class MainWindow(QMainWindow):
             self.open_validation_dialog)
         validation_menu.addAction(validate_action)
 
-        code_gen_menu = menubar.addMenu("コード生成(&G)")
+        code_gen_menu = menubar.addMenu("Code generation(&G)")
         generate_action = QAction(
-            "コード生成...", self)
+            "Code generation...", self)
         generate_action.setShortcut("Ctrl+G")
         generate_action.triggered.connect(
             self.open_code_generation_dialog)
@@ -433,7 +426,7 @@ class MainWindow(QMainWindow):
 
         code_gen_menu.addSeparator()
         gen_save_action = QAction(
-            "生成コードを保存...", self)
+            "生成コードをSave...", self)
         gen_save_action.setShortcut("Ctrl+Shift+S")
         gen_save_action.triggered.connect(
             self.save_generated_code_direct)
@@ -448,10 +441,10 @@ class MainWindow(QMainWindow):
         view_menu.addAction(toggle_traceball)
 
     # ------------------------------------------------------------------
-    # レイヤ設定
+    # Layer settings
     # ------------------------------------------------------------------
     def open_layer_settings(self):
-        """レイヤ設定ダイアログを開く"""
+        """Layer settingsダイアログを開く"""
         StaTableLogger.debug(
             "MainWindow.open_layer_settings called")
 
@@ -521,7 +514,7 @@ class MainWindow(QMainWindow):
            not hasattr(current_tab, 'sm'):
             QMessageBox.warning(
                 self, "Warning",
-                "状態遷移タブがありません。")
+                "There is no state transition tab.")
             return
         dlg = EventDefinitionDialog(
             current_tab.sm, self.global_defs, self)
@@ -538,7 +531,7 @@ class MainWindow(QMainWindow):
            not hasattr(current_tab, 'sm'):
             QMessageBox.warning(
                 self, "Warning",
-                "状態遷移タブがありません。")
+                "There is no state transition tab.")
             return
 
         auto_convert = \
@@ -577,11 +570,10 @@ class MainWindow(QMainWindow):
             "InterruptHandlerEditDialog closed")
 
     # ------------------------------------------------------------------
-    # プロジェクト保存・読込
+    # プロジェクトSave・読込
     # ------------------------------------------------------------------
     def save_project(self):
-        """全タブ・グローバル定義・共有ライブラリ・
-           プロジェクト設定を保存"""
+        """Save all tabs, global definitions, shared libraries, and\n           project settings"""
         StaTableLogger.debug(
             "MainWindow.save_project called")
 
@@ -705,8 +697,8 @@ class MainWindow(QMainWindow):
                 self.literal_library = lit_lib
 
             # ============================================================
-            # ★ 自動補完 1: 各タブの SM のロール関数を共有ライブラリへ登録
-            #   XML の <SharedLibraries> が空でもパレットに候補を出すため
+            # Auto-complete 1: register each tab's SM role functions into the shared library
+            #   Even if <SharedLibraries> in the XML is empty, present candidates in the palette
             # ============================================================
             from statable_gui.libcntrl.role_function_library import (
                 RoleFunction as LibRoleFunction)
@@ -729,7 +721,7 @@ class MainWindow(QMainWindow):
                         ))
                         registered_rfs += 1
                     except ValueError:
-                        pass  # 重複は無視
+                        pass  # Duplicates ignored
                     except Exception as e:
                         StaTableLogger.warning(
                             f"Failed to register role function {_qn}: {e}")
@@ -742,7 +734,7 @@ class MainWindow(QMainWindow):
                 )
 
             # ============================================================
-            # ★ 自動補完 2: 各遷移の条件式を ConditionLibrary へ登録
+            # Auto-complete 2: register each transition's condition into ConditionLibrary
             # ============================================================
             from statable_gui.libcntrl.condition_library import (
                 ConditionTemplate)
@@ -924,7 +916,7 @@ class MainWindow(QMainWindow):
             f"Tab closed at index {index}")
 
     # ------------------------------------------------------------------
-    # ログ・検証・コード生成
+    # Log・検証・Code generation
     # ------------------------------------------------------------------
     def toggle_traceball(self, checked: bool):
         if checked:
@@ -951,7 +943,7 @@ class MainWindow(QMainWindow):
 
     # ★ 複数層対応ヘルパー
     def _get_all_layers(self):
-        """全タブの (name, sm) リストを優先度昇順で返す"""
+        """Return the (name, sm) list of all tabs sorted by priority ascending"""
         layers = []
         for index in range(self.tab_widget.count()):
             tab = self.tab_widget.widget(index)
@@ -976,7 +968,7 @@ class MainWindow(QMainWindow):
         StaTableLogger.debug(
             "MainWindow.open_code_generation_dialog called")
 
-        # ★ 全タブを層として収集
+        # Collect all tabs as layers
         layers = self._get_all_layers()
         if layers:
             primary_sm = layers[0][1]
@@ -1013,7 +1005,7 @@ class MainWindow(QMainWindow):
             "CodeGenerationSettingsDialog closed")
 
     # ------------------------------------------------------------------
-    # 生成コード直接保存（複数層 + 警告収集対応）
+    # 生成コード直接Save（複数層 + Warning収集対応）
     # ------------------------------------------------------------------
     def save_generated_code_direct(self):
         StaTableLogger.debug(
@@ -1023,7 +1015,7 @@ class MainWindow(QMainWindow):
 
         if not output_dir:
             QMessageBox.warning(
-                self, "警告",
+                self, "Warning",
                 "出力先ディレクトリが設定されていません。\n"
                 "先に設定ダイアログで出力先を"
                 "指定してください。")
@@ -1033,11 +1025,11 @@ class MainWindow(QMainWindow):
             if not output_dir:
                 return
 
-        # ★ 全タブを層として収集
+        # Collect all tabs as layers
         layers = self._get_all_layers()
         if not layers:
             QMessageBox.warning(
-                self, "警告", "タブがありません。")
+                self, "Warning", "タブがYesません。")
             return
 
         global_defs = self.global_defs
@@ -1077,7 +1069,7 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             QMessageBox.critical(
-                self, "エラー",
+                self, "Error",
                 f"コード生成に失敗しました:\n{e}")
             StaTableLogger.error(
                 f"Code generation failed: {e}")
@@ -1086,7 +1078,7 @@ class MainWindow(QMainWindow):
             root_logger.removeHandler(collector)
 
         QMessageBox.information(
-            self, "保存完了",
+            self, "Save complete",
             f"{len(saved_files)}ファイルを保存しました。\n"
             f"層数: {len(layers)}\n\n"
             f"出力先: {output_dir}")
@@ -1099,6 +1091,6 @@ class MainWindow(QMainWindow):
                     seen.add(r)
                     unique.append(r)
             QMessageBox.warning(
-                self, "生成時の警告",
-                "以下の警告が発生しました:\n\n"
+                self, "Warnings during generation",
+                "The following warnings occurred:\n\n"
                 + "\n".join(f"・{m}" for m in unique))

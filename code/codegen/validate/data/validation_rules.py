@@ -13,12 +13,12 @@ VALIDATION_RULES = {
         'STATE_UNREACHABLE': {
             'severity': 'warning',
             'message': '状態「{name}」は到達不能です',
-            'suggestion': '遷移を追加するか、状態を削除してください',
+            'suggestion': '遷移をAddするか、状態をDeleteしてください',
         },
         'STATE_NO_TRANSITION': {
             'severity': 'warning',
-            'message': '状態「{name}」からの遷移がありません',
-            'suggestion': '遷移を追加するか、終端状態として明示してください',
+            'message': '状態「{name}」からの遷移がYesません',
+            'suggestion': '遷移をAddするか、終端状態として明示してください',
         },
         'STATE_DUPLICATE': {
             'severity': 'warning',
@@ -30,19 +30,19 @@ VALIDATION_RULES = {
         'EVENT_UNUSED': {
             'severity': 'warning',
             'message': 'イベント「{name}」はどの遷移にも使用されていません',
-            'suggestion': '遷移を追加するか、イベントを削除してください',
+            'suggestion': '遷移をAddするか、イベントをDeleteしてください',
         },
         'EVENT_NO_TRANSITION': {
             'severity': 'warning',
             'message': 'イベント「{name}」に対する遷移が定義されていません',
-            'suggestion': '遷移を追加してください',
+            'suggestion': '遷移をAddしてください',
         },
     },
     'transition': {
         'TRANSITION_TARGET_UNDEFINED': {
             'severity': 'error',
-            'message': '遷移先「{target}」が定義されていません',
-            'suggestion': '遷移先の状態を定義してください',
+            'message': 'Target「{target}」が定義されていません',
+            'suggestion': 'Targetの状態を定義してください',
         },
         'TRANSITION_EVENT_UNDEFINED': {
             'severity': 'error',
@@ -57,53 +57,53 @@ VALIDATION_RULES = {
         'TRANSITION_DUPLICATE': {
             'severity': 'warning',
             'message': '遷移「{source} --[{event}]--> {target}」が重複しています',
-            'suggestion': '重複した遷移を削除してください',
+            'suggestion': '重複した遷移をDeleteしてください',
         },
         'TRANSITION_SELF_LOOP': {
             'severity': 'info',
             'message': '自己遷移「{source} --[{event}]--> {source}」',
-            'suggestion': '自己遷移が意図的か確認してください',
+            'suggestion': '自己遷移が意図的かConfirmしてください',
         },
     },
     'role_function': {
         'ROLE_FUNC_NO_RETURN_TYPE': {
             'severity': 'error',
-            'message': 'ロール関数「{name}」の戻り値型が未定義です',
-            'suggestion': '戻り値型を設定してください',
+            'message': 'Role function「{name}」のReturn typeが未定義です',
+            'suggestion': 'Return typeを設定してください',
         },
         'ROLE_FUNC_ARG_MISMATCH': {
             'severity': 'error',
-            'message': 'ロール関数「{name}」の引数定義が不完全です',
-            'suggestion': '引数名と引数型を正しく設定してください',
+            'message': 'Role function「{name}」の引数定義が不完全です',
+            'suggestion': '引数名と引数Typeを正しく設定してください',
         },
         'ROLE_FUNC_UNUSED': {
             'severity': 'warning',
-            'message': 'ロール関数「{name}」は使用されていません',
-            'suggestion': '使用するか削除してください',
+            'message': 'Role function「{name}」は使用されていません',
+            'suggestion': '使用するかDeleteしてください',
         },
     },
     'variable': {
         'VAR_DUPLICATE_NAME': {
             'severity': 'error',
-            'message': '変数名「{name}」が重複しています',
-            'suggestion': '変数名を変更してください',
+            'message': 'Variable name「{name}」が重複しています',
+            'suggestion': 'Variable nameを変更してください',
         },
         'VAR_INVALID_TYPE': {
             'severity': 'warning',
-            'message': '変数「{name}」の型「{type}」が無効です',
-            'suggestion': '正しい型を指定してください',
+            'message': '変数「{name}」のType「{type}」が無効です',
+            'suggestion': '正しいTypeを指定してください',
         },
         'VAR_INVALID_ARRAY_SIZE': {
             'severity': 'error',
-            'message': '変数「{name}」の配列サイズが不正です',
-            'suggestion': '配列サイズを0より大きい値にしてください',
+            'message': '変数「{name}」のArray sizeが不正です',
+            'suggestion': 'Array sizeを0より大きい値にしてください',
         },
     },
     'flag': {
         'FLAG_DUPLICATE_NAME': {
             'severity': 'error',
-            'message': 'フラグ名「{name}」が重複しています',
-            'suggestion': 'フラグ名を変更してください',
+            'message': 'Flag name「{name}」が重複しています',
+            'suggestion': 'Flag nameを変更してください',
         },
         'FLAG_INVALID_RANGE': {
             'severity': 'warning',
@@ -114,49 +114,49 @@ VALIDATION_RULES = {
     'queue': {
         'QUEUE_INVALID_SIZE': {
             'severity': 'error',
-            'message': 'キュー「{name}」のサイズが不正です',
-            'suggestion': 'サイズを0より大きい値にしてください',
+            'message': 'キュー「{name}」のSizeが不正です',
+            'suggestion': 'Sizeを0より大きい値にしてください',
         },
         'QUEUE_UNDEFINED_EVENT': {
             'severity': 'warning',
             'message': 'キュー「{name}」に未定義のイベントが含まれています',
-            'suggestion': 'イベント定義を確認してください',
+            'suggestion': 'Event definitionsをConfirmしてください',
         },
     },
     'interrupt': {
         'INTERRUPT_DUPLICATE_NAME': {
             'severity': 'error',
-            'message': '割り込み名「{name}」が重複しています',
-            'suggestion': '割り込み名を変更してください',
+            'message': 'Interrupt name「{name}」が重複しています',
+            'suggestion': 'Interrupt nameを変更してください',
         },
         'INTERRUPT_UNDEFINED_EVENT': {
             'severity': 'warning',
             'message': '割り込み「{name}」に未定義のイベントが含まれています',
-            'suggestion': 'イベント定義を確認してください',
+            'suggestion': 'Event definitionsをConfirmしてください',
         },
     },
     'timer': {
         'TIMER_DUPLICATE_VARIABLE': {
             'severity': 'error',
-            'message': 'タイマ変数「{name}」が既存の変数と重複しています',
-            'suggestion': '変数名を変更してください',
+            'message': 'Timer変数「{name}」が既存の変数と重複しています',
+            'suggestion': 'Variable nameを変更してください',
         },
         'TIMER_INVALID_MULTIPLIER': {
             'severity': 'error',
-            'message': 'タイマ「{name}」の乗数が不正です',
+            'message': 'Timer「{name}」の乗数が不正です',
             'suggestion': '乗数を0より大きい値にしてください',
         },
     },
     'custom_type': {
         'TYPE_DUPLICATE_NAME': {
             'severity': 'error',
-            'message': '型名「{name}」が重複しています',
-            'suggestion': '型名を変更してください',
+            'message': 'Type name「{name}」が重複しています',
+            'suggestion': 'Type nameを変更してください',
         },
         'TYPE_NO_MEMBERS': {
             'severity': 'warning',
-            'message': '型「{name}」にメンバーが定義されていません',
-            'suggestion': 'メンバーを追加してください',
+            'message': 'Type「{name}」にメンバーが定義されていません',
+            'suggestion': 'メンバーをAddしてください',
         },
     },
 }

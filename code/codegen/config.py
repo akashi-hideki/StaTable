@@ -1,6 +1,6 @@
 # codegen/config.py
 """
-コード生成設定管理モジュール
+Code generation settings管理モジュール
 生成オプションを一元管理する
 """
 
@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 
 @dataclass
 class CodeGenerationConfig:
-    """コード生成設定"""
+    """Code generation settings"""
     
     # ===== 生成スタイル =====
     generation_style: str = "table_driven"  # table_driven / switch_case
@@ -18,10 +18,10 @@ class CodeGenerationConfig:
     # 遷移テーブル方式
     table_type: str = "array"  # array / switch / dictionary
     
-    # OS種別
+    # OS type
     os_type: str = "non_rtos"  # non_rtos / freertos / threadx
     
-    # ===== 命名規則 =====
+    # ===== Naming convention =====
     naming_prefix: str = ""
     state_prefix: str = "STATE"
     event_prefix: str = "EVENT"
@@ -32,33 +32,33 @@ class CodeGenerationConfig:
     enable_info_logs: bool = True
     enable_error_logs: bool = True
     
-    # ===== コメント生成 =====
+    # ===== comment生成 =====
     enable_comments: bool = True
     enable_doxygen: bool = True
     
     # ===== マーカー =====
     enable_user_markers: bool = True
     
-    # ===== 出力設定 =====
+    # ===== Output settings =====
     output_directory: str = ""
     save_with_merge: bool = True
     
     # ===== プロジェクト設定 =====
     project_name: str = "MyProject"
     
-    # ===== フォルダ構成 =====
+    # ===== Folder structure =====
     folder_structure: str = "by_type"       # flat / by_layer / by_type
     include_dir_name: str = "include"
     source_dir_name: str = "src"
     common_dir_name: str = "common"
     project_dir_name: str = "project"
     
-    # ===== スーパーインクルード =====
+    # ===== Super include =====
     generate_super_include: bool = True
     super_include_file: str = "statable_all.h"
     super_include_dir: str = "common"
     
-    # ===== 外部インクルード =====
+    # ===== External include =====
     external_includes: List[str] = field(default_factory=list)
     external_includes_in_super: bool = True
     external_includes_in_role: bool = True
@@ -119,7 +119,7 @@ class ConfigManager:
         self._config = CodeGenerationConfig()
     
     def get_config(self) -> CodeGenerationConfig:
-        """現在の設定を取得"""
+        """Get current settings"""
         return self._config
     
     def set_config(self, config: CodeGenerationConfig):
@@ -139,29 +139,29 @@ class ConfigManager:
     def get_available_styles(self) -> Dict[str, str]:
         """利用可能な生成スタイル"""
         return {
-            'table_driven': 'テーブル駆動方式',
-            'switch_case': 'switch-case方式',
+            'table_driven': 'Table-driven style',
+            'switch_case': 'switch-case style',
         }
     
     def get_available_table_types(self) -> Dict[str, str]:
         """利用可能なテーブル方式"""
         return {
-            'array': '配列方式',
-            'switch': 'switch-case方式',
+            'array': 'Array方式',
+            'switch': 'switch-case style',
             'dictionary': '辞書方式（非推奨）',
         }
     
     def get_available_os_types(self) -> Dict[str, str]:
         """利用可能なOS種別"""
         return {
-            'non_rtos': 'NonRTOS（ベアメタル）',
+            'non_rtos': 'NonRTOS (bare metal)',
             'freertos': 'FreeRTOS',
             'threadx': 'ThreadX',
         }
     
     def get_available_folder_structures(self) -> Dict[str, str]:
         return {
-            'flat': 'フラット',
-            'by_layer': '層ごと',
+            'flat': 'Flat',
+            'by_layer': 'Per layer',
             'by_type': 'include/src分離',
         }

@@ -1,7 +1,5 @@
 # statable_gui/transition_editor_direct/dialog.py
-"""
-動作編集メインダイアログ（共有ライブラリ対応・ノード編集対応）
-"""
+"""\nAction edit main dialog (shared library support / node edit support)\n"""
 
 import logging
 import sys
@@ -93,7 +91,7 @@ class ActionEditorDialog(QDialog):
         splitter.setSizes([200, 650])
 
         flow_layout.addWidget(splitter)
-        self.tabs.addTab(flow_tab, "フロー編集")
+        self.tabs.addTab(flow_tab, "フローEdit")
 
         self.code_widget = CodeWidget(self.draft)
         self.tabs.addTab(self.code_widget, "コード")
@@ -115,7 +113,7 @@ class ActionEditorDialog(QDialog):
 
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
-        cancel_btn = QPushButton("キャンセル")
+        cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(self.reject)
         btn_layout.addWidget(cancel_btn)
         ok_btn = QPushButton("OK")
@@ -209,7 +207,7 @@ class ActionEditorDialog(QDialog):
         elif node.item_type == "transition":
             flow_item = node.flow_item
             if flow_item:
-                # 遷移先ステートの選択肢をステートマシンから取得
+                # TargetステートのSelection肢をステートマシンから取得
                 states_list = [s.name for s in self.state_machine.states.values()] if self.state_machine else []
                 dlg = ConditionBuilderDialog(
                     condition=flow_item.params.get('condition', ''),
@@ -218,8 +216,8 @@ class ActionEditorDialog(QDialog):
                     state_machine=self.state_machine,
                     literal_library=self.literal_library,
                     states=states_list,
-                    target_state=flow_item.params.get('target', ''),          # ★ 現在の遷移先を渡す
-                    else_target_state=flow_item.params.get('else_target', ''), # ★ 現在のelse遷移先を渡す
+                    target_state=flow_item.params.get('target', ''),          # ★ 現在のTargetを渡す
+                    else_target_state=flow_item.params.get('else_target', ''), # ★ 現在のelseTargetを渡す
                     parent=self
                 )
                 if dlg.exec() == QDialog.Accepted:
@@ -238,7 +236,7 @@ class ActionEditorDialog(QDialog):
                     self.code_widget.update_code()
 
     def _on_node_delete_requested(self, node: FlowNodeItem):
-        ret = QMessageBox.question(self, "確認", "このノードを削除しますか？")
+        ret = QMessageBox.question(self, "Confirm", "このノードをDeleteしますか？")
         if ret == QMessageBox.Yes:
             flow_item = node.flow_item
             if flow_item and flow_item in self.draft.flow_items:

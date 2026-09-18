@@ -1,7 +1,5 @@
 # statable_gui/dialogs.py
-"""
-遷移編集ダイアログ（D&D編集対応、条件ビルダー直接起動対応）
-"""
+"""\nTransition edit dialog (D&D edit support / condition builder direct launch support)\n"""
 
 from typing import Optional, List
 
@@ -26,7 +24,7 @@ from .condition_builder_dialog import ConditionBuilderDialog
 
 
 class TransitionTable(QTableWidget):
-    """ダブルクリックイベントを確実に捕捉するためのテーブル"""
+    """Table that reliably captures double-click events"""
     cell_double_clicked_any = Signal(int, int)
 
     def __init__(self, *args, **kwargs):
@@ -45,13 +43,13 @@ class TransitionTable(QTableWidget):
 
 
 class TransitionListDialog(QDialog):
-    """1セル内の複数の遷移を一括編集するダイアログ（D&D編集対応、条件ビルダー直接起動）"""
+    """Dialog to batch-edit multiple transitions in one cell (D&D edit support, condition builder direct launch)"""
 
     def __init__(self, parent=None, state_names=None, event_name="",
                  existing_transitions=None, role_functions=None, global_defs=None,
                  state_machine=None):
         super().__init__(parent)
-        self.setWindowTitle("遷移編集（D&Dビジュアル編集）")
+        self.setWindowTitle("遷移Edit（D&DビジュアルEdit）")
         self.setMinimumSize(1000, 600)
         self.state_names = state_names or []
         self.role_functions = role_functions or {}
@@ -60,10 +58,10 @@ class TransitionListDialog(QDialog):
         self.state_machine = state_machine
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel(f"イベント: {event_name if event_name else '完了遷移'}"))
+        layout.addWidget(QLabel(f"イベント: {event_name if event_name else 'Completion transition'}"))
 
         self.table = TransitionTable(0, 5)
-        self.table.setHorizontalHeaderLabels(["タイトル", "状態遷移条件", "動作", "遷移先", "表示タイトル"])
+        self.table.setHorizontalHeaderLabels(["Title", "State transition condition", "動作", "Target", "表示Title"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setFont(QFont("Consolas", 10))
         layout.addWidget(self.table)
@@ -72,17 +70,17 @@ class TransitionListDialog(QDialog):
         self.table.itemChanged.connect(self.on_item_changed)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("行追加")
+        add_btn = QPushButton("Add row")
         add_btn.clicked.connect(lambda: self.add_row())
-        del_btn = QPushButton("行削除")
+        del_btn = QPushButton("Delete row")
         del_btn.clicked.connect(lambda: self.delete_row())
-        up_btn = QPushButton("上へ")
+        up_btn = QPushButton("Move up")
         up_btn.clicked.connect(lambda: self.move_row_up())
-        down_btn = QPushButton("下へ")
+        down_btn = QPushButton("Move down")
         down_btn.clicked.connect(lambda: self.move_row_down())
 
-        dnd_btn = QPushButton("D&D編集")
-        dnd_btn.setToolTip("選択中の行をビジュアルエディタで編集します")
+        dnd_btn = QPushButton("D&DEdit")
+        dnd_btn.setToolTip("Selection中の行をビジュアルエディタでEditします")
         dnd_btn.clicked.connect(self.open_dnd_editor)
 
         btn_layout.addWidget(add_btn)
@@ -110,19 +108,19 @@ class TransitionListDialog(QDialog):
     # ダブルクリック処理
     # ------------------------------------------------------------------
     def on_cell_double_clicked(self, row, col):
-        """列に応じて編集ダイアログを切り替える"""
+        """列に応じてEditダイアログを切り替える"""
         if col == 1:
-            # 状態遷移条件列 → 条件ビルダー
+            # State transition condition列 → 条件ビルダー
             self.open_condition_builder(row)
         elif col == 2 or col == 4:
-            # 動作列 or 表示タイトル列 → D&Dエディタ
+            # Action column or display title column -> D&D editor
             self.open_dnd_editor_for_row(row)
         else:
             # その他は何もしない
             pass
 
     def open_condition_builder(self, row):
-        """条件ビルダーを開いて条件式を編集する"""
+        """条件ビルダーを開いて条件式をEditする"""
         item = self.table.item(row, 1)
         if not item:
             item = QTableWidgetItem("")
@@ -149,12 +147,12 @@ class TransitionListDialog(QDialog):
         self.open_dnd_editor()
 
     # ------------------------------------------------------------------
-    # D&D編集
+    # D&DEdit
     # ------------------------------------------------------------------
     def open_dnd_editor(self):
         row = self.table.currentRow()
         if row < 0:
-            QMessageBox.warning(self, "警告", "編集する行を選択してください。")
+            QMessageBox.warning(self, "Warning", "Editする行をSelectionしてください。")
             return
 
         trans = self._row_to_transition(row)
@@ -186,25 +184,19 @@ class TransitionListDialog(QDialog):
             self._update_row_from_transition(row, trans)
             StaTableLogger.info(f"D&D editing completed for row {row}")
     def _transition_to_draft(self, trans: Transition) -> ActionDraft:
-        """
-        Transition → ActionDraft 変換
-
-        【v1.6 変更】layer_name を渡す（§11.2 #4）
-          code_widget._get_layer_name() がこれを最優先で参照するため、
-          ここで SM の層名を明示的に引き継ぐ。
-        """
-        # ★ v1.6: SM の layer_name を取得（空ならフォールバックに任せる）
+        """\n        Transition -> ActionDraft conversion\n\n        [v1.6 change] pass layer_name (section 11.2 #4)\n          code_widget._get_layer_name() gives this the highest priority,\n          so explicitly propagate the SM's layer name here.\n        """
+        # v1.6: get SM's layer_name (if empty, defer to fallback)
         layer_name = getattr(self.state_machine, 'layer_name', '') or ''
 
         draft = ActionDraft(
             source=trans.source,
             event=trans.event,
-            layer_name=layer_name,   # ★ v1.6 追加
+            layer_name=layer_name,   # v1.6 added
         )
         flow_item = FlowItem(
             item_type="transition",
-            name=trans.event or "完了",
-            edited_text=trans.title if trans.title != "(無題遷移)" else trans.event or "完了",
+            name=trans.event or "Completion",
+            edited_text=trans.title if trans.title != "(untitled transition)" else trans.event or "Completion",
             params={
                 "event": trans.event,
                 "condition": trans.condition,
@@ -236,7 +228,7 @@ class TransitionListDialog(QDialog):
         if row >= self.table.rowCount():
             return None
         title_item = self.table.item(row, 0)
-        title = title_item.text().strip() if title_item else "(無題遷移)"
+        title = title_item.text().strip() if title_item else "(untitled transition)"
         condition_item = self.table.item(row, 1)
         condition = condition_item.data(Qt.UserRole) if condition_item else ""
         target_widget = self.table.cellWidget(row, 3)
@@ -286,9 +278,9 @@ class TransitionListDialog(QDialog):
         row = self.table.rowCount()
         self.table.insertRow(row)
 
-        title_text = trans.title if trans else "(無題遷移)"
+        title_text = trans.title if trans else "(untitled transition)"
         title_item = QTableWidgetItem(title_text)
-        title_item.setToolTip("この遷移のタイトル。直接編集できます。")
+        title_item.setToolTip("この遷移のTitle。直接Editできます。")
         self.table.setItem(row, 0, title_item)
 
         cond_item = QTableWidgetItem(trans.condition if trans else "")
@@ -298,7 +290,7 @@ class TransitionListDialog(QDialog):
 
         action_text = trans.action if trans else ""
         action_item = QTableWidgetItem(action_text.replace('\n', ' ; '))
-        action_item.setToolTip("ダブルクリックでD&D編集")
+        action_item.setToolTip("ダブルクリックでD&DEdit")
         action_item.setData(Qt.UserRole, action_text)
         self.table.setItem(row, 2, action_item)
 
@@ -351,9 +343,9 @@ class TransitionListDialog(QDialog):
     def _generate_display_title(self, trans: Optional[Transition]) -> str:
         if not trans:
             return ""
-        if trans.title and trans.title != "(無題遷移)":
+        if trans.title and trans.title != "(untitled transition)":
             return trans.title
-        parts = [trans.target] if trans.target else ["(内部)"]
+        parts = [trans.target] if trans.target else ["(internal)"]
         if trans.condition:
             condition_display = trans.condition.replace('\n', ' ; ')
             parts.append(f"[{condition_display[:30]}]")
@@ -363,7 +355,7 @@ class TransitionListDialog(QDialog):
         for row in range(self.table.rowCount()):
             title_item = self.table.item(row, 0)
             if title_item and not title_item.text().strip():
-                title_item.setText("(無題遷移)")
+                title_item.setText("(untitled transition)")
             self._update_display_title(row)
         self.accept()
 

@@ -1,8 +1,5 @@
 # statable_gui/layer_settings_dialog.py
-"""
-レイヤ設定ダイアログ
-- 各タブ（層）の実行優先度・層名を一括設定
-"""
+"""\nLayer settings dialog\n- Batch configure execution priority and layer name for each tab (layer)\n"""
 
 import logging
 from typing import List, Tuple
@@ -20,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class LayerSettingsDialog(QDialog):
-    """レイヤ設定ダイアログ"""
+    """Layer settingsダイアログ"""
 
     def __init__(self, layers: List[Tuple[str, StateMachine]],
                  parent=None):
@@ -31,7 +28,7 @@ class LayerSettingsDialog(QDialog):
         super().__init__(parent)
         self.layers = layers
 
-        self.setWindowTitle("レイヤ設定")
+        self.setWindowTitle("Layer settings")
         self.setMinimumSize(640, 420)
 
         self._setup_ui()
@@ -40,16 +37,16 @@ class LayerSettingsDialog(QDialog):
     def _setup_ui(self):
         layout = QVBoxLayout(self)
 
-        # 説明
+        # description
         info_group = QGroupBox("設定項目について")
         info_layout = QVBoxLayout(info_group)
 
         info_label = QLabel(
-            "・層名: 生成コードの識別子に使用（例: Driver → "
+            "- Layer name: used in generated code identifiers (e.g., Driver -> "
             "STATE_Driver_Idle）。\n"
-            "  空欄にすると層名なし版（STATE_Idle）が生成されます。\n"
-            "・優先度: 1〜9 の範囲。1（低）が最初に実行・初期化。\n"
-            "・タブ名: 表示用の名前（変更はタブ名変更メニューから）。"
+            "  Leaving it empty generates a version without a layer name (STATE_Idle).\n"
+            "- Priority: range 1-9. 1 (low) runs / initializes first.\n"
+            "- Tab name: display name (change via the tab rename menu)."
         )
         info_label.setStyleSheet("color: gray;")
         info_layout.addWidget(info_label)
@@ -59,7 +56,7 @@ class LayerSettingsDialog(QDialog):
         # 層一覧テーブル（4列）
         self.table = QTableWidget(0, 4)
         self.table.setHorizontalHeaderLabels(
-            ["タブ名", "層名", "優先度", "説明"]
+            ["タブ名", "層名", "Priority", "Description"]
         )
         self.table.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeToContents)
@@ -78,11 +75,11 @@ class LayerSettingsDialog(QDialog):
 
         layout.addWidget(self.table)
 
-        # ボタン
+        # Buttons
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
-        cancel_btn = QPushButton("キャンセル")
+        cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
 
@@ -95,33 +92,33 @@ class LayerSettingsDialog(QDialog):
     def _load_layers(self):
         self.table.setRowCount(len(self.layers))
 
-        # 優先度の昇順でソート
+        # Priorityの昇順でソート
         sorted_layers = sorted(
             self.layers,
             key=lambda x: getattr(x[1], 'layer_priority', 5)
         )
 
         for row, (tab_name, sm) in enumerate(sorted_layers):
-            # タブ名（編集不可）
+            # タブ名（Edit不可）
             tab_item = QTableWidgetItem(tab_name)
             tab_item.setFlags(
                 tab_item.flags() & ~Qt.ItemIsEditable
             )
             self.table.setItem(row, 0, tab_item)
 
-            # ★ 層名（編集可）
+            # ★ 層名（Edit可）
             layer_name = getattr(sm, 'layer_name', '')
             name_item = QTableWidgetItem(layer_name)
             self.table.setItem(row, 1, name_item)
 
-            # 優先度（スピンボックス）
+            # Priority（スピンボックス）
             priority = getattr(sm, 'layer_priority', 5)
             priority_spin = QSpinBox()
             priority_spin.setRange(1, 9)
             priority_spin.setValue(priority)
             self.table.setCellWidget(row, 2, priority_spin)
 
-            # 説明
+            # description
             desc = getattr(sm, 'layer_description', '')
             desc_item = QTableWidgetItem(desc)
             self.table.setItem(row, 3, desc_item)
@@ -129,7 +126,7 @@ class LayerSettingsDialog(QDialog):
         self.table.resizeRowsToContents()
 
     def _on_ok(self):
-        # 優先度の重複チェック
+        # Priorityの重複チェック
         priorities = []
         for row in range(self.table.rowCount()):
             spin = self.table.cellWidget(row, 2)
@@ -138,8 +135,8 @@ class LayerSettingsDialog(QDialog):
 
         if len(priorities) != len(set(priorities)):
             reply = QMessageBox.question(
-                self, "確認",
-                "優先度が重複しています。このまま続けますか？",
+                self, "Confirm",
+                "Priorityが重複しています。このまま続けますか？",
                 QMessageBox.Yes | QMessageBox.No
             )
             if reply == QMessageBox.No:
@@ -167,12 +164,12 @@ class LayerSettingsDialog(QDialog):
             if name_item:
                 target_sm.layer_name = name_item.text().strip()
 
-            # 優先度
+            # Priority
             spin = self.table.cellWidget(row, 2)
             if spin:
                 target_sm.layer_priority = spin.value()
 
-            # 説明
+            # description
             desc_item = self.table.item(row, 3)
             if desc_item:
                 target_sm.layer_description = desc_item.text()
