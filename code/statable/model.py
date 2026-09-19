@@ -35,11 +35,18 @@ class EventSourceLayer(Enum):
 
 @dataclass
 class State:
+    """State definition.
+
+    [v2.2 change]
+      entry / exit: str -> List[str]
+        Multiple entry / exit actions are now supported.
+        Old XML (`entry="Foo"`) is auto-migrated in xml_io.py.
+    """
     name: str
     type: StateType = StateType.NORMAL
     parent: Optional[str] = None
-    entry: str = ""
-    exit: str = ""
+    entry: List[str] = field(default_factory=list)   # v2.2: was str
+    exit: List[str] = field(default_factory=list)    # v2.2: was str
     do: str = ""
     description: str = ""
 
@@ -66,50 +73,34 @@ class Event:
 
 @dataclass(kw_only=True)
 class Transition:
-    """
-    State transition definition
+    """State transition definition.
 
-    [v1.6 change] kw_only=True
-      To structurally prevent positional-argument field-order accidents
-      (v1.4 section 9.6 #67), only kw_only arguments are accepted.
+    [v2.2 additions]
+      early_return: bool = False
+        - True  : "Commit"    — stop evaluating later transitions in the same cell
+        - False : "Tentative" — later transitions may overwrite the target
+        Generated code: `if (!_handled && cond)` for True,
+                        `if (cond)`              for False.
 
-    Old: Transition("Idle", "START", "", ["init()"], "Active")  <- positional args (dangerous)
-    New: Transition(source="Idle", event="START", pre_actions=["init()"], ...)  <- kwargs only
+      label: str = ""
+        Stable identifier within a cell (e.g. "T1", "T2").
+        Referenced by TransitionRelation.members.
+        Persisted in XML.
 
-    In v1.5, an AST audit confirmed that all 14 sites in sample_data.py /
-    xml_io.py / dialogs.py / draft.py / change_applier.py use kwargs.
-
-    [v2.0 known constraint: transition_type is a reserved field]
-      - "external": normal transition (default, implemented)
-      - "internal": executes only the action without leaving the state (**unimplemented / reserved**)
-      - "local":    self transition (**unimplemented / reserved**)
-
-      As of v1.9, internal / local are unimplemented. Generated code
-      (codegen/transition_generator.py) does not reference transition_type,
-      and always treats it as equivalent to external (transition to target).
-
-      Impact:
-        - GUI (matrix_table.py) does not display a transition-type column
-        - Generated code does not call entry / exit separately
-        - XML save / load preserves the value (round-trip maintained)
-
-      Reservation reason:
-        Entry / exit call control widely affects the state machine runner
-        (c_code_generator.py / template group), so
-        v2.0 freezes the spec and implements it incrementally in v2.x.
-
-      Reference: v1.9 section 9.9 #93 (consistency check detected)
+    [v1.6] kw_only=True (positional-argument safety)
     """
     source: str
     event: str
-    condition: str = ""                # Condition expression (symbol names)
-    pre_actions: List[str] = field(default_factory=list)  # Pre-transition processing
+    condition: str = ""
+    pre_actions: List[str] = field(default_factory=list)
     target: str = ""
     has_else: bool = True
     else_target: str = ""
-    else_actions: List[str] = field(default_factory=list)  # elseAction
-    action: str = ""                   # Old field (compatibility)
-    transition_type: str = "external"  # Reserved fields
+    else_actions: List[str] = field(default_factory=list)
+    early_return: bool = False   # v2.2
+    label: str = ""              # v2.2
+    action: str = ""
+    transition_type: str = "external"
     title: str = ""
 
     def __post_init__(self):
@@ -117,24 +108,51 @@ class Transition:
             self.title = "(untitled transition)"
 
 
+@dataclass
+class ActionStep:
+    """Transition-independent action step (v2.2).
+
+    Represents an action that runs unconditionally or at a fixed
+    phase, independent of any transition condition.
+
+    trigger:
+      "always"             — runs at the very beginning of the cell body
+      "before_transitions" — runs just before evaluating transitions
+      "after_transitions"  — runs at the end of the cell body
+    """
+    role_function: str = ""      # qualified name (e.g. "Driver.PreCheck")
+    trigger: str = "always"
+    title: str = ""
+
+    def __post_init__(self):
+        if not self.title:
+            self.title = self.role_function or "(untitled action)"
+
+
+@dataclass
+class TransitionRelation:
+    """Relation between transitions in one cell (v2.2).
+
+    kind:
+      "sequential"  — evaluate members in order (default)
+      "exclusive"   — at most one member fires; codegen enforces early return
+      "group"       — logical grouping; shared_condition is hoisted
+                      as an outer `if` (evaluated once)
+
+    members: Transition.label values (e.g. ["T1", "T2"]).
+    shared_condition: only used when kind == "group".
+    """
+    kind: str = "sequential"
+    members: List[str] = field(default_factory=list)
+    shared_condition: str = ""
+    note: str = ""
+
+
 @dataclass(kw_only=True)
 class RoleFunction:
-    """
-    Role function (implements state transition conditions and actions together)
-
-    [v1.5 change] kw_only=True
-      To structurally prevent positional-argument field-order accidents
-      (v1.4 section 9.6 #76), only kw_only arguments are accepted.
-
-    Old: RoleFunction(name, desc, ret, ...)  <- positional args (dangerous)
-    New: RoleFunction(name=..., description=..., return_type=...)  <- kwargs only
-
-    namespace: layer name or feature group name (e.g. "Driver")
-      - Referenceable as `Driver.Init`
-      - Empty string means no layer
-    """
-    name: str                               # Bare name (e.g., \"Init\")
-    namespace: str = ""                     # Namespace (e.g., \"Driver\")
+    """Role function (shared library / state machine local)."""
+    name: str
+    namespace: str = ""
     description: str = ""
     return_type: str = "void"
     arg1_type: str = ""

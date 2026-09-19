@@ -16,10 +16,25 @@ from .global_defs import (
 def create_sample_state_machine() -> StateMachine:
     sm = StateMachine()
 
-    sm.add_state(State("Idle", entry="Idle_entry", description="Initial state"))
-    sm.add_state(State("Active", do="Active_do", description="Running"))
-    sm.add_state(State("Error", entry="Error_entry", exit="Error_exit", description="ErrorState"))
-    sm.add_state(State("Halt", type=StateType.FINAL, description="Stopped state"))
+    # ==================================================================
+    # [v2.2 change] State.entry / exit: str -> List[str]
+    #   Multiple entry / exit actions are now supported.
+    #   Old form (entry="Foo") is auto-normalized in State.__post_init__,
+    #   but the sample data uses the new list form explicitly.
+    # ==================================================================
+    sm.add_state(State("Idle",
+                       entry=["Idle_entry"],
+                       description="Initial state"))
+    sm.add_state(State("Active",
+                       do="Active_do",
+                       description="Running"))
+    sm.add_state(State("Error",
+                       entry=["Error_entry"],
+                       exit=["Error_exit"],
+                       description="Error state"))
+    sm.add_state(State("Halt",
+                       type=StateType.FINAL,
+                       description="Stopped state"))
 
     sm.add_event(Event(name="START", id=1, description="Startup request",
                        delivery_type=EventDeliveryType.DIRECT,
@@ -47,6 +62,7 @@ def create_sample_state_machine() -> StateMachine:
 
     # ==================================================================
     # [v1.5 fix] Root fix for Transition positional arg bug
+    # [v2.2] `early_return` and `label` are optional (default False / "")
     # ==================================================================
     sm.add_transition(Transition(
         source="Idle",
@@ -177,24 +193,30 @@ def create_sample_global_defs() -> GlobalDefinitions:
         name="TIMER0", description="1ms period timer",
         event_names=["TIMER0_OVERFLOW"], is_timer=True,
         actions=[
-            InterruptAction(condition="g_tick_100ms >= 5", action="StateMachine_EnqueueEvent(EVENT_TICK);"),
-            InterruptAction(condition="", action="g_system_tick++;\nUpdateDerivedTimers();"),
+            InterruptAction(condition="g_tick_100ms >= 5",
+                            action="StateMachine_EnqueueEvent(EVENT_TICK);"),
+            InterruptAction(condition="",
+                            action="g_system_tick++;\nUpdateDerivedTimers();"),
         ],
         title="Timer0Interrupt"
     ))
 
-    defs.placeholders.append(DevicePlaceholderDef(name="TIMER0_IRQ_FLAG",
-                                                  description="Timer0 interrupt flag clear register",
-                                                  title="Timer0 IRQFlag"))
+    defs.placeholders.append(DevicePlaceholderDef(
+        name="TIMER0_IRQ_FLAG",
+        description="Timer0 interrupt flag clear register",
+        title="Timer0 IRQFlag"))
 
     defs.timer_base = TimerBaseDef(
         variable_name="g_system_tick", unit="1ms", data_type="volatile uint32_t",
         derived=[
-            TimerDerivedDef(period_name="10ms", multiplier=10, variable_name="g_tick_10ms",
+            TimerDerivedDef(period_name="10ms", multiplier=10,
+                            variable_name="g_tick_10ms",
                             data_type="uint8_t", title="10msTimer"),
-            TimerDerivedDef(period_name="100ms", multiplier=100, variable_name="g_tick_100ms",
+            TimerDerivedDef(period_name="100ms", multiplier=100,
+                            variable_name="g_tick_100ms",
                             data_type="uint8_t", title="100msTimer"),
-            TimerDerivedDef(period_name="1s", multiplier=1000, variable_name="g_tick_1s",
+            TimerDerivedDef(period_name="1s", multiplier=1000,
+                            variable_name="g_tick_1s",
                             data_type="uint16_t", title="1sTimer"),
         ],
         title="System timer base",
@@ -202,10 +224,13 @@ def create_sample_global_defs() -> GlobalDefinitions:
     )
 
     defs.extra_timers.append(TimerBaseDef(
-        variable_name="g_high_speed_tick", unit="100us", data_type="volatile uint32_t",
+        variable_name="g_high_speed_tick", unit="100us",
+        data_type="volatile uint32_t",
         derived=[
-            TimerDerivedDef(period_name="1ms", multiplier=10, variable_name="g_hs_1ms",
-                            data_type="uint16_t", title="High-speed 1ms timer"),
+            TimerDerivedDef(period_name="1ms", multiplier=10,
+                            variable_name="g_hs_1ms",
+                            data_type="uint16_t",
+                            title="High-speed 1ms timer"),
         ],
         title="High-speed timer base",
         interrupt_name="TIMER1"

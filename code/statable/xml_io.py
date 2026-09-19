@@ -1,13 +1,18 @@
 # statable/xml_io.py
 """
-XML I/O (project settings / layer priority / layer name / namespace support)
-- Save shared libraries on project save / load
-- Also save Transition's pre_actions / else_actions / has_else / else_target
-- String-to-list normalization, auto-merge of single-character splits
-- Save / restore layer priority, description, layer_name, project name
-- Save / restore RoleFunction namespace
-- Save / restore InterruptHandlerDef's used_role_functions / used_variables
-- Auto-migrate legacy XML (without namespace)
+XML I/O for StaTable.
+
+[v2.2 additions]
+  - State.entry / exit: str -> List[str]
+    New format:  <State ...><Entry><Action name="..."/></Entry><Exit>...</Exit></State>
+    Old format:  <State entry="Foo" exit="Bar"/>   (auto-migrated on load)
+  - Transition: `early_return` and `label` attributes.
+  - Cell-level metadata: <Cells><Cell source=... event=...>...</Cell></Cells>
+
+[backward compatibility]
+  - Old files without <Entry>/<Exit> child elements are still loaded.
+  - Old files without `early_return` treat it as False.
+  - Old files without <Cells> have empty cell_actions / cell_relations.
 """
 
 import xml.etree.ElementTree as ET
@@ -17,6 +22,7 @@ from typing import List, Tuple, Optional
 from .model import (
     State, Event, Transition, StateType, EventKind, RoleFunction,
     EventDeliveryType, EventSourceLayer,
+    ActionStep, TransitionRelation,
 )
 from .state_machine import StateMachine
 from .global_defs import (
@@ -36,11 +42,13 @@ try:
 except ImportError:
     RoleFunctionLibrary = ConditionLibrary = LiteralLibrary = None
     LibRoleFunction = ConditionTemplate = LiteralDefinition = None
+
+
 # ======================================================================
 # Helpers: string / list normalization
 # ======================================================================
 def _normalize_actions(value) -> List[str]:
-    """\n    Always normalize pre_actions / else_actions to List[str].\n"""
+    """Always normalize action collections to List[str]."""
     if value is None:
         return []
     if isinstance(value, str):
@@ -50,7 +58,9 @@ def _normalize_actions(value) -> List[str]:
         # Detect and merge old data split into chars
         if value and all(isinstance(s, str) and len(s) == 1 for s in value):
             joined = "".join(value)
-            logger.warning(f"Detected 1-char split actions, joining: {value} -> ['{joined}']")
+            logger.warning(
+                f"Detected 1-char split actions, joining: {value} -> ['{joined}']"
+            )
             return [joined]
         # Normal list
         return [str(s) for s in value if str(s).strip()]
@@ -58,13 +68,89 @@ def _normalize_actions(value) -> List[str]:
     return [str(value)]
 
 
+def _normalize_str_list(value) -> List[str]:
+    """Same as _normalize_actions; used for State.entry / exit (v2.2)."""
+    return _normalize_actions(value)
+
+
 # ======================================================================
-# StateMachine → XML
+# StateMachine -> XML
 # ======================================================================
+def _state_to_element(state: State) -> ET.Element:
+    """Serialize one State (v2.2: entry/exit as child elements)."""
+    attrs = {
+        "name": state.name,
+        "type": state.type.value,
+        "parent": state.parent or "",
+        "do": state.do,
+        "description": state.description,
+    }
+    elem = ET.Element("State", **attrs)
+
+    # entry (list of actions)
+    entry_list = _normalize_str_list(getattr(state, 'entry', []))
+    if entry_list:
+        entry_elem = ET.SubElement(elem, "Entry")
+        for a in entry_list:
+            ET.SubElement(entry_elem, "Action", name=str(a))
+
+    # exit (list of actions)
+    exit_list = _normalize_str_list(getattr(state, 'exit', []))
+    if exit_list:
+        exit_elem = ET.SubElement(elem, "Exit")
+        for a in exit_list:
+            ET.SubElement(exit_elem, "Action", name=str(a))
+
+    return elem
+
+
+def _state_from_element(elem: ET.Element) -> State:
+    """Deserialize one State (v2.2: supports both old and new formats)."""
+    # New format: <Entry><Action name="..."/></Entry>
+    entry_list: List[str] = []
+    exit_list: List[str] = []
+
+    entry_elem = elem.find("Entry")
+    if entry_elem is not None:
+        for action_elem in entry_elem.findall("Action"):
+            n = action_elem.get("name", "")
+            if n:
+                entry_list.append(n)
+    else:
+        # Backward compat: <State entry="Foo"/>
+        old_entry = elem.get("entry", "")
+        if old_entry:
+            entry_list = _normalize_str_list(old_entry)
+
+    exit_elem = elem.find("Exit")
+    if exit_elem is not None:
+        for action_elem in exit_elem.findall("Action"):
+            n = action_elem.get("name", "")
+            if n:
+                exit_list.append(n)
+    else:
+        old_exit = elem.get("exit", "")
+        if old_exit:
+            exit_list = _normalize_str_list(old_exit)
+
+    return State(
+        name=elem.get("name", ""),
+        type=StateType(elem.get("type", "normal")),
+        parent=elem.get("parent") or None,
+        entry=entry_list,
+        exit=exit_list,
+        do=elem.get("do", ""),
+        description=elem.get("description", ""),
+    )
+
+
 def state_machine_to_element(sm: StateMachine) -> ET.Element:
-    """Convert StateMachine to XML Element"""
-    logger.debug(f"state_machine_to_element: states={len(sm.states)}, events={len(sm.events)}, "
-                 f"roles={len(sm.role_functions)}, transitions={len(sm.transitions)}")
+    """Convert StateMachine to XML Element."""
+    logger.debug(
+        f"state_machine_to_element: states={len(sm.states)}, "
+        f"events={len(sm.events)}, roles={len(sm.role_functions)}, "
+        f"transitions={len(sm.transitions)}"
+    )
 
     root = ET.Element("StateMachine")
     if sm.initial_state:
@@ -74,23 +160,13 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
     root.set("layer_priority", str(getattr(sm, 'layer_priority', 5)))
     root.set("layer_description", getattr(sm, 'layer_description', ''))
     root.set("layer_name", getattr(sm, 'layer_name', ''))
-    logger.debug(f"  layer_priority={getattr(sm, 'layer_priority', 5)}, "
-                 f"layer_description='{getattr(sm, 'layer_description', '')}', "
-                 f"layer_name='{getattr(sm, 'layer_name', '')}'")
 
+    # States
     states_elem = ET.SubElement(root, "States")
     for state in sm.states.values():
-        attrs = {
-            "name": state.name,
-            "type": state.type.value,
-            "parent": state.parent or "",
-            "entry": state.entry,
-            "exit": state.exit,
-            "do": state.do,
-            "description": state.description,
-        }
-        ET.SubElement(states_elem, "State", **attrs)
+        states_elem.append(_state_to_element(state))
 
+    # Events
     events_elem = ET.SubElement(root, "Events")
     for event in sm.events.values():
         attrs = {
@@ -108,7 +184,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
         }
         ET.SubElement(events_elem, "Event", **attrs)
 
-    # Add namespace attribute to RoleFunctions
+    # RoleFunctions
     roles_elem = ET.SubElement(root, "RoleFunctions")
     for rf in sm.role_functions.values():
         attrs = {
@@ -124,13 +200,15 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
         }
         ET.SubElement(roles_elem, "RoleFunction", **attrs)
 
+    # Transitions
     trans_elem = ET.SubElement(root, "Transitions")
-    for idx, t in enumerate(sm.transitions):
-        # Normalization: convert strings to lists
+    for t in sm.transitions:
         pre_actions = _normalize_actions(getattr(t, 'pre_actions', []))
         else_actions = _normalize_actions(getattr(t, 'else_actions', []))
         has_else = getattr(t, 'has_else', True)
         else_target = getattr(t, 'else_target', '')
+        early_return = getattr(t, 'early_return', False)
+        label = getattr(t, 'label', '')
 
         attrs = {
             "source": t.source,
@@ -142,51 +220,75 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
             "title": t.title,
             "has_else": "true" if has_else else "false",
             "else_target": else_target,
+            "early_return": "true" if early_return else "false",  # v2.2
         }
-        trans_child = ET.SubElement(trans_elem, "Transition", **attrs)
+        if label:                                                  # v2.2
+            attrs["label"] = label
 
+        trans_child = ET.SubElement(trans_elem, "Transition", **attrs)
         for pre in pre_actions:
             ET.SubElement(trans_child, "PreAction", action=str(pre))
         for ea in else_actions:
             ET.SubElement(trans_child, "ElseAction", action=str(ea))
 
+    # Cells (v2.2): actions + relations
+    cell_keys = sm.get_cell_keys()
+    if cell_keys:
+        cells_elem = ET.SubElement(root, "Cells")
+        for (source, event) in cell_keys:
+            cell_elem = ET.SubElement(
+                cells_elem, "Cell",
+                source=source, event=event,
+            )
+
+            actions = sm.get_actions_for_cell(source, event)
+            if actions:
+                actions_elem = ET.SubElement(cell_elem, "Actions")
+                for a in actions:
+                    ET.SubElement(actions_elem, "Action",
+                                  role_function=a.role_function,
+                                  trigger=a.trigger,
+                                  title=a.title)
+
+            relations = sm.get_relations_for_cell(source, event)
+            if relations:
+                rels_elem = ET.SubElement(cell_elem, "Relations")
+                for r in relations:
+                    ET.SubElement(rels_elem, "Relation",
+                                  kind=r.kind,
+                                  members=",".join(r.members),
+                                  shared_condition=r.shared_condition,
+                                  note=r.note)
+
     return root
 
 
 def state_machine_from_element(elem: ET.Element) -> StateMachine:
-    """Build StateMachine from XML Element"""
+    """Build StateMachine from XML Element."""
     logger.debug(f"state_machine_from_element: tag={elem.tag}")
 
     sm = StateMachine()
     initial_state_name = elem.get("initial")
 
-    # Layer settings
     try:
         sm.layer_priority = int(elem.get("layer_priority", "5"))
     except ValueError:
         sm.layer_priority = 5
     sm.layer_description = elem.get("layer_description", "")
     sm.layer_name = elem.get("layer_name", "")
-    logger.debug(f"  layer_name='{sm.layer_name}'")
 
+    # ---- States ----
     states_elem = elem.find("States")
     if states_elem is None:
         logger.error("  <States> element not found!")
         return sm
     for state_elem in states_elem:
         try:
-            sm.add_state(State(
-                name=state_elem.get("name", ""),
-                type=StateType(state_elem.get("type", "normal")),
-                parent=state_elem.get("parent") or None,
-                entry=state_elem.get("entry", ""),
-                exit=state_elem.get("exit", ""),
-                do=state_elem.get("do", ""),
-                description=state_elem.get("description", ""),
-            ))
+            sm.add_state(_state_from_element(state_elem))
         except Exception as e:
             logger.error(f"  Failed to load state: {e}", exc_info=True)
 
+    # ---- Events ----
     events_elem = elem.find("Events")
     if events_elem is not None:
         for event_elem in events_elem:
@@ -209,14 +311,12 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             except Exception as e:
                 logger.error(f"  Failed to load event: {e}", exc_info=True)
 
-    # RoleFunctions: namespace loading
+    # ---- RoleFunctions ----
     roles_elem = elem.find("RoleFunctions")
     if roles_elem is not None:
         for rf_elem in roles_elem:
             raw_name = rf_elem.get("name", "")
             namespace = rf_elem.get("namespace", "")
-
-            # Legacy migration: namespace unset + layer prefix
             if not namespace and sm.layer_name:
                 legacy_prefix = f"{sm.layer_name}_"
                 if raw_name.startswith(legacy_prefix):
@@ -227,7 +327,6 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
                     )
                     namespace = sm.layer_name
                     raw_name = raw_name[len(legacy_prefix):]
-
             try:
                 sm.add_role_function(RoleFunction(
                     name=raw_name,
@@ -243,20 +342,25 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             except Exception as e:
                 logger.error(f"  Failed to load role_function: {e}", exc_info=True)
 
+    # ---- Transitions ----
     trans_elem = elem.find("Transitions")
     if trans_elem is not None:
         for trans_elem_child in trans_elem:
-            # Get raw list
-            pre_actions_raw = [p.get("action", "") for p in trans_elem_child.findall("PreAction")]
-            else_actions_raw = [e.get("action", "") for e in trans_elem_child.findall("ElseAction")]
-
-            # Normalization (merge if split)
+            pre_actions_raw = [
+                p.get("action", "")
+                for p in trans_elem_child.findall("PreAction")
+            ]
+            else_actions_raw = [
+                e.get("action", "")
+                for e in trans_elem_child.findall("ElseAction")
+            ]
             pre_actions = _normalize_actions(pre_actions_raw)
             else_actions = _normalize_actions(else_actions_raw)
 
-            has_else_str = trans_elem_child.get("has_else", "true")
-            has_else = has_else_str.lower() == "true"
+            has_else = trans_elem_child.get("has_else", "true").lower() == "true"
             else_target = trans_elem_child.get("else_target", "")
+            early_return = trans_elem_child.get("early_return", "false").lower() == "true"  # v2.2
+            label = trans_elem_child.get("label", "")                                       # v2.2
 
             try:
                 sm.add_transition(Transition(
@@ -271,22 +375,60 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
                     has_else=has_else,
                     else_target=else_target,
                     else_actions=else_actions,
+                    early_return=early_return,
+                    label=label,
                 ))
             except Exception as e:
                 logger.error(f"  Failed to load transition: {e}", exc_info=True)
 
+    # ---- Cells (v2.2) ----
+    cells_elem = elem.find("Cells")
+    if cells_elem is not None:
+        for cell_elem in cells_elem.findall("Cell"):
+            source = cell_elem.get("source", "")
+            event = cell_elem.get("event", "")
+
+            # Actions
+            actions_elem = cell_elem.find("Actions")
+            if actions_elem is not None:
+                actions = []
+                for a_elem in actions_elem.findall("Action"):
+                    actions.append(ActionStep(
+                        role_function=a_elem.get("role_function", ""),
+                        trigger=a_elem.get("trigger", "always"),
+                        title=a_elem.get("title", ""),
+                    ))
+                sm.set_actions_for_cell(source, event, actions)
+
+            # Relations
+            rels_elem = cell_elem.find("Relations")
+            if rels_elem is not None:
+                relations = []
+                for r_elem in rels_elem.findall("Relation"):
+                    members_str = r_elem.get("members", "")
+                    members = [m.strip() for m in members_str.split(",") if m.strip()]
+                    relations.append(TransitionRelation(
+                        kind=r_elem.get("kind", "sequential"),
+                        members=members,
+                        shared_condition=r_elem.get("shared_condition", ""),
+                        note=r_elem.get("note", ""),
+                    ))
+                sm.set_relations_for_cell(source, event, relations)
+
     if initial_state_name:
         sm.set_initial(initial_state_name)
 
-    logger.debug(f"state_machine_from_element: loaded states={len(sm.states)}, "
-                 f"events={len(sm.events)}, roles={len(sm.role_functions)}, "
-                 f"transitions={len(sm.transitions)}")
-
+    logger.debug(
+        f"state_machine_from_element: loaded states={len(sm.states)}, "
+        f"events={len(sm.events)}, roles={len(sm.role_functions)}, "
+        f"transitions={len(sm.transitions)}, "
+        f"cells={len(sm.get_cell_keys())}"
+    )
     return sm
 
 
 # ======================================================================
-# GlobalDefinitions → XML
+# GlobalDefinitions -> XML  (unchanged from v2.1)
 # ======================================================================
 def _timer_to_element(parent: ET.Element, timer: TimerBaseDef, tag: str = "Timer"):
     elem = ET.SubElement(parent, tag)
@@ -366,7 +508,6 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
             "description": flag.description, "title": flag.title,
         })
 
-    # Interrupts: used_role_functions support
     if defs.interrupts:
         intrs_elem = ET.SubElement(root, "Interrupts")
         for intr in defs.interrupts:
@@ -380,7 +521,6 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
                 ET.SubElement(intr_child, "Action", **{
                     "condition": act.condition, "action": act.action,
                 })
-            # Record used role functions and variables
             for ref in getattr(intr, 'used_role_functions', []):
                 ET.SubElement(intr_child, "UsedRoleFunction", ref=ref)
             for var in getattr(intr, 'used_variables', []):
@@ -475,7 +615,6 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                 title=flag_elem.get("title", ""),
             ))
 
-    # Interrupts: used_role_functions restore
     intrs_elem = elem.find("Interrupts")
     if intrs_elem is not None:
         for intr_elem in intrs_elem:
@@ -485,7 +624,6 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
                     condition=act_elem.get("condition", ""),
                     action=act_elem.get("action", ""),
                 ))
-            # Restore used role functions and variables
             used_rfs = [r.get("ref", "")
                         for r in intr_elem.findall("UsedRoleFunction")
                         if r.get("ref")]
@@ -550,7 +688,7 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
 
 
 # ======================================================================
-# Shared library -> XML
+# Shared libraries -> XML  (unchanged from v2.1)
 # ======================================================================
 def role_function_library_to_element(lib) -> Optional[ET.Element]:
     if lib is None:
@@ -574,10 +712,6 @@ def role_function_library_to_element(lib) -> Optional[ET.Element]:
 
 
 def role_function_library_from_element(elem: Optional[ET.Element]):
-    """
-    libcntrl.RoleFunction accepts only name/title/description,
-    so other attributes are set via setattr after checking with hasattr.
-    """
     if elem is None:
         return RoleFunctionLibrary() if RoleFunctionLibrary else None
     lib = RoleFunctionLibrary()
@@ -586,8 +720,6 @@ def role_function_library_from_element(elem: Optional[ET.Element]):
         name = rf_elem.get("name", "")
         namespace = rf_elem.get("namespace", "")
         try:
-            # Generate only with accepted arguments
-            # namespace added as a keyword argument
             try:
                 rf = LibRoleFunction(
                     name=name,
@@ -596,7 +728,6 @@ def role_function_library_from_element(elem: Optional[ET.Element]):
                     description=rf_elem.get("description", ""),
                 )
             except TypeError:
-                # Old version compatibility (no namespace)
                 rf = LibRoleFunction(
                     name=name,
                     title=rf_elem.get("title", ""),
@@ -604,7 +735,6 @@ def role_function_library_from_element(elem: Optional[ET.Element]):
                 )
                 if hasattr(rf, 'namespace'):
                     rf.namespace = namespace
-            # Set additional attributes only if they exist
             for attr in ('return_type', 'arg1_type', 'arg1_name',
                          'arg2_type', 'arg2_name'):
                 if hasattr(rf, attr):
@@ -682,10 +812,9 @@ def literal_library_from_element(elem: Optional[ET.Element]):
 
 
 # ======================================================================
-# Project settings -> XML
+# Project settings -> XML  (unchanged from v2.1)
 # ======================================================================
 def _project_settings_to_element(settings: Optional[dict]) -> ET.Element:
-    """Convert project settings to XML element"""
     logger.debug(f"_project_settings_to_element: settings={settings is not None}")
     elem = ET.Element("ProjectSettings")
 
@@ -707,7 +836,6 @@ def _project_settings_to_element(settings: Optional[dict]) -> ET.Element:
         cg.set("max_consecutive_pending_events",
                str(settings.get('max_consecutive_pending_events', 16)))
 
-        # External include
         ext_includes = settings.get('external_includes', [])
         if ext_includes:
             ext_elem = ET.SubElement(cg, "ExternalIncludes")
@@ -727,7 +855,6 @@ def _project_settings_to_element(settings: Optional[dict]) -> ET.Element:
 
 
 def _project_settings_from_element(elem: Optional[ET.Element]) -> dict:
-    """Restore project settings from XML element"""
     settings = {}
     if elem is None:
         return settings
@@ -780,12 +907,9 @@ def project_to_xml(
         literal_library=None,
         project_settings: Optional[dict] = None,
 ) -> None:
-    """Save project to XML file (including shared library)"""
     logger.debug(f"=== project_to_xml START: {filepath} ===")
-
     root = ET.Element("Project")
 
-    # Project settings
     project_name = "MyProject"
     if project_settings:
         project_name = project_settings.get('project_name', 'MyProject')
@@ -799,17 +923,11 @@ def project_to_xml(
             or literal_library is not None):
         libs_elem = ET.SubElement(root, "SharedLibraries")
         if role_function_library is not None:
-            libs_elem.append(
-                role_function_library_to_element(role_function_library)
-            )
+            libs_elem.append(role_function_library_to_element(role_function_library))
         if condition_library is not None:
-            libs_elem.append(
-                condition_library_to_element(condition_library)
-            )
+            libs_elem.append(condition_library_to_element(condition_library))
         if literal_library is not None:
-            libs_elem.append(
-                literal_library_to_element(literal_library)
-            )
+            libs_elem.append(literal_library_to_element(literal_library))
 
     for name, sm in tabs:
         tab_elem = ET.SubElement(root, "Tab")
@@ -823,20 +941,11 @@ def project_to_xml(
 
 
 def project_from_xml(filepath: str):
-    """
-    Load project from XML file.
-    Returns:
-        (tabs, global_defs, role_lib, cond_lib, lit_lib, project_settings)
-    """
     logger.debug(f"=== project_from_xml START: {filepath} ===")
-
     tree = ET.parse(filepath)
     root = tree.getroot()
 
-    # Project settings
-    project_settings = _project_settings_from_element(
-        root.find("ProjectSettings")
-    )
+    project_settings = _project_settings_from_element(root.find("ProjectSettings"))
     if 'project_name' not in project_settings and root.get("name"):
         project_settings['project_name'] = root.get("name")
 
@@ -844,13 +953,9 @@ def project_from_xml(filepath: str):
     global_defs = (global_defs_from_element(gd_elem)
                    if gd_elem is not None else GlobalDefinitions())
 
-    # Load shared library
-    role_function_library = (RoleFunctionLibrary()
-                             if RoleFunctionLibrary else None)
-    condition_library = (ConditionLibrary()
-                         if ConditionLibrary else None)
-    literal_library = (LiteralLibrary()
-                       if LiteralLibrary else None)
+    role_function_library = (RoleFunctionLibrary() if RoleFunctionLibrary else None)
+    condition_library = (ConditionLibrary() if ConditionLibrary else None)
+    literal_library = (LiteralLibrary() if LiteralLibrary else None)
 
     libs_elem = root.find("SharedLibraries")
     if libs_elem is not None:

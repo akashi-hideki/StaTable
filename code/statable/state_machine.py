@@ -1,6 +1,10 @@
 # statable/state_machine.py
-from typing import Dict, List, Optional
-from .model import State, Event, Transition, RoleFunction
+from typing import Dict, List, Optional, Tuple
+
+from .model import (
+    State, Event, Transition, RoleFunction,
+    ActionStep, TransitionRelation,
+)
 
 
 class StateMachine:
@@ -11,11 +15,20 @@ class StateMachine:
         self.role_functions: Dict[str, RoleFunction] = {}
         self.initial_state: Optional[str] = None
 
-        # ★ Layer settings
-        self.layer_priority: int = 5          # Execution priority (1-9)
-        self.layer_description: str = ""      # Layer description (optional)
-        self.layer_name: str = ""             # Layer name (e.g., \"Driver\")
+        # Layer settings
+        self.layer_priority: int = 5
+        self.layer_description: str = ""
+        self.layer_name: str = ""
 
+        # === v2.2: per-cell metadata ===
+        # Key: (source_state_name, event_name)
+        # Note: event_name may be "" for completion transitions.
+        self.cell_actions: Dict[Tuple[str, str], List[ActionStep]] = {}
+        self.cell_relations: Dict[Tuple[str, str], List[TransitionRelation]] = {}
+
+    # ------------------------------------------------------------------
+    # Existing API (unchanged)
+    # ------------------------------------------------------------------
     def add_state(self, state: State):
         if state.name in self.states:
             raise ValueError(f"State '{state.name}' already exists")
@@ -30,6 +43,11 @@ class StateMachine:
         if name in self.events:
             del self.events[name]
         self.transitions = [t for t in self.transitions if t.event != name]
+        # v2.2: drop cell metadata that referenced this event
+        for key in [k for k in self.cell_actions if k[1] == name]:
+            del self.cell_actions[key]
+        for key in [k for k in self.cell_relations if k[1] == name]:
+            del self.cell_relations[key]
 
     def add_transition(self, trans: Transition):
         if trans.source not in self.states:
@@ -64,3 +82,40 @@ class StateMachine:
 
     def get_transitions_for_event(self, event: str) -> List[Transition]:
         return [t for t in self.transitions if t.event == event]
+
+    # ------------------------------------------------------------------
+    # v2.2: cell action / relation accessors
+    # ------------------------------------------------------------------
+    def get_actions_for_cell(self, source: str, event: str) -> List[ActionStep]:
+        return self.cell_actions.get((source, event), [])
+
+    def set_actions_for_cell(self, source: str, event: str,
+                              actions: List[ActionStep]) -> None:
+        key = (source, event)
+        if actions:
+            self.cell_actions[key] = list(actions)
+        else:
+            self.cell_actions.pop(key, None)
+
+    def get_relations_for_cell(self, source: str, event: str
+                                ) -> List[TransitionRelation]:
+        return self.cell_relations.get((source, event), [])
+
+    def set_relations_for_cell(self, source: str, event: str,
+                                relations: List[TransitionRelation]) -> None:
+        key = (source, event)
+        if relations:
+            self.cell_relations[key] = list(relations)
+        else:
+            self.cell_relations.pop(key, None)
+
+    def get_cell_keys(self) -> List[Tuple[str, str]]:
+        """All (source, event) keys that have actions or relations."""
+        keys = set(self.cell_actions.keys()) | set(self.cell_relations.keys())
+        return sorted(keys)
+
+    def remove_cell_metadata(self, source: str, event: str) -> None:
+        """Remove all cell-level actions / relations for the given cell."""
+        key = (source, event)
+        self.cell_actions.pop(key, None)
+        self.cell_relations.pop(key, None)
