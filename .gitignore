@@ -1,2 +1,5 @@
 *.pyc
 /code/logs/*.log
+
+# CI generated output
+code/output/
