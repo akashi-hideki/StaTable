@@ -2,6 +2,17 @@
 """
 Role function generation module (multi-layer state machine / ISR support)
 
+Version: 3.1 (2026-09-19 / v2.2.5 fixes)
+  - _collect_call_sites now also collects:
+      * State entry / exit references
+      * Cell-level actions (before_transitions / after_transitions)
+    This matches v2.2 XML extensions. Without it, functions referenced
+    only from state entry/exit or cell actions were declared in .h but
+    never defined in .c (link error on strict compilers).
+  - _should_emit_implementation now accepts namespace prefix matches
+    (e.g. namespace="App" matches layer_name="Application") to avoid
+    dropping self-layer functions due to naming inconsistency.
+
 Version: 3.0 (2026-09-13 / Stage 4: transition-side Namespace.Name support)
   - _normalize_func_ref preserves qualified_name
   - _extract_func_names_from_condition detects 'Driver.Init' form
@@ -541,11 +552,23 @@ class RoleFunctionGenerator:
     # ================================================================
     def _collect_call_sites(self, state_machine
                             ) -> Dict[str, List[RoleFuncCallSite]]:
+        """Collect all call sites for role functions.
+
+        [v2.2.5 fix]
+          Extended to also collect:
+            - State entry / exit references
+            - Cell-level actions (before_transitions / after_transitions)
+          Previously only Transition condition / pre_actions / else_actions
+          were scanned, which caused functions referenced solely from
+          state entry/exit or cell actions to be declared in .h but never
+          defined in .c (link error on strict compilers).
+        """
         if state_machine is None:
             return {}
         call_map: Dict[str, List[RoleFuncCallSite]] = {}
         seen = set()
 
+        # ---- 1. Transition-level refs ----
         for state in state_machine.states.values():
             for event in state_machine.events.values():
                 transitions = state_machine.get_transitions_for_cell(
@@ -591,6 +614,59 @@ class RoleFunctionGenerator:
                             state.name, event.name,
                             else_target or target,
                         ))
+
+        # ---- 2. v2.2.5: State entry / exit refs ----
+        for state in state_machine.states.values():
+            for fname in ensure_list(getattr(state, 'entry', [])):
+                norm = self._normalize_func_ref(fname)
+                if not norm:
+                    continue
+                key = (norm, 'state_entry', state.name, '')
+                if key in seen:
+                    continue
+                seen.add(key)
+                call_map.setdefault(norm, []).append(RoleFuncCallSite(
+                    norm, 'state_entry', state.name, '', state.name,
+                ))
+            for fname in ensure_list(getattr(state, 'exit', [])):
+                norm = self._normalize_func_ref(fname)
+                if not norm:
+                    continue
+                key = (norm, 'state_exit', state.name, '')
+                if key in seen:
+                    continue
+                seen.add(key)
+                call_map.setdefault(norm, []).append(RoleFuncCallSite(
+                    norm, 'state_exit', state.name, '', state.name,
+                ))
+
+        # ---- 3. v2.2.5: Cell-level actions ----
+        if hasattr(state_machine, 'get_cell_keys'):
+            try:
+                cell_keys = state_machine.get_cell_keys()
+            except Exception:
+                cell_keys = []
+            for cell_key in cell_keys:
+                try:
+                    source, event = cell_key
+                except Exception:
+                    continue
+                for action in state_machine.get_actions_for_cell(
+                        source, event):
+                    rf = getattr(action, 'role_function', '') or ''
+                    norm = self._normalize_func_ref(rf)
+                    if not norm:
+                        continue
+                    trigger = getattr(action, 'trigger',
+                                      'before_transitions')
+                    kind = f'cell_action_{trigger}'
+                    key = (norm, kind, source, event)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    call_map.setdefault(norm, []).append(RoleFuncCallSite(
+                        norm, kind, source, event, '',
+                    ))
 
         self._log_debug(
             f"_collect_call_sites: {len(call_map)} funcs, "
@@ -642,25 +718,39 @@ class RoleFunctionGenerator:
     # v1.6 sec 9.6 #90 Option A: layer filter decision
     # ================================================================
     def _should_emit_implementation(self, func, call_map) -> bool:
-        """
-        Decide whether to emit this function's implementation in this
-        layer's file (v1.6 sec 9.6 #90 Option A).
+        """Decide whether to emit this function's implementation.
 
         Conditions for emission:
-          1. Self-layer function (namespace == self.layer_name)
-          2. Function called from this layer's transitions
-             (has an entry in call_map)
+          1. Self-layer function
+             (namespace == self.layer_name, OR namespace is a prefix
+              of / equal to the layer_name modulo case)
+          2. Function called from this layer's transitions /
+             state entry-exit / cell actions (has an entry in call_map)
 
-        Otherwise (other-layer function with no caller) is skipped.
-        This prevents emitting many empty stubs for other layers.
+        [v2.2.5 fix]
+          Namespace prefix matching added: XML often uses short namespaces
+          (e.g. namespace="App" for layer_name="Application"), which
+          previously caused self-layer functions to be dropped.
+
+        Otherwise (other-layer function with no caller) is skipped to
+        prevent emitting many empty stubs for other layers.
         """
         namespace = getattr(func, 'namespace', '') or ''
+        layer = self.layer_name or ''
 
-        # 1. Self-layer function
-        if namespace == self.layer_name:
+        # 1a. Exact match
+        if namespace == layer:
             return True
 
-        # 2. Function called from this layer's transitions
+        # 1b. v2.2.5: prefix match (App <-> Application, Drv <-> Driver)
+        if namespace and layer:
+            ns_l, ly_l = namespace.lower(), layer.lower()
+            if ly_l.startswith(ns_l) or ns_l.startswith(ly_l):
+                # Require at least 3 chars to avoid spurious short matches
+                if min(len(ns_l), len(ly_l)) >= 3:
+                    return True
+
+        # 2. Caller in this layer
         qn = getattr(func, 'qualified_name', None) or ''
         if qn and call_map.get(qn):
             return True
@@ -971,12 +1061,11 @@ class RoleFunctionGenerator:
         """
         Generate the implementation set for this layer's file.
 
-        [v1.6 sec 9.6 #90 Option A]
-          - Self-layer functions (namespace == self.layer_name)
-          - Functions called from this layer's transitions
-          Only these are emitted.
-          Other-layer functions with no caller are skipped, preventing
-          massive empty stubs from being output.
+        [v2.2.5]
+          Filtering now includes:
+            - Self-layer functions (namespace == layer_name or prefix match)
+            - Functions called from this layer's transitions, state
+              entry/exit, or cell actions
         """
         unique_funcs = self._dedupe_by_name(role_functions)
         include_transition_id = state_machine is not None
