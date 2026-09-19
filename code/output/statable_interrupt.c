@@ -6,18 +6,18 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-19 17:26:55
+ * @date    2026-09-19 19:23:41
  */
 
-/*==============================================================*/
+/*==============================================================
  *  Include files
-/*==============================================================*/
+ *==============================================================*/
 
 #include "statable_all.h"
 
-/*==============================================================*/
+/*==============================================================
  *  State transition functions
-/*==============================================================*/
+ *==============================================================*/
 
 /**
  * @brief  TIMER0 interrupt handler
@@ -38,40 +38,9 @@ void ISR_TIMER0(void)
 
     /* ===== User extension area ===== */
     /* [[STABLE_USER_CODE_START:TIMER0]] */
-    /* ユーザー追加コードをここに記述 */
-
+    /* Add user code here */
     /* [[STABLE_USER_CODE_END:TIMER0]] */
 
     /* ===== Exit log ===== */
     LOG_DEBUG("Exit ISR: TIMER0");
-}
-
-/**
- * @brief  UART_RX interrupt handler
- * @note   UART RX
- * @note   Used role functions:
- *         - Application.HandleRx
- */
-void ISR_UARTRX(void)
-{
-
-    /* ===== Context reference (auto-generated) ===== */
-    SystemContext_t *ctx = &g_ctx;
-    (void)ctx;
-
-    /* ===== Entry log ===== */
-    LOG_DEBUG("Enter ISR: UART_RX");
-
-    /* ===== Actions (auto-generated) ===== */
-    ctx->data.rx_ready = true;
-    if (ctx->data.rx_ready) { RoleFunc_Application_HandleRx(NULL, ctx); }
-
-    /* ===== User extension area ===== */
-    /* [[STABLE_USER_CODE_START:UARTRX]] */
-    /* ユーザー追加コードをここに記述 */
-
-    /* [[STABLE_USER_CODE_END:UARTRX]] */
-
-    /* ===== Exit log ===== */
-    LOG_DEBUG("Exit ISR: UART_RX");
 }

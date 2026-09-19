@@ -6,19 +6,21 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-19 17:26:55
+ * @date    2026-09-19 19:23:41
  */
 
-/*==============================================================*/
+/*==============================================================
  *  Include files
-/*==============================================================*/
+ *==============================================================*/
 
 #include "statable_types_common.h"
+#include "Driver/statable_types_Driver.h"
+#include "Middleware/statable_types_Middleware.h"
 #include "Application/statable_types_Application.h"
 
-/*==============================================================*/
+/*==============================================================
  *  Initialization function
-/*==============================================================*/
+ *==============================================================*/
 
 /**
  * @brief  System context initialization
@@ -37,11 +39,8 @@ void SystemContext_Init(SystemContext_t *ctx)
     /* Initialize global variables */
     ctx->data.counter = 0;
     ctx->data.error_code = 0;
-    ctx->data.error_severity = 0;
     ctx->data.retry_count = 0;
     ctx->data.running = false;
-    ctx->data.mode = 0;
-    ctx->data.confirm = false;
     ctx->data.g_system_tick = 0;
     ctx->data.g_tick_10ms = 0;
 

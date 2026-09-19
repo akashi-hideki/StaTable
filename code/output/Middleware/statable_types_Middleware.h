@@ -6,28 +6,28 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 19:23:41
  */
 
 #ifndef STATABLE_TYPES_H_MIDDLEWARE
 #define STATABLE_TYPES_H_MIDDLEWARE
 
-/*==============================================================*/
+/*==============================================================
  *  Include files
-/*==============================================================*/
+ *==============================================================*/
 
 #include "statable_types_common.h"
 
-/*==============================================================*/
+/*==============================================================
  *  Type definitions
-/*==============================================================*/
+ *==============================================================*/
 
 /* Middleware layer state definitions */
 typedef enum {
-    STATE_Middleware_Idle = 0,    /* 待機 Type: INITIAL */
-    STATE_Middleware_Connecting = 1,    /* 接続中 */
-    STATE_Middleware_Connected = 2,    /* 接続済 */
-    STATE_Middleware_Error = 3,    /* エラー */
+    STATE_Middleware_Idle = 0,    /* Idle Type: INITIAL */
+    STATE_Middleware_Connecting = 1,    /* Connecting */
+    STATE_Middleware_Connected = 2,    /* Connected */
+    STATE_Middleware_Error = 3,    /* Error */
     STATE_Middleware_MAX           /* element count (for system use) */
 } STATE_Middleware_t;
 
@@ -35,20 +35,13 @@ typedef enum {
 /* Middleware layer event definitions */
 typedef enum {
     EVENT_Middleware_NONE = 0,    /* completion transition */
-    EVENT_Middleware_CONNECT = 1,    /* 接続要求 Title: 接続 */
-    EVENT_Middleware_CONNECTED = 2,    /* 接続完了 Title: 接続完了 */
-    EVENT_Middleware_ERROR = 3,    /* エラー通知 Title: エラー */
-    EVENT_Middleware_RETRY = 4,    /* 再試行 Title: 再試行 */
+    EVENT_Middleware_CONNECT = 1,    /* Connect request Title: Connect */
+    EVENT_Middleware_CONNECTED = 2,    /* Connected Title: Connected */
+    EVENT_Middleware_ERROR = 3,    /* Error Title: Error */
+    EVENT_Middleware_RETRY = 4,    /* Retry Title: Retry */
     EVENT_Middleware_MAX           /* element count (for system use) */
 } EVENT_Middleware_t;
 
-
-/* Event flag definitions */
-typedef enum {
-    FLAG_EVT_INIT_DONE = 0,    /* 初期化完了 Title: 初期化完了 */
-    FLAG_EVT_ERROR = 1,    /* エラー発生 Title: エラー */
-    FLAG_MAX           /* element count (for system use) */
-} FLAG_t;
 
 
 #endif /* STATABLE_TYPES_H_MIDDLEWARE */

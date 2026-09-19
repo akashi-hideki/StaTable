@@ -2,9 +2,12 @@
 """
 Code generation template definitions (multi-layer state machine / ISR support)
 
-Version: 2.2 (2026-09-19)
-  - Added v2.2 section headers for cell actions / transitions
-  - Existing templates unchanged
+Version: 2.2.2 (2026-09-19)
+  - Fix (v2.2.1): section header emitted an invalid C block comment.
+      Old: "/*==========*/\n *  Title\n/*==========*/"
+      New: "/*==========\n *  Title\n *==========*/"
+  - Add (v2.2.2): SECTION_HEADERS['common_function_decls'] for the new
+    prototype section in statable_types_common.h
 """
 
 
@@ -13,7 +16,10 @@ class CodeTemplates:
 
     # ===== Basic string definitions =====
     STRINGS = {
-        'section_line': '/*==============================================================*/',
+        # --- Fixed section line (VALID C block comment) ---
+        'section_line_start': '/*==============================================================',
+        'section_line_end':   ' *==============================================================*/',
+
         'indent_1': '    ',
         'indent_2': '        ',
         'indent_3': '            ',
@@ -70,10 +76,11 @@ class CodeTemplates:
         'semaphore_impl': 'Semaphore implementation',
         'queue_impl': 'Queue implementation',
         'critical_section_impl': 'Critical section implementation',
-        # ---- v2.2 additions ----
         'cell_actions': 'Cell actions (transition-independent)',
         'cell_transitions': 'Cell transitions (ordered)',
         'state_entry_exit': 'State entry / exit calls',
+        # ★ v2.2.2
+        'common_function_decls': 'Common function declarations',
     }
 
     # ===== Struct comment definitions =====
@@ -133,7 +140,9 @@ class CodeTemplates:
 
     # ===== Format templates =====
     FORMATS = {
-        'section_header': '{line}\n *  {title}\n{line}',
+        # --- Valid C section header (2-line open + close) ---
+        'section_header': '{start}\n *  {title}\n{end}',
+
         'file_header': '''/**
  * @file    {filename}
  * @brief   {description}
@@ -163,7 +172,7 @@ class CodeTemplates:
         'title_comment': '{indent}/* Title: {title} */',
     }
 
-    # ===== Multi-layer state machine templates (unchanged) =====
+    # ===== Multi-layer state machine templates =====
     LAYER_TEMPLATES = {
         'types_header_comment': '''/**
  * @file    statable_types_{layer}.h
@@ -194,7 +203,6 @@ class CodeTemplates:
 #endif''',
     }
 
-    # ===== ISR templates (unchanged) =====
     ISR_TEMPLATES = {
         'context_section':    '    /* ===== Context reference (auto-generated) ===== */',
         'enter_log_section':  '    /* ===== Enter log ===== */',
@@ -213,7 +221,6 @@ class CodeTemplates:
         'no_action_hint':     '    /* (no action defined) */',
     }
 
-    # ===== Debug log message definitions =====
     DEBUG_MESSAGES = {
         'function_entry': 'Enter {func_name}: state={state}, event={event}',
         'function_exit': 'Exit {func_name}: next_state={next_state}',
@@ -227,7 +234,6 @@ class CodeTemplates:
         'pending_event_too_long': 'Pending event chain too long ({count})',
     }
 
-    # ===== OSAL templates (unchanged) =====
     OSAL = {
         'os_types': {
             'non_rtos': {'name': 'NonRTOS', 'description': 'No RTOS (bare metal)', 'header': 'osal.h', 'source': 'osal.c'},
@@ -406,7 +412,6 @@ void OSAL_Critical_Exit(void);''',
         },
     }
 
-    # ===== Super include / super loop (unchanged) =====
     SUPER_INCLUDE_TEMPLATES = {
         'file_comment': '''/**
  * @file    {filename}

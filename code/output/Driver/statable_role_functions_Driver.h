@@ -6,25 +6,97 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 19:23:41
  */
 
 #ifndef STATABLE_ROLE_FUNCTIONS_H_DRIVER
 #define STATABLE_ROLE_FUNCTIONS_H_DRIVER
 
-/*==============================================================*/
+/*==============================================================
  *  Include files
-/*==============================================================*/
+ *==============================================================*/
 
 #include "statable_types_Driver.h"
 
-/*==============================================================*/
+/*==============================================================
  *  Role function declarations
-/*==============================================================*/
+ *==============================================================*/
 
 /**
- * @brief  Role function: ドライバ初期化
- * @note   ドライバ初期化
+ * @brief  Role function: Idle entry
+ * @note   Idle entry
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_Driver_IdleEntry(
+    const TransitionContext_Driver_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Idle exit
+ * @note   Idle exit
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_Driver_IdleExit(
+    const TransitionContext_Driver_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Init entry
+ * @note   Initializing entry
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_Driver_InitEntry(
+    const TransitionContext_Driver_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Ready entry
+ * @note   Ready entry
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_Driver_ReadyEntry(
+    const TransitionContext_Driver_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Error entry
+ * @note   Error entry
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_Driver_ErrorEntry(
+    const TransitionContext_Driver_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Error exit
+ * @note   Error exit
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_Driver_ErrorExit(
+    const TransitionContext_Driver_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Driver init
+ * @note   Driver init
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
@@ -35,8 +107,8 @@ int RoleFunc_Driver_Init(
 );
 
 /**
- * @brief  Role function: エラーログ
- * @note   エラーログ
+ * @brief  Role function: Log error
+ * @note   Log error
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
@@ -47,8 +119,8 @@ int RoleFunc_Driver_LogError(
 );
 
 /**
- * @brief  Role function: リセット処理
- * @note   リセット処理
+ * @brief  Role function: Reset
+ * @note   Reset
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
@@ -59,133 +131,25 @@ int RoleFunc_Driver_Reset(
 );
 
 /**
- * @brief  Role function: RX確認（ISR用）
- * @note   RX確認処理
+ * @brief  Role function: Pre-check
+ * @note   Pre-check
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Driver_CheckRx(
+int RoleFunc_Driver_PreCheck(
     const TransitionContext_Driver_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: 接続処理
- * @note   接続処理
+ * @brief  Role function: Cleanup
+ * @note   Cleanup
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Middleware_Connect(
-    const TransitionContext_Driver_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: エラー処理
- * @note   エラー処理
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Middleware_HandleErr(
-    const TransitionContext_Driver_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: 再試行処理
- * @note   再試行処理
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Middleware_Retry(
-    const TransitionContext_Driver_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: アプリ起動
- * @note   アプリ起動
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_Boot(
-    const TransitionContext_Driver_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: アプリ開始
- * @note   アプリ開始
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_Start(
-    const TransitionContext_Driver_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: 一時停止処理
- * @note   一時停止処理
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_Pause(
-    const TransitionContext_Driver_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: 再開処理
- * @note   再開処理
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_Resume(
-    const TransitionContext_Driver_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: 周期処理（ISR用）
- * @note   周期処理（ISR用）
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_HandleTick(
-    const TransitionContext_Driver_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: RX処理（ISR用）
- * @note   RX処理（ISR用）
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_HandleRx(
-    const TransitionContext_Driver_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: エラー処理（ISR用）
- * @note   エラー処理（ISR用）
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_HandleError(
+int RoleFunc_Driver_Cleanup(
     const TransitionContext_Driver_t *transition,
     SystemContext_t *ctx
 );

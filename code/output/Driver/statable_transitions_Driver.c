@@ -6,19 +6,19 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 19:23:41
  */
 
-/*==============================================================*/
+/*==============================================================
  *  Include files
-/*==============================================================*/
+ *==============================================================*/
 
 #include "statable_transitions_Driver.h"
 #include "statable_role_functions_Driver.h"
 
-/*==============================================================*/
+/*==============================================================
  *  State transition table
-/*==============================================================*/
+ *==============================================================*/
 
 /* ===== Cell transition function forward declarations ===== */
 static STATE_Driver_t t_Idle_INIT(
@@ -58,7 +58,8 @@ const TransitionFunc_Driver_t transition_table_Driver
 
 
 /**
- * @brief  Cell transition: STATE_Driver_Idle -[EVENT_Driver_INIT]-> Initializing
+ * @brief  Cell transition: STATE_Driver_Idle -[EVENT_Driver_INIT]-> (multi)
+ * @note   Transition count: 1
  */
 static STATE_Driver_t t_Idle_INIT(
     const TransitionContext_Driver_t *transition,
@@ -66,19 +67,29 @@ static STATE_Driver_t t_Idle_INIT(
 )
 {
     STATE_Driver_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] (unconditional) */
-    if (1) {
+    /* ===== Cell actions (before_transitions) ===== */
+    RoleFunc_Driver_PreCheck(transition, ctx);
+
+    /* ===== Transition[T1] (Commit) ===== */
+    if (!_handled && 1) {
+        RoleFunc_Driver_IdleExit(transition, ctx);  /* state exit */
         RoleFunc_Driver_Init(transition, ctx);
         next_state = STATE_Driver_Initializing;
-        return next_state;
+        RoleFunc_Driver_InitEntry(transition, ctx);  /* state entry */
+        _handled = true;
     }
+
+    /* ===== Cell actions (after_transitions) ===== */
+    RoleFunc_Driver_Cleanup(transition, ctx);
 
     return next_state;
 }
 
 /**
- * @brief  Cell transition: STATE_Driver_Initializing -[EVENT_Driver_READY]-> Ready
+ * @brief  Cell transition: STATE_Driver_Initializing -[EVENT_Driver_READY]-> (multi)
+ * @note   Transition count: 2
  */
 static STATE_Driver_t t_Initializing_READY(
     const TransitionContext_Driver_t *transition,
@@ -86,25 +97,28 @@ static STATE_Driver_t t_Initializing_READY(
 )
 {
     STATE_Driver_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] */
-    if (error_code == 0) {
+    /* ===== Transition[T1] (Commit) ===== */
+    if (!_handled && error_code == 0) {
         next_state = STATE_Driver_Ready;
-        return next_state;
+        RoleFunc_Driver_ReadyEntry(transition, ctx);  /* state entry */
+        _handled = true;
     }
 
-    /* Transition[1] */
+    /* ===== Transition[T2] (Tentative) ===== */
     if (error_code != 0) {
         RoleFunc_Driver_LogError(transition, ctx);
         next_state = STATE_Driver_Error;
-        return next_state;
+        RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
     }
 
     return next_state;
 }
 
 /**
- * @brief  Cell transition: STATE_Driver_Initializing -[EVENT_Driver_FAIL]-> Error
+ * @brief  Cell transition: STATE_Driver_Initializing -[EVENT_Driver_FAIL]-> (multi)
+ * @note   Transition count: 1
  */
 static STATE_Driver_t t_Initializing_FAIL(
     const TransitionContext_Driver_t *transition,
@@ -112,19 +126,22 @@ static STATE_Driver_t t_Initializing_FAIL(
 )
 {
     STATE_Driver_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] (unconditional) */
-    if (1) {
+    /* ===== Transition[T1] (Commit) ===== */
+    if (!_handled && 1) {
         RoleFunc_Driver_LogError(transition, ctx);
         next_state = STATE_Driver_Error;
-        return next_state;
+        RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
+        _handled = true;
     }
 
     return next_state;
 }
 
 /**
- * @brief  Cell transition: STATE_Driver_Ready -[EVENT_Driver_FAIL]-> Error
+ * @brief  Cell transition: STATE_Driver_Ready -[EVENT_Driver_FAIL]-> (multi)
+ * @note   Transition count: 1
  */
 static STATE_Driver_t t_Ready_FAIL(
     const TransitionContext_Driver_t *transition,
@@ -132,19 +149,22 @@ static STATE_Driver_t t_Ready_FAIL(
 )
 {
     STATE_Driver_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] (unconditional) */
-    if (1) {
+    /* ===== Transition[T1] (Commit) ===== */
+    if (!_handled && 1) {
         RoleFunc_Driver_LogError(transition, ctx);
         next_state = STATE_Driver_Error;
-        return next_state;
+        RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
+        _handled = true;
     }
 
     return next_state;
 }
 
 /**
- * @brief  Cell transition: STATE_Driver_Error -[EVENT_Driver_RESET]-> Idle
+ * @brief  Cell transition: STATE_Driver_Error -[EVENT_Driver_RESET]-> (multi)
+ * @note   Transition count: 2
  */
 static STATE_Driver_t t_Error_RESET(
     const TransitionContext_Driver_t *transition,
@@ -152,21 +172,41 @@ static STATE_Driver_t t_Error_RESET(
 )
 {
     STATE_Driver_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] (unconditional) */
-    if (1) {
-        RoleFunc_Driver_Reset(transition, ctx);
-        next_state = STATE_Driver_Idle;
-        return next_state;
+    /* ===== Group (shared_condition) ===== */
+    if (running == false) {
+
+        /* ===== Transition[T1] (Commit) ===== */
+        if (!_handled && retry_count < 3) {
+            RoleFunc_Driver_ErrorExit(transition, ctx);  /* state exit */
+            RoleFunc_Driver_Reset(transition, ctx);
+            next_state = STATE_Driver_Idle;
+            RoleFunc_Driver_IdleEntry(transition, ctx);  /* state entry */
+            _handled = true;
+        } else if (!_handled && !(retry_count < 3)) {
+            RoleFunc_Driver_ErrorExit(transition, ctx);  /* state exit */
+            next_state = STATE_Driver_Error;
+            RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
+            _handled = true;
+        }
+
+        /* ===== Transition[T2] (Commit) ===== */
+        if (!_handled && retry_count >= 3) {
+            RoleFunc_Driver_ErrorExit(transition, ctx);  /* state exit */
+            next_state = STATE_Driver_Error;
+            RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
+            _handled = true;
+        }
     }
 
     return next_state;
 }
 
 
-/*==============================================================*/
+/*==============================================================
  *  State transition functions
-/*==============================================================*/
+ *==============================================================*/
 
 /**
  * @brief  Driver layer state transition processing

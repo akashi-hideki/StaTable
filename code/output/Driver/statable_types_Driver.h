@@ -6,28 +6,28 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 19:23:41
  */
 
 #ifndef STATABLE_TYPES_H_DRIVER
 #define STATABLE_TYPES_H_DRIVER
 
-/*==============================================================*/
+/*==============================================================
  *  Include files
-/*==============================================================*/
+ *==============================================================*/
 
 #include "statable_types_common.h"
 
-/*==============================================================*/
+/*==============================================================
  *  Type definitions
-/*==============================================================*/
+ *==============================================================*/
 
 /* Driver layer state definitions */
 typedef enum {
-    STATE_Driver_Idle = 0,    /* 待機 Type: INITIAL */
-    STATE_Driver_Initializing = 1,    /* 初期化中 */
-    STATE_Driver_Ready = 2,    /* 準備完了 */
-    STATE_Driver_Error = 3,    /* エラー */
+    STATE_Driver_Idle = 0,    /* Idle Type: INITIAL */
+    STATE_Driver_Initializing = 1,    /* Initializing */
+    STATE_Driver_Ready = 2,    /* Ready */
+    STATE_Driver_Error = 3,    /* Error */
     STATE_Driver_MAX           /* element count (for system use) */
 } STATE_Driver_t;
 
@@ -35,20 +35,13 @@ typedef enum {
 /* Driver layer event definitions */
 typedef enum {
     EVENT_Driver_NONE = 0,    /* completion transition */
-    EVENT_Driver_INIT = 1,    /* 初期化要求 Title: 初期化 */
-    EVENT_Driver_READY = 2,    /* 準備完了 Title: 準備完了 */
-    EVENT_Driver_FAIL = 3,    /* 失敗通知 Title: 失敗 */
-    EVENT_Driver_RESET = 4,    /* リセット Title: リセット */
+    EVENT_Driver_INIT = 1,    /* Init request Title: Init */
+    EVENT_Driver_READY = 2,    /* Ready Title: Ready */
+    EVENT_Driver_FAIL = 3,    /* Failure Title: Failure */
+    EVENT_Driver_RESET = 4,    /* Reset Title: Reset */
     EVENT_Driver_MAX           /* element count (for system use) */
 } EVENT_Driver_t;
 
-
-/* Event flag definitions */
-typedef enum {
-    FLAG_EVT_INIT_DONE = 0,    /* 初期化完了 Title: 初期化完了 */
-    FLAG_EVT_ERROR = 1,    /* エラー発生 Title: エラー */
-    FLAG_MAX           /* element count (for system use) */
-} FLAG_t;
 
 
 #endif /* STATABLE_TYPES_H_DRIVER */

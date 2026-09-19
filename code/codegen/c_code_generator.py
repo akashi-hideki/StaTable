@@ -3,36 +3,17 @@
 C code generation main class
 (step-table driven / 13-file support / multi-layer support / by_layer / ISR)
 
-Design policy:
-  - Per-file generation procedure is declared in the FILE_STEPS table
-  - Each step is bound to an executor via the step_executors dictionary
-  - _run_steps() / _run_steps_multi() execute the step list in order
-  - Conditional steps are declared by 'when' predicates
-  - File-to-file dispatch is managed by the FILE_DISPATCH dictionary
-  - Folder structure is resolved by FOLDER_STRUCTURE_RESOLVERS
-  - Super include / super loop are always generated
-  - Multiple layers are generated in bulk by generate_all_layers()
-  - by_layer separates layer-specific files into layer folders
+Version: 2.2.2 (2026-09-19)
+  - Fix (v2.2.1): FLAG_t was emitted in every layer's statable_types_<Layer>.h,
+    causing duplicate typedef. Now emitted once in statable_types_common.h.
+  - Add (v2.2.2): Common function prototypes
+    (SystemContext_Init / Timer_Init / Timer_Update) are emitted
+    in statable_types_common.h so any file that includes
+    statable_all.h sees them.
+  - Fix (v2.2.1): Section header is now a valid C block comment.
 
 Version: 2.1 (2026-09-13 / Stage 3: ISR context support)
-  - Added statable_all.h to interrupt_c (to obtain g_ctx / RoleFunc_* decls)
-  - _step_interrupts recomputes used_role_functions / used_variables
-
-[v1.6 sec 9.7 #91]
-  - Append `_{layer}` suffix to layer-specific files in by_layer mode
-    statable_role_functions.c -> statable_role_functions_Driver.c
-  - Update include statements inside layer-specific files accordingly
-  - Append layer suffix to include guard names (collision avoidance)
-  - Common files individually include each layer's types in by_layer
-  - Super include layer-specific include paths also use the suffix
-
-[v1.6 sec 9.8 #92] (Option Y)
-  - Consolidate common structs (FLAG_t / SystemData_t / EventFlags_t /
-    SystemContext_t / TransitionContext_t / var_macros / pending_event_macros)
-    into the new statable_types_common.h
-  - Layer-specific statable_types_{layer}.h outputs enums only
-  - Layer-specific statable_types_{layer}.h includes statable_types_common.h
-  - custom_types also moved to the common section (no duplication per layer)
+Version: 1.6 (by_layer suffix / common types)
 """
 
 import sys
@@ -90,7 +71,9 @@ class CCodeGenerator:
     # [Table 1] Per-file step definitions
     # ================================================================
     FILE_STEPS: Dict[str, List[Dict[str, Any]]] = {
-        # v1.6 sec 9.8 #92: common type definitions (new)
+        # v1.6 sec 9.8 #92: common type definitions
+        # v2.2.1: + enums_common step (FLAG_t moved here)
+        # v2.2.2: + common_function_decls step (SystemContext_Init / Timer_*)
         'statable_types_common.h': [
             {'action': 'file_header',
              'filename': 'statable_types_common.h'},
@@ -98,6 +81,8 @@ class CCodeGenerator:
             {'action': 'guard_start'},
             {'action': 'include_section', 'key': 'types'},
             {'action': 'section_header', 'key': 'type_defs'},
+            {'action': 'blank'},
+            {'action': 'enums_common'},
             {'action': 'blank'},
             {'action': 'custom_types',
              'when': lambda c: bool(c['global_defs'].custom_types)},
@@ -117,9 +102,12 @@ class CCodeGenerator:
             {'action': 'blank'},
             {'action': 'var_macros'},
             {'action': 'blank'},
+            {'action': 'section_header', 'key': 'common_function_decls'},
+            {'action': 'blank'},
+            {'action': 'common_function_decls'},
+            {'action': 'blank'},
             {'action': 'guard_end'},
         ],
-        # v1.6 sec 9.8 #92: layer-specific type definitions (enum only)
         'statable_types.h': [
             {'action': 'file_header',
              'filename': 'statable_types.h'},
@@ -239,7 +227,6 @@ class CCodeGenerator:
         'osal.c': [
             {'action': 'osal_source'},
         ],
-        # Super include (including extern declarations)
         'statable_all.h': [
             {'action': 'super_include_header'},
             {'action': 'blank'},
@@ -345,7 +332,7 @@ class CCodeGenerator:
     # [Table 6] File classification for by_layer
     # ================================================================
     LAYER_SPECIFIC_FILES = {
-        'statable_types.h',   # Layer-specific (enum only)
+        'statable_types.h',
         'statable_transitions.h',
         'statable_transitions.c',
         'statable_role_functions.h',
@@ -353,7 +340,7 @@ class CCodeGenerator:
     }
 
     COMMON_FILES = {
-        'statable_types_common.h',   # v1.6 sec 9.8 #92
+        'statable_types_common.h',
         'statable_init.c',
         'statable_event_queue.c',
         'statable_interrupt.c',
@@ -384,7 +371,6 @@ class CCodeGenerator:
         self.formats = self.templates.FORMATS
         self.merger = CodeMerger()
 
-        # Configuration
         self.config_manager = ConfigManager()
         if config:
             self.config_manager.set_config(config)
@@ -394,20 +380,16 @@ class CCodeGenerator:
             datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
 
-        # Shared library active only during generation
         self._current_role_function_library = None
 
-        # Super loop filename
         self.super_loop_filename = (
             f"{self.config.project_name}_run.c"
         )
 
-        # Copy at instance level
         self.FILE_STEPS = dict(self.__class__.FILE_STEPS)
         self.FILE_DISPATCH = dict(self.__class__.FILE_DISPATCH)
         self.FILE_CATEGORY = dict(self.__class__.FILE_CATEGORY)
 
-        # Register super loop dynamically
         self.FILE_STEPS[self.super_loop_filename] = [
             {'action': 'super_loop_header'},
             {'action': 'blank'},
@@ -425,7 +407,6 @@ class CCodeGenerator:
             '_generate_super_loop'
         self.FILE_CATEGORY[self.super_loop_filename] = 'src'
 
-        # ===== File generation metadata =====
         self.file_generators: Dict[str, Dict] = {
             'statable_types_common.h': {
                 'description': 'Common type definitions for state transition system',
@@ -485,15 +466,12 @@ class CCodeGenerator:
             },
         }
 
-        # ===== Include definitions =====
         self.include_headers: Dict[str, List[str]] = {
-            # Standard headers for common type definitions
             'types': [
                 '#include <stdint.h>',
                 '#include <stdbool.h>',
                 '#include <string.h>',
             ],
-            # v1.6 sec 9.8 #92: layer-specific files include common types
             'types_layer': [
                 '#include "statable_types_common.h"',
             ],
@@ -510,7 +488,6 @@ class CCodeGenerator:
             'role_functions_c': [
                 '#include "statable_role_functions{layer_suffix}.h"',
             ],
-            # Common files (individually expanded by _step_include_section in by_layer)
             'init_c': ['#include "statable_types_common.h"'],
             'event_queue_c': ['#include "statable_types_common.h"'],
             'interrupt_c': [
@@ -520,42 +497,34 @@ class CCodeGenerator:
             'timer_c': ['#include "statable_types_common.h"'],
         }
 
-        # ===== Step executor dictionary =====
         self.step_executors: Dict[str, Callable] = {
-            # Common
             'file_header':        self._step_file_header,
             'blank':              self._step_blank,
             'guard_start':        self._step_guard_start,
             'guard_end':          self._step_guard_end,
             'include_section':    self._step_include_section,
             'section_header':     self._step_section_header,
-            # Type definitions
             'enums':              self._step_enums,
+            'enums_common':       self._step_enums_common,
+            'common_function_decls': self._step_common_function_decls,   # ★ v2.2.2
             'custom_types':       self._step_custom_types,
             'struct':             self._step_struct,
             'var_macros':         self._step_var_macros,
-            # Transitions
             'state_machine_decl': self._step_state_machine_decl,
             'cell_prototypes':    self._step_cell_prototypes,
             'transition_table':   self._step_transition_table,
             'cell_functions':     self._step_cell_functions,
             'process_func':       self._step_process_func,
-            # Roles
             'role_decls':         self._step_role_decls,
             'role_impls':         self._step_role_impls,
-            # Initialization
             'init_func':          self._step_init_func,
-            # Event queue / interrupt
             'event_queues':       self._step_event_queues,
             'interrupts':         self._step_interrupts,
-            # Timer
             'timer_struct':       self._step_timer_struct,
             'timer_init':         self._step_timer_init,
             'timer_update':       self._step_timer_update,
-            # OSAL
             'osal_header':        self._step_osal_header,
             'osal_source':        self._step_osal_source,
-            # Super include
             'super_include_header':      self._step_super_include_header,
             'super_include_guard_start': self._step_super_include_guard_start,
             'super_include_common':      self._step_super_include_common,
@@ -566,7 +535,6 @@ class CCodeGenerator:
             'super_include_external':    self._step_super_include_external,
             'super_include_user':        self._step_super_include_user,
             'super_include_guard_end':   self._step_super_include_guard_end,
-            # Super loop
             'super_loop_header':      self._step_super_loop_header,
             'super_loop_include':     self._step_super_loop_include,
             'super_loop_context_var': self._step_super_loop_context_var,
@@ -610,8 +578,6 @@ class CCodeGenerator:
         return list(state_machine.events.values())
 
     def _get_role_functions_list(self, state_machine):
-        """Return the role function list merged from
-           state_machine and the shared library"""
         funcs = dict(state_machine.role_functions)
         lib = self._current_role_function_library
         if lib is not None:
@@ -622,22 +588,20 @@ class CCodeGenerator:
         return list(funcs.values())
 
     def _get_layer_name(self, state_machine) -> str:
-        """Get layer name (empty string if unset)"""
         return getattr(state_machine, 'layer_name', '') or ''
 
     def _get_initial_state(self, state_machine) -> str:
-        """Get initial state name (defaults to 'Idle' if unset)"""
         initial = getattr(state_machine, 'initial_state', None)
         if not initial:
             initial = getattr(state_machine, 'initial', None)
         return initial or 'Idle'
 
     def _generate_section_header(self, section_key):
-        line = self.strings['section_line']
-        title = self.templates.SECTION_HEADERS.get(
-            section_key, ''
-        )
-        return f"{line}\n *  {title}\n{line}"
+        """Generate a VALID C block comment section header."""
+        start = self.strings['section_line_start']
+        end = self.strings['section_line_end']
+        title = self.templates.SECTION_HEADERS.get(section_key, '')
+        return f"{start}\n *  {title}\n{end}"
 
     def _generate_file_header(self, filename, description=""):
         return (
@@ -667,9 +631,6 @@ class CCodeGenerator:
         lines.append("")
         return '\n'.join(lines)
 
-    # ================================================================
-    # v1.6 sec 9.7 #91: Layer suffix helpers
-    # ================================================================
     def _layer_filename(self, filename: str, layer_name: str) -> str:
         if not layer_name:
             return filename
@@ -681,28 +642,14 @@ class CCodeGenerator:
     def _layer_suffix(self, layer_name: str) -> str:
         return f"_{layer_name}" if layer_name else ""
 
-    # ================================================================
-    # Multi-layer support
-    # ================================================================
     def _normalize_layers(self, layers) -> List[Tuple[str, StateMachine]]:
-        """
-        Normalize layers.
-
-        Args:
-            layers: List[(name, sm)] or List[sm] or StateMachine
-
-        Returns:
-            List[(layer_name, state_machine)] (ascending priority)
-        """
         if layers is None:
             return []
 
-        # Single StateMachine
         if isinstance(layers, StateMachine):
             name = self._get_layer_name(layers)
             return [(name, layers)]
 
-        # List
         result = []
         for item in layers:
             if isinstance(item, tuple) and len(item) == 2:
@@ -712,19 +659,16 @@ class CCodeGenerator:
                 sm = item
             else:
                 continue
-            # If layer name is unset, use tab name as default
             if not self._get_layer_name(sm) and name:
                 sm.layer_name = name
             result.append((name, sm))
 
-        # Sort ascending by priority
         result.sort(
             key=lambda x: getattr(x[1], 'layer_priority', 5)
         )
         return result
 
     def _setup_layer_generators(self, state_machine):
-        """Propagate state_machine.layer_name to each sub-generator"""
         layer_name = self._get_layer_name(state_machine)
         for name, gen in [
             ('enum_gen',       self.enum_gen),
@@ -736,22 +680,11 @@ class CCodeGenerator:
             if hasattr(gen, 'set_layer'):
                 gen.set_layer(layer_name)
 
-    # ================================================================
-    # Folder structure resolution
-    # ================================================================
     def _resolve_output_path(self, filename: str,
                              layer_name: str = '') -> str:
-        """
-        Return the relative save path for the given filename.
-
-        If filename already contains a path separator ('/' or '\\'),
-        use it as-is (e.g. "Driver/statable_types.h" for by_layer).
-        """
-        # Already path-like -> use as-is
         if '/' in filename or '\\' in filename:
             return filename
 
-        # Special handling for super include
         if filename == 'statable_all.h':
             return self._resolve_super_include_path(layer_name)
 
@@ -764,7 +697,6 @@ class CCodeGenerator:
         return resolver(filename, layer_name)
 
     def _resolve_super_include_path(self, layer_name: str = '') -> str:
-        """Resolve the save path for the super include"""
         fname = self.config.super_include_file
         structure = self.config.folder_structure
 
@@ -775,7 +707,6 @@ class CCodeGenerator:
                 self.config.super_include_dir, fname
             )
         elif structure == 'by_layer':
-            # If layer_name is set, use layer folder; otherwise root
             if layer_name:
                 return os.path.join(layer_name, fname)
             return fname
@@ -783,12 +714,10 @@ class CCodeGenerator:
 
     def _resolve_path_flat(self, filename: str,
                            layer_name: str = '') -> str:
-        """flat: all files in the same folder"""
         return filename
 
     def _resolve_path_by_type(self, filename: str,
                               layer_name: str = '') -> str:
-        """by_type: classify into include / src / common"""
         category = self.FILE_CATEGORY.get(filename, '')
         if category == 'include':
             return os.path.join(
@@ -806,42 +735,24 @@ class CCodeGenerator:
 
     def _resolve_path_by_layer(self, filename: str,
                                layer_name: str = '') -> str:
-        """
-        by_layer: place into layer folder.
-
-        When generate_all_layers is used with by_layer, the key already
-        contains "layer/filename", so this function is normally not called
-        (see early return in _resolve_output_path).
-
-        Fallback for using by_layer with single-layer generate_all.
-        """
         if not layer_name:
             return filename
-        # Only layer-specific files get folder separation
         if filename in self.LAYER_SPECIFIC_FILES:
             fname = self._layer_filename(filename, layer_name)
             return os.path.join(layer_name, fname)
         return filename
 
-    # ================================================================
-    # Generic step execution
-    # ================================================================
     def _run_steps(self, filename,
                    state_machine, global_defs) -> str:
-        """Generate one file following the step table (single layer)"""
         return self._run_steps_multi(
             filename,
             [(self._get_layer_name(state_machine), state_machine)],
             global_defs
         )
 
-    # ================================================================
-    # Generic step execution (multi-layer)
-    # ================================================================
     def _run_steps_multi(self, filename,
                          layers: List[Tuple[str, StateMachine]],
                          global_defs) -> str:
-        """Multi-layer step execution"""
         if not layers:
             return ""
 
@@ -924,7 +835,6 @@ class CCodeGenerator:
         layers = ctx.get('layers', [])
         structure = ctx['config'].folder_structure
 
-        # 1. Layer-specific file: single-layer suffix
         if filename in self.LAYER_SPECIFIC_FILES and layers:
             layer_name = self._get_layer_name(layers[0][1])
             suffix = self._layer_suffix(layer_name)
@@ -932,7 +842,6 @@ class CCodeGenerator:
                 key, layer_suffix=suffix
             )]
 
-        # 2. Common file + by_layer: individually include each layer's types
         if structure == 'by_layer' and filename in (
                 'statable_init.c',
                 'statable_event_queue.c',
@@ -943,7 +852,6 @@ class CCodeGenerator:
             if filename == 'statable_interrupt.c':
                 lines.append('#include "statable_all.h"')
             else:
-                # Common type definitions + each layer's enum
                 lines.append('#include "statable_types_common.h"')
                 for layer_name, sm in layers:
                     layer = self._get_layer_name(sm)
@@ -955,7 +863,6 @@ class CCodeGenerator:
             lines.append("")
             return ['\n'.join(lines)]
 
-        # 3. Other: static include
         return [self._generate_include_section(key)]
 
     def _step_section_header(self, step, ctx):
@@ -964,7 +871,13 @@ class CCodeGenerator:
         )]
 
     def _step_enums(self, step, ctx):
-        """Concatenate enums from multiple layers"""
+        """Layer-specific enums (states + events only).
+
+        [v2.2.1]
+          FLAG_t is emitted once in statable_types_common.h
+          (see _step_enums_common). Passing flags=None here
+          prevents duplicate typedef of FLAG_t across layers.
+        """
         gd = ctx['global_defs']
         layers = ctx['layers']
         results = []
@@ -973,13 +886,53 @@ class CCodeGenerator:
             enum_code = self.enum_gen.generate_all_enums(
                 self._get_states_list(sm),
                 self._get_events_list(sm),
-                gd.flags,
+                None,
             )
             if enum_code:
                 results.append(enum_code)
         if not results:
             return ['']
         return ['\n'.join(results)]
+
+    def _step_enums_common(self, step, ctx):
+        """Common enums (flags only) emitted in statable_types_common.h."""
+        gd = ctx['global_defs']
+        flags = getattr(gd, 'flags', []) or []
+        if not flags:
+            return ['']
+        self.enum_gen.set_layer("")
+        code = self.enum_gen.generate_flag_enum(flags)
+        return [code] if code else ['']
+
+    def _step_common_function_decls(self, step, ctx):
+        """Emit prototypes for functions defined in common .c files.
+
+        [v2.2.2]
+          SystemContext_Init (statable_init.c) and Timer_Init /
+          Timer_Update (statable_timer.c) had no prototypes.
+          Any caller including only statable_all.h saw implicit
+          declarations (C99 warning) or link errors on strict
+          compilers.
+        """
+        return [
+            '/**',
+            ' * @brief  Initialize SystemContext_t (implemented in statable_init.c)',
+            ' * @param  ctx  System context pointer',
+            ' */',
+            'void SystemContext_Init(SystemContext_t *ctx);',
+            '',
+            '/**',
+            ' * @brief  Initialize timer variables (implemented in statable_timer.c)',
+            ' * @param  ctx  System context pointer',
+            ' */',
+            'void Timer_Init(SystemContext_t *ctx);',
+            '',
+            '/**',
+            ' * @brief  Update derived timer variables (implemented in statable_timer.c)',
+            ' * @param  ctx  System context pointer',
+            ' */',
+            'void Timer_Update(SystemContext_t *ctx);',
+        ]
 
     def _step_custom_types(self, step, ctx):
         gd = ctx['global_defs']
@@ -995,12 +948,10 @@ class CCodeGenerator:
         return result
 
     def _step_struct(self, step, ctx):
-        """Dispatch struct kind by dictionary lookup"""
         kind = step.get('kind', '')
         method_name = self.STRUCT_KIND_DISPATCH.get(kind)
         if method_name is None:
             return []
-        # First arg of struct_gen.generate_struct is the kind
         return [self.struct_gen.generate_struct(
             kind, ctx['global_defs']
         )]
@@ -1011,7 +962,6 @@ class CCodeGenerator:
         )]
 
     def _step_state_machine_decl(self, step, ctx):
-        """Concatenate StateMachine_Process declarations for multiple layers"""
         layers = ctx['layers']
         results = []
         for layer_name, sm in layers:
@@ -1042,7 +992,6 @@ class CCodeGenerator:
         return ['\n'.join(results)] if results else ['']
 
     def _step_cell_prototypes(self, step, ctx):
-        """Per-cell function forward declarations for multiple layers"""
         layers = ctx['layers']
         results = []
         for layer_name, sm in layers:
@@ -1054,7 +1003,6 @@ class CCodeGenerator:
         return ['\n'.join(results)] if results else ['']
 
     def _step_transition_table(self, step, ctx):
-        """Transition tables for multiple layers"""
         layers = ctx['layers']
         results = []
         for layer_name, sm in layers:
@@ -1067,7 +1015,6 @@ class CCodeGenerator:
         return ['\n'.join(results)] if results else ['']
 
     def _step_cell_functions(self, step, ctx):
-        """Cell function bodies for multiple layers"""
         layers = ctx['layers']
         results = []
         for layer_name, sm in layers:
@@ -1079,7 +1026,6 @@ class CCodeGenerator:
         return ['\n'.join(results)] if results else ['']
 
     def _step_process_func(self, step, ctx):
-        """StateMachine_Process for multiple layers"""
         layers = ctx['layers']
         results = []
         for layer_name, sm in layers:
@@ -1093,7 +1039,6 @@ class CCodeGenerator:
         return ['\n'.join(results)] if results else ['']
 
     def _step_role_decls(self, step, ctx):
-        """Role function declarations for multiple layers"""
         layers = ctx['layers']
         results = []
         for layer_name, sm in layers:
@@ -1106,7 +1051,6 @@ class CCodeGenerator:
         return ['\n'.join(results)] if results else ['']
 
     def _step_role_impls(self, step, ctx):
-        """Role function implementations for multiple layers"""
         layers = ctx['layers']
         results = []
         for layer_name, sm in layers:
@@ -1142,7 +1086,6 @@ class CCodeGenerator:
             result.append("")
         return result
 
-    # Stage 3: recompute used_role_functions / used_variables
     def _step_interrupts(self, step, ctx):
         gd = ctx['global_defs']
         interrupts = getattr(gd, 'interrupts', [])
@@ -1153,7 +1096,6 @@ class CCodeGenerator:
             "",
         ]
         for handler in interrupts:
-            # Automatically extract and write back used role funcs / vars
             try:
                 self.interrupt_gen.update_handler_symbols(handler)
             except Exception as e:
@@ -1193,9 +1135,6 @@ class CCodeGenerator:
             self.config.os_type
         )]
 
-    # ================================================================
-    # Super include steps
-    # ================================================================
     def _step_super_include_header(self, step, ctx):
         T = self.templates.SUPER_INCLUDE_TEMPLATES
         fname = self.config.super_include_file
@@ -1210,9 +1149,6 @@ class CCodeGenerator:
         return [T['guard_end']]
 
     def _step_super_include_common(self, step, ctx):
-        """
-        v1.6 sec 9.8 #92: include common type definitions + each layer's enum
-        """
         T = self.templates.SUPER_INCLUDE_TEMPLATES
         layers = ctx['layers']
         structure = self.config.folder_structure
@@ -1220,9 +1156,7 @@ class CCodeGenerator:
         parts = [T['common_section']]
 
         if structure == 'by_layer':
-            # Common type definitions (one)
             parts.append('#include "statable_types_common.h"')
-            # Each layer's enum
             for layer_name, sm in layers:
                 layer = self._get_layer_name(sm)
                 if layer:
@@ -1267,7 +1201,6 @@ class CCodeGenerator:
         ]
 
     def _step_super_include_extern_vars(self, step, ctx):
-        """extern variable declarations for all layers"""
         T = self.templates.SUPER_INCLUDE_TEMPLATES
         layers = ctx['layers']
         parts = [T['extern_var_section'], T['extern_context']]
@@ -1279,16 +1212,32 @@ class CCodeGenerator:
             else:
                 parts.append(T['extern_state_nolayer'])
         return parts
-
     def _step_super_include_extern_funcs(self, step, ctx):
-        """extern declarations for super loop functions"""
         T = self.templates.SUPER_INCLUDE_TEMPLATES
         project = self.config.project_name
-        return [
+        parts = [
             T['extern_func_section'],
             T['extern_init'].format(project_name=project),
             T['extern_run'].format(project_name=project),
         ]
+
+        # ★ v2.2.3: ISR prototypes (referenced from vector table / startup)
+        gd = ctx['global_defs']
+        interrupts = getattr(gd, 'interrupts', []) or []
+        if interrupts:
+            parts.append("")
+            parts.append("/* ---- Interrupt handlers (extern) ---- */")
+            for handler in interrupts:
+                try:
+                    isr_name = self.interrupt_gen._get_isr_function_name(handler)
+                except Exception:
+                    name = getattr(handler, 'name', '') or ''
+                    if not name:
+                        continue
+                    isr_name = f"ISR_{self.naming.to_pascal_case(name)}"
+                parts.append(f"void {isr_name}(void);")
+
+        return parts
 
     def _step_super_include_external(self, step, ctx):
         T = self.templates.SUPER_INCLUDE_TEMPLATES
@@ -1311,9 +1260,6 @@ class CCodeGenerator:
             T['user_marker_end'],
         ]
 
-    # ================================================================
-    # Super loop steps
-    # ================================================================
     def _step_super_loop_header(self, step, ctx):
         T = self.templates.SUPER_LOOP_TEMPLATES
         project = self.config.project_name
@@ -1326,7 +1272,6 @@ class CCodeGenerator:
         return [self.templates.SUPER_LOOP_TEMPLATES['context_var']]
 
     def _step_super_loop_state_var(self, step, ctx):
-        """state variable definitions for all layers"""
         layers = ctx['layers']
         T = self.templates.SUPER_LOOP_TEMPLATES
         parts = []
@@ -1339,7 +1284,6 @@ class CCodeGenerator:
         return parts
 
     def _step_super_loop_init_func(self, step, ctx):
-        """Initialization for all layers"""
         layers = ctx['layers']
         project = self.config.project_name
         T = self.templates.SUPER_LOOP_TEMPLATES
@@ -1365,7 +1309,6 @@ class CCodeGenerator:
         return parts
 
     def _step_super_loop_run_func(self, step, ctx):
-        """run block for all layers (in priority order)"""
         layers = ctx['layers']
         project = self.config.project_name
         T = self.templates.SUPER_LOOP_TEMPLATES
@@ -1386,7 +1329,6 @@ class CCodeGenerator:
                 )
             else:
                 block = T['run_block_nolayer']
-            # Adjust indentation
             indented = '        ' + block.replace(
                 '\n', '\n        ')
             parts.append(indented)
@@ -1433,7 +1375,6 @@ class CCodeGenerator:
     def _generate_osal_source(self, sm, gd):
         return self._run_steps('osal.c', sm, gd)
 
-    # Super include
     def _generate_super_include(self, sm, gd):
         return self._run_steps('statable_all.h', sm, gd)
 
@@ -1441,11 +1382,10 @@ class CCodeGenerator:
         return self._run_steps(self.super_loop_filename, sm, gd)
 
     # ================================================================
-    # Public methods (single layer)
+    # Public methods
     # ================================================================
     def generate_all(self, state_machine, global_defs,
                      role_function_library=None):
-        """Generate all code for a single layer (backward compatible)"""
         self._setup_layer_generators(state_machine)
 
         prev = self._current_role_function_library
@@ -1453,7 +1393,6 @@ class CCodeGenerator:
         try:
             generated_files = {}
             for filename in self.file_generators.keys():
-                # Skip check for super include
                 if (filename == 'statable_all.h'
                         and not self.config.generate_super_include):
                     continue
@@ -1472,7 +1411,6 @@ class CCodeGenerator:
 
     def generate_file(self, filename, state_machine, global_defs,
                       role_function_library=None):
-        """Generate a specific file (single layer)"""
         self._setup_layer_generators(state_machine)
 
         prev = self._current_role_function_library
@@ -1486,26 +1424,8 @@ class CCodeGenerator:
         finally:
             self._current_role_function_library = prev
 
-    # ================================================================
-    # Public methods (multi-layer)
-    # ================================================================
     def generate_all_layers(self, layers, global_defs,
                             role_function_library=None):
-        """Generate code for multiple layers.
-
-        Args:
-            layers: List[(layer_name, StateMachine)] or
-                    single StateMachine (backward compatible)
-            global_defs: GlobalDefinitions
-            role_function_library: shared library (optional)
-
-        Returns:
-            Dict[str, str]: generated file dictionary
-            - by_type / flat: normal filenames
-            - by_layer: "layer/filename" form (layer-specific)
-                        + normal filenames (common)
-        """
-        # Normalize + sort by priority
         norm_layers = self._normalize_layers(layers)
         if not norm_layers:
             return {}
@@ -1517,7 +1437,6 @@ class CCodeGenerator:
                 norm_layers, global_defs, role_function_library
             )
 
-        # by_type / flat: merge all layers into one file
         primary_sm = norm_layers[0][1]
         self._setup_layer_generators(primary_sm)
 
@@ -1538,13 +1457,6 @@ class CCodeGenerator:
 
     def _generate_all_by_layer(self, layers, global_defs,
                                role_function_library):
-        """
-        by_layer dedicated generation.
-
-        v1.6 sec 9.8 #92:
-          - Add common file statable_types_common.h
-          - Layer-specific statable_types_{layer}.h contains enum only
-        """
         self._log_debug(
             f"_generate_all_by_layer: {len(layers)} layers"
         )
@@ -1553,7 +1465,6 @@ class CCodeGenerator:
         prev = self._current_role_function_library
         self._current_role_function_library = role_function_library
         try:
-            # === 1. Layer-specific files ===
             for layer_name, sm in layers:
                 self._setup_layer_generators(sm)
 
@@ -1586,12 +1497,10 @@ class CCodeGenerator:
                         f"{layer_name}/{fname_with_layer}"
                     ] = content
 
-            # === 2. Common files ===
             common_names = list(self.COMMON_FILES) + [
                 self.super_loop_filename
             ]
             for fname in common_names:
-                # Skip check for super include
                 if (fname == 'statable_all.h'
                         and not self.config.generate_super_include):
                     continue
@@ -1604,12 +1513,8 @@ class CCodeGenerator:
         finally:
             self._current_role_function_library = prev
 
-    # ================================================================
-    # Save
-    # ================================================================
     def save_generated_code(self, generated_files, output_dir,
                             layer_name: str = ''):
-        """Save generated code (no merge)"""
         saved_files = []
         os.makedirs(output_dir, exist_ok=True)
 
@@ -1619,7 +1524,6 @@ class CCodeGenerator:
             )
             filepath = os.path.join(output_dir, rel_path)
 
-            # Create parent directory
             parent = os.path.dirname(filepath)
             if parent:
                 os.makedirs(parent, exist_ok=True)
@@ -1633,7 +1537,6 @@ class CCodeGenerator:
     def save_generated_code_with_merge(self, generated_files,
                                        output_dir,
                                        layer_name: str = ''):
-        """Save while preserving user code"""
         merged_files = self.merger.merge_all_files(
             generated_files, output_dir,
             path_resolver=self._resolve_output_path,
@@ -1645,7 +1548,6 @@ class CCodeGenerator:
 
     def get_merge_summary(self, generated_files, output_dir,
                           layer_name: str = ''):
-        """Summary of the merge result"""
         summary = {}
         for filename, content in generated_files.items():
             rel_path = self._resolve_output_path(
@@ -1670,5 +1572,4 @@ class CCodeGenerator:
         return summary
 
     def get_generated_file_list(self):
-        """Return the list of generated files"""
         return list(self.file_generators.keys())

@@ -490,33 +490,31 @@ class CStructGenerator:
             T['max_consecutive_macro'],
         ]
         return ''.join(parts)
-
-    # ==================================================================
-    # 8. Batch generation
-    # ==================================================================
     def generate_all_structs(self, global_defs: GlobalDefinitions) -> str:
-        """
-        Generate all structs in bulk
+        """Generate all structs in bulk
         (custom_type + system_data + event_flags + system_context).
 
-        Note: TransitionContext_t and pending_event macros are separate methods.
+        [v2.2.1 fix] Section header now emits a valid C block comment
+        using section_line_start / section_line_end.
         """
         lines = []
 
+        def _section_header(title_key: str) -> str:
+            start = self.strings['section_line_start']
+            end = self.strings['section_line_end']
+            title = self.templates.SECTION_HEADERS.get(title_key, '')
+            return f"{start}\n *  {title}\n{end}"
+
         # custom_types
         if getattr(global_defs, 'custom_types', []):
-            line = self.strings['section_line']
-            title = self.templates.SECTION_HEADERS['custom_types']
-            lines.append(f"{line}\n *  {title}\n{line}")
+            lines.append(_section_header('custom_types'))
             lines.append("")
             for custom_type in global_defs.custom_types:
                 lines.append(self._generate_custom_type(custom_type))
                 lines.append("")
 
         # system_structs
-        line = self.strings['section_line']
-        title = self.templates.SECTION_HEADERS['system_structs']
-        lines.append(f"{line}\n *  {title}\n{line}")
+        lines.append(_section_header('system_structs'))
         lines.append("")
         lines.append(self._generate_system_data(global_defs))
         lines.append("")

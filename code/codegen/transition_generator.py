@@ -2,6 +2,12 @@
 """
 State transition function generation module (v2.2 multi-transition + nesting support).
 
+Version: 2.2.1 (2026-09-19)
+  - Fix: Nested group emitted duplicate transition blocks when parent
+    and child both declared the same members. Now the parent skips
+    labels that any descendant declares (see _collect_child_labels).
+  - Fix: Section header is now a valid C block comment (see c_code_generator).
+
 [v2.2 changes]
   - Multiple transitions per cell
   - `_handled` guard pattern (Commit / Tentative)
@@ -492,8 +498,28 @@ class TransitionGenerator:
 
         return ''.join(parts)
 
+    def _collect_child_labels(self, rel) -> set:
+        """Recursively collect all labels mentioned in descendants of rel.
+
+        [v2.2.1 fix]
+          Used to avoid emitting the same transition twice when a parent
+          and its child both declare the same members. The parent skips
+          any label that any descendant declares.
+        """
+        labels = set()
+        for child in (getattr(rel, 'children', None) or []):
+            labels.update(getattr(child, 'members', None) or [])
+            labels.update(self._collect_child_labels(child))
+        return labels
+
     def _emit_relation(self, rel, by_label, indent_level=1) -> str:
-        """Emit one relation (recursively for children)."""
+        """Emit one relation (recursively for children).
+
+        [v2.2.1 fix]
+          If a child relation declares the same members as its parent,
+          the child takes over and the parent does not emit them.
+          This prevents duplicate transition blocks in the generated C.
+        """
         parts = []
         pad = '    ' * indent_level
 
@@ -508,8 +534,13 @@ class TransitionGenerator:
         else:
             inner_indent = indent_level
 
-        # Members
+        # v2.2.1: labels handled by descendant relations are skipped here
+        child_labels = self._collect_child_labels(rel)
+
+        # Members (skip those delegated to children)
         for label in (getattr(rel, 'members', None) or []):
+            if label in child_labels:
+                continue
             t = by_label.get(label)
             if t is None:
                 continue

@@ -6,19 +6,19 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 19:23:41
  */
 
-/*==============================================================*/
+/*==============================================================
  *  Include files
-/*==============================================================*/
+ *==============================================================*/
 
 #include "statable_transitions_Middleware.h"
 #include "statable_role_functions_Middleware.h"
 
-/*==============================================================*/
+/*==============================================================
  *  State transition table
-/*==============================================================*/
+ *==============================================================*/
 
 /* ===== Cell transition function forward declarations ===== */
 static STATE_Middleware_t t_Idle_CONNECT(
@@ -58,7 +58,8 @@ const TransitionFunc_Middleware_t transition_table_Middleware
 
 
 /**
- * @brief  Cell transition: STATE_Middleware_Idle -[EVENT_Middleware_CONNECT]-> Connecting
+ * @brief  Cell transition: STATE_Middleware_Idle -[EVENT_Middleware_CONNECT]-> (multi)
+ * @note   Transition count: 1
  */
 static STATE_Middleware_t t_Idle_CONNECT(
     const TransitionContext_Middleware_t *transition,
@@ -66,19 +67,22 @@ static STATE_Middleware_t t_Idle_CONNECT(
 )
 {
     STATE_Middleware_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] (unconditional) */
-    if (1) {
+    /* ===== Transition[T1] (Commit) ===== */
+    if (!_handled && 1) {
         RoleFunc_Middleware_Connect(transition, ctx);
         next_state = STATE_Middleware_Connecting;
-        return next_state;
+        RoleFunc_Middleware_ConnEntry(transition, ctx);  /* state entry */
+        _handled = true;
     }
 
     return next_state;
 }
 
 /**
- * @brief  Cell transition: STATE_Middleware_Connecting -[EVENT_Middleware_CONNECTED]-> Connected
+ * @brief  Cell transition: STATE_Middleware_Connecting -[EVENT_Middleware_CONNECTED]-> (multi)
+ * @note   Transition count: 2
  */
 static STATE_Middleware_t t_Connecting_CONNECTED(
     const TransitionContext_Middleware_t *transition,
@@ -86,25 +90,35 @@ static STATE_Middleware_t t_Connecting_CONNECTED(
 )
 {
     STATE_Middleware_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] */
-    if (retry_count < 3) {
-        next_state = STATE_Middleware_Connected;
-        return next_state;
-    }
+    /* ===== Group (shared_condition) ===== */
+    if (error_code == 0) {
 
-    /* Transition[1] */
-    if (retry_count >= 3) {
-        RoleFunc_Middleware_HandleErr(transition, ctx);
-        next_state = STATE_Middleware_Error;
-        return next_state;
+        /* ===== Transition[T1] (Commit) ===== */
+        if (!_handled && retry_count < 3) {
+            RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
+            next_state = STATE_Middleware_Connected;
+            RoleFunc_Middleware_ConnOkEntry(transition, ctx);  /* state entry */
+            _handled = true;
+        }
+
+        /* ===== Transition[T2] (Commit) ===== */
+        if (!_handled && retry_count >= 3) {
+            RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
+            RoleFunc_Middleware_HandleErr(transition, ctx);
+            next_state = STATE_Middleware_Error;
+            RoleFunc_Middleware_ErrorEntry(transition, ctx);  /* state entry */
+            _handled = true;
+        }
     }
 
     return next_state;
 }
 
 /**
- * @brief  Cell transition: STATE_Middleware_Connecting -[EVENT_Middleware_ERROR]-> Error
+ * @brief  Cell transition: STATE_Middleware_Connecting -[EVENT_Middleware_ERROR]-> (multi)
+ * @note   Transition count: 1
  */
 static STATE_Middleware_t t_Connecting_ERROR(
     const TransitionContext_Middleware_t *transition,
@@ -112,19 +126,29 @@ static STATE_Middleware_t t_Connecting_ERROR(
 )
 {
     STATE_Middleware_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] (unconditional) */
-    if (1) {
+    /* ===== Transition[T1] (Commit) ===== */
+    if (!_handled && 1) {
+        RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
         RoleFunc_Middleware_HandleErr(transition, ctx);
         next_state = STATE_Middleware_Error;
-        return next_state;
+        RoleFunc_Middleware_ErrorEntry(transition, ctx);  /* state entry */
+        _handled = true;
+    } else if (!_handled && !(1)) {
+        RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
+        RoleFunc_Middleware_Retry(transition, ctx);
+        next_state = STATE_Middleware_Idle;
+        RoleFunc_Middleware_IdleEntry(transition, ctx);  /* state entry */
+        _handled = true;
     }
 
     return next_state;
 }
 
 /**
- * @brief  Cell transition: STATE_Middleware_Connected -[EVENT_Middleware_ERROR]-> Error
+ * @brief  Cell transition: STATE_Middleware_Connected -[EVENT_Middleware_ERROR]-> (multi)
+ * @note   Transition count: 1
  */
 static STATE_Middleware_t t_Connected_ERROR(
     const TransitionContext_Middleware_t *transition,
@@ -132,19 +156,22 @@ static STATE_Middleware_t t_Connected_ERROR(
 )
 {
     STATE_Middleware_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] (unconditional) */
-    if (1) {
+    /* ===== Transition[T1] (Commit) ===== */
+    if (!_handled && 1) {
         RoleFunc_Middleware_HandleErr(transition, ctx);
         next_state = STATE_Middleware_Error;
-        return next_state;
+        RoleFunc_Middleware_ErrorEntry(transition, ctx);  /* state entry */
+        _handled = true;
     }
 
     return next_state;
 }
 
 /**
- * @brief  Cell transition: STATE_Middleware_Error -[EVENT_Middleware_RETRY]-> Idle
+ * @brief  Cell transition: STATE_Middleware_Error -[EVENT_Middleware_RETRY]-> (multi)
+ * @note   Transition count: 2
  */
 static STATE_Middleware_t t_Error_RETRY(
     const TransitionContext_Middleware_t *transition,
@@ -152,21 +179,29 @@ static STATE_Middleware_t t_Error_RETRY(
 )
 {
     STATE_Middleware_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] (unconditional) */
-    if (1) {
+    /* ===== Transition[T1] (Commit) ===== */
+    if (!_handled && retry_count < 3) {
         RoleFunc_Middleware_Retry(transition, ctx);
         next_state = STATE_Middleware_Idle;
-        return next_state;
+        RoleFunc_Middleware_IdleEntry(transition, ctx);  /* state entry */
+        _handled = true;
+    }
+
+    /* ===== Transition[T2] (Tentative) ===== */
+    if (retry_count >= 3) {
+        next_state = STATE_Middleware_Error;
+        RoleFunc_Middleware_ErrorEntry(transition, ctx);  /* state entry */
     }
 
     return next_state;
 }
 
 
-/*==============================================================*/
+/*==============================================================
  *  State transition functions
-/*==============================================================*/
+ *==============================================================*/
 
 /**
  * @brief  Middleware layer state transition processing

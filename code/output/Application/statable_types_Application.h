@@ -6,29 +6,29 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-19 17:26:55
+ * @date    2026-09-19 19:23:41
  */
 
 #ifndef STATABLE_TYPES_H_APPLICATION
 #define STATABLE_TYPES_H_APPLICATION
 
-/*==============================================================*/
+/*==============================================================
  *  Include files
-/*==============================================================*/
+ *==============================================================*/
 
 #include "statable_types_common.h"
 
-/*==============================================================*/
+/*==============================================================
  *  Type definitions
-/*==============================================================*/
+ *==============================================================*/
 
 /* Application layer state definitions */
 typedef enum {
-    STATE_Application_Idle = 0,    /* Idle state Type: INITIAL */
-    STATE_Application_Active = 1,    /* Active state */
-    STATE_Application_Waiting = 2,    /* Waiting state */
-    STATE_Application_Error = 3,    /* Error state */
-    STATE_Application_Done = 4,    /* Done state Type: FINAL */
+    STATE_Application_Boot = 0,    /* Boot Type: INITIAL */
+    STATE_Application_Init = 1,    /* Init */
+    STATE_Application_Running = 2,    /* Running */
+    STATE_Application_Paused = 3,    /* Paused */
+    STATE_Application_Stopped = 4,    /* Stopped Type: FINAL */
     STATE_Application_MAX           /* element count (for system use) */
 } STATE_Application_t;
 
@@ -36,22 +36,14 @@ typedef enum {
 /* Application layer event definitions */
 typedef enum {
     EVENT_Application_NONE = 0,    /* completion transition */
-    EVENT_Application_START = 1,    /* Start Title: Start */
-    EVENT_Application_PAUSE = 2,    /* Pause Title: Pause */
-    EVENT_Application_RESUME = 3,    /* Resume Title: Resume */
-    EVENT_Application_STOP = 4,    /* Stop Title: Stop */
-    EVENT_Application_ERROR = 5,    /* Error Title: Error */
-    EVENT_Application_RESET = 6,    /* Reset Title: Reset */
+    EVENT_Application_BOOT = 1,    /* Boot Title: Boot */
+    EVENT_Application_START = 2,    /* Start Title: Start */
+    EVENT_Application_PAUSE = 3,    /* Pause Title: Pause */
+    EVENT_Application_RESUME = 4,    /* Resume Title: Resume */
+    EVENT_Application_STOP = 5,    /* Stop Title: Stop */
     EVENT_Application_MAX           /* element count (for system use) */
 } EVENT_Application_t;
 
-
-/* Event flag definitions */
-typedef enum {
-    FLAG_EVT_INIT_DONE = 0,    /* Init done Title: Init done */
-    FLAG_EVT_ERROR = 1,    /* Error occurred Title: Error flag */
-    FLAG_MAX           /* element count (for system use) */
-} FLAG_t;
 
 
 #endif /* STATABLE_TYPES_H_APPLICATION */

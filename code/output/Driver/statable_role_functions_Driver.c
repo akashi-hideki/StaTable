@@ -6,18 +6,18 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 19:23:41
  */
 
-/*==============================================================*/
+/*==============================================================
  *  Include files
-/*==============================================================*/
+ *==============================================================*/
 
 #include "statable_role_functions_Driver.h"
 
-/*==============================================================*/
+/*==============================================================
  *  Role function implementations
-/*==============================================================*/
+ *==============================================================*/
 
 
 /* ============================================================== */
@@ -70,8 +70,278 @@ static const RoleFuncCallSiteEntry_Driver_t call_sites_Reset[] = {
 
 
 /**
- * @brief  Role function: ドライバ初期化
- * @note   ドライバ初期化
+ * @brief  Role function: Idle entry
+ * @note   Idle entry
+ *
+ * @note   Call sites: (none)
+ */
+int RoleFunc_Driver_IdleEntry(
+    const TransitionContext_Driver_t *transition,
+    SystemContext_t *ctx
+)
+{
+    /* ===== transition NULL guard (supports ISR calls) ===== */
+    STATE_Driver_t from_state = STATE_Driver_MAX;
+    EVENT_Driver_t event = EVENT_Driver_NONE;
+    if (transition != NULL) {
+        from_state = transition->from_state;
+        event = transition->event;
+    }
+    (void)from_state;   /* suppress unused warning */
+    (void)event;   /* suppress unused warning */
+
+    /* ===== transition ID (index within call_sites) ===== */
+    const uint16_t transition_id = Transition_GetId(
+        transition, NULL, 0);
+
+    /* ===== local pointer to ctx->data ===== */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+
+    /* ===== return value ===== */
+    int ret = 0;   /* can be modified in user code */
+
+    /* TODO: implement the code here */
+
+    /* [[STABLE_USER_CODE_START:Driver_IdleEntry]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Driver_IdleEntry]] */
+
+    return ret;
+}
+
+/**
+ * @brief  Role function: Idle exit
+ * @note   Idle exit
+ *
+ * @note   Call sites: (none)
+ */
+int RoleFunc_Driver_IdleExit(
+    const TransitionContext_Driver_t *transition,
+    SystemContext_t *ctx
+)
+{
+    /* ===== transition NULL guard (supports ISR calls) ===== */
+    STATE_Driver_t from_state = STATE_Driver_MAX;
+    EVENT_Driver_t event = EVENT_Driver_NONE;
+    if (transition != NULL) {
+        from_state = transition->from_state;
+        event = transition->event;
+    }
+    (void)from_state;   /* suppress unused warning */
+    (void)event;   /* suppress unused warning */
+
+    /* ===== transition ID (index within call_sites) ===== */
+    const uint16_t transition_id = Transition_GetId(
+        transition, NULL, 0);
+
+    /* ===== local pointer to ctx->data ===== */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+
+    /* ===== return value ===== */
+    int ret = 0;   /* can be modified in user code */
+
+    /* TODO: implement the code here */
+
+    /* [[STABLE_USER_CODE_START:Driver_IdleExit]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Driver_IdleExit]] */
+
+    return ret;
+}
+
+/**
+ * @brief  Role function: Init entry
+ * @note   Initializing entry
+ *
+ * @note   Call sites: (none)
+ */
+int RoleFunc_Driver_InitEntry(
+    const TransitionContext_Driver_t *transition,
+    SystemContext_t *ctx
+)
+{
+    /* ===== transition NULL guard (supports ISR calls) ===== */
+    STATE_Driver_t from_state = STATE_Driver_MAX;
+    EVENT_Driver_t event = EVENT_Driver_NONE;
+    if (transition != NULL) {
+        from_state = transition->from_state;
+        event = transition->event;
+    }
+    (void)from_state;   /* suppress unused warning */
+    (void)event;   /* suppress unused warning */
+
+    /* ===== transition ID (index within call_sites) ===== */
+    const uint16_t transition_id = Transition_GetId(
+        transition, NULL, 0);
+
+    /* ===== local pointer to ctx->data ===== */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+
+    /* ===== return value ===== */
+    int ret = 0;   /* can be modified in user code */
+
+    /* TODO: implement the code here */
+
+    /* [[STABLE_USER_CODE_START:Driver_InitEntry]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Driver_InitEntry]] */
+
+    return ret;
+}
+
+/**
+ * @brief  Role function: Ready entry
+ * @note   Ready entry
+ *
+ * @note   Call sites: (none)
+ */
+int RoleFunc_Driver_ReadyEntry(
+    const TransitionContext_Driver_t *transition,
+    SystemContext_t *ctx
+)
+{
+    /* ===== transition NULL guard (supports ISR calls) ===== */
+    STATE_Driver_t from_state = STATE_Driver_MAX;
+    EVENT_Driver_t event = EVENT_Driver_NONE;
+    if (transition != NULL) {
+        from_state = transition->from_state;
+        event = transition->event;
+    }
+    (void)from_state;   /* suppress unused warning */
+    (void)event;   /* suppress unused warning */
+
+    /* ===== transition ID (index within call_sites) ===== */
+    const uint16_t transition_id = Transition_GetId(
+        transition, NULL, 0);
+
+    /* ===== local pointer to ctx->data ===== */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+
+    /* ===== return value ===== */
+    int ret = 0;   /* can be modified in user code */
+
+    /* TODO: implement the code here */
+
+    /* [[STABLE_USER_CODE_START:Driver_ReadyEntry]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Driver_ReadyEntry]] */
+
+    return ret;
+}
+
+/**
+ * @brief  Role function: Error entry
+ * @note   Error entry
+ *
+ * @note   Call sites: (none)
+ */
+int RoleFunc_Driver_ErrorEntry(
+    const TransitionContext_Driver_t *transition,
+    SystemContext_t *ctx
+)
+{
+    /* ===== transition NULL guard (supports ISR calls) ===== */
+    STATE_Driver_t from_state = STATE_Driver_MAX;
+    EVENT_Driver_t event = EVENT_Driver_NONE;
+    if (transition != NULL) {
+        from_state = transition->from_state;
+        event = transition->event;
+    }
+    (void)from_state;   /* suppress unused warning */
+    (void)event;   /* suppress unused warning */
+
+    /* ===== transition ID (index within call_sites) ===== */
+    const uint16_t transition_id = Transition_GetId(
+        transition, NULL, 0);
+
+    /* ===== local pointer to ctx->data ===== */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+
+    /* ===== return value ===== */
+    int ret = 0;   /* can be modified in user code */
+
+    /* TODO: implement the code here */
+
+    /* [[STABLE_USER_CODE_START:Driver_ErrorEntry]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Driver_ErrorEntry]] */
+
+    return ret;
+}
+
+/**
+ * @brief  Role function: Error exit
+ * @note   Error exit
+ *
+ * @note   Call sites: (none)
+ */
+int RoleFunc_Driver_ErrorExit(
+    const TransitionContext_Driver_t *transition,
+    SystemContext_t *ctx
+)
+{
+    /* ===== transition NULL guard (supports ISR calls) ===== */
+    STATE_Driver_t from_state = STATE_Driver_MAX;
+    EVENT_Driver_t event = EVENT_Driver_NONE;
+    if (transition != NULL) {
+        from_state = transition->from_state;
+        event = transition->event;
+    }
+    (void)from_state;   /* suppress unused warning */
+    (void)event;   /* suppress unused warning */
+
+    /* ===== transition ID (index within call_sites) ===== */
+    const uint16_t transition_id = Transition_GetId(
+        transition, NULL, 0);
+
+    /* ===== local pointer to ctx->data ===== */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+
+    /* ===== return value ===== */
+    int ret = 0;   /* can be modified in user code */
+
+    /* TODO: implement the code here */
+
+    /* [[STABLE_USER_CODE_START:Driver_ErrorExit]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Driver_ErrorExit]] */
+
+    return ret;
+}
+
+/**
+ * @brief  Role function: Driver init
+ * @note   Driver init
  *
  * @note   Call sites:
  *         - [pre_action]  STATE_Driver_Idle -[EVENT_Driver_INIT]-> STATE_Driver_Initializing
@@ -96,13 +366,12 @@ int RoleFunc_Driver_Init(
         transition, call_sites_Init, (uint16_t)CALL_SITES_Init_COUNT);
 
     /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -110,16 +379,15 @@ int RoleFunc_Driver_Init(
     /* TODO: implement the code here */
 
     /* [[STABLE_USER_CODE_START:Driver_Init]] */
-    /* ユーザー実装コードをここに記述 */
-
+    /* Write user implementation code here */
     /* [[STABLE_USER_CODE_END:Driver_Init]] */
 
     return ret;
 }
 
 /**
- * @brief  Role function: エラーログ
- * @note   エラーログ
+ * @brief  Role function: Log error
+ * @note   Log error
  *
  * @note   Call sites:
  *         - [pre_action]  STATE_Driver_Initializing -[EVENT_Driver_READY]-> STATE_Driver_Error
@@ -146,13 +414,12 @@ int RoleFunc_Driver_LogError(
         transition, call_sites_LogError, (uint16_t)CALL_SITES_LogError_COUNT);
 
     /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -160,16 +427,15 @@ int RoleFunc_Driver_LogError(
     /* TODO: implement the code here */
 
     /* [[STABLE_USER_CODE_START:Driver_LogError]] */
-    /* ユーザー実装コードをここに記述 */
-
+    /* Write user implementation code here */
     /* [[STABLE_USER_CODE_END:Driver_LogError]] */
 
     return ret;
 }
 
 /**
- * @brief  Role function: リセット処理
- * @note   リセット処理
+ * @brief  Role function: Reset
+ * @note   Reset
  *
  * @note   Call sites:
  *         - [pre_action]  STATE_Driver_Error -[EVENT_Driver_RESET]-> STATE_Driver_Idle
@@ -194,13 +460,12 @@ int RoleFunc_Driver_Reset(
         transition, call_sites_Reset, (uint16_t)CALL_SITES_Reset_COUNT);
 
     /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -208,20 +473,19 @@ int RoleFunc_Driver_Reset(
     /* TODO: implement the code here */
 
     /* [[STABLE_USER_CODE_START:Driver_Reset]] */
-    /* ユーザー実装コードをここに記述 */
-
+    /* Write user implementation code here */
     /* [[STABLE_USER_CODE_END:Driver_Reset]] */
 
     return ret;
 }
 
 /**
- * @brief  Role function: RX確認（ISR用）
- * @note   RX確認処理
+ * @brief  Role function: Pre-check
+ * @note   Pre-check
  *
  * @note   Call sites: (none)
  */
-int RoleFunc_Driver_CheckRx(
+int RoleFunc_Driver_PreCheck(
     const TransitionContext_Driver_t *transition,
     SystemContext_t *ctx
 )
@@ -241,23 +505,66 @@ int RoleFunc_Driver_CheckRx(
         transition, NULL, 0);
 
     /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
 
     /* TODO: implement the code here */
 
-    /* [[STABLE_USER_CODE_START:Driver_CheckRx]] */
-    /* ユーザー実装コードをここに記述 */
+    /* [[STABLE_USER_CODE_START:Driver_PreCheck]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Driver_PreCheck]] */
 
-    /* [[STABLE_USER_CODE_END:Driver_CheckRx]] */
+    return ret;
+}
+
+/**
+ * @brief  Role function: Cleanup
+ * @note   Cleanup
+ *
+ * @note   Call sites: (none)
+ */
+int RoleFunc_Driver_Cleanup(
+    const TransitionContext_Driver_t *transition,
+    SystemContext_t *ctx
+)
+{
+    /* ===== transition NULL guard (supports ISR calls) ===== */
+    STATE_Driver_t from_state = STATE_Driver_MAX;
+    EVENT_Driver_t event = EVENT_Driver_NONE;
+    if (transition != NULL) {
+        from_state = transition->from_state;
+        event = transition->event;
+    }
+    (void)from_state;   /* suppress unused warning */
+    (void)event;   /* suppress unused warning */
+
+    /* ===== transition ID (index within call_sites) ===== */
+    const uint16_t transition_id = Transition_GetId(
+        transition, NULL, 0);
+
+    /* ===== local pointer to ctx->data ===== */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+
+    /* ===== return value ===== */
+    int ret = 0;   /* can be modified in user code */
+
+    /* TODO: implement the code here */
+
+    /* [[STABLE_USER_CODE_START:Driver_Cleanup]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Driver_Cleanup]] */
 
     return ret;
 }
@@ -303,6 +610,5 @@ static uint16_t Transition_GetId(
 /*  Code added here is preserved across regenerations             */
 /* ============================================================== */
 /* [[STABLE_USER_CODE_TAIL_START]] */
-/* ユーザー追加コードをここに記述（ヘルパー関数など） */
-
+/* Write user-added code here (helper functions, etc.) */
 /* [[STABLE_USER_CODE_TAIL_END]] */

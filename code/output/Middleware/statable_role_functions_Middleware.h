@@ -6,25 +6,85 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 19:23:41
  */
 
 #ifndef STATABLE_ROLE_FUNCTIONS_H_MIDDLEWARE
 #define STATABLE_ROLE_FUNCTIONS_H_MIDDLEWARE
 
-/*==============================================================*/
+/*==============================================================
  *  Include files
-/*==============================================================*/
+ *==============================================================*/
 
 #include "statable_types_Middleware.h"
 
-/*==============================================================*/
+/*==============================================================
  *  Role function declarations
-/*==============================================================*/
+ *==============================================================*/
 
 /**
- * @brief  Role function: 接続処理
- * @note   接続処理
+ * @brief  Role function: Idle entry
+ * @note   Idle entry
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_Middleware_IdleEntry(
+    const TransitionContext_Middleware_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Connecting entry
+ * @note   Connecting entry
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_Middleware_ConnEntry(
+    const TransitionContext_Middleware_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Connecting exit
+ * @note   Connecting exit
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_Middleware_ConnExit(
+    const TransitionContext_Middleware_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Connected entry
+ * @note   Connected entry
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_Middleware_ConnOkEntry(
+    const TransitionContext_Middleware_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Error entry
+ * @note   Error entry
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_Middleware_ErrorEntry(
+    const TransitionContext_Middleware_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Connect
+ * @note   Connect
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
@@ -35,8 +95,8 @@ int RoleFunc_Middleware_Connect(
 );
 
 /**
- * @brief  Role function: エラー処理
- * @note   エラー処理
+ * @brief  Role function: Handle error
+ * @note   Handle error
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
@@ -47,8 +107,8 @@ int RoleFunc_Middleware_HandleErr(
 );
 
 /**
- * @brief  Role function: 再試行処理
- * @note   再試行処理
+ * @brief  Role function: Retry
+ * @note   Retry
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
@@ -59,133 +119,13 @@ int RoleFunc_Middleware_Retry(
 );
 
 /**
- * @brief  Role function: ドライバ初期化
- * @note   ドライバ初期化
+ * @brief  Role function: Before connect
+ * @note   Before connect
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Driver_Init(
-    const TransitionContext_Middleware_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: エラーログ
- * @note   エラーログ
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Driver_LogError(
-    const TransitionContext_Middleware_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: リセット処理
- * @note   リセット処理
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Driver_Reset(
-    const TransitionContext_Middleware_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: RX確認（ISR用）
- * @note   RX確認処理
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Driver_CheckRx(
-    const TransitionContext_Middleware_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: アプリ起動
- * @note   アプリ起動
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_Boot(
-    const TransitionContext_Middleware_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: アプリ開始
- * @note   アプリ開始
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_Start(
-    const TransitionContext_Middleware_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: 一時停止処理
- * @note   一時停止処理
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_Pause(
-    const TransitionContext_Middleware_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: 再開処理
- * @note   再開処理
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_Resume(
-    const TransitionContext_Middleware_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: 周期処理（ISR用）
- * @note   周期処理（ISR用）
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_HandleTick(
-    const TransitionContext_Middleware_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: RX処理（ISR用）
- * @note   RX処理（ISR用）
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_HandleRx(
-    const TransitionContext_Middleware_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: エラー処理（ISR用）
- * @note   エラー処理（ISR用）
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_Application_HandleError(
+int RoleFunc_Middleware_BeforeConnect(
     const TransitionContext_Middleware_t *transition,
     SystemContext_t *ctx
 );

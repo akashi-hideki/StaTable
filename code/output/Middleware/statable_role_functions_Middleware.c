@@ -6,18 +6,18 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 19:23:41
  */
 
-/*==============================================================*/
+/*==============================================================
  *  Include files
-/*==============================================================*/
+ *==============================================================*/
 
 #include "statable_role_functions_Middleware.h"
 
-/*==============================================================*/
+/*==============================================================
  *  Role function implementations
-/*==============================================================*/
+ *==============================================================*/
 
 
 /* ============================================================== */
@@ -63,15 +63,241 @@ static const RoleFuncCallSiteEntry_Middleware_t call_sites_HandleErr[] = {
 
 /* --- call site table for Retry --- */
 static const RoleFuncCallSiteEntry_Middleware_t call_sites_Retry[] = {
-    { STATE_Middleware_Error, EVENT_Middleware_RETRY },
+    { STATE_Middleware_Connecting, EVENT_Middleware_ERROR },
+    { STATE_Middleware_Error,      EVENT_Middleware_RETRY },
 };
 #define CALL_SITES_Retry_COUNT \
     (sizeof(call_sites_Retry) / sizeof(call_sites_Retry[0]))
 
 
 /**
- * @brief  Role function: 接続処理
- * @note   接続処理
+ * @brief  Role function: Idle entry
+ * @note   Idle entry
+ *
+ * @note   Call sites: (none)
+ */
+int RoleFunc_Middleware_IdleEntry(
+    const TransitionContext_Middleware_t *transition,
+    SystemContext_t *ctx
+)
+{
+    /* ===== transition NULL guard (supports ISR calls) ===== */
+    STATE_Middleware_t from_state = STATE_Middleware_MAX;
+    EVENT_Middleware_t event = EVENT_Middleware_NONE;
+    if (transition != NULL) {
+        from_state = transition->from_state;
+        event = transition->event;
+    }
+    (void)from_state;   /* suppress unused warning */
+    (void)event;   /* suppress unused warning */
+
+    /* ===== transition ID (index within call_sites) ===== */
+    const uint16_t transition_id = Transition_GetId(
+        transition, NULL, 0);
+
+    /* ===== local pointer to ctx->data ===== */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+
+    /* ===== return value ===== */
+    int ret = 0;   /* can be modified in user code */
+
+    /* TODO: implement the code here */
+
+    /* [[STABLE_USER_CODE_START:Middleware_IdleEntry]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Middleware_IdleEntry]] */
+
+    return ret;
+}
+
+/**
+ * @brief  Role function: Connecting entry
+ * @note   Connecting entry
+ *
+ * @note   Call sites: (none)
+ */
+int RoleFunc_Middleware_ConnEntry(
+    const TransitionContext_Middleware_t *transition,
+    SystemContext_t *ctx
+)
+{
+    /* ===== transition NULL guard (supports ISR calls) ===== */
+    STATE_Middleware_t from_state = STATE_Middleware_MAX;
+    EVENT_Middleware_t event = EVENT_Middleware_NONE;
+    if (transition != NULL) {
+        from_state = transition->from_state;
+        event = transition->event;
+    }
+    (void)from_state;   /* suppress unused warning */
+    (void)event;   /* suppress unused warning */
+
+    /* ===== transition ID (index within call_sites) ===== */
+    const uint16_t transition_id = Transition_GetId(
+        transition, NULL, 0);
+
+    /* ===== local pointer to ctx->data ===== */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+
+    /* ===== return value ===== */
+    int ret = 0;   /* can be modified in user code */
+
+    /* TODO: implement the code here */
+
+    /* [[STABLE_USER_CODE_START:Middleware_ConnEntry]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Middleware_ConnEntry]] */
+
+    return ret;
+}
+
+/**
+ * @brief  Role function: Connecting exit
+ * @note   Connecting exit
+ *
+ * @note   Call sites: (none)
+ */
+int RoleFunc_Middleware_ConnExit(
+    const TransitionContext_Middleware_t *transition,
+    SystemContext_t *ctx
+)
+{
+    /* ===== transition NULL guard (supports ISR calls) ===== */
+    STATE_Middleware_t from_state = STATE_Middleware_MAX;
+    EVENT_Middleware_t event = EVENT_Middleware_NONE;
+    if (transition != NULL) {
+        from_state = transition->from_state;
+        event = transition->event;
+    }
+    (void)from_state;   /* suppress unused warning */
+    (void)event;   /* suppress unused warning */
+
+    /* ===== transition ID (index within call_sites) ===== */
+    const uint16_t transition_id = Transition_GetId(
+        transition, NULL, 0);
+
+    /* ===== local pointer to ctx->data ===== */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+
+    /* ===== return value ===== */
+    int ret = 0;   /* can be modified in user code */
+
+    /* TODO: implement the code here */
+
+    /* [[STABLE_USER_CODE_START:Middleware_ConnExit]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Middleware_ConnExit]] */
+
+    return ret;
+}
+
+/**
+ * @brief  Role function: Connected entry
+ * @note   Connected entry
+ *
+ * @note   Call sites: (none)
+ */
+int RoleFunc_Middleware_ConnOkEntry(
+    const TransitionContext_Middleware_t *transition,
+    SystemContext_t *ctx
+)
+{
+    /* ===== transition NULL guard (supports ISR calls) ===== */
+    STATE_Middleware_t from_state = STATE_Middleware_MAX;
+    EVENT_Middleware_t event = EVENT_Middleware_NONE;
+    if (transition != NULL) {
+        from_state = transition->from_state;
+        event = transition->event;
+    }
+    (void)from_state;   /* suppress unused warning */
+    (void)event;   /* suppress unused warning */
+
+    /* ===== transition ID (index within call_sites) ===== */
+    const uint16_t transition_id = Transition_GetId(
+        transition, NULL, 0);
+
+    /* ===== local pointer to ctx->data ===== */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+
+    /* ===== return value ===== */
+    int ret = 0;   /* can be modified in user code */
+
+    /* TODO: implement the code here */
+
+    /* [[STABLE_USER_CODE_START:Middleware_ConnOkEntry]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Middleware_ConnOkEntry]] */
+
+    return ret;
+}
+
+/**
+ * @brief  Role function: Error entry
+ * @note   Error entry
+ *
+ * @note   Call sites: (none)
+ */
+int RoleFunc_Middleware_ErrorEntry(
+    const TransitionContext_Middleware_t *transition,
+    SystemContext_t *ctx
+)
+{
+    /* ===== transition NULL guard (supports ISR calls) ===== */
+    STATE_Middleware_t from_state = STATE_Middleware_MAX;
+    EVENT_Middleware_t event = EVENT_Middleware_NONE;
+    if (transition != NULL) {
+        from_state = transition->from_state;
+        event = transition->event;
+    }
+    (void)from_state;   /* suppress unused warning */
+    (void)event;   /* suppress unused warning */
+
+    /* ===== transition ID (index within call_sites) ===== */
+    const uint16_t transition_id = Transition_GetId(
+        transition, NULL, 0);
+
+    /* ===== local pointer to ctx->data ===== */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+
+    /* ===== return value ===== */
+    int ret = 0;   /* can be modified in user code */
+
+    /* TODO: implement the code here */
+
+    /* [[STABLE_USER_CODE_START:Middleware_ErrorEntry]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Middleware_ErrorEntry]] */
+
+    return ret;
+}
+
+/**
+ * @brief  Role function: Connect
+ * @note   Connect
  *
  * @note   Call sites:
  *         - [pre_action]  STATE_Middleware_Idle -[EVENT_Middleware_CONNECT]-> STATE_Middleware_Connecting
@@ -96,13 +322,12 @@ int RoleFunc_Middleware_Connect(
         transition, call_sites_Connect, (uint16_t)CALL_SITES_Connect_COUNT);
 
     /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -110,16 +335,15 @@ int RoleFunc_Middleware_Connect(
     /* TODO: implement the code here */
 
     /* [[STABLE_USER_CODE_START:Middleware_Connect]] */
-    /* ユーザー実装コードをここに記述 */
-
+    /* Write user implementation code here */
     /* [[STABLE_USER_CODE_END:Middleware_Connect]] */
 
     return ret;
 }
 
 /**
- * @brief  Role function: エラー処理
- * @note   エラー処理
+ * @brief  Role function: Handle error
+ * @note   Handle error
  *
  * @note   Call sites:
  *         - [pre_action]  STATE_Middleware_Connecting -[EVENT_Middleware_CONNECTED]-> STATE_Middleware_Error
@@ -146,13 +370,12 @@ int RoleFunc_Middleware_HandleErr(
         transition, call_sites_HandleErr, (uint16_t)CALL_SITES_HandleErr_COUNT);
 
     /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -160,19 +383,19 @@ int RoleFunc_Middleware_HandleErr(
     /* TODO: implement the code here */
 
     /* [[STABLE_USER_CODE_START:Middleware_HandleErr]] */
-    /* ユーザー実装コードをここに記述 */
-
+    /* Write user implementation code here */
     /* [[STABLE_USER_CODE_END:Middleware_HandleErr]] */
 
     return ret;
 }
 
 /**
- * @brief  Role function: 再試行処理
- * @note   再試行処理
+ * @brief  Role function: Retry
+ * @note   Retry
  *
  * @note   Call sites:
- *         - [pre_action]  STATE_Middleware_Error -[EVENT_Middleware_RETRY]-> STATE_Middleware_Idle
+ *         - [else_action]  STATE_Middleware_Connecting -[EVENT_Middleware_ERROR]-> STATE_Middleware_Idle
+ *         - [pre_action]   STATE_Middleware_Error      -[EVENT_Middleware_RETRY]-> STATE_Middleware_Idle
  */
 int RoleFunc_Middleware_Retry(
     const TransitionContext_Middleware_t *transition,
@@ -194,13 +417,12 @@ int RoleFunc_Middleware_Retry(
         transition, call_sites_Retry, (uint16_t)CALL_SITES_Retry_COUNT);
 
     /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -208,9 +430,53 @@ int RoleFunc_Middleware_Retry(
     /* TODO: implement the code here */
 
     /* [[STABLE_USER_CODE_START:Middleware_Retry]] */
-    /* ユーザー実装コードをここに記述 */
-
+    /* Write user implementation code here */
     /* [[STABLE_USER_CODE_END:Middleware_Retry]] */
+
+    return ret;
+}
+
+/**
+ * @brief  Role function: Before connect
+ * @note   Before connect
+ *
+ * @note   Call sites: (none)
+ */
+int RoleFunc_Middleware_BeforeConnect(
+    const TransitionContext_Middleware_t *transition,
+    SystemContext_t *ctx
+)
+{
+    /* ===== transition NULL guard (supports ISR calls) ===== */
+    STATE_Middleware_t from_state = STATE_Middleware_MAX;
+    EVENT_Middleware_t event = EVENT_Middleware_NONE;
+    if (transition != NULL) {
+        from_state = transition->from_state;
+        event = transition->event;
+    }
+    (void)from_state;   /* suppress unused warning */
+    (void)event;   /* suppress unused warning */
+
+    /* ===== transition ID (index within call_sites) ===== */
+    const uint16_t transition_id = Transition_GetId(
+        transition, NULL, 0);
+
+    /* ===== local pointer to ctx->data ===== */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+
+    /* ===== return value ===== */
+    int ret = 0;   /* can be modified in user code */
+
+    /* TODO: implement the code here */
+
+    /* [[STABLE_USER_CODE_START:Middleware_BeforeConnect]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:Middleware_BeforeConnect]] */
 
     return ret;
 }
@@ -256,6 +522,5 @@ static uint16_t Transition_GetId(
 /*  Code added here is preserved across regenerations             */
 /* ============================================================== */
 /* [[STABLE_USER_CODE_TAIL_START]] */
-/* ユーザー追加コードをここに記述（ヘルパー関数など） */
-
+/* Write user-added code here (helper functions, etc.) */
 /* [[STABLE_USER_CODE_TAIL_END]] */

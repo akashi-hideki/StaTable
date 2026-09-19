@@ -88,6 +88,10 @@ class Event:
 class Transition:
     """State transition definition.
 
+    [v1.6 change] kw_only=True
+      To structurally prevent positional-argument field-order accidents
+      (v1.4 section 9.6 #67), only kw_only arguments are accepted.
+
     [v2.2 additions]
       early_return: bool = False
         - True  : "Commit"    - stop evaluating later transitions in the same cell
@@ -117,9 +121,13 @@ class Transition:
             self.title = "(untitled transition)"
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ActionStep:
     """Transition-independent action step (v2.2).
+
+    [v2.2.4 change] kw_only=True
+      To structurally prevent positional-argument field-order accidents
+      (consistent with v1.5 RoleFunction / v1.6 Transition).
 
     trigger:
       "before_transitions" - runs just before evaluating transitions
@@ -137,9 +145,13 @@ class ActionStep:
             self.title = self.role_function or "(untitled action)"
 
 
-@dataclass
+@dataclass(kw_only=True)
 class TransitionRelation:
     """Relation between transitions in one cell (v2.2).
+
+    [v2.2.4 change] kw_only=True
+      To structurally prevent positional-argument field-order accidents
+      (consistent with v1.5 RoleFunction / v1.6 Transition).
 
     kind:
       "sequential"  - evaluate members in order (default)
@@ -151,7 +163,6 @@ class TransitionRelation:
     shared_condition: only used when kind == "group".
 
     [v2.2 §12-5] children: nested sub-relations (recursive).
-      A child relation is emitted inside the parent's if-block.
     """
     kind: str = "sequential"
     members: List[str] = field(default_factory=list)

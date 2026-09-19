@@ -1,515 +1,736 @@
-# StaTable 統合仕様書 v1.5
-
-**版**: 1.5（2026-09-13 本スレッド成果反映・v1.4 バグ修正版）
-**作成根拠**: v1.4 + 本スレッド共有 12 ファイル + 実機検証（IsrNamespaceTest.xml）
-**v1.4 からの主な変更**: コード生成バグ根本修正（6 ファイル）、`RoleFunction` の `kw_only=True` 化、namespace 保持の完全化、新規発見 7 項目追加
+!# 項目 2 → 6 → 5 順次実施 + 仕様書詳細版
 
 ---
 
-## 0. v1.4 → v1.5 差分サマリ
+# 項目 2: 仕様書 §1.3（動作環境）の修正
 
-| 項目 | v1.4 | v1.5 |
-|------|------|------|
-| `RoleFunction`（SM 側） | 位置引数許可 | **`kw_only=True` 化**（再発防止） |
-| `SettingsPanel.apply_changes()` | 位置引数で構築 → namespace 汚染 | **kwarg 化 + namespace 列追加** |
-| `RoleFunctionDialog` | `namespace` 未設定 | **namespace 入力欄追加** |
-| `code_widget.py`（D&D プレビュー） | `void RoleFunc_X.Y(ctx, t)` 独自形式 | **実ファイル生成形式に統一** |
-| `sample_data.py` の `Transition` | 位置引数で `pre_actions` に文字列 | **全 kwarg + `List[str]` 明示** |
-| `role_function_generator` | 不正識別子を素通し | **識別子検証ガード追加** |
-| 既知の制約 | 75 項目 | **+7 項目（計 82 項目）** |
-| 実機検証 | 未実施 | **IsrNamespaceTest.xml で正常動作確認済** |
+## 2.1 変更内容
 
----
-
-## 1. 全体アーキテクチャ
-
-```
-┌─────────────────────────────────────────────────────┐
-│  statable_gui/          GUI 層                       │
-│   ├── main_window.py                                 │
-│   ├── widgets.py        （StateMachineTab / SettingsPanel）│
-│   ├── matrix_table.py   （遷移表）                    │
-│   ├── role_function_dialog.py  ★ v1.5 namespace 欄追加│
-│   ├── *_dialog.py       （各種編集ダイアログ）          │
-│   └── transition_editor_direct/  （D&D 遷移エディタ）  │
-│       └── code_widget.py  ★ v1.5 プレビュー形式統一  │
-├─────────────────────────────────────────────────────┤
-│  libcntrl/              共有ライブラリ層              │
-│   ├── role_function_library.py                       │
-│   ├── condition_library.py                           │
-│   └── literal_library.py                             │
-├─────────────────────────────────────────────────────┤
-│  statable/              データモデル層                │
-│   ├── model.py          ★ v1.5 RoleFunction kw_only  │
-│   ├── state_machine.py                               │
-│   ├── global_defs.py                                 │
-│   ├── xml_io.py                                      │
-│   └── sample_data.py    ★ v1.5 Transition kwarg 化   │
-├─────────────────────────────────────────────────────┤
-│  codegen/               コード生成層                  │
-│   ├── c_code_generator.py 他 15 モジュール            │
-│   ├── role_function_generator.py  ★ v1.5 識別子検証  │
-│   └── validate/         検証・AI連携層                │
-└─────────────────────────────────────────────────────┘
-```
-
-★ 印は v1.5 で変更されたファイル。
-
----
-
-## 2. データモデル層（`statable/`）
-
-### 2.1 `model.py` の Enum（変更なし）
-
-| Enum | 値 |
-|------|-----|
-| `StateType` | `NORMAL` / `CONCURRENT` / `REGION` / `INITIAL` / `FINAL` / `CHOICE` / `JUNCTION`（7 種） |
-| `EventKind` | `SIGNAL` / `CALL` / `TIME` / `CHANGE` |
-| `EventDeliveryType` | `DIRECT` / `QUEUE` / `DOUBLE` |
-| `EventSourceLayer` | `DRIVER` / `MIDDLEWARE` |
-
-### 2.2 `RoleFunction`（SM 側）★ v1.5 重要変更
-
-```python
-@dataclass(kw_only=True)   # ★ v1.5 追加
-class RoleFunction:
-    name: str
-    namespace: str = ""
-    description: str = ""
-    return_type: str = "void"
-    arg1_type: str = ""
-    arg1_name: str = ""
-    arg2_type: str = ""
-    arg2_name: str = ""
-    title: str = ""
-```
-
-#### kw_only 化の根拠
-
-v1.4 まで位置引数構築が可能で、`namespace` フィールドが後から挿入された結果、**全フィールドが 1 つずつずれる事故**が発生（v1.5 §9.6 #76）。
-
-| 引数 | 渡した値 | 旧: 入るフィールド | 新: kw_only 化 |
-|---|---|---|---|
-| `RoleFunction("Connect", "接続処理", "int")` | position | `namespace="接続処理"`, `description="int"` ❌ | **TypeError で即検出** ✅ |
-
-#### 影響範囲（kw_only 化への対応が必要な箇所）
-
-| ファイル | 対応 | 状態 |
+| 項目 | 変更前 | 変更後 |
 |---|---|---|
-| `statable/xml_io.py` | 元から全 kwarg | ✅ 変更不要 |
-| `statable_gui/widgets.py` | kwarg 化修正 | ✅ v1.5 修正済 |
-| `statable_gui/role_function_dialog.py` | kwarg 化修正 | ✅ v1.5 修正済 |
-| `statable/sample_data.py` | kwarg 化修正 | ✅ v1.5 修正済 |
-| `codegen/validate/change_applier.py` | 元から全 kwarg | ✅ 変更不要 |
-| `statable_gui/transition_editor_direct/draft.py` | `Transition` 経由のみ | ✅ 変更不要 |
+| Python 要件 | 3.9 以上 | **3.10 以上** |
+| 推奨 | 3.12+ 推奨 | 3.12+ 推奨（変更なし） |
 
-### 2.3 `Transition`（変更なし、kw_only 化は v1.6 予定）
+**理由**: `@dataclass(kw_only=True)` は Python 3.10 で導入。3.9 では `TypeError`。
 
-`Transition` も同じ地雷を抱えているが、`sample_data.py` の修正（v1.5 実施済）と他呼び出し元の確認を経て、**v1.6 で kw_only 化予定**。
+## 2.2 仕様書 完全テキスト（§1.3 差替え）
 
-```python
-@dataclass
-class Transition:
-    source: str
-    event: str
-    condition: str = ""
-    pre_actions: List[str] = field(default_factory=list)
-    target: str = ""
-    has_else: bool = True
-    else_target: str = ""
-    else_actions: List[str] = field(default_factory=list)
-    action: str = ""
-    transition_type: str = "external"
-    title: str = ""
-```
+```markdown
+### 1.3 動作環境
 
-### 2.4 `sample_data.py` ★ v1.5 修正
-
-#### 修正前（v1.4）
-
-```python
-sm.add_transition(Transition("Idle", "START", "", "init()", "Active", title="起動"))
-# → pre_actions に文字列 "init()" が入り、XML 保存時に 1 文字ずつ分解される
-```
-
-#### 修正後（v1.5）
-
-```python
-sm.add_transition(Transition(
-    source="Idle",
-    event="START",
-    condition="",
-    pre_actions=["init()"],   # ★ List[str] で明示
-    target="Active",
-    title="起動",
-))
-```
-
-全 6 遷移・全 2 ロール関数を kwarg 化。
-
----
-
-## 3. 共有ライブラリ層（`libcntrl/`）
-
-v1.4 から変更なし。`RoleFunction`（libcntrl 側）は SM 側とは別クラスで、`kw_only` 化の影響を受けない。
-
-| 項目 | libcntrl 側 |
+| 項目 | 要件 |
 |---|---|
-| フィールド | `name` / `namespace` / `description` / `title` / `used_global_vars` / `used_events` / `used_literals` |
-| 一意キー | `qualified_name` |
+| Python | **3.10 以上**（**3.12+ 推奨** — PEP 701 対応） |
+| PySide6 | 6.x（QtWebEngine 含む） |
+| OS | Windows / macOS / Linux |
+| 生成コード | C99 以上 |
 
 ---
 
-## 4. 状態遷移エンジン
+#### 1.3.1 Python 3.10 以上が必要な理由
 
-v1.4 から変更なし。
+StaTable v2.2 のデータモデルは `@dataclass(kw_only=True)` を使用しています。
 
----
+| クラス | `kw_only` 導入版 | 定義箇所 |
+|---|---|---|
+| `RoleFunction` | v1.5 | `statable/model.py` |
+| `Transition` | v1.6 | `statable/model.py` |
+| `ActionStep` | v2.2 | `statable/model.py` |
+| `TransitionRelation` | v2.2 | `statable/model.py` |
 
-## 5. コード生成層（`codegen/`）
+`@dataclass(kw_only=True)` は **Python 3.10** で導入された言語機能です。
 
-### 5.1 `role_function_generator.py` ★ v1.5 修正
+- **Python 3.9 以前**: `TypeError: dataclass() got an unexpected keyword argument 'kw_only'`
+- **Python 3.10 以上**: 正常動作
 
-#### 修正① 識別子検証ガード
+**設計意図**:
+
+`kw_only=True` は、v1.5 / v1.6 で発生した **位置引数のフィールド順序事故** を構造的に防止します。
 
 ```python
-_VALID_C_IDENTIFIER = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
-_VALID_QUALIFIED = re.compile(
-    r'^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$'
-)
+# 旧（危険）: 引数順序を間違えても型エラーにならない
+Transition("Idle", "START", "", ["init()"], "Active")
 
-def _normalize_func_ref(self, ref: str) -> str:
-    ...
-    # ★ v1.5 追加: 識別子検証
-    if not _VALID_QUALIFIED.match(name):
-        self._log_debug(
-            f"_normalize_func_ref: reject invalid identifier: {ref!r}",
-            'warning',
-        )
-        return ""
-    return name
+# 新（安全）: フィールド名を強制
+Transition(source="Idle", event="START",
+           condition="", pre_actions=["init()"], target="Active")
 ```
 
-**効果**: `retry_count++` / `g_system_tick++` / `a + b` などの C 演算子混入参照を弾き、`RoleFunc_retry_count++` の生成を防止。
-
-#### 修正② 未定義参照の警告ログ
-
-`generate_all_implementations()` 内で、`call_map` に登録されたが `role_functions` に存在しないキーを警告出力。
-
-### 5.2 `c_code_generator.py`（変更なし）
-
-### 5.3 その他（変更なし）
+この安全性を **全 dataclass に一貫適用** しているため、Python 3.10+ が必須です。
 
 ---
 
-## 6. GUI 層（`statable_gui/`）
+#### 1.3.2 Python 3.12+ を推奨する理由（PEP 701）
 
-### 6.1 `widgets.py` / `SettingsPanel` ★ v1.5 修正
+**PEP 701**（f-string の拡張）により、Python 3.12 以降では f-string が以下の **3 種類のトークンに分割** されます。
 
-#### 修正① `role_table` の列追加（8 列 → 9 列）
+| Python バージョン | `f"動作: {x}"` のトークン |
+|---|---|
+| 3.11 以前 | 1 個の `STRING` トークン |
+| **3.12 以降** | `FSTRING_START('f"')` + `FSTRING_MIDDLE('動作: ')` + `FSTRING_MIDDLE('{x}')` + `FSTRING_END('"')` |
+
+**影響**: `tokenize.STRING` のみを対象とする抽出ツール（`tools/extract_strings.py` / `tools/apply_translations.py`）は **f-string 内の日本語を見落とします**。
+
+**対策**: StaTable v2.1 では以下を実施済みです。
+
+- 抽出・検証には **生テキスト走査**（`tools/find_all_japanese.py`）を併用
+- f-string 内の置換は単純な文字列置換で実施（`tools/apply_batch11_fstrings.py`）
+
+両バージョンで検証可能ですが、**3.12+ の方が将来の拡張に適しています**。
+
+---
+
+#### 1.3.3 検証済み環境
+
+| 項目 | 値 |
+|---|---|
+| **開発環境** | Python **3.13** |
+| PySide6 | 6.x |
+| OS | Windows 10 |
+| テスト総数 | 457 |
+| 生成 C ファイル | 24（3 層構成） |
+| 生成コード検証 | errors=0, warnings=0 |
+
+**本番環境推奨**: Python 3.10 以上（3.12+ が理想）
+```
+
+## 2.3 関連セクションへの波及
+
+| セクション | 修正 |
+|---|---|
+| §1.3 | 上記 |
+| §10.5 既知の制約 | 「Python 3.9 以上」前提の記述があれば「3.10 以上」に統一 |
+| §11 バージョン履歴 | v2.2.5 行を追加（下記） |
+
+### §11 バージョン履歴への追加行
+
+```markdown
+| **v2.2.5** | **Python 3.10+ 要件明記 / Custom type `_t` 二重化回避 / CI 組み込み** | 15 |
+```
+
+---
+
+# 項目 6: CI 組み込み（日本語 + 生成コード検証）
+
+## 6.1 仕様書 §14.4（CI 組み込み例）完全版
+
+```markdown
+### 14.4 CI 組み込み（完全版）
+
+StaTable v2.2 は以下 4 つの CI ジョブを **GitHub Actions** で実行することを推奨します。
+
+| # | ジョブ | 検証内容 | 失敗条件 |
+|---|---|---|---|
+| 1 | `no-japanese` | ソース・生成コード内の日本語残存 | 1 行でも検出 |
+| 2 | `syntax` | Python 構文エラー | `compileall` 失敗 |
+| 3 | `tests` | 全ユニットテスト（457 件） | 1 件でも FAIL |
+| 4 | `generated-code` | 生成 C コードの構造検証 | errors > 0 |
+
+---
+
+#### 14.4.1 `.github/workflows/check.yml`（完全版）
+
+```yaml
+name: Check
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  # ==============================================================
+  # Job 1: No Japanese characters in source / generated code
+  # ==============================================================
+  no-japanese:
+    name: No Japanese characters
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run find_all_japanese.py
+        run: |
+          python tools/find_all_japanese.py
+          # Expect: "Total: 0 line(s) with Japanese"
+
+  # ==============================================================
+  # Job 2: Python syntax check
+  # ==============================================================
+  syntax:
+    name: Python syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PySide6 (for import resolution)
+        run: pip install PySide6
+
+      - name: compileall
+        run: |
+          python -m compileall -q statable statable_gui codegen
+
+  # ==============================================================
+  # Job 3: Unit tests (457 tests)
+  # ==============================================================
+  tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    needs: [syntax]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PySide6
+        run: pip install PySide6
+
+      - name: Run test suites
+        env:
+          QT_QPA_PLATFORM: offscreen
+          STATABLE_DISABLE_MERMAID: '1'
+        run: |
+          python tests/test_v2_2_p1.py
+          python tests/test_v2_2_p2.py
+          python tests/test_v2_2_p3.py
+          python tests/test_v2_2_p4a.py
+          python tests/test_v2_2_p4b.py
+          python tests/test_v2_2_p12_2.py
+          python tests/test_v2_2_p12_5.py
+          python tests/test_v2_2_p12_6.py
+
+  # ==============================================================
+  # Job 4: Generated C code verification
+  # ==============================================================
+  generated-code:
+    name: Generated C code verification
+    runs-on: ubuntu-latest
+    needs: [syntax]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PySide6
+        run: pip install PySide6
+
+      - name: Generate C code from test XML
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          from codegen.c_code_generator import CCodeGenerator
+          from codegen.config import CodeGenerationConfig
+          from statable.xml_io import project_from_xml
+
+          tabs, gd, _, _, _, ps = project_from_xml(
+              'tests/data/v22_features_test3.xml')
+          cfg = CodeGenerationConfig(**{
+              k: v for k, v in ps.items()
+              if hasattr(CodeGenerationConfig, k)
+          })
+          gen = CCodeGenerator(config=cfg)
+          files = gen.generate_all_layers(tabs, gd)
+          gen.save_generated_code(files, 'output')
+          print(f'Saved {len(files)} files')
+          "
+
+      - name: Verify generated C code
+        run: |
+          python tools/verify_generated_code.py --root output
+          # Expect: "TOTAL: errors=0, warnings=0"
+```
+
+---
+
+#### 14.4.2 ローカルでの事前検証
+
+CI に push する前に、ローカルで以下を実行することで **CI と同じ検証** が可能です。
+
+```powershell
+# Windows PowerShell
+cd <project-root>
+
+# Job 1
+python tools\find_all_japanese.py
+
+# Job 2
+python -m compileall -q statable statable_gui codegen
+
+# Job 3
+$env:QT_QPA_PLATFORM = 'offscreen'
+$env:STATABLE_DISABLE_MERMAID = '1'
+python tests\test_v2_2_p1.py
+python tests\test_v2_2_p2.py
+python tests\test_v2_2_p3.py
+python tests\test_v2_2_p4a.py
+python tests\test_v2_2_p4b.py
+python tests\test_v2_2_p12_2.py
+python tests\test_v2_2_p12_5.py
+python tests\test_v2_2_p12_6.py
+
+# Job 4
+python -c "import sys; sys.path.insert(0, '.'); from codegen.c_code_generator import CCodeGenerator; from codegen.config import CodeGenerationConfig; from statable.xml_io import project_from_xml; tabs, gd, _, _, _, ps = project_from_xml('tests/data/v22_features_test3.xml'); cfg = CodeGenerationConfig(**{k: v for k, v in ps.items() if hasattr(CodeGenerationConfig, k)}); gen = CCodeGenerator(config=cfg); files = gen.generate_all_layers(tabs, gd); gen.save_generated_code(files, 'output')"
+python tools\verify_generated_code.py --root output
+```
+
+---
+
+#### 14.4.3 CI 失敗時のトラブルシューティング
+
+| ジョブ | 失敗症状 | 対応 |
+|---|---|---|
+| `no-japanese` | `Total: N line(s)` | `find_all_japanese.py` の出力を確認、該当箇所を英語化 |
+| `syntax` | `SyntaxError` | 該当ファイルを修正、`compileall` で再確認 |
+| `tests` | 特定テスト FAIL | ローカルで再現 → 修正 |
+| `generated-code` | `errors > 0` | `verify_generated_code.py` の出力を確認、ジェネレータ修正 |
+
+---
+
+#### 14.4.4 依存関係
+
+```yaml
+syntax
+  ├─→ tests
+  └─→ generated-code
+no-japanese  (独立)
+```
+
+`no-japanese` は並列実行可能。`tests` と `generated-code` は `syntax` 成功後に実行。
+
+---
+
+#### 14.4.5 将来拡張（v2.3 候補）
+
+| 追加ジョブ | 内容 |
+|---|---|
+| `compile-c` | GCC で生成 C コードを実コンパイル（要 `gcc` インストール） |
+| `mypy` | 型チェック |
+| `pytest` | `pytest` 形式での統一実行 |
+| `coverage` | カバレッジ計測 |
+```
+
+---
+
+# 項目 5: Custom type `_t` 二重化の自動回避
+
+## 5.1 問題の再確認
+
+| 入力 | 現状の出力 | 参照側 | 結果 |
+|---|---|---|---|
+| `CustomTypeDef(name="SystemStatus_t")` | `SystemStatusT_t` | `SystemStatus_t` | ❌ 型名不一致 |
+| `CustomTypeDef(name="SystemStatus")` | `SystemStatus_t` | `SystemStatus_t` | ✅ 一致 |
+
+**原因**: `naming_convention.py::create_type_name()` が **末尾の `_t` を考慮せず** に PascalCase 変換 + `_t` 付与。
+
+## 5.2 修正内容
+
+`codegen/naming_convention.py` の `create_type_name()` を **冪等化**（1 メソッドのみ）。
+
+### 変更前
 
 ```python
-# v1.4 まで: 8 列（namespace 列なし）
-self.role_table = QTableWidget(0, 8)
-self.role_table.setHorizontalHeaderLabels([
-    "タイトル", "関数名", "説明", "戻り値型",
-    "引数1型", "引数1名", "引数2型", "引数2名"
-])
-
-# v1.5: 9 列（名前空間列を挿入）
-self.role_table = QTableWidget(0, 9)
-self.role_table.setHorizontalHeaderLabels([
-    "タイトル", "関数名", "名前空間", "説明", "戻り値型",
-    "引数1型", "引数1名", "引数2型", "引数2名"
-])
+    @classmethod
+    def create_type_name(cls, name):
+        return cls.to_pascal_case(name) + "_t"
 ```
 
-#### 修正② `apply_changes()` の kwarg 化
+### 変更後
 
 ```python
-# v1.4 まで（バグ）
-self.sm.add_role_function(
-    RoleFunction(name, desc, ret, a1t, a1n, a2t, a2n, title)
-)   # → namespace に desc が混入
+    @classmethod
+    def create_type_name(cls, name):
+        """Create a C type name with '_t' suffix (idempotent).
 
-# v1.5（修正後）
-self.sm.add_role_function(RoleFunction(
-    name=name,
-    namespace=namespace,
-    description=desc,
-    return_type=ret,
-    arg1_type=a1t,
-    arg1_name=a1n,
-    arg2_type=a2t,
-    arg2_name=a2n,
-    title=title,
-))
+        [v2.2.5 fix]
+          If the name already ends with '_t', it is preserved as-is
+          so that references match. Otherwise PascalCase + '_t' is applied.
+
+        Examples:
+            'SystemStatus'   -> 'SystemStatus_t'
+            'SystemStatus_t' -> 'SystemStatus_t'   (not 'SystemStatusT_t')
+            'sensor_data'    -> 'SensorData_t'
+            'sensor_data_t'  -> 'sensor_data_t'    (preserved)
+            ''               -> 'Unknown_t'
+        """
+        if not name:
+            return "Unknown_t"
+        if name.endswith('_t'):
+            return name
+        return cls.to_pascal_case(name) + "_t"
 ```
 
-### 6.2 `role_function_dialog.py` ★ v1.5 修正
+## 5.3 完全版ファイル: `codegen/naming_convention.py`
 
 ```python
-# namespace 入力欄を追加
-self.namespace_edit = QLineEdit()
-self.namespace_edit.setText(role_function.namespace if role_function else "")
-self.namespace_edit.setPlaceholderText("例: Driver（空なら層なし）")
-layout.addRow("名前空間", self.namespace_edit)
+# codegen/naming_convention.py
+"""
+C language naming convention module.
 
-# get_role_function()
-return RoleFunction(
-    name=...,
-    namespace=self.namespace_edit.text().strip(),   # ★ 追加
-    description=...,
-    ...
-)
+Version: 2.2.5 (2026-09-19)
+  - Fix: create_type_name() is now idempotent.
+    Names already ending in '_t' are preserved (avoids '_t_t' doubling
+    such as 'SystemStatus_t' -> 'SystemStatusT_t').
+"""
+
+import re
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from .code_templates import CodeTemplates
+except ImportError:
+    from code_templates import CodeTemplates
+
+
+class CNamingConvention:
+    """Class managing C naming conventions"""
+
+    CONVERSION_PATTERNS = {
+        'upper_snake': {
+            'patterns': [
+                (r'(.)([A-Z][a-z]+)', r'\1_\2'),
+                (r'([a-z0-9])([A-Z])', r'\1_\2'),
+            ],
+            'transform': str.upper,
+        },
+        'lower_snake': {
+            'patterns': [
+                (r'(.)([A-Z][a-z]+)', r'\1_\2'),
+                (r'([a-z0-9])([A-Z])', r'\1_\2'),
+            ],
+            'transform': str.lower,
+        },
+        'camel': {
+            'split': r'[_-]',
+            'first': str.lower,
+            'rest': str.capitalize,
+        },
+        'pascal': {
+            'split': r'[_-]',
+            'first': str.capitalize,
+            'rest': str.capitalize,
+        },
+    }
+
+    C_KEYWORDS = {
+        'auto', 'break', 'case', 'char', 'const', 'continue',
+        'default', 'do', 'double', 'else', 'enum', 'extern',
+        'float', 'for', 'goto', 'if', 'inline', 'int', 'long',
+        'register', 'restrict', 'return', 'short', 'signed',
+        'sizeof', 'static', 'struct', 'switch', 'typedef',
+        'union', 'unsigned', 'void', 'volatile', 'while',
+        '_Bool', '_Complex', '_Imaginary'
+    }
+
+    IDENTIFIER_RULES = {
+        'variable': 'to_lower_snake',
+        'function': 'to_pascal_case',
+        'type': 'to_pascal_case',
+        'enum': 'to_upper_snake',
+        'macro': 'to_upper_snake',
+    }
+
+    def __init__(self):
+        self.templates = CodeTemplates()
+        self.strings = self.templates.STRINGS
+        self.formats = self.templates.FORMATS
+
+    @classmethod
+    def to_snake_case(cls, name, upper=False):
+        config = cls.CONVERSION_PATTERNS['upper_snake' if upper else 'lower_snake']
+        result = name
+        for pattern, replacement in config['patterns']:
+            result = re.sub(pattern, replacement, result)
+        return config['transform'](result)
+
+    @classmethod
+    def to_upper_snake(cls, name):
+        return cls.to_snake_case(name, upper=True)
+
+    @classmethod
+    def to_lower_snake(cls, name):
+        return cls.to_snake_case(name, upper=False)
+
+    @classmethod
+    def to_camel_case(cls, name):
+        config = cls.CONVERSION_PATTERNS['camel']
+        parts = re.split(config['split'], name)
+        if not parts:
+            return ""
+        result = config['first'](parts[0])
+        for part in parts[1:]:
+            if part:
+                result += config['rest'](part)
+        return result
+
+    @classmethod
+    def to_pascal_case(cls, name):
+        """Convert to PascalCase"""
+        config = cls.CONVERSION_PATTERNS['pascal']
+        parts = re.split(config['split'], name)
+        if not parts:
+            return ""
+
+        result = ""
+        for part in parts:
+            if part:
+                # If camelCase, capitalize first letter
+                result += part[0].upper() + part[1:]
+        return result
+
+    @classmethod
+    def sanitize_identifier(cls, name):
+        if not name:
+            return "_unnamed"
+        if name[0].isdigit():
+            name = '_' + name
+        name = re.sub(r'[^a-zA-Z0-9_]', '_', name)
+        if name in cls.C_KEYWORDS:
+            name = name + '_'
+        return name
+
+    @classmethod
+    def create_identifier(cls, name, kind='variable'):
+        method_name = cls.IDENTIFIER_RULES.get(kind, 'to_lower_snake')
+        method = getattr(cls, method_name)
+        return cls.sanitize_identifier(method(name))
+
+    @classmethod
+    def create_type_name(cls, name):
+        """Create a C type name with '_t' suffix (idempotent).
+
+        [v2.2.5 fix]
+          If the name already ends with '_t', it is preserved as-is
+          so that references match. Otherwise PascalCase + '_t' is applied.
+
+        Examples:
+            'SystemStatus'   -> 'SystemStatus_t'
+            'SystemStatus_t' -> 'SystemStatus_t'   (not 'SystemStatusT_t')
+            'sensor_data'    -> 'SensorData_t'
+            'sensor_data_t'  -> 'sensor_data_t'    (preserved)
+            ''               -> 'Unknown_t'
+        """
+        if not name:
+            return "Unknown_t"
+        if name.endswith('_t'):
+            return name
+        return cls.to_pascal_case(name) + "_t"
+
+    @classmethod
+    def create_enum_value(cls, prefix, name):
+        return cls.sanitize_identifier(prefix) + "_" + cls.to_upper_snake(name)
+
+    @classmethod
+    def create_function_name(cls, module, action):
+        return cls.to_pascal_case(module) + "_" + cls.to_pascal_case(action)
+
+    @classmethod
+    def create_variable_name(cls, name):
+        return cls.sanitize_identifier(cls.to_lower_snake(name))
+
+    @classmethod
+    def create_macro_name(cls, name):
+        return cls.to_upper_snake(name)
 ```
 
-### 6.3〜6.20（v1.4 から変更なし）
+**変更点**: `create_type_name()` の 1 メソッドのみ（+ docstring に v2.2.5 注記）。
 
----
-
-## 7. 遷移エディタ層（`transition_editor_direct/`）
-
-### 7.1 `code_widget.py` ★ v1.5 修正（重要）
-
-#### 修正前（v1.4 まで）の問題
+## 5.4 検証テスト（新規 / `tests/test_v2_2_p12_7.py`）
 
 ```python
-# プレビュー生成（独自形式）
-lines.append(f"void RoleFunc_{name}(SystemContext_t *ctx, const TransitionContext_t *transition);")
+#!/usr/bin/env python3
+"""Verify create_type_name() idempotency (v2.2.5)."""
+
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+
+def main():
+    from codegen.naming_convention import CNamingConvention
+
+    cases = [
+        # (input, expected)
+        ("SystemStatus",     "SystemStatus_t"),
+        ("SystemStatus_t",   "SystemStatus_t"),    # ★ 二重化回避
+        ("SensorData",       "SensorData_t"),
+        ("SensorData_t",     "SensorData_t"),      # ★
+        ("sensor_data",      "SensorData_t"),
+        ("sensor_data_t",    "sensor_data_t"),     # ★ 元の形式を保持
+        ("",                 "Unknown_t"),
+        ("my_type",          "MyType_t"),
+        ("my_type_t",        "my_type_t"),         # ★
+    ]
+
+    passed = 0
+    failed = 0
+    for inp, expected in cases:
+        result = CNamingConvention.create_type_name(inp)
+        ok = (result == expected)
+        status = "[PASS]" if ok else "[FAIL]"
+        print(f"  {status} create_type_name({inp!r}) -> {result!r} (expected {expected!r})")
+        if ok:
+            passed += 1
+        else:
+            failed += 1
+
+    print()
+    print(f"TOTAL: {passed + failed}  PASSED: {passed}  FAILED: {failed}")
+    return 0 if failed == 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
 ```
 
-**症状**: `void RoleFunc_Middleware.HandleErr(ctx, transition)` など、実ファイル生成と全く異なる形式を D&D エディタの「コード」タブに表示。
+### 実行
 
-#### 修正後（v1.5）
-
-```python
-# 実ファイル生成（role_function_generator.py）と一致する形式
-def _role_func_name(self, ref: str) -> str:
-    """'Middleware.HandleErr' → 'RoleFunc_Middleware_HandleErr'"""
-    ...
-
-def _context_type(self) -> str:
-    layer = self._get_layer_name()
-    return f"TransitionContext_{layer}_t" if layer else "TransitionContext_t"
-
-# プロトタイプ
-lines.append(
-    f"int {func_name}("
-    f"const {context_type} *transition, "
-    f"SystemContext_t *ctx);"
-)
-
-# 本体
-lines.append(f"    {func_name}(transition, ctx);")
+```powershell
+python tests\test_v2_2_p12_7.py
 ```
 
-#### 層名推定ロジック（新規）
-
-```python
-def _get_layer_name(self) -> str:
-    """参照関数の namespace を集計し、最頻値を層名として採用"""
-    ns_count = {}
-    for item in self.draft.flow_items:
-        names = ...
-        for n in names:
-            if '.' in n:
-                ns = n.split('.', 1)[0]
-                ns_count[ns] = ns_count.get(ns, 0) + 1
-    if ns_count:
-        return max(ns_count.items(), key=lambda kv: kv[1])[0]
-    return ''
-```
-
-### 7.2 その他（変更なし）
-
----
-
-## 8. 検証・AI連携層（`validate/`）
-
-v1.4 から変更なし（v1.4 で完全解明済）。
-
----
-
-## 9. 既知の制約・未実装項目
-
-### 9.1〜9.5 v1.0〜v1.4 から継続
-
-v1.4 から変更なし（75 項目）。
-
-### 9.6 v1.5 で新規発見・修正済み（★ 7 項目追加）
-
-| # | 項目 | 対象 | 状態 |
-|---|------|------|------|
-| 76 | **`SettingsPanel.apply_changes()` が `RoleFunction` を位置引数で構築 → `namespace` に `description` が混入** | `widgets.py` | ✅ 修正済 |
-| 77 | **`role_table` に namespace 列がなく round-trip で消失** | `widgets.py` | ✅ 修正済 |
-| 78 | **`role_function_dialog.py` が `namespace` を設定しない** | `role_function_dialog.py` | ✅ 修正済 |
-| 79 | **`update_mermaid()` → `apply_changes()` の副作用で XML ロード直後に namespace が破壊される** | `widgets.py` | ✅ #76 で解消 |
-| 80 | **`model.py` の `RoleFunction` を `kw_only=True` 化していない** | `model.py` | ✅ 修正済 |
-| 81 | **`code_widget.py` のプレビューが実ファイルと形式不一致（`void` / `.` / 引数逆順 / 層名欠落）** | `code_widget.py` | ✅ 修正済 |
-| 82 | **`role_function_generator._normalize_func_ref` に識別子検証なし → `retry_count++` 等の混入** | `role_function_generator.py` | ✅ 修正済 |
-
----
-
-## 10. 付録: バージョン差分まとめ
-
-| 変更 | v1.0 | v1.1 | v1.2 | v1.3 | v1.4 | **v1.5** |
-|------|------|------|------|------|------|----------|
-| スコープ | 5 層 | +遷移エディタ | +GUI 詳細 | +GUI 全容 | +validate 層 | **+バグ根本修正** |
-| データモデル | 正式化 | – | – | – | 大幅拡充 | **kw_only 化** |
-| 共有ライブラリ | 追加 | – | – | – | 構造差異確定 | – |
-| GUI 層 | 追加 | – | 詳細化 | 更に詳細化 | +編集ダイアログ 3 件 | **+namespace 列** |
-| コード生成層 | v3.0 要約 | 主要 12 詳細化 | – | – | – | **識別子検証追加** |
-| 遷移エディタ層 | 概要 | 詳細章化 | 起動元追記 | – | – | **プレビュー形式統一** |
-| validate 層 | – | – | – | 存在判明 | 完全解明 | – |
-| 2 つの `RoleFunction` | 中核明記 | – | – | namespace 消失追記 | 構造差異確定 | **SM 側 kw_only 化** |
-| 既知の制約 | 23 | 32 | 47 | 65 | 75 | **82** |
-| 実機検証 | – | – | – | – | – | **IsrNamespaceTest で成功** |
-
----
-
-## 11. 残課題（次版 v1.6 で対応）
-
-### 11.1 ファイル共有で解決可能
-
-| # | 課題 | 必要なファイル | 優先 |
-|---|------|--------------|------|
-| 1 | 遷移エディタ層の中核未精査 | `palette_widget.py` / `flow_widget.py`（共有済だが改修余地） | ★★ |
-| 2 | `codegen/sample_data.py`（GUI 側でない方）の見直し | 同ファイル | ★★ |
-| 3 | 残り codegen モジュール（`struct_generator.py` / `enum_generator.py` / `variable_generator.py` / `event_queue_generator.py` / `timer_generator.py` / `osal_generator.py`） | 各ファイル | ★ |
-| 4 | `__init__.py` 群 4 件（v1.4 §11 #3 から継続） | 各ファイル | ★ |
-| 5 | `main_window.py` の残メソッド精査 | 同ファイル | ★ |
-
-### 11.2 方針確定待ち（ファイル共有では解決しない）
-
-| # | 項目 | 優先 |
-|---|------|------|
-| 1 | **`Transition` の `kw_only=True` 化**（`sample_data.py` 修正済のため実施可能） | ★★★ |
-| 2 | `add_state` の `type` 列挙不足（`CONCURRENT` / `REGION` / `CHOICE` / `JUNCTION` 追加） | ★★ |
-| 3 | `remove_role_function` の不一致（`ChangeActionType` にあるが `ACTION_DEFINITIONS` / `_handlers` にない） | ★★ |
-| 4 | `code_widget.py` の層名推定を `ActionDraft.layer_name` 属性で正式化 | ★★ |
-| 5 | `role_function_generator` の未定義参照を **エラー扱い** に昇格するか | ★ |
-| 6 | `event` / `transition` バリデータの logger 追加 | ★ |
-| 7 | v1.3 §9.5 #58-60（DIRECT→DOUBLE 変換）を仕様許容 or バグ修正 | ★★★ |
-| 8 | `parser.py` スタブの実装予定を仕様に明記 | ★ |
-
----
-
-## 12. v1.5 の最重要発見
-
-1. **`RoleFunction` の位置引数構築が namespace 汚染の根本原因**（v1.4 §9.6 #69 の真実）
-2. **`kw_only=True` 化により、同種の事故を構造的に防止可能**
-3. **`code_widget.py` のプレビューが実ファイル生成と不一致**（D&D エディタ表示のみ別系統だった）
-4. **`update_mermaid()` → `apply_changes()` の副作用で XML ロード直後に namespace が破壊される**
-5. **`sample_data.py` の位置引数バグ #67 が `retry_count++` 症状の根本原因**
-6. **`role_function_generator` に識別子検証がなく、不正参照を素通ししていた**
-
-### 修正の本質（一言）
-
-> **「フィールド順序変更 + 位置引数構築」の掛け算で、namespace ↔ description ↔ title が 1 つずつずれていた**
-
----
-
-## 13. 実機検証結果（IsrNamespaceTest.xml）
-
-### 検証項目と結果
-
-| # | 検証項目 | 結果 |
-|---|---------|------|
-| 1 | 3 層（Driver / Middleware / Application）が表示される | ✅ |
-| 2 | `RoleFunction` が namespace 付きで表示される | ✅ |
-| 3 | 割り込み処理タブに 5 件の ISR が表示される | ✅ |
-| 4 | 遷移セル編集で「ロール関数」「遷移条件」両リストに候補が表示される | ✅ |
-| 5 | コード生成後、`statable_interrupt.c` に `ctx` 挿入と `RoleFunc_*` 呼び出し | ✅ |
-| 6 | マージ再生成でユーザー追加コードが保持される | ✅ |
-
-### 生成コード（成功例）
-
-```c
-/* statable_role_functions.c */
-int RoleFunc_Middleware_Connect(
-    const TransitionContext_Middleware_t *transition,
-    SystemContext_t *ctx)
-{ ... }
-
-int RoleFunc_Middleware_HandleErr(
-    const TransitionContext_Middleware_t *transition,
-    SystemContext_t *ctx)
-{ ... }
-
-int RoleFunc_Driver_Init(
-    const TransitionContext_Driver_t *transition,
-    SystemContext_t *ctx)
-{ ... }
-```
-
-**日本語関数名・`.` 混入・引数逆順が全て消滅。**
-
----
-
-## 14. 次版 v1.6 への引き継ぎ
-
-### 最優先事項
-
-1. **`Transition` の `kw_only=True` 化**（★★★）
-   - `sample_data.py` は v1.5 で修正済みのため、他呼び出し元の kwarg 確認後すぐに実施可能
-   - 対象: `statable/model.py`
-
-2. **`codegen/sample_data.py`（GUI 側でない方）の精査**（★★）
-   - v1.5 を通じて未共有のまま
-   - `SampleDataGenerator` の役割確認と形式統一
-
-3. **`add_state` の `type` 列挙拡張**（★★）
-   - `CONCURRENT` / `REGION` / `CHOICE` / `JUNCTION` 追加
-   - 対象: `codegen/validate/change_applier.py` の `_add_state` メソッド
-
-### 次スレッド冒頭に貼るテンプレート
+### 期待結果
 
 ```
-# StaTable 統合仕様書 v1.5 引き継ぎ
+  [PASS] create_type_name('SystemStatus') -> 'SystemStatus_t' (expected 'SystemStatus_t')
+  [PASS] create_type_name('SystemStatus_t') -> 'SystemStatus_t' (expected 'SystemStatus_t')
+  [PASS] create_type_name('SensorData') -> 'SensorData_t' (expected 'SensorData_t')
+  [PASS] create_type_name('SensorData_t') -> 'SensorData_t' (expected 'SensorData_t')
+  [PASS] create_type_name('sensor_data') -> 'SensorData_t' (expected 'SensorData_t')
+  [PASS] create_type_name('sensor_data_t') -> 'sensor_data_t' (expected 'sensor_data_t')
+  [PASS] create_type_name('') -> 'Unknown_t' (expected 'Unknown_t')
+  [PASS] create_type_name('my_type') -> 'MyType_t' (expected 'MyType_t')
+  [PASS] create_type_name('my_type_t') -> 'my_type_t' (expected 'my_type_t')
 
-## 作業目的
-StaTable 統合仕様書の完成。v1.5 から v1.6 へ。
+TOTAL: 9  PASSED: 9  FAILED: 0
+```
 
-## 前スレッドの成果
-- コード生成バグ根本修正（6 ファイル）
-- RoleFunction の kw_only=True 化（再発防止）
-- namespace 保持の完全化
-- IsrNamespaceTest.xml で実機検証成功
+## 5.5 仕様書 §10.1 への追記
 
-## 修正済みファイル（v1.5）
-1. statable/model.py                （RoleFunction kw_only 化）
-2. statable_gui/role_function_dialog.py （namespace 欄追加）
-3. statable_gui/widgets.py           （namespace 列追加 + kwarg 化）
-4. statable_gui/transition_editor_direct/code_widget.py（プレビュー形式統一）
-5. statable/sample_data.py           （Transition kwarg 化）
-6. codegen/role_function_generator.py（識別子検証追加）
+```markdown
+### 10.1 データモデル関連
 
-## 次に共有すべきファイル
-1. codegen/sample_data.py          （GUI 側でない方）
-2. statable_gui/transition_editor_direct/palette_widget.py
-3. codegen/struct_generator.py / enum_generator.py / variable_generator.py
-4. codegen/event_queue_generator.py / timer_generator.py / osal_generator.py
-5. __init__.py 群 4 件
-
-## 方針確定待ち
-1. Transition の kw_only=True 化（★★★）
-2. add_state の type 列挙拡張（★★）
-3. remove_role_function の不一致（★★）
+| # | 制約 | 影響 |
+|---|---|---|
+| 1 | `StateType.CONCURRENT` / `REGION` の親子関係 | 生成コードでは未使用 |
+| 2 | イベントの `params` | 生成コードでは未使用 |
+| 3 | `Transition.action` フィールド | 互換用・未使用 |
+| **4** | **Custom type 名の `_t` サフィックス** | **v2.2.5 で冪等化**（`SystemStatus_t` → `SystemStatus_t`、二重化回避） |
 ```
 
 ---
 
-**以上、本スレッドの成果を反映した StaTable 統合仕様書 v1.5 を完成させました。**
+# 統合検証手順
 
-**v1.4 からの主な進展**:
-- コード生成の根本バグ 6 ファイル修正
-- `RoleFunction` の `kw_only=True` 化（同種事故の構造的防止）
-- D&D エディタプレビューと実ファイル生成の形式統一
-- 実機検証（IsrNamespaceTest.xml）で全 6 項目成功
+```powershell
+cd C:\Users\user\OneDrive\ドキュメント\GitHub\StaTable\code
 
-**次スレッドへの引き継ぎ**:
-- 本 v1.5 を冒頭に貼付
-- §11.1 の優先順にファイルを共有
-- §11.2 の方針確定項目を順次判断
-- §14 の最優先事項 3 件から着手
+# 1. 構文
+python -m compileall -q statable statable_gui codegen
+
+# 2. Custom type 冪等性テスト（新規）
+python tests\test_v2_2_p12_7.py
+
+# 3. 既存テスト回帰
+python tests\test_v2_2_p1.py
+python tests\test_v2_2_p2.py
+python tests\test_v2_2_p3.py
+python tests\test_v2_2_p4a.py
+python tests\test_v2_2_p4b.py
+python tests\test_v2_2_p12_2.py
+python tests\test_v2_2_p12_5.py
+python tests\test_v2_2_p12_6.py
+
+# 4. 生成コード検証
+python -c "import sys; sys.path.insert(0, '.'); from codegen.c_code_generator import CCodeGenerator; from codegen.config import CodeGenerationConfig; from statable.xml_io import project_from_xml; tabs, gd, _, _, _, ps = project_from_xml('tests/data/v22_features_test3.xml'); cfg = CodeGenerationConfig(**{k: v for k, v in ps.items() if hasattr(CodeGenerationConfig, k)}); gen = CCodeGenerator(config=cfg); files = gen.generate_all_layers(tabs, gd); gen.save_generated_code(files, 'output')"
+python tools\verify_generated_code.py --root output
+
+# 5. 英語化
+python tools\find_all_japanese.py
+```
+
+## 期待結果
+
+| 検証 | 期待 |
+|---|---|
+| `test_v2_2_p12_7.py` | **9/9 PASS** |
+| 既存テスト | 457/457 PASS（変更なし） |
+| 生成コード検証 | errors=0, warnings=0 |
+| 日本語 | 0 行 |
+
+**累積: 466/466 PASS**
+
+---
+
+# 引継ぎ資料 更新（差分）
+
+`HANDOVER_v2.2.md` の末尾に以下を追記:
+
+```markdown
+## 15. v2.2.5 追加修正
+
+### 15.1 修正サマリ
+
+| # | 項目 | 修正 |
+|---|---|---|
+| 1 | Python 要件明記 | §1.3: 「3.9 以上」→「3.10 以上」（`kw_only=True` のため） |
+| 2 | CI 組み込み | `.github/workflows/check.yml` 4 ジョブ |
+| 3 | Custom type `_t` 二重化 | `naming_convention.py::create_type_name()` 冪等化 |
+
+### 15.2 CI ジョブ
+
+| ジョブ | 検証 | 失敗条件 |
+|---|---|---|
+| `no-japanese` | 日本語残存 | 1 行でも検出 |
+| `syntax` | Python 構文 | `compileall` 失敗 |
+| `tests` | ユニットテスト | 1 件 FAIL |
+| `generated-code` | 生成 C コード | errors > 0 |
+
+### 15.3 累積テスト
+
+| Phase | テスト数 |
+|---|---|
+| v2.2.4 まで | 457 |
+| **v2.2.5 追加** | +9（`test_v2_2_p12_7.py`） |
+| **合計** | **466** |
+
+### 15.4 変更ファイル（v2.2.5）
+
+| # | ファイル | 変更 |
+|---|---|---|
+| 1 | `codegen/naming_convention.py` | `create_type_name()` 冪等化 |
+| 2 | `tests/test_v2_2_p12_7.py` | **新規**（9 テスト） |
+| 3 | `.github/workflows/check.yml` | **新規** |
+| 4 | `HANDOVER_v2.2.md` | §15 追加 |
+```
+
+---
+
+## 次のアクション
+
+1. **`naming_convention.py` を完全版に置換**
+2. **`tests/test_v2_2_p12_7.py` を配置**
+3. **`.github/workflows/check.yml` を配置**
+4. **仕様書 §1.3 / §10.1 / §14.4 を更新**
+5. 上記「統合検証手順」を実行 → 結果を貼り付け
+
+**結果を待っています。** 全 PASS なら **v2.2.5 正式版** として確定します。

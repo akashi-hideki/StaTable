@@ -1,6 +1,11 @@
 # statable_gui/transition_editor_direct/code_widget.py
 """Code display widget (read-only, ActionDraft support / v2.2).
 
+Version: 2.2.1 (2026-09-19)
+  - Fix: Nested group emitted duplicate transition blocks when parent
+    and child both declared the same members. The parent now skips
+    labels that any descendant declares.
+
 [v2.2 changes]
   - Renders cell_actions (before_transitions / after_transitions).
     Legacy "always" trigger is treated as "before_transitions".
@@ -241,8 +246,26 @@ class CodeWidget(QPlainTextEdit):
     # ==================================================================
     # §12-5: Recursive relation emission
     # ==================================================================
+    def _collect_child_labels_inline(self, rel) -> set:
+        """Recursively collect all labels mentioned in descendants of rel.
+
+        [v2.2.1 fix]
+          Used to avoid emitting the same transition twice when a parent
+          and its child both declare the same members.
+        """
+        labels = set()
+        for child in (getattr(rel, 'children', None) or []):
+            labels.update(getattr(child, 'members', None) or [])
+            labels.update(self._collect_child_labels_inline(child))
+        return labels
+
     def _emit_relation_inline(self, rel, by_label, lines, indent_level=1):
-        """Recursively emit one relation into `lines`."""
+        """Recursively emit one relation into `lines`.
+
+        [v2.2.1 fix]
+          Labels handled by child relations are not emitted by the
+          parent, avoiding duplicate transition blocks.
+        """
         pad = "    " * indent_level
         shared_cond = (getattr(rel, 'shared_condition', '') or '').strip()
         has_cond = bool(shared_cond)
@@ -254,8 +277,13 @@ class CodeWidget(QPlainTextEdit):
         else:
             inner_indent = indent_level
 
-        # Members
+        # v2.2.1: labels handled by descendants are skipped here
+        child_labels = self._collect_child_labels_inline(rel)
+
+        # Members (skip those delegated to children)
         for label in (getattr(rel, 'members', None) or []):
+            if label in child_labels:
+                continue
             it = by_label.get(label)
             if it is None:
                 continue

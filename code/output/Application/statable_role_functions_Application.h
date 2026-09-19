@@ -6,186 +6,150 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-19 17:26:55
+ * @date    2026-09-19 19:23:41
  */
 
 #ifndef STATABLE_ROLE_FUNCTIONS_H_APPLICATION
 #define STATABLE_ROLE_FUNCTIONS_H_APPLICATION
 
-/*==============================================================*/
+/*==============================================================
  *  Include files
-/*==============================================================*/
+ *==============================================================*/
 
 #include "statable_types_Application.h"
 
-/*==============================================================*/
+/*==============================================================
  *  Role function declarations
-/*==============================================================*/
+ *==============================================================*/
 
 /**
- * @brief  Role function: Idle entry
- * @note   Idle entry
+ * @brief  Role function: Boot entry
+ * @note   Boot entry
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_App_IdleEntry(
+int RoleFunc_App_BootEntry(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: Idle exit
- * @note   Idle exit
+ * @brief  Role function: Boot exit
+ * @note   Boot exit
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_App_IdleExit(
+int RoleFunc_App_BootExit(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: Active entry 1
- * @note   Active entry 1
+ * @brief  Role function: Init entry
+ * @note   Init entry
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_App_ActiveEntry1(
+int RoleFunc_App_InitEntry(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: Active entry 2
- * @note   Active entry 2
+ * @brief  Role function: Running entry 1
+ * @note   Running entry 1
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_App_ActiveEntry2(
+int RoleFunc_App_RunEntry1(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: Waiting entry
- * @note   Waiting entry
+ * @brief  Role function: Running entry 2
+ * @note   Running entry 2
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_App_WaitEntry(
+int RoleFunc_App_RunEntry2(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: Waiting exit
- * @note   Waiting exit
+ * @brief  Role function: Paused entry
+ * @note   Paused entry
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_App_WaitExit(
+int RoleFunc_App_PauseEntry(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: Error entry
- * @note   Error entry
+ * @brief  Role function: Stopped entry
+ * @note   Stopped entry
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_App_ErrorEntry(
+int RoleFunc_App_StopEntry(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: Error exit
- * @note   Error exit
+ * @brief  Role function: App boot
+ * @note   App boot
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_App_ErrorExit(
+int RoleFunc_App_Boot(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: Pre-check
- * @note   Pre-check action
+ * @brief  Role function: App start
+ * @note   App start
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_App_PreCheck(
+int RoleFunc_App_Start(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: Cleanup
- * @note   Cleanup action
+ * @brief  Role function: App pause
+ * @note   App pause
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_App_Cleanup(
+int RoleFunc_App_Pause(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: Init session
- * @note   Init session
+ * @brief  Role function: App resume
+ * @note   App resume
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_App_InitSession(
-    const TransitionContext_Application_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: Log error
- * @note   Log error
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_App_LogError(
-    const TransitionContext_Application_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: Log reset
- * @note   Log reset
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_App_LogReset(
-    const TransitionContext_Application_t *transition,
-    SystemContext_t *ctx
-);
-
-/**
- * @brief  Role function: Handle pause
- * @note   Handle pause
- * @param  transition  Transition context (may be NULL: called from ISR)
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */
-int RoleFunc_App_HandlePause(
+int RoleFunc_App_Resume(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
@@ -203,25 +167,49 @@ int RoleFunc_App_HandleStop(
 );
 
 /**
- * @brief  Role function: Resume work
- * @note   Resume work
+ * @brief  Role function: Pre-check
+ * @note   Pre-check
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_App_ResumeWork(
+int RoleFunc_App_PreCheck(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: Handle RX
- * @note   Handle RX (ISR)
+ * @brief  Role function: Cleanup
+ * @note   Cleanup
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_App_HandleRx(
+int RoleFunc_App_Cleanup(
+    const TransitionContext_Application_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Pre (before transitions)
+ * @note   Runs before evaluating transitions
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_App_Pre(
+    const TransitionContext_Application_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Post (after transitions)
+ * @note   Runs after evaluating transitions
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_App_Post(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );

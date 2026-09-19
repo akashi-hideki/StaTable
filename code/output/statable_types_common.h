@@ -6,27 +6,35 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-19 17:26:55
+ * @date    2026-09-19 19:23:41
  */
 
 #ifndef STATABLE_TYPES_COMMON_H
 #define STATABLE_TYPES_COMMON_H
 
-/*==============================================================*/
+/*==============================================================
  *  Include files
-/*==============================================================*/
+ *==============================================================*/
 
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 
-/*==============================================================*/
+/*==============================================================
  *  Type definitions
-/*==============================================================*/
+ *==============================================================*/
 
-/*==============================================================*/
+/* Event flag definitions */
+typedef enum {
+    FLAG_EVT_INIT_DONE = 0,    /* Init done Title: Init done */
+    FLAG_EVT_ERROR = 1,    /* Error occurred Title: Error flag */
+    FLAG_MAX           /* element count (for system use) */
+} FLAG_t;
+
+
+/*==============================================================
  *  System structs
-/*==============================================================*/
+ *==============================================================*/
 
 /* Global variable struct */
 /* Manages variables shared across the system */
@@ -36,16 +44,10 @@ typedef struct {
     uint32_t counter;
     /* Error code */
     uint8_t error_code;
-    /* Error severity */
-    uint8_t error_severity;
     /* Retry counter */
     uint8_t retry_count;
     /* Running flag */
     bool running;
-    /* Operation mode */
-    uint8_t mode;
-    /* Confirm flag */
-    bool confirm;
 
     /* === Timer === */
     /* Timer base [1ms] */
@@ -99,20 +101,39 @@ typedef struct {
 #endif
 
 
-/*==============================================================*/
+/*==============================================================
  *  Variable access macros
-/*==============================================================*/
+ *==============================================================*/
 
 #define DATA_COUNTER(ctx)    ((ctx)->data.counter)
 #define DATA_ERROR_CODE(ctx)    ((ctx)->data.error_code)
-#define DATA_ERROR_SEVERITY(ctx)    ((ctx)->data.error_severity)
 #define DATA_RETRY_COUNT(ctx)    ((ctx)->data.retry_count)
 #define DATA_RUNNING(ctx)    ((ctx)->data.running)
-#define DATA_MODE(ctx)    ((ctx)->data.mode)
-#define DATA_CONFIRM(ctx)    ((ctx)->data.confirm)
 #define DATA_G_SYSTEM_TICK(ctx)    ((ctx)->data.g_system_tick)
 #define DATA_G_TICK_10MS(ctx)    ((ctx)->data.g_tick_10ms)
 #define FLAG_EVT_INIT_DONE(ctx)   ((ctx)->flags.EVT_INIT_DONE)
 #define FLAG_EVT_ERROR(ctx)   ((ctx)->flags.EVT_ERROR)
+
+/*==============================================================
+ *  Common function declarations
+ *==============================================================*/
+
+/**
+ * @brief  Initialize SystemContext_t (implemented in statable_init.c)
+ * @param  ctx  System context pointer
+ */
+void SystemContext_Init(SystemContext_t *ctx);
+
+/**
+ * @brief  Initialize timer variables (implemented in statable_timer.c)
+ * @param  ctx  System context pointer
+ */
+void Timer_Init(SystemContext_t *ctx);
+
+/**
+ * @brief  Update derived timer variables (implemented in statable_timer.c)
+ * @param  ctx  System context pointer
+ */
+void Timer_Update(SystemContext_t *ctx);
 
 #endif /* STATABLE_TYPES_COMMON_H */
