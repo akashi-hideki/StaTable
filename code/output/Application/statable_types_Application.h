@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-19 19:54:26
+ * @date    2026-09-19 20:52:49
  */
 
 #ifndef STATABLE_TYPES_H_APPLICATION
@@ -45,5 +45,11 @@ typedef enum {
 } EVENT_Application_t;
 
 
+
+/* Transition context for Application layer */
+typedef struct {
+    STATE_Application_t from_state;   /* source state */
+    EVENT_Application_t event;        /* event */
+} TransitionContext_Application_t;
 
 #endif /* STATABLE_TYPES_H_APPLICATION */

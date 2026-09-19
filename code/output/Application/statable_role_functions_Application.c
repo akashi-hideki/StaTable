@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-19 19:54:26
+ * @date    2026-09-19 20:52:49
  */
 
 /*==============================================================
@@ -124,7 +124,6 @@ int RoleFunc_App_Boot(
 
     /* [[STABLE_USER_CODE_START:App_Boot]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_Boot]] */
 
     return ret;
@@ -171,7 +170,6 @@ int RoleFunc_App_Start(
 
     /* [[STABLE_USER_CODE_START:App_Start]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_Start]] */
 
     return ret;
@@ -218,7 +216,6 @@ int RoleFunc_App_Pause(
 
     /* [[STABLE_USER_CODE_START:App_Pause]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_Pause]] */
 
     return ret;
@@ -265,7 +262,6 @@ int RoleFunc_App_Resume(
 
     /* [[STABLE_USER_CODE_START:App_Resume]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_Resume]] */
 
     return ret;
@@ -312,7 +308,6 @@ int RoleFunc_App_HandleStop(
 
     /* [[STABLE_USER_CODE_START:App_HandleStop]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_HandleStop]] */
 
     return ret;
@@ -360,5 +355,4 @@ static uint16_t Transition_GetId(
 /* ============================================================== */
 /* [[STABLE_USER_CODE_TAIL_START]] */
 /* Write user-added code here (helper functions, etc.) */
-
 /* [[STABLE_USER_CODE_TAIL_END]] */

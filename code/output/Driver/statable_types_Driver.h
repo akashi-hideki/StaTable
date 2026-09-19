@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-19 19:54:26
+ * @date    2026-09-19 20:52:49
  */
 
 #ifndef STATABLE_TYPES_H_DRIVER
@@ -43,5 +43,11 @@ typedef enum {
 } EVENT_Driver_t;
 
 
+
+/* Transition context for Driver layer */
+typedef struct {
+    STATE_Driver_t from_state;   /* source state */
+    EVENT_Driver_t event;        /* event */
+} TransitionContext_Driver_t;
 
 #endif /* STATABLE_TYPES_H_DRIVER */

@@ -3,7 +3,11 @@
 C code generation main class
 (step-table driven / 13-file support / multi-layer support / by_layer / ISR)
 
-Version: 2.2.2 (2026-09-19)
+Version: 2.2.5 (2026-09-19)
+  - Fix: Per-layer TransitionContext_<Layer>_t is now emitted in
+    statable_types_<Layer>.h (was missing since v2.2.1).
+    References in role-function / transition files were previously
+    undefined (CC-RX / GCC compile errors).
   - Fix (v2.2.1): FLAG_t was emitted in every layer's statable_types_<Layer>.h,
     causing duplicate typedef. Now emitted once in statable_types_common.h.
   - Add (v2.2.2): Common function prototypes
@@ -108,6 +112,7 @@ class CCodeGenerator:
             {'action': 'blank'},
             {'action': 'guard_end'},
         ],
+        # v2.2.5: + layer_transition_context step
         'statable_types.h': [
             {'action': 'file_header',
              'filename': 'statable_types.h'},
@@ -117,6 +122,8 @@ class CCodeGenerator:
             {'action': 'section_header', 'key': 'type_defs'},
             {'action': 'blank'},
             {'action': 'enums'},
+            {'action': 'blank'},
+            {'action': 'layer_transition_context'},
             {'action': 'blank'},
             {'action': 'guard_end'},
         ],
@@ -506,7 +513,8 @@ class CCodeGenerator:
             'section_header':     self._step_section_header,
             'enums':              self._step_enums,
             'enums_common':       self._step_enums_common,
-            'common_function_decls': self._step_common_function_decls,   # ★ v2.2.2
+            'layer_transition_context': self._step_layer_transition_context,  # v2.2.5
+            'common_function_decls': self._step_common_function_decls,        # v2.2.2
             'custom_types':       self._step_custom_types,
             'struct':             self._step_struct,
             'var_macros':         self._step_var_macros,
@@ -904,6 +912,41 @@ class CCodeGenerator:
         code = self.enum_gen.generate_flag_enum(flags)
         return [code] if code else ['']
 
+    def _step_layer_transition_context(self, step, ctx):
+        """Emit per-layer TransitionContext_<Layer>_t (v2.2.5).
+
+        [v2.2.5 fix]
+          statable_types_<Layer>.h previously emitted only enums
+          (STATE_<Layer>_t / EVENT_<Layer>_t). References to
+          TransitionContext_<Layer>_t in role-function and
+          transition .c/.h files were left undefined, causing
+          CC-RX / GCC compile errors.
+
+          This step emits:
+              typedef struct {
+                  STATE_<Layer>_t from_state;
+                  EVENT_<Layer>_t event;
+              } TransitionContext_<Layer>_t;
+
+          in each layer-specific header, matching the base type
+          TransitionContext_t (emitted in statable_types_common.h).
+        """
+        layers = ctx['layers']
+        results = []
+        for layer_name, sm in layers:
+            layer = self._get_layer_name(sm)
+            if not layer:
+                continue
+            self.struct_gen.set_layer(layer)
+            state_type = f"STATE_{layer}_t"
+            event_type = f"EVENT_{layer}_t"
+            code = self.struct_gen.generate_layer_transition_context(
+                state_type, event_type,
+            )
+            if code:
+                results.append(code)
+        return ['\n\n'.join(results)] if results else ['']
+
     def _step_common_function_decls(self, step, ctx):
         """Emit prototypes for functions defined in common .c files.
 
@@ -1212,6 +1255,7 @@ class CCodeGenerator:
             else:
                 parts.append(T['extern_state_nolayer'])
         return parts
+
     def _step_super_include_extern_funcs(self, step, ctx):
         T = self.templates.SUPER_INCLUDE_TEMPLATES
         project = self.config.project_name
@@ -1221,7 +1265,7 @@ class CCodeGenerator:
             T['extern_run'].format(project_name=project),
         ]
 
-        # ★ v2.2.3: ISR prototypes (referenced from vector table / startup)
+        # v2.2.3: ISR prototypes (referenced from vector table / startup)
         gd = ctx['global_defs']
         interrupts = getattr(gd, 'interrupts', []) or []
         if interrupts:

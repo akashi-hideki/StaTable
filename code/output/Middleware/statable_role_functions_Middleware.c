@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-19 19:54:26
+ * @date    2026-09-19 20:52:49
  */
 
 /*==============================================================
@@ -110,7 +110,6 @@ int RoleFunc_Middleware_IdleEntry(
 
     /* [[STABLE_USER_CODE_START:Middleware_IdleEntry]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:Middleware_IdleEntry]] */
 
     return ret;
@@ -156,7 +155,6 @@ int RoleFunc_Middleware_ConnEntry(
 
     /* [[STABLE_USER_CODE_START:Middleware_ConnEntry]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:Middleware_ConnEntry]] */
 
     return ret;
@@ -202,7 +200,6 @@ int RoleFunc_Middleware_ConnExit(
 
     /* [[STABLE_USER_CODE_START:Middleware_ConnExit]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:Middleware_ConnExit]] */
 
     return ret;
@@ -248,7 +245,6 @@ int RoleFunc_Middleware_ConnOkEntry(
 
     /* [[STABLE_USER_CODE_START:Middleware_ConnOkEntry]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:Middleware_ConnOkEntry]] */
 
     return ret;
@@ -294,7 +290,6 @@ int RoleFunc_Middleware_ErrorEntry(
 
     /* [[STABLE_USER_CODE_START:Middleware_ErrorEntry]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:Middleware_ErrorEntry]] */
 
     return ret;
@@ -341,7 +336,6 @@ int RoleFunc_Middleware_Connect(
 
     /* [[STABLE_USER_CODE_START:Middleware_Connect]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:Middleware_Connect]] */
 
     return ret;
@@ -390,7 +384,6 @@ int RoleFunc_Middleware_HandleErr(
 
     /* [[STABLE_USER_CODE_START:Middleware_HandleErr]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:Middleware_HandleErr]] */
 
     return ret;
@@ -438,7 +431,6 @@ int RoleFunc_Middleware_Retry(
 
     /* [[STABLE_USER_CODE_START:Middleware_Retry]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:Middleware_Retry]] */
 
     return ret;
@@ -484,7 +476,6 @@ int RoleFunc_Middleware_BeforeConnect(
 
     /* [[STABLE_USER_CODE_START:Middleware_BeforeConnect]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:Middleware_BeforeConnect]] */
 
     return ret;
@@ -532,5 +523,4 @@ static uint16_t Transition_GetId(
 /* ============================================================== */
 /* [[STABLE_USER_CODE_TAIL_START]] */
 /* Write user-added code here (helper functions, etc.) */
-
 /* [[STABLE_USER_CODE_TAIL_END]] */
