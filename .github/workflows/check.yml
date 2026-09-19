@@ -7,6 +7,11 @@ on:
     branches: [main, develop]
   workflow_dispatch:
 
+
+# ★ 全 run ステップの作業ディレクトリを code/ に固定
+defaults:
+  run:
+    working-directory: code
 jobs:
   # ==============================================================
   # Job 1: No Japanese / non-ASCII characters
