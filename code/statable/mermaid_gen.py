@@ -4,80 +4,106 @@ from .state_machine import StateMachine
 # ============================================================
 # Mermaid label sanitization (v2.0 added)
 # ============================================================
-#
-# Characters causing problems in Mermaid labels:
-#
-#   : misidentified as label separator
-#        Example: \"Halt --> Active : RETRY\"
-#        -> Parse error due to ":" in the title
-#
-#   "[" "]"
-#        may conflict with condition block notation
-#        -> parse fails if double [ ]
-#
-#   quote misidentified as label end
-#
-#   "\n" label is valid only on one line -> normalized to space
-#
-#   backquote may be misidentified as code block
-#
 _MERMAID_LABEL_REPLACEMENTS = (
-    (":",  ":"),   # Colon -> full-width colon
-    ("[",  "["),   # Open bracket -> full-width
-    ("]",  "]"),   # Close bracket -> full-width
-    ('"',  "'"),    # Double quote -> single
-    ("`",  "'"),    # Backquote -> single
-    ("\n", " "),    # Newline -> space
+    (":",  "："),
+    ("[",  "［"),
+    ("]",  "］"),
+    ('"',  "'"),
+    ("`",  "'"),
+    ("\n", " "),
     ("\r", " "),
 )
 
 
 def _sanitize_label(text: str) -> str:
-    """
-    Sanitize the Mermaid label string.
-
-    Even if user-entered title, event name, or condition expression
-    contains Mermaid meta characters, replace them so that
-    no parse error occurs.
-
-    Example:
-      "RETRY: battery_voltage >600"
-        -> "RETRY: battery_voltage >600"
-    """
+    """Sanitize the Mermaid label string."""
     if not text:
         return ""
     for src, dst in _MERMAID_LABEL_REPLACEMENTS:
         text = text.replace(src, dst)
-    # Normalize consecutive whitespace
     text = " ".join(text.split())
     return text
 
 
 def _truncate_condition(condition: str, max_chars: int = 50) -> str:
-    """Show long state transition conditions abbreviated (only the first line if multiline)"""
+    """Show long state transition conditions abbreviated."""
     if not condition:
         return ""
-
-    # If newline, use only first line
     lines = condition.split('\n')
     first_line = lines[0].strip() if lines else ""
     if not first_line:
         return ""
-
     if len(first_line) > max_chars:
         return first_line[:max_chars].rstrip() + "..."
-    # Append ellipsis if 2nd line or later
     if len(lines) > 1:
         return first_line + " ..."
     return first_line
+
+
+def _mode_suffix(trans) -> str:
+    """
+    v2.2: Return a short mode suffix for the transition label.
+
+    "C" -> Commit    (early_return=True)
+    "T" -> Tentative (early_return=False)
+    Empty string is returned when early_return is not set (backward compat).
+    """
+    er = getattr(trans, 'early_return', None)
+    if er is True:
+        return " [Commit]"
+    if er is False:
+        # Do not add "[Tentative]" to keep labels short by default.
+        return ""
+    return ""
+
+
+def _build_label(trans, *, short_mode: bool = True) -> str:
+    """Build the Mermaid label for a single transition."""
+    label_parts = []
+
+    # ---- Title ----
+    title_raw = getattr(trans, 'title', '') or ""
+    title_safe = _sanitize_label(title_raw)
+    if title_safe and title_safe != "(untitled transition)":
+        label_parts.append(title_safe)
+    else:
+        if getattr(trans, 'target', ''):
+            label_parts.append(_sanitize_label(trans.target))
+        else:
+            label_parts.append("(internal)")
+
+    # ---- Event ----
+    ev = getattr(trans, 'event', '') or ""
+    if ev:
+        ev_safe = _sanitize_label(ev)
+        if ev_safe:
+            label_parts.append(f"({ev_safe})")
+
+    # ---- Condition ----
+    cond = getattr(trans, 'condition', '') or ""
+    if cond:
+        cond_text = _sanitize_label(_truncate_condition(cond))
+        if cond_text:
+            label_parts.append(f"[{cond_text}]")
+
+    # ---- Mode (v2.2) ----
+    mode = _mode_suffix(trans)
+    if mode:
+        label_parts.append(mode)
+
+    return " ".join(label_parts).strip()
 
 
 def generate_mermaid(sm: StateMachine) -> str:
     """
     Generate a Mermaid stateDiagram-v2 string from a StateMachine.
 
-    Labels (title / event name / condition expression) are all
-    normalized by _sanitize_label to prevent parse errors.
+    [v2.2 changes]
+      - Each transition in a cell becomes its own edge.
+      - else_target is emitted as a separate edge (dashed style not
+        available in stateDiagram-v2, so we use label "else").
+      - early_return=True adds " [Commit]" to the label.
+      - entry / exit are NOT rendered (metadata only).
     """
     lines = ["stateDiagram-v2", "    direction LR"]
 
@@ -85,43 +111,35 @@ def generate_mermaid(sm: StateMachine) -> str:
         lines.append(f"    [*] --> {sm.initial_state}")
 
     for t in sm.transitions:
-        label_parts = []
-
-        # ---- Title (other than untitled transition) ----
-        title_raw = t.title or ""
-        title_safe = _sanitize_label(title_raw)
-        if title_safe and title_safe != "(untitled transition)":
-            label_parts.append(title_safe)
-        else:
-            # If no title, show target
-            if t.target:
-                label_parts.append(_sanitize_label(t.target))
-            else:
-                label_parts.append("(internal)")
-
-        # ---- Event name ----
-        if t.event:
-            event_safe = _sanitize_label(t.event)
-            if event_safe:
-                label_parts.append(f"({event_safe})")
-
-        # ---- Guard condition (shortened) ----
-        if t.condition:
-            cond_text = _sanitize_label(
-                _truncate_condition(t.condition)
-            )
-            if cond_text:
-                label_parts.append(f"[{cond_text}]")
-
-        # ---- Label combine ----
-        label = " ".join(label_parts).strip()
-
-        # ---- Output transition lines ----
+        # ---- Primary edge (target) ----
         if t.target:
+            label = _build_label(t)
             lines.append(f"    {t.source} --> {t.target} : {label}")
         else:
+            # No target: internal action only -> attach a note
+            label = _build_label(t)
+            lines.append(f"    note right of {t.source} : internal: {label}")
+
+        # ---- Secondary edge (else_target) ----
+        else_target = getattr(t, 'else_target', '') or ''
+        has_else = getattr(t, 'has_else', True)
+        if has_else and else_target:
+            else_label_parts = []
+            # Show event name (if any) so the edge is identifiable
+            ev = getattr(t, 'event', '') or ""
+            if ev:
+                ev_safe = _sanitize_label(ev)
+                if ev_safe:
+                    else_label_parts.append(f"({ev_safe})")
+            else_label_parts.append("(completion)")
+            else_label_parts.append("else")
+            # Add mode suffix
+            mode = _mode_suffix(t)
+            if mode:
+                else_label_parts.append(mode)
+            else_label = " ".join(else_label_parts)
             lines.append(
-                f"    note right of {t.source} : internal: {label}"
+                f"    {t.source} --> {else_target} : {else_label}"
             )
 
     return "\n".join(lines)

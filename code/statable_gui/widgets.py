@@ -1,7 +1,7 @@
 # statable_gui/widgets.py
-"""\nStaTable main widget (shared library support)\n"""
+"""StaTable main widget (shared library support / v2.2 entry-exit list)"""
 
-import os                    # A1: for STATABLE_DISABLE_MERMAID check
+import os
 import tempfile
 from typing import Optional, List
 
@@ -15,9 +15,6 @@ from PySide6.QtWidgets import (
 
 # ============================================================
 # A1: branch WebEngine import itself by environment variable
-#   - When STATABLE_DISABLE_MERMAID=1: do not import
-#     -> Qt WebEngine runtime is not initialized, so no leak warning is emitted
-#- Normal: import as before
 # ============================================================
 _DISABLE_MERMAID = os.environ.get("STATABLE_DISABLE_MERMAID") == "1"
 
@@ -54,8 +51,36 @@ from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary
 from statable_gui.libcntrl.condition_library import ConditionLibrary
 from statable_gui.libcntrl.literal_library import LiteralLibrary
 
+
+# ======================================================================
+# v2.2: List[str] <-> display helpers for entry / exit
+# ======================================================================
+_ENTRY_EXIT_SEP = "; "
+
+
+def _list_to_display(items) -> str:
+    """Convert List[str] to a display string ('A; B; C')."""
+    if items is None:
+        return ""
+    if isinstance(items, str):
+        return items
+    if isinstance(items, list):
+        return _ENTRY_EXIT_SEP.join(str(x) for x in items if str(x).strip())
+    return str(items)
+
+
+def _display_to_list(text: str) -> List[str]:
+    """Parse a display string ('A; B; C') into List[str]."""
+    if not text:
+        return []
+    if isinstance(text, list):
+        return [str(x) for x in text if str(x).strip()]
+    parts = str(text).split(';')
+    return [p.strip() for p in parts if p.strip()]
+
+
 class MermaidWidget(QWidget):
-    """\n    Mermaid diagram preview widget\n\n    WebEngine can be disabled via the environment variable STATABLE_DISABLE_MERMAID=1.\n    (To avoid Qt WebEngine leak warnings during tests)\n    """
+    """Mermaid diagram preview widget."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -66,19 +91,14 @@ class MermaidWidget(QWidget):
             os.environ.get("STATABLE_DISABLE_MERMAID") == "1"
         )
 
-        # ---- Test mode: do not generate WebEngine ----
         if self._disabled:
-            placeholder = QLabel(
-                "Mermaid rendering disabled (test mode)"
-            )
+            placeholder = QLabel("Mermaid rendering disabled (test mode)")
             placeholder.setAlignment(Qt.AlignCenter)
             layout.addWidget(placeholder)
             StaTableLogger.debug(
-                "MermaidWidget: disabled via STATABLE_DISABLE_MERMAID"
-            )
+                "MermaidWidget: disabled via STATABLE_DISABLE_MERMAID")
             return
 
-        #---- Normal mode ----
         if WEBENGINE_AVAILABLE:
             self.web_view = QWebEngineView()
             settings = self.web_view.settings()
@@ -99,14 +119,10 @@ class MermaidWidget(QWidget):
                 "Please install PySide6-Addons.\n"
                 "pip install PySide6-Addons"
             )
-            StaTableLogger.warning(
-                "MermaidWidget: WebEngine NOT available")
+            StaTableLogger.warning("MermaidWidget: WebEngine NOT available")
 
     def set_mermaid_code(self, code: str):
         StaTableLogger.debug("MermaidWidget.set_mermaid_code called")
-        StaTableLogger.debug(f"Mermaid code:\n{code}")
-
-        #---- Test mode: do nothing ----
         if self._disabled:
             return
 
@@ -117,10 +133,7 @@ class MermaidWidget(QWidget):
                     f"mermaidwin.js NOT found: {mermaid_js_path}")
                 return
 
-            js_abs_url = QUrl.fromLocalFile(
-                str(mermaid_js_path)).toString()
-            StaTableLogger.debug(
-                f"mermaidwin.js absolute URL: {js_abs_url}")
+            js_abs_url = QUrl.fromLocalFile(str(mermaid_js_path)).toString()
 
             html = f"""<!DOCTYPE html>
 <html>
@@ -148,8 +161,6 @@ class MermaidWidget(QWidget):
                         delete=False, encoding='utf-8') as f:
                     f.write(html)
                     temp_path = f.name
-                StaTableLogger.debug(
-                    f"Temporary HTML created: {temp_path}")
                 self.web_view.load(QUrl.fromLocalFile(temp_path))
             except Exception as e:
                 StaTableLogger.error(
@@ -160,12 +171,17 @@ class MermaidWidget(QWidget):
     def _on_load_finished(self, ok: bool):
         StaTableLogger.debug(f"WebEngine loadFinished: ok={ok}")
         if ok and self.web_view:
-            StaTableLogger.debug(
-                "Executing renderMermaid() via JavaScript...")
             self.web_view.page().runJavaScript("renderMermaid();")
 
 
 class SettingsPanel(QWidget):
+    """State / role function settings panel.
+
+    [v2.2 change]
+      - State.entry / State.exit are List[str].
+      - Display format: "; " separated.
+      - apply_changes() parses display back to List[str].
+    """
     settings_changed = Signal()
 
     def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None, parent=None):
@@ -183,10 +199,14 @@ class SettingsPanel(QWidget):
         self.tab = QTabWidget()
         layout.addWidget(self.tab)
 
+        # ---- State tab ----
         state_tab = QWidget()
         state_layout = QVBoxLayout(state_tab)
         self.state_table = QTableWidget(0, 6)
-        self.state_table.setHorizontalHeaderLabels(["Name", "Description", "entry function", "exit function", "do function", "Type"])
+        self.state_table.setHorizontalHeaderLabels([
+            "Name", "Description",
+            "entry function", "exit function", "do function", "Type"
+        ])
         self.state_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.state_table.setFont(QFont("Consolas", 10))
         state_layout.addWidget(self.state_table)
@@ -200,9 +220,9 @@ class SettingsPanel(QWidget):
         state_layout.addLayout(btn_state)
         self.tab.addTab(state_tab, "State list")
 
+        # ---- Role function tab ----
         role_tab = QWidget()
         role_layout = QVBoxLayout(role_tab)
-        # v1.5 change: 8 columns -> 9 columns (insert namespace column)
         self.role_table = QTableWidget(0, 9)
         self.role_table.setHorizontalHeaderLabels([
             "Title", "Function name", "Namespace", "Description", "Return type",
@@ -228,7 +248,8 @@ class SettingsPanel(QWidget):
 
         self.state_table.itemChanged.connect(self.on_state_table_item_changed)
         self.role_table.itemChanged.connect(self.on_role_table_item_changed)
-        self.state_table.cellDoubleClicked.connect(self.on_state_table_cell_double_clicked)
+        self.state_table.cellDoubleClicked.connect(
+            self.on_state_table_cell_double_clicked)
 
         self.populate()
         StaTableLogger.debug("SettingsPanel initialized")
@@ -245,30 +266,43 @@ class SettingsPanel(QWidget):
         for row, state in enumerate(states):
             self.state_table.setItem(row, 0, QTableWidgetItem(state.name))
             self.state_table.setItem(row, 1, QTableWidgetItem(state.description))
-            entry_item = QTableWidgetItem(state.entry)
-            entry_item.setToolTip("Double-click to edit")
+
+            # v2.2: entry / exit are List[str]; convert to display string
+            entry_display = _list_to_display(getattr(state, 'entry', []))
+            exit_display = _list_to_display(getattr(state, 'exit', []))
+
+            entry_item = QTableWidgetItem(entry_display)
+            entry_item.setToolTip(
+                "Multiple functions: separate with '; '\n"
+                "Double-click to edit via action dialog")
             self.state_table.setItem(row, 2, entry_item)
-            exit_item = QTableWidgetItem(state.exit)
-            exit_item.setToolTip("Double-click to edit")
+
+            exit_item = QTableWidgetItem(exit_display)
+            exit_item.setToolTip(
+                "Multiple functions: separate with '; '\n"
+                "Double-click to edit via action dialog")
             self.state_table.setItem(row, 3, exit_item)
+
             do_item = QTableWidgetItem(state.do)
             do_item.setToolTip("Double-click to edit")
             self.state_table.setItem(row, 4, do_item)
+
             self.state_table.setItem(row, 5, QTableWidgetItem(state.type.value))
 
         self.populate_role_table()
 
         self._updating = False
-        StaTableLogger.debug(f"Settings populated: {len(states)} states, {len(self.sm.role_functions)} roles")
+        StaTableLogger.debug(
+            f"Settings populated: {len(states)} states, "
+            f"{len(self.sm.role_functions)} roles")
 
     def populate_role_table(self):
-        """\n         v1.5 change: added namespace column (index 2)\n          Old 8 columns -> New 9 columns\n            0: Title\n            1: Function name\n            2: Namespace    new\n            3: Description\n            4: Return type\n            5: Arg1 type\n            6: Arg1 name\n            7: Arg2 type\n            8: Arg2 name\n        """
         roles = list(self.sm.role_functions.values())
         self.role_table.setRowCount(len(roles))
         for row, rf in enumerate(roles):
             self.role_table.setItem(row, 0, QTableWidgetItem(rf.title))
             self.role_table.setItem(row, 1, QTableWidgetItem(rf.name))
-            self.role_table.setItem(row, 2, QTableWidgetItem(rf.namespace))   # New
+            self.role_table.setItem(row, 2, QTableWidgetItem(rf.namespace))
             self.role_table.setItem(row, 3, QTableWidgetItem(rf.description))
             self.role_table.setItem(row, 4, QTableWidgetItem(rf.return_type))
             self.role_table.setItem(row, 5, QTableWidgetItem(rf.arg1_type))
@@ -277,7 +311,8 @@ class SettingsPanel(QWidget):
             self.role_table.setItem(row, 8, QTableWidgetItem(rf.arg2_name))
 
     def on_state_table_cell_double_clicked(self, row, col):
-        StaTableLogger.debug(f"SettingsPanel.on_state_table_cell_double_clicked: row={row}, col={col}")
+        StaTableLogger.debug(
+            f"SettingsPanel.on_state_table_cell_double_clicked: row={row}, col={col}")
         if col not in (2, 3, 4):
             return
 
@@ -310,9 +345,17 @@ class SettingsPanel(QWidget):
     def delete_state(self):
         row = self.state_table.currentRow()
         if row >= 0:
-            name = self.state_table.item(row, 0).text().strip() if self.state_table.item(row, 0) else ""
+            name = (self.state_table.item(row, 0).text().strip()
+                    if self.state_table.item(row, 0) else "")
             if name and name in self.sm.states:
-                self.sm.transitions = [t for t in self.sm.transitions if t.source != name and t.target != name]
+                self.sm.transitions = [
+                    t for t in self.sm.transitions
+                    if t.source != name and t.target != name
+                ]
+                # Also clean cell metadata
+                for (src, evt) in list(self.sm.get_cell_keys()):
+                    if src == name:
+                        self.sm.remove_cell_metadata(src, evt)
                 del self.sm.states[name]
                 self.populate()
                 self.settings_changed.emit()
@@ -333,7 +376,9 @@ class SettingsPanel(QWidget):
         if dlg.exec() == QDialog.Accepted:
             rf = dlg.get_role_function()
             if rf.name in self.sm.role_functions:
-                QMessageBox.warning(self, "Warning", "A role function with the same name already exists.")
+                QMessageBox.warning(
+                    self, "Warning",
+                    "A role function with the same name already exists.")
                 return
             self.sm.add_role_function(rf)
             self.populate_role_table()
@@ -342,8 +387,8 @@ class SettingsPanel(QWidget):
     def delete_role_function(self):
         row = self.role_table.currentRow()
         if row >= 0:
-            # v1.5: function name is column 1 (unchanged)
-            name = self.role_table.item(row, 1).text().strip() if self.role_table.item(row, 1) else ""
+            name = (self.role_table.item(row, 1).text().strip()
+                    if self.role_table.item(row, 1) else "")
             if name and name in self.sm.role_functions:
                 self.sm.remove_role_function(name)
                 self.populate_role_table()
@@ -359,44 +404,68 @@ class SettingsPanel(QWidget):
         self._debounce_timer.start()
 
     def apply_changes(self):
-        """\n         v1.5 change: construct RoleFunction with kwargs, preserving namespace\n\n        Old code (up to v1.4):\n            RoleFunction(name, desc, ret, a1t, a1n, a2t, a2n, title)  <- positional args\n              -> inserting namespace in model.py shifted all fields by one,\n                 causing description to leak into namespace (v1.4 section 9.6 #76)\n\n        New code (v1.5):\n            RoleFunction(name=..., namespace=..., description=..., ...)  <- kwargs\n        """
-        #=== Reflect state table ===
+        """Apply the UI edits back into the StateMachine.
+
+        [v2.2]
+          entry / exit: display string -> List[str] via split(';')
+        """
+        # === State table ===
         for row in range(self.state_table.rowCount()):
-            name = self.state_table.item(row, 0).text().strip() if self.state_table.item(row, 0) else ""
-            desc = self.state_table.item(row, 1).text().strip() if self.state_table.item(row, 1) else ""
-            entry = self.state_table.item(row, 2).text().strip() if self.state_table.item(row, 2) else ""
-            exit_ = self.state_table.item(row, 3).text().strip() if self.state_table.item(row, 3) else ""
-            do = self.state_table.item(row, 4).text().strip() if self.state_table.item(row, 4) else ""
-            type_str = self.state_table.item(row, 5).text().strip() if self.state_table.item(row, 5) else "normal"
+            name = (self.state_table.item(row, 0).text().strip()
+                    if self.state_table.item(row, 0) else "")
+            desc = (self.state_table.item(row, 1).text().strip()
+                    if self.state_table.item(row, 1) else "")
+
+            # v2.2: convert display string to List[str]
+            entry_text = (self.state_table.item(row, 2).text().strip()
+                          if self.state_table.item(row, 2) else "")
+            exit_text = (self.state_table.item(row, 3).text().strip()
+                         if self.state_table.item(row, 3) else "")
+            entry_list = _display_to_list(entry_text)
+            exit_list = _display_to_list(exit_text)
+
+            do = (self.state_table.item(row, 4).text().strip()
+                  if self.state_table.item(row, 4) else "")
+            type_str = (self.state_table.item(row, 5).text().strip()
+                        if self.state_table.item(row, 5) else "normal")
+
             if name:
                 if name in self.sm.states:
                     st = self.sm.states[name]
                     st.description = desc
-                    st.entry = entry
-                    st.exit = exit_
+                    st.entry = entry_list
+                    st.exit = exit_list
                     st.do = do
                     st.type = StateType(type_str)
                 else:
-                    self.sm.add_state(State(name, type=StateType(type_str), description=desc,
-                                             entry=entry, exit=exit_, do=do))
+                    self.sm.add_state(State(
+                        name, type=StateType(type_str), description=desc,
+                        entry=entry_list, exit=exit_list, do=do,
+                    ))
 
-        # === Reflect role function table ===
+        # === Role function table ===
         self.sm.role_functions.clear()
         for row in range(self.role_table.rowCount()):
-            # New column order: 0=title, 1=function name, 2=namespace, 3=description,
-            #          4=return type, 5=arg1 type, 6=arg1 name, 7=arg2 type, 8=arg2 name
-            title     = self.role_table.item(row, 0).text().strip() if self.role_table.item(row, 0) else ""
-            name      = self.role_table.item(row, 1).text().strip() if self.role_table.item(row, 1) else ""
+            title = (self.role_table.item(row, 0).text().strip()
+                     if self.role_table.item(row, 0) else "")
+            name = (self.role_table.item(row, 1).text().strip()
+                    if self.role_table.item(row, 1) else "")
             if name:
-                namespace = self.role_table.item(row, 2).text().strip() if self.role_table.item(row, 2) else ""
-                desc      = self.role_table.item(row, 3).text().strip() if self.role_table.item(row, 3) else ""
-                ret       = self.role_table.item(row, 4).text().strip() if self.role_table.item(row, 4) else "int"
-                a1t       = self.role_table.item(row, 5).text().strip() if self.role_table.item(row, 5) else "int"
-                a1n       = self.role_table.item(row, 6).text().strip() if self.role_table.item(row, 6) else "arg1"
-                a2t       = self.role_table.item(row, 7).text().strip() if self.role_table.item(row, 7) else "int"
-                a2n       = self.role_table.item(row, 8).text().strip() if self.role_table.item(row, 8) else "arg2"
+                namespace = (self.role_table.item(row, 2).text().strip()
+                             if self.role_table.item(row, 2) else "")
+                desc = (self.role_table.item(row, 3).text().strip()
+                        if self.role_table.item(row, 3) else "")
+                ret = (self.role_table.item(row, 4).text().strip()
+                       if self.role_table.item(row, 4) else "int")
+                a1t = (self.role_table.item(row, 5).text().strip()
+                       if self.role_table.item(row, 5) else "int")
+                a1n = (self.role_table.item(row, 6).text().strip()
+                       if self.role_table.item(row, 6) else "arg1")
+                a2t = (self.role_table.item(row, 7).text().strip()
+                       if self.role_table.item(row, 7) else "int")
+                a2n = (self.role_table.item(row, 8).text().strip()
+                       if self.role_table.item(row, 8) else "arg2")
 
-                # Construct with all kwargs (kw_only=True support + namespace preserved)
                 self.sm.add_role_function(RoleFunction(
                     name=name,
                     namespace=namespace,
@@ -435,10 +504,6 @@ class StateMachineTab(QWidget):
             f"conditions={len(self.condition_library.list_all())}, "
             f"literals={len(self.literal_library.list_all())}"
         )
-        for rf in self.role_function_library.list_all():
-            StaTableLogger.debug(f"  role in tab: {rf.name}")
-        for ct in self.condition_library.list_all():
-            StaTableLogger.debug(f"  condition in tab: {ct.name}")
 
         layout = QHBoxLayout(self)
 

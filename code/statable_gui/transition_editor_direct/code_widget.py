@@ -1,8 +1,16 @@
 # statable_gui/transition_editor_direct/code_widget.py
-"""\nCode display widget (read-only, ActionDraft support)\n- Enhanced debug logging\n- Detailed output of each FlowItem's processing\n\n[v1.5 fix]\n  - Removed the old form `void RoleFunc_xxx(ctx, transition)`\n  - Unified to a form consistent with real file generation (role_function_generator.py):\n    * Return type: int (per role_function_generator convention)\n    * Function name: RoleFunc_<Namespace>_<PascalName> (dots replaced with _)\n    * Arg order: (const TransitionContext_<Layer>_t *transition, SystemContext_t *ctx)\n  - Split Namespace and Name from qualified_name ('Driver.Init')\n"""
+"""Code display widget (read-only, ActionDraft support / v2.2).
+
+[v2.2 changes]
+  - Renders cell_actions (always / before_transitions / after_transitions).
+  - Respects early_return per transition (`_handled` guard).
+  - Renders `group` shared_condition as an outer `if`.
+  - Handles entry / exit via State.entry / State.exit lists.
+"""
 
 import logging
 import re
+from typing import List
 
 from PySide6.QtWidgets import QPlainTextEdit
 from .draft import ActionDraft, ensure_list
@@ -10,12 +18,11 @@ from .draft import ActionDraft, ensure_list
 logger = logging.getLogger("transition_editor_direct.code")
 
 
-# A valid C identifier form (rejects e.g. `retry_count++`)
 _VALID_C_IDENTIFIER = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
 
 
 def _to_pascal_case(name: str) -> str:
-    """snake_case / camelCase → PascalCase"""
+    """snake_case / camelCase -> PascalCase."""
     if not name:
         return ""
     parts = re.split(r'[_\s]+', name)
@@ -41,16 +48,13 @@ class CodeWidget(QPlainTextEdit):
         logger.debug(f"Code updated ({len(code)} chars)")
 
     # ==================================================================
-    # Resolve layer name and type name
+    # Layer / type resolution
     # ==================================================================
     def _get_layer_name(self) -> str:
-        """\n        Infer layer name from ActionDraft\n\n        - Cannot be inferred from draft.role_func_map etc.,\n          so collect the Namespace part of function names\n          (e.g., 'Middleware' from 'Middleware.HandleErr')\n          and use the most frequent value\n        - If undeterminable, empty string (no layer)\n        """
-        # 1. If ActionDraft has a layer_name attribute, use it (future extension)
         layer = getattr(self.draft, 'layer_name', '') or ''
         if layer:
             return layer
 
-        #2. Count namespaces of referenced functions
         ns_count = {}
         for item in self.draft.flow_items:
             names = []
@@ -74,21 +78,19 @@ class CodeWidget(QPlainTextEdit):
         return f"TransitionContext_{layer}_t" if layer else "TransitionContext_t"
 
     # ==================================================================
-    # Reference name -> RoleFunc function name
+    # Reference -> RoleFunc name
     # ==================================================================
     def _role_func_name(self, ref: str) -> str:
-        """\n        Convert reference string to RoleFunc_<Namespace>_<PascalName>\n\n        Input examples:\n          'Middleware.HandleErr'  -> 'RoleFunc_Middleware_HandleErr'\n          'Driver.Init'           -> 'RoleFunc_Driver_Init'\n          'HandleError'           -> 'RoleFunc_HandleError'\n          'RoleFunc_Xxx'          -> 'RoleFunc_Xxx' (already prefixed)\n          'retry_count++'         -> '' (invalid identifier)\n        """
+        """Convert reference string to RoleFunc_<Namespace>_<PascalName>."""
         if not ref:
             return ""
         name = ref.strip()
         if not name:
             return ""
 
-        # Strip argument part
         if '(' in name:
             name = name.split('(', 1)[0].strip()
 
-        # If it already starts with RoleFunc_, keep as-is
         if name.startswith("RoleFunc_"):
             rest = name[len("RoleFunc_"):]
             rest = rest.replace('.', '_')
@@ -96,7 +98,6 @@ class CodeWidget(QPlainTextEdit):
                 return f"RoleFunc_{rest}"
             return ""
 
-        # Namespace.Name → Namespace_Name
         if '.' in name:
             ns, base = name.split('.', 1)
             if not (_VALID_C_IDENTIFIER.match(ns)
@@ -105,14 +106,18 @@ class CodeWidget(QPlainTextEdit):
             pascal = _to_pascal_case(base)
             return f"RoleFunc_{ns}_{pascal}"
 
-        # Bare name
         if not _VALID_C_IDENTIFIER.match(name):
             logger.warning(
-                f"_role_func_name: reject invalid identifier: {ref!r}"
-            )
+                f"_role_func_name: reject invalid identifier: {ref!r}")
             return ""
         pascal = _to_pascal_case(name)
         return f"RoleFunc_{pascal}"
+
+    def _call_stmt(self, ref: str) -> str:
+        fn = self._role_func_name(ref)
+        if not fn:
+            return f"/* Invalid reference: {ref} */"
+        return f"{fn}(transition, ctx);"
 
     # ==================================================================
     # Code generation
@@ -123,19 +128,15 @@ class CodeWidget(QPlainTextEdit):
 
         context_type = self._context_type()
 
-        #System global definitions (if any)
+        # System globals
         for g in self.draft.system_globals:
             lines.append(f"{g.type} {g.name} = {g.initial_value};")
         if self.draft.system_globals:
             lines.append("")
 
-        # Collect role function prototypes (dedupe)
+        # Collect role function prototypes
         proto_names = set()
         for item in self.draft.flow_items:
-            logger.debug(
-                f"Processing flow_item for prototypes: "
-                f"type={item.item_type}, name={item.name}"
-            )
             if item.item_type == "transition":
                 pre_actions = ensure_list(item.params.get('pre_actions', []))
                 else_actions = ensure_list(item.params.get('else_actions', []))
@@ -146,14 +147,17 @@ class CodeWidget(QPlainTextEdit):
             elif item.item_type == "function":
                 proto_names.add(item.name)
 
+        # Cell actions also need prototypes
+        for a in self.draft.cell_actions:
+            if a.role_function:
+                proto_names.add(a.role_function)
+
         if proto_names:
-            # Output matching real file generation
             for ref in sorted(proto_names):
                 func_name = self._role_func_name(ref)
                 if not func_name:
                     lines.append(
-                        f"/* Undefined reference (invalid identifier): {ref} */"
-                    )
+                        f"/* Undefined reference (invalid identifier): {ref} */")
                     continue
                 lines.append(
                     f"int {func_name}("
@@ -162,73 +166,116 @@ class CodeWidget(QPlainTextEdit):
                 )
             lines.append("")
 
-        # Body
-        for item in self.draft.flow_items:
-            logger.debug(
-                f"Processing flow_item for code: "
-                f"type={item.item_type}, name={item.name}, params={item.params}"
-            )
-            if item.item_type == "transition":
-                cond = item.params.get('condition', '')
-                target = item.params.get('target', '')
-                if not target:
-                    target = self.draft.default_target
-                pre_actions = ensure_list(item.params.get('pre_actions', []))
-                else_actions = ensure_list(item.params.get('else_actions', []))
-                has_else = item.params.get('has_else', True)
-                else_target = item.params.get('else_target', '')
-                if not else_target:
-                    else_target = self.draft.default_target
+        # ---- Body ----
+        # Determine whether we need _handled
+        needs_handled = any(
+            item.params.get('early_return', False)
+            for item in self.draft.flow_items
+            if item.item_type == "transition"
+        )
 
-                if cond:
-                    lines.append(f"if ({cond}) {{")
-                    for p in pre_actions:
-                        func_name = self._role_func_name(p)
-                        if func_name:
-                            lines.append(
-                                f"    {func_name}(transition, ctx);"
-                            )
-                        else:
-                            lines.append(
-                                f"    /* Invalid reference: {p} */"
-                            )
-                    if target:
-                        lines.append(f"    next_state = {target};")
-                    else:
-                        lines.append("    // TargetNot set")
+        # Cell actions (always / before_transitions)
+        for trigger in ("always", "before_transitions"):
+            trigger_actions = [a for a in self.draft.cell_actions
+                               if a.trigger == trigger]
+            if trigger_actions:
+                lines.append(f"/* ===== Cell actions ({trigger}) ===== */")
+                for a in trigger_actions:
+                    lines.append("    " + self._call_stmt(a.role_function))
+                lines.append("")
+
+        # Transitions
+        transitions = [it for it in self.draft.flow_items
+                       if it.item_type == "transition"]
+        if transitions:
+            # Open _handled declaration
+            if needs_handled:
+                lines.append("bool _handled = false;")
+                lines.append("")
+
+            # Group map
+            group_map = {}
+            for rel in self.draft.cell_relations:
+                if rel.kind == "group" and rel.shared_condition:
+                    for lbl in rel.members:
+                        group_map[lbl] = rel.shared_condition
+
+            open_group_cond = None
+            for idx, item in enumerate(transitions):
+                params = item.params
+                label = params.get('label', '') or f"T{idx + 1}"
+                cond = params.get('condition', '')
+                target = params.get('target', '') or self.draft.default_target
+                pre_actions = ensure_list(params.get('pre_actions', []))
+                else_actions = ensure_list(params.get('else_actions', []))
+                has_else = params.get('has_else', True)
+                else_target = params.get('else_target', '') or self.draft.default_target
+                early_return = params.get('early_return', False)
+
+                sc = group_map.get(label)
+                # Open group
+                if sc and sc != open_group_cond:
+                    lines.append(
+                        f"/* ===== Group (shared_condition) ===== */")
+                    lines.append(f"if ({sc}) {{")
+                    open_group_cond = sc
+                # Close previous group if changed
+                elif open_group_cond and sc != open_group_cond:
                     lines.append("}")
-                    if has_else:
-                        lines.append("else {")
-                        for ea in else_actions:
-                            func_name = self._role_func_name(ea)
-                            if func_name:
-                                lines.append(
-                                    f"    {func_name}(transition, ctx);"
-                                )
-                            else:
-                                lines.append(
-                                    f"    /* Invalid reference: {ea} */"
-                                )
-                        if else_target:
-                            lines.append(f"    next_state = {else_target};")
-                        else:
-                            lines.append("    // else target (not set)")
-                        lines.append("}")
+                    open_group_cond = None
+
+                indent = "    " if open_group_cond else ""
+                cond_expr = cond if cond else "1"
+                mode = "Commit" if early_return else "Tentative"
+                lines.append(f"{indent}/* ===== Transition[{label}] ({mode}) ===== */")
+
+                # Condition
+                if early_return:
+                    lines.append(f"{indent}if (!_handled && {cond_expr}) {{")
                 else:
-                    if target:
-                        lines.append(f"next_state = {target};")
+                    lines.append(f"{indent}if ({cond_expr}) {{")
+
+                for p in pre_actions:
+                    lines.append(f"{indent}    " + self._call_stmt(p))
+
+                if target:
+                    lines.append(f"{indent}    next_state = {target};")
+
+                if early_return:
+                    lines.append(f"{indent}    _handled = true;")
+
+                # else branch
+                if has_else and (else_target or else_actions):
+                    if early_return:
+                        lines.append(
+                            f"{indent}}} else if (!_handled && !({cond_expr})) {{")
                     else:
-                        lines.append("// TargetNot set")
+                        lines.append(f"{indent}}} else {{")
+                    for ea in else_actions:
+                        lines.append(f"{indent}    " + self._call_stmt(ea))
+                    if else_target:
+                        lines.append(f"{indent}    next_state = {else_target};")
+                    if early_return:
+                        lines.append(f"{indent}    _handled = true;")
 
-            elif item.item_type == "function":
-                func_name = self._role_func_name(item.name)
-                if func_name:
-                    lines.append(f"{func_name}(transition, ctx);")
-                else:
-                    lines.append(f"/* Invalid reference: {item.name} */")
+                lines.append(f"{indent}}}")
+                lines.append("")
 
-        # Debug log
-        generated = "\n".join(lines)
+            # Close group
+            if open_group_cond:
+                lines.append("}")
+                lines.append("")
+
+        # Cell actions (after_transitions)
+        after_actions = [a for a in self.draft.cell_actions
+                         if a.trigger == "after_transitions"]
+        if after_actions:
+            lines.append("/* ===== Cell actions (after_transitions) ===== */")
+            for a in after_actions:
+                lines.append("    " + self._call_stmt(a.role_function))
+            lines.append("")
+
+        generated = "\n".join(lines).rstrip()
         logger.debug("=== Generated Code ===")
         logger.debug(generated)
         logger.debug("=== _generate_code END ===")

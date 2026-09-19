@@ -1,15 +1,23 @@
 # statable_gui/transition_editor_direct/draft.py
-"""\nAction edit draft model (node position saving support)\n\n[v1.6 change]\n  - Added layer_name attribute to ActionDraft (section 11.2 #4)\n    code_widget._get_layer_name() gives this the highest priority.\n    The old \"namespace mode inference\" remains as fallback.\n"""
+"""Action edit draft model.
+
+[v2.2 additions]
+  - ActionDraft.cell_actions / cell_relations
+  - FlowItem.params['early_return'] / ['label']
+"""
 
 import logging
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 
+from statable.model import (
+    ActionStep, TransitionRelation, Transition as ModelTransition,
+)
+
 logger = logging.getLogger("transition_editor_direct.draft")
 
 
 def ensure_list(value) -> List[str]:
-    """\n    Convert a value to a list if it isn't one.\n    - None or empty string -> empty list\n    - A string is treated as a single-element list\n    - A list is returned as-is\n    """
     if isinstance(value, list):
         return value
     if value is None:
@@ -19,7 +27,8 @@ def ensure_list(value) -> List[str]:
         if not stripped:
             return []
         return [stripped]
-    logger.warning(f"Unexpected type for list: {type(value)}. Returning empty list.")
+    logger.warning(
+        f"Unexpected type for list: {type(value)}. Returning empty list.")
     return []
 
 
@@ -57,6 +66,8 @@ class TransitionParams:
     has_else: bool = True
     else_target: str = ""
     else_actions: List[str] = field(default_factory=list)
+    early_return: bool = False    # v2.2
+    label: str = ""               # v2.2
 
 
 @dataclass
@@ -65,8 +76,6 @@ class FlowItem:
     name: str = ""
     edited_text: str = ""
     params: Dict[str, Any] = field(default_factory=dict)
-
-    # For node position saving (preserve free movement on Canvas)
     pos_x: Optional[float] = None
     pos_y: Optional[float] = None
 
@@ -99,10 +108,6 @@ class FlowItem:
 class ActionDraft:
     source: str = ""
     event: str = ""
-
-    # v1.6 added: layer name (first candidate for code_widget._get_layer_name)
-    #   - Pass sm.layer_name from generators such as matrix_table.py
-    #   - If empty, code_widget falls back to the most frequent namespace
     layer_name: str = ""
 
     flow_items: List[FlowItem] = field(default_factory=list)
@@ -114,6 +119,10 @@ class ActionDraft:
     role_func_map: Dict[str, str] = field(default_factory=dict)
     user_code: Dict[str, str] = field(default_factory=dict)
 
+    # === v2.2: cell-level metadata ===
+    cell_actions: List[ActionStep] = field(default_factory=list)
+    cell_relations: List[TransitionRelation] = field(default_factory=list)
+
     def clear(self):
         self.flow_items = []
         self.default_target = ""
@@ -121,8 +130,8 @@ class ActionDraft:
         self.generated_code = ""
         self.role_func_map = {}
         self.user_code = {}
-        # layer_name represents \"the layer this draft belongs to\",
-        #   clear() preserves it (does not reset)
+        self.cell_actions = []
+        self.cell_relations = []
 
     def get_role_func_name(self, base_name: str, phase: str) -> str:
         key = f"{self.source}|{self.event}|{phase}|{base_name}"
@@ -135,32 +144,63 @@ class ActionDraft:
         return {
             'source': self.source,
             'event': self.event,
-            'layer_name': self.layer_name,   # v1.6 added
+            'layer_name': self.layer_name,
             'flow_items': [i.to_dict() for i in self.flow_items],
             'default_target': self.default_target,
             'system_globals': [g.to_dict() for g in self.system_globals],
             'generated_code': self.generated_code,
             'role_func_map': self.role_func_map,
             'user_code': self.user_code,
+            # v2.2
+            'cell_actions': [
+                {'role_function': a.role_function, 'trigger': a.trigger,
+                 'title': a.title}
+                for a in self.cell_actions
+            ],
+            'cell_relations': [
+                {'kind': r.kind, 'members': list(r.members),
+                 'shared_condition': r.shared_condition, 'note': r.note}
+                for r in self.cell_relations
+            ],
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> 'ActionDraft':
-        return cls(
+        d = cls(
             source=data.get('source', ''),
             event=data.get('event', ''),
-            layer_name=data.get('layer_name', ''),   # v1.6 added
-            flow_items=[FlowItem.from_dict(i) for i in data.get('flow_items', [])],
+            layer_name=data.get('layer_name', ''),
+            flow_items=[FlowItem.from_dict(i)
+                        for i in data.get('flow_items', [])],
             default_target=data.get('default_target', ''),
-            system_globals=[SystemGlobal.from_dict(g) for g in data.get('system_globals', [])],
+            system_globals=[SystemGlobal.from_dict(g)
+                            for g in data.get('system_globals', [])],
             generated_code=data.get('generated_code', ''),
             role_func_map=data.get('role_func_map', {}),
             user_code=data.get('user_code', {}),
         )
+        d.cell_actions = [
+            ActionStep(
+                role_function=a.get('role_function', ''),
+                trigger=a.get('trigger', 'always'),
+                title=a.get('title', ''),
+            )
+            for a in data.get('cell_actions', [])
+        ]
+        d.cell_relations = [
+            TransitionRelation(
+                kind=r.get('kind', 'sequential'),
+                members=list(r.get('members', [])),
+                shared_condition=r.get('shared_condition', ''),
+                note=r.get('note', ''),
+            )
+            for r in data.get('cell_relations', [])
+        ]
+        return d
 
 
 def transition_to_flow_item(trans) -> FlowItem:
-    """Transition -> FlowItem (type=transition) conversion"""
+    """Transition -> FlowItem (v2.2: preserves early_return / label)."""
     pre_actions = ensure_list(getattr(trans, 'pre_actions', []))
     else_actions = ensure_list(getattr(trans, 'else_actions', []))
     condition = getattr(trans, 'condition', '')
@@ -168,15 +208,20 @@ def transition_to_flow_item(trans) -> FlowItem:
         logger.error(f"Condition is not str: {type(condition)}. Using empty string.")
         condition = ""
 
-    # If event name is empty, default to \"NewEvent\"
     event_name = trans.event if trans.event else "NewEvent"
 
-    logger.debug(f"transition_to_flow_item: event='{event_name}', condition='{condition}', pre_actions={pre_actions}, else_actions={else_actions}")
+    logger.debug(
+        f"transition_to_flow_item: event='{event_name}', "
+        f"condition='{condition}', pre_actions={pre_actions}, "
+        f"else_actions={else_actions}")
 
     return FlowItem(
         item_type="transition",
         name=event_name,
-        edited_text=trans.title if trans.title != "(untitled transition)" else event_name,
+        edited_text=(
+            trans.title if trans.title != "(untitled transition)"
+            else event_name
+        ),
         params={
             "event": event_name,
             "condition": condition,
@@ -185,12 +230,15 @@ def transition_to_flow_item(trans) -> FlowItem:
             "has_else": getattr(trans, 'has_else', True),
             "else_target": getattr(trans, 'else_target', ''),
             "else_actions": else_actions,
+            # v2.2
+            "early_return": getattr(trans, 'early_return', False),
+            "label": getattr(trans, 'label', ''),
         }
     )
 
 
 def flow_item_to_transition(item: FlowItem, source: str, event: str):
-    """FlowItem -> Transition conversion"""
+    """FlowItem -> Transition (v2.2: preserves early_return / label)."""
     from statable.model import Transition
     params = item.params
     pre_actions = ensure_list(params.get('pre_actions', []))
@@ -200,7 +248,9 @@ def flow_item_to_transition(item: FlowItem, source: str, event: str):
         logger.error(f"Condition is not str: {type(condition)}. Using empty string.")
         condition = ""
 
-    logger.debug(f"flow_item_to_transition: condition='{condition}', pre_actions={pre_actions}, else_actions={else_actions}")
+    logger.debug(
+        f"flow_item_to_transition: condition='{condition}', "
+        f"pre_actions={pre_actions}, else_actions={else_actions}")
 
     return Transition(
         source=source,
@@ -211,7 +261,10 @@ def flow_item_to_transition(item: FlowItem, source: str, event: str):
         has_else=params.get('has_else', True),
         else_target=params.get('else_target', ''),
         else_actions=else_actions,
+        early_return=params.get('early_return', False),
+        label=params.get('label', ''),
         action="",
         transition_type="external",
-        title=item.edited_text if item.edited_text and item.edited_text != item.name else "(untitled transition)",
+        title=item.edited_text if item.edited_text and item.edited_text != item.name
+        else "(untitled transition)",
     )

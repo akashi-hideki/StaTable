@@ -1,5 +1,5 @@
 # statable_gui/matrix_table.py
-"""\nState transition table widget (D&D editor direct launch support)\n"""
+"""State transition table widget (D&D editor direct launch support / v2.2 multi-transition)."""
 
 from typing import List
 
@@ -17,11 +17,18 @@ from .config import MAX_COLUMN_WIDTH, MIN_ROW_HEIGHT, MAX_ROW_HEIGHT
 from .global_defs import GlobalDefinitions
 
 from .transition_editor_direct.dialog import ActionEditorDialog
-from .transition_editor_direct.draft import ActionDraft, transition_to_flow_item, flow_item_to_transition
+from .transition_editor_direct.draft import (
+    ActionDraft, transition_to_flow_item, flow_item_to_transition,
+)
 
 from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary
 from statable_gui.libcntrl.condition_library import ConditionLibrary
 from statable_gui.libcntrl.literal_library import LiteralLibrary
+
+
+# ======================================================================
+# Helpers
+# ======================================================================
 def _truncate_text(text: str, max_chars: int = 40) -> str:
     if not text:
         return ""
@@ -34,6 +41,32 @@ def _truncate_text(text: str, max_chars: int = 40) -> str:
     return first_line
 
 
+def _mode_marker(trans: Transition) -> str:
+    """
+    v2.2: Return the mode marker for a transition.
+
+      " [C]" -> Commit    (early_return=True)
+      " [T]" -> Tentative (early_return=False)
+      ""     -> not specified (backward compat)
+    """
+    er = getattr(trans, 'early_return', None)
+    if er is True:
+        return " [C]"
+    if er is False:
+        return " [T]"
+    return ""
+
+
+def _mode_label(trans: Transition) -> str:
+    """v2.2: Human-readable mode label for tooltips."""
+    er = getattr(trans, 'early_return', None)
+    if er is True:
+        return "Commit"
+    if er is False:
+        return "Tentative"
+    return "(unset)"
+
+
 def _build_transition_tooltip(trans: Transition) -> str:
     parts = []
     parts.append(f"Title: {trans.title}")
@@ -44,6 +77,16 @@ def _build_transition_tooltip(trans: Transition) -> str:
         parts.append("Event: Completion transition")
     if trans.condition:
         parts.append(f"State transition condition:\n{trans.condition}")
+    # v2.2: Mode (Commit / Tentative)
+    parts.append(f"Mode: {_mode_label(trans)}")
+    # v2.2: else info
+    if getattr(trans, 'has_else', False):
+        else_t = getattr(trans, 'else_target', '') or '(not set)'
+        parts.append(f"else target: {else_t}")
+    # v2.2: label (T1, T2, ...)
+    lbl = getattr(trans, 'label', '')
+    if lbl:
+        parts.append(f"Label: {lbl}")
     return "\n".join(parts)
 
 
@@ -71,7 +114,6 @@ class MatrixTableWidget(QTableWidget):
         self.condition_library = condition_library if condition_library else ConditionLibrary()
         self.literal_library = literal_library if literal_library else LiteralLibrary()
 
-        # Debug log: shared library content at MatrixTableWidget initialization
         StaTableLogger.debug(
             f"MatrixTableWidget.__init__: roles={len(self.role_function_library.list_all())}, "
             f"conditions={len(self.condition_library.list_all())}, "
@@ -104,7 +146,8 @@ class MatrixTableWidget(QTableWidget):
         for event_name in events:
             event_obj = self.sm.events.get(event_name)
             delivery = event_obj.delivery_type if event_obj else EventDeliveryType.DIRECT
-            event_labels.append(_event_header_label(event_name if event_name else "Completion", delivery))
+            event_labels.append(_event_header_label(
+                event_name if event_name else "Completion", delivery))
         self.setVerticalHeaderLabels(event_labels)
 
         for row, event in enumerate(events):
@@ -140,12 +183,21 @@ class MatrixTableWidget(QTableWidget):
             elif current_height > MAX_ROW_HEIGHT:
                 self.setRowHeight(row, MAX_ROW_HEIGHT)
 
-        StaTableLogger.debug(f"MatrixTable populated: {len(events)} events, {len(states)} states")
+        StaTableLogger.debug(
+            f"MatrixTable populated: {len(events)} events, {len(states)} states")
 
     def _find_transitions(self, state: str, event: str) -> List[Transition]:
         return self.sm.get_transitions_for_cell(state, event)
 
     def _generate_cell_label(self, trans: Transition, event: str) -> str:
+        """
+        Generate the cell label for one transition.
+
+        [v2.2]
+          - Add [C]/[T] mode marker (Commit / Tentative).
+          - Append [N] when there are multiple transitions in the cell
+            (handled at caller side by joining labels with newline).
+        """
         parts = []
         if trans.title and trans.title != "(untitled transition)":
             parts.append(trans.title)
@@ -159,6 +211,17 @@ class MatrixTableWidget(QTableWidget):
         if trans.condition:
             condition_display = _truncate_text(trans.condition, 30)
             parts.append(f"[{condition_display}]")
+
+        # v2.2: mode marker
+        marker = _mode_marker(trans)
+        if marker:
+            parts.append(marker.strip())
+
+        # v2.2: label (T1, T2, ...) if set
+        lbl = getattr(trans, 'label', '')
+        if lbl:
+            parts.append(f"<{lbl}>")
+
         return " ".join(parts)
 
     def _generate_title(self, trans: Transition) -> str:
@@ -170,9 +233,13 @@ class MatrixTableWidget(QTableWidget):
         if trans.condition:
             condition_display = _truncate_text(trans.condition, 30)
             parts.append(f"[{condition_display}]")
+        marker = _mode_marker(trans)
+        if marker:
+            parts.append(marker.strip())
         return " ".join(parts)
+
     def open_transition_dialog(self, row: int, col: int):
-        """\n        Open the transition edit dialog\n\n        [v1.6 change] pass layer_name to ActionDraft (section 11.2 #4)\n          code_widget._get_layer_name() gives this the highest priority,\n          so explicitly propagate the SM's layer name here.\n        """
+        """Open the transition edit dialog."""
         state = self.horizontalHeaderItem(col).text() if self.horizontalHeaderItem(col) else ""
         raw_event = self.verticalHeaderItem(row).text() if self.verticalHeaderItem(row) else ""
         event_name = raw_event
@@ -188,36 +255,26 @@ class MatrixTableWidget(QTableWidget):
 
         existing_list = self._find_transitions(state, event_name)
         StaTableLogger.debug(f"existing transitions count = {len(existing_list)}")
-        for i, t in enumerate(existing_list):
-            StaTableLogger.debug(f"  existing[{i}]: condition='{t.condition}', pre_actions={t.pre_actions}, target={t.target}, title={t.title}")
 
-        # v1.6: get SM's layer_name (if empty, defer to code_widget's fallback)
         layer_name = getattr(self.sm, 'layer_name', '') or ''
 
         draft = ActionDraft(
             source=state,
             event=event_name,
-            layer_name=layer_name,   # v1.6 added
+            layer_name=layer_name,
         )
         for trans in existing_list:
             fi = transition_to_flow_item(trans)
-            StaTableLogger.debug(f"  converted flow_item: {fi}")
             draft.flow_items.append(fi)
 
         # Merge shared library and current SM role functions
-        #    (Allow selecting SM's local functions even when the shared library is empty)
-        #   From Stage 1/4, role functions are handled by qualified_name (e.g., 'Driver.Init')
         role_func_names = []
         _seen = set()
-
-        # 1. From shared library
         for rf in self.role_function_library.list_all():
             qn = getattr(rf, 'qualified_name', None) or rf.name
             if qn and qn not in _seen:
                 _seen.add(qn)
                 role_func_names.append(qn)
-
-        # 2. From the current SM's role functions
         for rf in self.sm.role_functions.values():
             qn = getattr(rf, 'qualified_name', None) or rf.name
             if qn and qn not in _seen:
@@ -226,7 +283,6 @@ class MatrixTableWidget(QTableWidget):
 
         states = list(self.sm.states.keys())
 
-        # Debug log: content passed to ActionEditorDialog
         StaTableLogger.debug(
             f"open_transition_dialog: merged roles={len(role_func_names)} "
             f"(library={len(self.role_function_library.list_all())}, "
@@ -234,10 +290,6 @@ class MatrixTableWidget(QTableWidget):
             f"conditions={len(self.condition_library.list_all())}, "
             f"literals={len(self.literal_library.list_all())}"
         )
-        for qn in role_func_names:
-            StaTableLogger.debug(f"  role to dialog: {qn}")
-        for ct in self.condition_library.list_all():
-            StaTableLogger.debug(f"  condition to dialog: {ct.name}")
 
         dialog = ActionEditorDialog(
             draft,
@@ -258,14 +310,31 @@ class MatrixTableWidget(QTableWidget):
                 if item.item_type == "transition":
                     new_transitions.append(flow_item_to_transition(item, state, event_name))
 
-            StaTableLogger.debug(f"  -> D&D editor accepted, {len(new_transitions)} transitions")
-            self.sm.transitions = [t for t in self.sm.transitions
-                                   if not (t.source == state and t.event == event_name)]
+            StaTableLogger.debug(
+                f"  -> D&D editor accepted, {len(new_transitions)} transitions")
+
+            # Preserve cell-level actions / relations across regeneration
+            old_actions = self.sm.get_actions_for_cell(state, event_name)
+            old_relations = self.sm.get_relations_for_cell(state, event_name)
+
+            self.sm.transitions = [
+                t for t in self.sm.transitions
+                if not (t.source == state and t.event == event_name)
+            ]
             for trans in new_transitions:
                 self.sm.add_transition(trans)
+
+            # Restore cell metadata
+            if old_actions:
+                self.sm.set_actions_for_cell(state, event_name, old_actions)
+            if old_relations:
+                self.sm.set_relations_for_cell(state, event_name, old_relations)
+
             self.populate()
             self.transition_changed.emit()
-            StaTableLogger.info(f"Transition updated: {state} -{event_name or 'Completion'}-> {len(new_transitions)} transition(s)")
+            StaTableLogger.info(
+                f"Transition updated: {state} -{event_name or 'Completion'}-> "
+                f"{len(new_transitions)} transition(s)")
         else:
             StaTableLogger.debug("  -> D&D editor cancelled")
 
@@ -282,8 +351,23 @@ class MatrixTableWidget(QTableWidget):
                 if trans_list:
                     for trans in trans_list:
                         self.sm.remove_transition(trans)
+                    # Also remove cell metadata
+                    state = self.horizontalHeaderItem(
+                        current.column()).text() if self.horizontalHeaderItem(current.column()) else ""
+                    raw_event = self.verticalHeaderItem(
+                        current.row()).text() if self.verticalHeaderItem(current.row()) else ""
+                    event_name = raw_event
+                    if event_name.startswith("[Q] "):
+                        event_name = event_name[4:]
+                    elif event_name.startswith("[D] "):
+                        event_name = event_name[4:]
+                    if event_name == "Completion":
+                        event_name = ""
+                    self.sm.remove_cell_metadata(state, event_name)
+
                     self.populate()
                     self.transition_changed.emit()
-                    StaTableLogger.info(f"Transition deleted: {len(trans_list)} transition(s)")
+                    StaTableLogger.info(
+                        f"Transition deleted: {len(trans_list)} transition(s)")
             return
         super().keyPressEvent(event)
