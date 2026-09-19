@@ -1,0 +1,128 @@
+name: Check
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  # ==============================================================
+  # Job 1: No Japanese / non-ASCII characters
+  # ==============================================================
+  no-japanese:
+    name: No Japanese characters
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run find_all_japanese.py
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          python tools/find_all_japanese.py
+
+  # ==============================================================
+  # Job 2: Python syntax check
+  # ==============================================================
+  syntax:
+    name: Python syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PySide6 and pycparser
+        run: pip install PySide6 pycparser
+
+      - name: compileall
+        run: |
+          python -m compileall -q statable statable_gui codegen
+
+  # ==============================================================
+  # Job 3: Unit tests (539 tests)
+  # ==============================================================
+  tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    needs: [syntax]
+    env:
+      QT_QPA_PLATFORM: offscreen
+      STATABLE_DISABLE_MERMAID: '1'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PySide6 and pycparser
+        run: pip install PySide6 pycparser
+
+      - name: Run v2.2 test suites
+        run: |
+          python tests/test_v2_2_p1.py
+          python tests/test_v2_2_p2.py
+          python tests/test_v2_2_p3.py
+          python tests/test_v2_2_p4a.py
+          python tests/test_v2_2_p4b.py
+          python tests/test_v2_2_p12_2.py
+          python tests/test_v2_2_p12_5.py
+          python tests/test_v2_2_p12_6.py
+          python tests/test_v2_2_p12_7.py
+          python tests/test_v2_2_p12_8.py
+          python tests/test_v2_2_p12_9.py
+          python tests/test_v2_2_p12_10.py
+
+  # ==============================================================
+  # Job 4: Generated C code verification
+  # ==============================================================
+  generated-code:
+    name: Generated C code verification
+    runs-on: ubuntu-latest
+    needs: [syntax]
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PySide6
+        run: pip install PySide6
+
+      - name: Generate C code from test XML
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          from codegen.c_code_generator import CCodeGenerator
+          from codegen.config import CodeGenerationConfig
+          from statable.xml_io import project_from_xml
+
+          tabs, gd, _, _, _, ps = project_from_xml(
+              'tests/data/v22_features_test3.xml')
+          cfg = CodeGenerationConfig(**{
+              k: v for k, v in ps.items()
+              if hasattr(CodeGenerationConfig, k)
+          })
+          gen = CCodeGenerator(config=cfg)
+          files = gen.generate_all_layers(tabs, gd)
+          gen.save_generated_code(files, 'output')
+          print(f'Saved {len(files)} files')
+          "
+
+      - name: Verify generated C code
+        run: |
+          python tools/verify_generated_code.py --root output
