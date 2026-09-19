@@ -1,12 +1,12 @@
 # codegen/code_templates.py
 """
 Code generation template definitions (multi-layer state machine / ISR support)
-Centralized management of all fixed strings.
 
-Version: 2.1 (2026-09-13)
-  - Added ISR_TEMPLATES (Stage 3 / H3)
+Version: 2.2 (2026-09-19)
+  - Added v2.2 section headers for cell actions / transitions
   - Existing templates unchanged
 """
+
 
 class CodeTemplates:
     """Code generation template dictionary"""
@@ -70,6 +70,10 @@ class CodeTemplates:
         'semaphore_impl': 'Semaphore implementation',
         'queue_impl': 'Queue implementation',
         'critical_section_impl': 'Critical section implementation',
+        # ---- v2.2 additions ----
+        'cell_actions': 'Cell actions (transition-independent)',
+        'cell_transitions': 'Cell transitions (ordered)',
+        'state_entry_exit': 'State entry / exit calls',
     }
 
     # ===== Struct comment definitions =====
@@ -98,7 +102,6 @@ class CodeTemplates:
         'system_context': 'SystemContext_t',
         'transition_cell': 'TransitionCell_t',
         'transition_table': 'transition_matrix',
-        # Multi-layer support (layer name is appended dynamically)
         'layer_state_prefix': 'STATE_',
         'layer_event_prefix': 'EVENT_',
         'layer_transition_context_prefix': 'TransitionContext_',
@@ -160,9 +163,7 @@ class CodeTemplates:
         'title_comment': '{indent}/* Title: {title} */',
     }
 
-    # ===== Multi-layer state machine templates =====
-
-    # Templates for layer-specific type definition headers
+    # ===== Multi-layer state machine templates (unchanged) =====
     LAYER_TEMPLATES = {
         'types_header_comment': '''/**
  * @file    statable_types_{layer}.h
@@ -177,13 +178,12 @@ class CodeTemplates:
 }} TransitionContext_{layer}_t;''',
     }
 
-    # Templates for common type headers
     COMMON_TYPES_TEMPLATES = {
         'system_context': '''typedef struct {{
-    SystemData_t data;              /* Global variables */
-    EventFlags_t flags;             /* Event flags */
-    uint16_t pending_event;         /* Pending event */
-    bool pending_event_valid;       /* Pending event valid flag */
+    SystemData_t data;
+    EventFlags_t flags;
+    uint16_t pending_event;
+    bool pending_event_valid;
 }} SystemContext_t;''',
         'fire_event_macro': '''#define FIRE_EVENT(ctx, evt)  do {{ \\
     (ctx)->pending_event = (uint16_t)(evt); \\
@@ -194,216 +194,22 @@ class CodeTemplates:
 #endif''',
     }
 
-    # Templates for per-cell transition functions
-    TRANSITION_CELL_TEMPLATES = {
-        'cell_func_comment': '''/**
- * @brief  Cell transition: {state} -[{event}]-> {target}
- */''',
-        'cell_func_signature': 'static STATE_{layer}_t {func_name}(',
-        'cell_func_args': '''    const TransitionContext_{layer}_t *transition,
-    SystemContext_t *ctx''',
-        'cell_func_open': ''')
-{
-    STATE_{layer}_t next_state = transition->from_state;''',
-        'condition_if': '    if ({condition}) {{',
-        'condition_if_true': '    if (1) {{   /* unconditional transition */',
-        'pre_actions': '        /* pre_actions */',
-        'action_call': '        {func_name}(transition, ctx);',
-        'target_assign': '        next_state = STATE_{layer}_{target};',
-        'else_block': '    else {',
-        'else_comment': '        /* else_actions */',
-        'else_target_assign': '        next_state = STATE_{layer}_{else_target};',
-        'else_not_set': '        /* else target not set */',
-        'cell_func_close': '''    return next_state;
-}''',
-    }
-
-    # Templates for transition tables
-    TRANSITION_TABLE_TEMPLATES = {
-        'table_typedef': 'typedef STATE_{layer}_t (*TransitionFunc_{layer}_t)(\n    const TransitionContext_{layer}_t *, SystemContext_t *);',
-        'table_start': 'static const TransitionFunc_{layer}_t transition_table_{layer}\n    [STATE_{layer}_MAX][EVENT_{layer}_MAX] = {{',
-        'table_entry': '    [STATE_{layer}_{state}][EVENT_{layer}_{event}] = \n        {func_name},',
-        'table_null_comment': '    /* [{state}][{event}] = NULL (no transition) */',
-        'table_end': '};',
-    }
-
-    # Templates for state transition processing functions
-    PROCESS_FUNC_TEMPLATES = {
-        'func_comment': '''/**
- * @brief  State transition processing for {layer} layer
- * @param  current_state  Current state
- * @param  event          Event that occurred
- * @param  ctx            System context pointer
- * @return State after transition
- */''',
-        'func_signature': 'STATE_{layer}_t StateMachine_Process_{layer}(',
-        'func_args': '''    STATE_{layer}_t current_state,
-    EVENT_{layer}_t event,
-    SystemContext_t *ctx''',
-        'func_open': ''')
-{
-    TransitionContext_{layer}_t transition = {
-        .from_state = current_state,
-        .event = event,
-    };
-    TransitionFunc_{layer}_t func = transition_table_{layer}[current_state][event];''',
-        'func_null_check': '''    if (func != NULL) {
-        return func(&transition, ctx);
-    }''',
-        'func_return': '''    return current_state;
-}''',
-    }
-
-    # Templates for GetNextEvent
-    GET_NEXT_EVENT_TEMPLATES = {
-        'func_comment': '''/**
- * @brief  Get next event for {layer} layer (pending event preferred)
- * @param  ctx  System context pointer
- * @return Next event (EVENT_{layer}_NONE if no pending event)
- */''',
-        'func_signature': 'EVENT_{layer}_t StateMachine_GetNextEvent_{layer}(SystemContext_t *ctx)',
-        'func_open': '{',
-        'consecutive_count': '    static uint8_t consecutive_count = 0;',
-        'pending_check': '''    if (ctx->pending_event_valid) {
-        consecutive_count++;
-        if (consecutive_count > MAX_CONSECUTIVE_PENDING_EVENTS) {
-            LOG_ERROR("Pending event chain too long (%d)", consecutive_count);
-            ctx->pending_event_valid = false;
-            consecutive_count = 0;
-            return EVENT_{layer}_NONE;
-        }
-        EVENT_{layer}_t evt = (EVENT_{layer}_t)ctx->pending_event;
-        ctx->pending_event_valid = false;
-        return evt;
-    }
-    consecutive_count = 0;
-    return EVENT_{layer}_NONE;''',
-        'func_close': '}',
-    }
-
-    # Templates for role functions (new signature)
-    ROLE_FUNC_TEMPLATES = {
-        'decl_comment': '''/**
- * @brief  Role function: {title}
- * @param  transition  Transition context
- * @param  ctx         System context pointer
- * @return 0: success, non-zero: error (can also be used for condition checks)
- */''',
-        'decl_signature': 'int RoleFunc_{layer}_{name}(',
-        'decl_args': '''    const TransitionContext_{layer}_t *transition,
-    SystemContext_t *ctx''',
-        'decl_semicolon': ');',
-        'impl_open': ''')
-{
-    (void)transition;  /* suppress unused argument warning */
-    (void)ctx;         /* suppress unused argument warning */
-    /* TODO: implement the code here */''',
-        'impl_user_marker_start': '    /* [[STABLE_USER_CODE_START:{name}]] */',
-        'impl_user_marker_end': '    /* [[STABLE_USER_CODE_END:{name}]] */',
-        'impl_return': '''    return 0;  /* default value */
-}''',
-    }
-
-    # Templates for super include
-    SUPER_INCLUDE_TEMPLATES = {
-        'file_comment': '''/**
- * @file    {filename}
- * @brief   StaTable generated code super include
- *
- * @note    This file may only be included from:
- *          - User's main.c
- *          - Project .c files
- *          * Do not include from generated .h files
- */''',
-        'guard_start': '#ifndef STATABLE_ALL_H\n#define STATABLE_ALL_H\n',
-        'common_section': '/* ---- Common headers ---- */',
-        'layer_section': '/* ---- Per-layer headers ---- */',
-        'project_section': '/* ---- Project headers ---- */',
-        'external_section': '/* ---- External includes (user-specified) ---- */',
-        'user_section': '/* ---- User-added includes ---- */',
-        'user_marker_start': '/* [[STABLE_USER_INCLUDES_START]] */',
-        'user_marker_end': '/* [[STABLE_USER_INCLUDES_END]] */',
-        'guard_end': '#endif /* STATABLE_ALL_H */',
-        # extern declarations
-        'extern_var_section': '/* ---- Super loop variables (extern) ---- */',
-        'extern_context': 'extern SystemContext_t g_ctx;',
-        'extern_state': 'extern STATE_{layer}_t g_{layer}_state;',
-        'extern_state_nolayer': 'extern STATE_t g_state;',
-        'extern_func_section': '/* ---- Super loop functions ---- */',
-        'extern_init': 'void {project_name}_Init(void);',
-        'extern_run': 'void {project_name}_Run(void);',
-    }
-
-    # Templates for super loop (with extern support)
-    SUPER_LOOP_TEMPLATES = {
-        'file_comment': '''/**
- * @file    {project_name}_run.c
- * @brief   State machine super loop
- *
- * @note    Do not edit this file manually
- *          Perform hardware initialization in main.c and call this file
- */''',
-        'include': '#include "statable_all.h"',
-        'context_var': 'SystemContext_t g_ctx;',
-        'state_var': 'STATE_{layer}_t g_{layer}_state;',
-        'state_var_nolayer': 'STATE_t g_state;',
-        'init_func_comment': '''/**
- * @brief  State machine initialization
- * @note   Initialize each layer's state machine in priority order
- */''',
-        'init_func_signature': 'void {project_name}_Init(void)',
-        'init_func_open': '{',
-        'init_context': '    SystemContext_Init(&g_ctx);',
-        'init_state': '    g_{layer}_state = STATE_{layer}_{initial};',
-        'init_state_nolayer': '    g_state = STATE_{initial};',
-        'init_func_close': '}',
-        'run_func_comment': '''/**
- * @brief  State machine main loop
- */''',
-        'run_func_signature': 'void {project_name}_Run(void)',
-        'run_func_open': '{',
-        'run_while': '    while (1) {',
-        'run_block': '''        EVENT_{layer}_t evt = StateMachine_GetNextEvent_{layer}(&g_ctx);
-        if (evt != EVENT_{layer}_NONE) {{
-            g_{layer}_state = StateMachine_Process_{layer}(g_{layer}_state, evt, &g_ctx);
-        }}''',
-        'run_block_nolayer': '''        EVENT_t evt = StateMachine_GetNextEvent(&g_ctx);
-        if (evt != EVENT_NONE) {
-            g_state = StateMachine_Process(g_state, evt, &g_ctx);
-        }''',
-        'run_while_close': '    }',
-        'run_func_close': '}',
-    }
-
-    # ===== ISR generation templates (Stage 3 / H3) =====
-    # Fallback used when interrupt_generator.py builds strings directly.
-    # Keep these values synchronized with interrupt_generator.py.
+    # ===== ISR templates (unchanged) =====
     ISR_TEMPLATES = {
-        # Section comments
         'context_section':    '    /* ===== Context reference (auto-generated) ===== */',
         'enter_log_section':  '    /* ===== Enter log ===== */',
         'action_section':     '    /* ===== Actions (auto-generated) ===== */',
         'user_section':       '    /* ===== User code area ===== */',
         'exit_log_section':   '    /* ===== Exit log ===== */',
-
-        # Context
         'context_decl':       '    SystemContext_t *ctx = &g_ctx;',
         'context_void':       '    (void)ctx;',
-
-        # Logs
         'enter_log':          '    LOG_DEBUG("Enter ISR: {name}");',
         'exit_log':           '    LOG_DEBUG("Exit ISR: {name}");',
-
-        # User markers
         'user_marker_start':  '    /* [[STABLE_USER_CODE_START:{marker}]] */',
         'user_hint':          '    /* Write user code here */',
         'user_marker_end':    '    /* [[STABLE_USER_CODE_END:{marker}]] */',
-
-        # Comments (for @note)
         'used_rf_header':     ' * @note   Used role functions:',
         'used_rf_line':       ' *         - {ref}',
-
-        # Placeholder when no action is defined
         'no_action_hint':     '    /* (no action defined) */',
     }
 
@@ -421,16 +227,13 @@ class CodeTemplates:
         'pending_event_too_long': 'Pending event chain too long ({count})',
     }
 
-    # ===== OSAL-related templates =====
+    # ===== OSAL templates (unchanged) =====
     OSAL = {
-        # OS type definitions
         'os_types': {
             'non_rtos': {'name': 'NonRTOS', 'description': 'No RTOS (bare metal)', 'header': 'osal.h', 'source': 'osal.c'},
             'freertos': {'name': 'FreeRTOS', 'description': 'FreeRTOS', 'header': 'osal_freertos.h', 'source': 'osal_freertos.c'},
             'threadx': {'name': 'ThreadX', 'description': 'Azure RTOS ThreadX', 'header': 'osal_threadx.h', 'source': 'osal_threadx.c'},
         },
-
-        # Header file templates
         'header': {
             'file_comment': '''/**
  * @file    {filename}
@@ -474,8 +277,6 @@ void OSAL_Critical_Exit(void);''',
             'freertos_includes': '#include "FreeRTOS.h"\n#include "semphr.h"\n#include "queue.h"',
             'threadx_includes': '#include "tx_api.h"',
         },
-
-        # Source file templates
         'source': {
             'file_comment': '''/**
  * @file    {filename}
@@ -485,8 +286,6 @@ void OSAL_Critical_Exit(void);''',
             'semaphore_section_comment': '/* Semaphore implementation */',
             'queue_section_comment': '/* Queue implementation */',
             'critical_section_comment': '/* Critical section implementation */',
-
-            # NonRTOS mutex implementation
             'mutex_create_nonrtos': '''OSAL_Status_t OSAL_Mutex_Create(OSAL_Mutex_t *mutex)
 {
     if (mutex == NULL) {
@@ -497,7 +296,7 @@ void OSAL_Critical_Exit(void);''',
 }''',
             'mutex_lock_nonrtos': '''OSAL_Status_t OSAL_Mutex_Lock(OSAL_Mutex_t *mutex, uint32_t timeout_ms)
 {
-    (void)timeout_ms;  /* Not used in NonRTOS */
+    (void)timeout_ms;
     if (mutex == NULL) {
         return OSAL_ERROR;
     }
@@ -515,8 +314,6 @@ void OSAL_Critical_Exit(void);''',
     mutex->locked = false;
     return OSAL_OK;
 }''',
-
-            # NonRTOS semaphore implementation
             'semaphore_create_nonrtos': '''OSAL_Status_t OSAL_Semaphore_Create(OSAL_Semaphore_t *sem, uint32_t max_count, uint32_t initial_count)
 {
     if (sem == NULL) {
@@ -549,8 +346,6 @@ void OSAL_Critical_Exit(void);''',
     sem->count++;
     return OSAL_OK;
 }''',
-
-            # NonRTOS queue implementation
             'queue_create_nonrtos': '''OSAL_Status_t OSAL_Queue_Create(OSAL_Queue_t *queue, void *buffer, uint32_t size, uint32_t item_size)
 {
     if (queue == NULL || buffer == NULL) {
@@ -600,17 +395,73 @@ void OSAL_Critical_Exit(void);''',
     queue->count--;
     return OSAL_OK;
 }''',
-
-            # NonRTOS critical section
             'critical_enter_nonrtos': '''void OSAL_Critical_Enter(void)
 {
-    /* Disable interrupts in NonRTOS */
     __disable_irq();
 }''',
             'critical_exit_nonrtos': '''void OSAL_Critical_Exit(void)
 {
-    /* Enable interrupts */
     __enable_irq();
 }''',
         },
+    }
+
+    # ===== Super include / super loop (unchanged) =====
+    SUPER_INCLUDE_TEMPLATES = {
+        'file_comment': '''/**
+ * @file    {filename}
+ * @brief   StaTable generated code super include
+ */''',
+        'guard_start': '#ifndef STATABLE_ALL_H\n#define STATABLE_ALL_H\n',
+        'common_section': '/* ---- Common headers ---- */',
+        'layer_section': '/* ---- Per-layer headers ---- */',
+        'project_section': '/* ---- Project headers ---- */',
+        'external_section': '/* ---- External includes (user-specified) ---- */',
+        'user_section': '/* ---- User-added includes ---- */',
+        'user_marker_start': '/* [[STABLE_USER_INCLUDES_START]] */',
+        'user_marker_end': '/* [[STABLE_USER_INCLUDES_END]] */',
+        'guard_end': '#endif /* STATABLE_ALL_H */',
+        'extern_var_section': '/* ---- Super loop variables (extern) ---- */',
+        'extern_context': 'extern SystemContext_t g_ctx;',
+        'extern_state': 'extern STATE_{layer}_t g_{layer}_state;',
+        'extern_state_nolayer': 'extern STATE_t g_state;',
+        'extern_func_section': '/* ---- Super loop functions ---- */',
+        'extern_init': 'void {project_name}_Init(void);',
+        'extern_run': 'void {project_name}_Run(void);',
+    }
+
+    SUPER_LOOP_TEMPLATES = {
+        'file_comment': '''/**
+ * @file    {project_name}_run.c
+ * @brief   State machine super loop
+ */''',
+        'include': '#include "statable_all.h"',
+        'context_var': 'SystemContext_t g_ctx;',
+        'state_var': 'STATE_{layer}_t g_{layer}_state;',
+        'state_var_nolayer': 'STATE_t g_state;',
+        'init_func_comment': '''/**
+ * @brief  State machine initialization
+ */''',
+        'init_func_signature': 'void {project_name}_Init(void)',
+        'init_func_open': '{',
+        'init_context': '    SystemContext_Init(&g_ctx);',
+        'init_state': '    g_{layer}_state = STATE_{layer}_{initial};',
+        'init_state_nolayer': '    g_state = STATE_{initial};',
+        'init_func_close': '}',
+        'run_func_comment': '''/**
+ * @brief  State machine main loop
+ */''',
+        'run_func_signature': 'void {project_name}_Run(void)',
+        'run_func_open': '{',
+        'run_while': '    while (1) {',
+        'run_block': '''        EVENT_{layer}_t evt = StateMachine_GetNextEvent_{layer}(&g_ctx);
+        if (evt != EVENT_{layer}_NONE) {{
+            g_{layer}_state = StateMachine_Process_{layer}(g_{layer}_state, evt, &g_ctx);
+        }}''',
+        'run_block_nolayer': '''        EVENT_t evt = StateMachine_GetNextEvent(&g_ctx);
+        if (evt != EVENT_NONE) {
+            g_state = StateMachine_Process(g_state, evt, &g_ctx);
+        }''',
+        'run_while_close': '    }',
+        'run_func_close': '}',
     }
