@@ -1,10 +1,16 @@
 # codegen/validate/change_applier.py
 """
-Change apply engine (fixed version)
+Change apply engine.
 
 [v1.6 change]
-  - Added 'remove_role_function' to _handlers (resolved mismatch with ChangeActionType)
-  - Implemented _remove_role_function method
+  - Added 'remove_role_function' to _handlers
+
+[v2.2 §12-6 change]
+  - Added 7 cell-level AI action handlers:
+      _add_cell / _remove_cell
+      _add_action_step / _remove_action_step
+      _add_transition_relation / _remove_transition_relation
+      _set_early_return
 """
 
 import sys
@@ -18,7 +24,7 @@ from .change_actions import ChangeRequest, ChangeActionType
 
 
 class ChangeApplier:
-    """Apply change requests to system"""
+    """Apply change requests to a StateMachine / GlobalDefinitions."""
 
     def __init__(self, sm, gd):
         logger.debug("ChangeApplier.__init__ started")
@@ -35,18 +41,26 @@ class ChangeApplier:
             'remove_transition': self._remove_transition,
             'update_transition': self._update_transition,
             'add_role_function': self._add_role_function,
-            'remove_role_function': self._remove_role_function,   # v1.6 added
+            'remove_role_function': self._remove_role_function,
             'add_variable': self._add_variable,
             'add_flag': self._add_flag,
+            # v2.2 §12-6 additions
+            'add_cell': self._add_cell,
+            'remove_cell': self._remove_cell,
+            'add_action_step': self._add_action_step,
+            'remove_action_step': self._remove_action_step,
+            'add_transition_relation': self._add_transition_relation,
+            'remove_transition_relation': self._remove_transition_relation,
+            'set_early_return': self._set_early_return,
         }
         logger.debug("ChangeApplier.__init__ completed")
 
     def apply(self, change: ChangeRequest) -> Tuple[bool, str]:
         """Apply change"""
         logger.debug(f"apply: action={change.action}")
-
-        # Get handler by ChangeActionType value
-        action_value = change.action.value if hasattr(change.action, 'value') else str(change.action)
+        action_value = (change.action.value
+                        if hasattr(change.action, 'value')
+                        else str(change.action))
         logger.debug(f"action_value: {action_value}")
 
         handler = self._handlers.get(action_value)
@@ -71,25 +85,27 @@ class ChangeApplier:
     def apply_all(self, changes: List[ChangeRequest]) -> Dict:
         """Apply all changes"""
         logger.debug(f"apply_all: {len(changes)} changes")
-
         results = []
         for change in changes:
             success, message = self.apply(change)
-            results.append({'change': change, 'success': success, 'message': message})
-
+            results.append({'change': change, 'success': success,
+                            'message': message})
         summary = {
             'total': len(changes),
             'applied': len(self.applied_changes),
             'failed': len(self.failed_changes),
             'results': results,
         }
-
-        logger.debug(f"apply_all completed: applied={summary['applied']}, failed={summary['failed']}")
+        logger.debug(
+            f"apply_all completed: applied={summary['applied']}, "
+            f"failed={summary['failed']}")
         return summary
 
+    # ==================================================================
+    # Existing handlers (unchanged)
+    # ==================================================================
     def _set_initial(self, params: Dict) -> Tuple[bool, str]:
         state = params.get('state', '')
-        logger.debug(f"_set_initial: state={state}, available={list(self.sm.states.keys())}")
         if state not in self.sm.states:
             return False, f"State '{state}' does not exist"
         self.sm.set_initial(state)
@@ -97,21 +113,16 @@ class ChangeApplier:
 
     def _add_transition(self, params: Dict) -> Tuple[bool, str]:
         from statable.model import Transition
-
         source = params.get('source', '')
         event = params.get('event', '')
         target = params.get('target', '')
-        logger.debug(f"_add_transition: {source} --[{event}]--> {target}")
-
         if not all([source, event, target]):
             return False, "Transition information is incomplete"
-
         transition = Transition(
             source=source, event=event, target=target,
             condition=params.get('condition', ''),
-            action=params.get('action_name', '')
+            action=params.get('action_name', ''),
         )
-
         try:
             self.sm.add_transition(transition)
             return True, f"Transition '{source} --[{event}]--> {target}' added"
@@ -120,61 +131,49 @@ class ChangeApplier:
 
     def _add_state(self, params: Dict) -> Tuple[bool, str]:
         from statable.model import State, StateType
-
         name = params.get('name', '')
         if not name:
             return False, "State name is not specified"
         if name in self.sm.states:
             return False, f"State '{name}' already exists"
-
-        # v1.6: fall back to NORMAL
         type_name = params.get('type', 'NORMAL')
         state_type = getattr(StateType, type_name, StateType.NORMAL)
         if not hasattr(StateType, type_name):
             logger.warning(
-                f"_add_state: unknown type '{type_name}' -> NORMAL fallback"
-            )
-
-        # v1.6: accept parent parameter (for REGION / CONCURRENT)
+                f"_add_state: unknown type '{type_name}' -> NORMAL fallback")
         parent = params.get('parent', None) or None
-
         self.sm.add_state(State(
-            name=name,
-            type=state_type,
-            parent=parent,
+            name=name, type=state_type, parent=parent,
             description=params.get('description', ''),
         ))
         return True, f"State '{name}' added (type={state_type.name})"
 
     def _add_event(self, params: Dict) -> Tuple[bool, str]:
         from statable.model import Event, EventKind
-
         name = params.get('name', '')
         if not name:
             return False, "Event name is not specified"
         if name in self.sm.events:
             return False, f"Event '{name}' already exists"
-
-        kind = getattr(EventKind, params.get('kind', 'SIGNAL'), EventKind.SIGNAL)
-        self.sm.add_event(Event(name=name, kind=kind, description=params.get('description', '')))
+        kind = getattr(EventKind, params.get('kind', 'SIGNAL'),
+                       EventKind.SIGNAL)
+        self.sm.add_event(Event(name=name, kind=kind,
+                                description=params.get('description', '')))
         return True, f"Event '{name}' added"
 
     def _remove_transition(self, params: Dict) -> Tuple[bool, str]:
         source = params.get('source', '')
         event = params.get('event', '')
         target = params.get('target', '')
-
         for t in self.sm.transitions:
             if t.source == source and t.event == event and t.target == target:
                 self.sm.remove_transition(t)
                 return True, f"Transition '{source} --[{event}]--> {target}' deleted"
-
         return False, "No matching transition found"
 
     def _update_transition(self, params: Dict) -> Tuple[bool, str]:
         source = params.get('source', '')
         event = params.get('event', '')
-
         for t in self.sm.transitions:
             if t.source == source and t.event == event:
                 if 'new_target' in params:
@@ -184,18 +183,15 @@ class ChangeApplier:
                 if 'new_action' in params:
                     t.action = params['new_action']
                 return True, f"Transition '{source} --[{event}]-->' updated"
-
         return False, "No matching transition found"
 
     def _add_role_function(self, params: Dict) -> Tuple[bool, str]:
         from statable.model import RoleFunction
-
         name = params.get('name', '')
         if not name:
             return False, "Function name is not specified"
         if name in self.sm.role_functions:
             return False, f"Function '{name}' already exists"
-
         rf = RoleFunction(
             name=name,
             namespace=params.get('namespace', ''),
@@ -216,12 +212,6 @@ class ChangeApplier:
         name = params.get('name', '')
         if not name:
             return False, "Function name is not specified"
-
-        logger.debug(
-            f"_remove_role_function: name='{name}', "
-            f"available={list(self.sm.role_functions.keys())}"
-        )
-
         # Exact match
         if name in self.sm.role_functions:
             self.sm.remove_role_function(name)
@@ -239,23 +229,178 @@ class ChangeApplier:
             if getattr(rf, 'name', '') == name:
                 self.sm.remove_role_function(key)
                 return True, f"Role function '{name}' deleted"
-
         return False, f"Function '{name}' not found"
 
     def _add_variable(self, params: Dict) -> Tuple[bool, str]:
         from statable.global_defs import SystemVariable
-
         name = params.get('name', '')
-        var = SystemVariable(name=name, type=params.get('type', 'uint8'),
-                            group=params.get('group', ''), description=params.get('description', ''))
+        var = SystemVariable(
+            name=name, type=params.get('type', 'uint8'),
+            group=params.get('group', ''),
+            description=params.get('description', ''))
         self.gd.variables.append(var)
         return True, f"Variable '{name}' added"
 
     def _add_flag(self, params: Dict) -> Tuple[bool, str]:
         from statable.global_defs import EventFlag
-
         name = params.get('name', '')
-        flag = EventFlag(name=name, min_value=params.get('min_value', 0),
-                        max_value=params.get('max_value', 1), group=params.get('group', ''))
+        flag = EventFlag(
+            name=name, min_value=params.get('min_value', 0),
+            max_value=params.get('max_value', 1),
+            group=params.get('group', ''))
         self.gd.flags.append(flag)
         return True, f"Flag '{name}' added"
+
+    # ==================================================================
+    # v2.2 §12-6: Cell-level handlers
+    # ==================================================================
+    def _add_cell(self, params: Dict) -> Tuple[bool, str]:
+        """Ensure a cell exists for (source, event). Idempotent."""
+        source = params.get('source', '')
+        event = params.get('event', '')
+        if source not in self.sm.states:
+            return False, f"Source state '{source}' does not exist"
+        # event may be '' for completion transitions
+        if event and event not in self.sm.events:
+            return False, f"Event '{event}' does not exist"
+        # Ensure cell_actions / cell_relations entries exist (may be empty lists)
+        self.sm.cell_actions.setdefault((source, event), [])
+        self.sm.cell_relations.setdefault((source, event), [])
+        return True, f"Cell ({source}, {event or 'Completion'}) ensured"
+
+    def _remove_cell(self, params: Dict) -> Tuple[bool, str]:
+        """Remove all cell-level metadata (actions + relations)."""
+        source = params.get('source', '')
+        event = params.get('event', '')
+        if source not in self.sm.states:
+            return False, f"Source state '{source}' does not exist"
+        self.sm.remove_cell_metadata(source, event)
+        return True, f"Cell ({source}, {event or 'Completion'}) removed"
+
+    def _add_action_step(self, params: Dict) -> Tuple[bool, str]:
+        from statable.model import ActionStep
+        source = params.get('source', '')
+        event = params.get('event', '')
+        role_function = params.get('role_function', '')
+        trigger = params.get('trigger', 'before_transitions')
+
+        if not role_function:
+            return False, "role_function is required"
+        if source not in self.sm.states:
+            return False, f"Source state '{source}' does not exist"
+        if event and event not in self.sm.events:
+            return False, f"Event '{event}' does not exist"
+        if trigger not in ('before_transitions', 'after_transitions'):
+            return False, f"Invalid trigger: {trigger}"
+
+        existing = list(self.sm.get_actions_for_cell(source, event))
+        existing.append(ActionStep(
+            role_function=role_function, trigger=trigger,
+            title=role_function,
+        ))
+        self.sm.set_actions_for_cell(source, event, existing)
+        return True, (f"Action step '{role_function}' ({trigger}) "
+                      f"added to ({source}, {event or 'Completion'})")
+
+    def _remove_action_step(self, params: Dict) -> Tuple[bool, str]:
+        source = params.get('source', '')
+        event = params.get('event', '')
+        role_function = params.get('role_function', '')
+
+        if not role_function:
+            return False, "role_function is required"
+        if source not in self.sm.states:
+            return False, f"Source state '{source}' does not exist"
+
+        existing = list(self.sm.get_actions_for_cell(source, event))
+        filtered = [a for a in existing if a.role_function != role_function]
+        if len(filtered) == len(existing):
+            return False, f"Action step '{role_function}' not found"
+        self.sm.set_actions_for_cell(source, event, filtered)
+        return True, (f"Action step '{role_function}' removed from "
+                      f"({source}, {event or 'Completion'})")
+
+    def _add_transition_relation(self, params: Dict) -> Tuple[bool, str]:
+        from statable.model import TransitionRelation
+        source = params.get('source', '')
+        event = params.get('event', '')
+        kind = params.get('kind', '')
+        members = params.get('members', [])
+        shared_condition = params.get('shared_condition', '')
+
+        if source not in self.sm.states:
+            return False, f"Source state '{source}' does not exist"
+        if event and event not in self.sm.events:
+            return False, f"Event '{event}' does not exist"
+        if kind not in ('sequential', 'exclusive', 'group'):
+            return False, f"Invalid kind: {kind}"
+        if not members:
+            return False, "members is required"
+        if kind == 'group' and not shared_condition:
+            return False, "shared_condition is required for kind == 'group'"
+
+        # Validate that labels exist in this cell
+        existing_labels = {getattr(t, 'label', '') or ''
+                           for t in self.sm.get_transitions_for_cell(source, event)}
+        for m in members:
+            if m not in existing_labels:
+                return False, f"Label '{m}' does not exist in this cell"
+
+        existing = list(self.sm.get_relations_for_cell(source, event))
+        existing.append(TransitionRelation(
+            kind=kind, members=list(members),
+            shared_condition=shared_condition,
+        ))
+        self.sm.set_relations_for_cell(source, event, existing)
+        return True, (f"Relation ({kind}) added to "
+                      f"({source}, {event or 'Completion'})")
+
+    def _remove_transition_relation(self, params: Dict) -> Tuple[bool, str]:
+        source = params.get('source', '')
+        event = params.get('event', '')
+        kind = params.get('kind', '')
+        shared_condition = params.get('shared_condition', None)
+
+        if source not in self.sm.states:
+            return False, f"Source state '{source}' does not exist"
+
+        existing = list(self.sm.get_relations_for_cell(source, event))
+        filtered = []
+        removed = False
+        for r in existing:
+            if removed:
+                filtered.append(r)
+                continue
+            kind_match = (r.kind == kind)
+            cond_match = (shared_condition is None
+                          or r.shared_condition == shared_condition)
+            if kind_match and cond_match:
+                removed = True
+                continue
+            filtered.append(r)
+
+        if not removed:
+            return False, f"No matching relation found (kind={kind})"
+        self.sm.set_relations_for_cell(source, event, filtered)
+        return True, (f"Relation ({kind}) removed from "
+                      f"({source}, {event or 'Completion'})")
+
+    def _set_early_return(self, params: Dict) -> Tuple[bool, str]:
+        source = params.get('source', '')
+        event = params.get('event', '')
+        label = params.get('label', '')
+        early_return = params.get('early_return', None)
+
+        if source not in self.sm.states:
+            return False, f"Source state '{source}' does not exist"
+        if not label:
+            return False, "label is required"
+        if early_return is None:
+            return False, "early_return is required"
+
+        for t in self.sm.get_transitions_for_cell(source, event):
+            if getattr(t, 'label', '') == label:
+                t.early_return = bool(early_return)
+                return True, (f"Transition '{label}' early_return set to "
+                              f"{t.early_return}")
+        return False, f"Transition label '{label}' not found in ({source}, {event or 'Completion'})"
