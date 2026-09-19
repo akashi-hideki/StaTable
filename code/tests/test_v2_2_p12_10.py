@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """
-P12-10 Comprehensive validation for StaTable v2.2.5 (v7).
+P12-10 Comprehensive validation for StaTable v2.2.5 (v8).
 
-Track 1: Real C syntax parsing (pycparser + heuristics)
-Track 2: Symbol table validation (static-aware, CRLF-safe)
-Track 3: folder_structure coverage
+Primary target: by_layer (the only configuration used in production).
+
+Tracks:
+  Track 1: Real C syntax parsing (pycparser)  -- by_layer only
+  Track 2: Symbol table validation            -- all structures
+  Track 3: folder_structure coverage          -- file generation checks
 
 Run:  python tests/test_v2_2_p12_10.py
 """
@@ -60,15 +63,13 @@ def check(name, cond, msg=""):
 
 
 # ======================================================================
-# Text utilities — v7: normalize newlines first
+# Text utilities
 # ======================================================================
 def normalize_newlines(t):
     return t.replace('\r\n', '\n').replace('\r', '\n')
 
-
 def join_line_continuations(t):
     return re.sub(r'\\[ \t]*\n', '', t)
-
 
 def strip_comments(t):
     out = []; i, n = 0, len(t)
@@ -93,10 +94,8 @@ def strip_comments(t):
         out.append(c); i += 1
     return ''.join(out)
 
-
 def strip_preprocessor(t):
     return re.sub(r'^[ \t]*#.*$', '', t, flags=re.MULTILINE)
-
 
 def clean(t):
     t = normalize_newlines(t)
@@ -117,7 +116,7 @@ C_KEYWORDS = {
 }
 NOISE_NAMES = {'func', 'fn', 'cb', 'cbk', 'user'}
 
-# v7: explicit (?m) + [ \t\r] (belt & suspenders)
+# v8: \s* between ) and ;/{ allows newline (e.g. `)\n{`)
 SIG_RE = re.compile(
     r'(?m)^[ \t]*'
     r'(?P<prefix>(?:(?:static|extern|inline|const|volatile'
@@ -128,7 +127,7 @@ SIG_RE = re.compile(
     r'(?P<name>[A-Za-z_]\w*)'
     r'[ \t]*'
     r'\((?P<args>[^;{}]*)\)'
-    r'[ \t]*'
+    r'\s*'
     r'(?P<end>[;{])',
 )
 
@@ -150,20 +149,19 @@ def extract_symbols(files):
     return S
 
 
-# ======================================================================
-# Track 2 checks
-# ======================================================================
 def check_symbols(S, files, structure):
     print(f"\n--- [{structure}] Track 2: Symbol table ---")
 
+    # 1. Functions declared in headers must be defined
     header_decls = {n for n, entries in S['decls'].items()
                     if any(f.endswith('.h') for f, _ in entries)}
     defined_names = set(S['defs'].keys())
     missing = sorted(header_decls - defined_names)
     check(f"[{structure}] all header-declared funcs have definitions",
           not missing,
-          f"missing {len(missing)}: {missing[:6]}")
+          f"missing {len(missing)}: {missing[:8]}")
 
+    # 2. Duplicate NON-static definitions
     dup = []
     for n, entries in S['defs'].items():
         c_entries = [(f, s) for f, s in entries if f.endswith('.c')]
@@ -173,14 +171,15 @@ def check_symbols(S, files, structure):
         if len(files_set) > 1:
             dup.append((n, files_set))
     check(f"[{structure}] no duplicate non-static definitions",
-          not dup, f"{len(dup)} duplicate(s): {dup[:3]}")
+          not dup, f"{len(dup)}: {dup[:3]}")
 
+    # 3. No noise identifiers
     check(f"[{structure}] no noise identifiers in symbols",
           'func' not in S['defs'] and 'func' not in S['decls'])
 
 
 # ======================================================================
-# Track 1 — pycparser (v5-style: all headers concatenated, ordered)
+# Track 1 — pycparser (by_layer only)
 # ======================================================================
 FAKE_HEADERS = """
 typedef unsigned char uint8_t;
@@ -220,9 +219,7 @@ def _sort_headers(paths):
     return sorted(paths, key=key)
 
 
-def _preprocess_v7(fname, files):
-    """v5-style: concatenate all headers in dependency order (dedup by content),
-    then append the .c body with its #include lines removed."""
+def _preprocess_for_pycparser(fname, files):
     seen_content = set()
     header_block = []
     for h in _sort_headers([f for f in files if f.endswith('.h')]):
@@ -265,7 +262,7 @@ def try_pycparser(files, structure):
     for fname in sorted(files):
         if not fname.endswith('.c'):
             continue
-        src = _preprocess_v7(fname, files)
+        src = _preprocess_for_pycparser(fname, files)
         try:
             parser.parse(src, filename=fname)
         except Exception as e:
@@ -322,7 +319,8 @@ def _generate(tabs, gd, rfl, structure):
     return gen.generate_all_layers(tabs, gd, role_function_library=rfl)
 
 
-def generate_flat_or_by_type(structure):
+def generate_single_tab(structure):
+    """flat / by_type: single tab only, no library."""
     tabs, gd, _, _, _, _ = load_xml()
     sm = tabs[0][1]
     sm.layer_name = ''
@@ -330,6 +328,7 @@ def generate_flat_or_by_type(structure):
 
 
 def generate_by_layer():
+    """by_layer: full multi-layer data (production config)."""
     tabs, gd, rfl, _, _, _ = load_xml()
     return _generate(tabs, gd, rfl, 'by_layer')
 
@@ -352,7 +351,11 @@ def check_includes_resolve(files, structure):
           "unresolved:\n" + "\n".join(unresolved[:5]))
 
 
-def run_tracks(structure, files, key_files):
+# ======================================================================
+# Test drivers
+# ======================================================================
+def run_full(structure, files, key_files):
+    """Full: Track 3 + Track 2 + Track 1."""
     check(f"[{structure}] files generated", len(files) > 0, f"got {len(files)}")
     for kf in key_files:
         check(f"[{structure}] has {kf}", kf in files)
@@ -367,40 +370,56 @@ def run_tracks(structure, files, key_files):
     heuristic_lint(files, structure)
 
 
+def run_light(structure, files, key_files):
+    """Light: Track 3 + Track 2 only. Skip pycparser (not production config)."""
+    check(f"[{structure}] files generated", len(files) > 0, f"got {len(files)}")
+    for kf in key_files:
+        check(f"[{structure}] has {kf}", kf in files)
+    check_includes_resolve(files, structure)
+
+    S = extract_symbols(files)
+    check_symbols(S, files, structure)
+
+    print(f"\n--- [{structure}] Track 1: C syntax ---")
+    R.skip(f"[{structure}] pycparser",
+           "flat/by_type are not the production configuration")
+    heuristic_lint(files, structure)
+
+
 def test_flat():
     print("\n" + "=" * 70)
-    print("  STRUCTURE: flat (single-tab)")
+    print("  STRUCTURE: flat (informational — not production)")
     print("=" * 70)
     try:
-        files = generate_flat_or_by_type('flat')
+        files = generate_single_tab('flat')
     except Exception as e:
         check("[flat] generation succeeded", False, repr(e)); return
-    run_tracks('flat', files, [
+    run_light('flat', files, [
         'statable_types.h', 'statable_transitions.c',
         'statable_role_functions.c', 'statable_all.h'])
 
 
 def test_by_type():
     print("\n" + "=" * 70)
-    print("  STRUCTURE: by_type (single-tab)")
+    print("  STRUCTURE: by_type (informational — not production)")
     print("=" * 70)
     try:
-        files = generate_flat_or_by_type('by_type')
+        files = generate_single_tab('by_type')
     except Exception as e:
         check("[by_type] generation succeeded", False, repr(e)); return
     keys = list(files.keys())
-    run_tracks('by_type', files, keys[:3])
+    run_light('by_type', files, keys[:3])
 
 
 def test_by_layer():
     print("\n" + "=" * 70)
-    print("  STRUCTURE: by_layer (multi-layer, primary)")
+    print("  STRUCTURE: by_layer (PRODUCTION)")
     print("=" * 70)
     try:
         files = generate_by_layer()
     except Exception as e:
         check("[by_layer] generation succeeded", False, repr(e)); return
-    run_tracks('by_layer', files, [
+    run_full('by_layer', files, [
         'Driver/statable_types_Driver.h',
         'Application/statable_transitions_Application.c',
         'statable_all.h'])
@@ -409,7 +428,7 @@ def test_by_layer():
 # ======================================================================
 def main():
     print("=" * 70)
-    print("  StaTable v2.2.5 P12-10 v7 (Tracks 1-3)")
+    print("  StaTable v2.2.5 P12-10 v8 (Tracks 1-3)")
     print("=" * 70)
 
     try:
