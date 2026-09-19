@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-19 19:23:41
+ * @date    2026-09-19 19:54:26
  */
 
 #ifndef STATABLE_TYPES_H_MIDDLEWARE
