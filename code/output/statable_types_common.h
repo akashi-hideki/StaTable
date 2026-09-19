@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 17:26:55
  */
 
 #ifndef STATABLE_TYPES_COMMON_H
@@ -32,21 +32,25 @@
 /* Manages variables shared across the system */
 typedef struct {
     /* === System === */
-    /* 汎用カウンタ */
+    /* General counter */
     uint32_t counter;
-    /* エラーコード */
+    /* Error code */
     uint8_t error_code;
-    /* リトライ回数 */
+    /* Error severity */
+    uint8_t error_severity;
+    /* Retry counter */
     uint8_t retry_count;
-    /* RX 準備完了 */
-    bool rx_ready;
-    /* RX 受信データ */
-    uint8_t rx_data;
+    /* Running flag */
+    bool running;
+    /* Operation mode */
+    uint8_t mode;
+    /* Confirm flag */
+    bool confirm;
 
     /* === Timer === */
-    /* タイマ基準 [1ms] */
+    /* Timer base [1ms] */
     volatile uint32_t g_system_tick;
-    /* 派生タイマ [10ms] */
+    /* Derived timer [10ms] */
     uint8_t g_tick_10ms;
 } SystemData_t;
 
@@ -54,9 +58,9 @@ typedef struct {
 /* Manages flags indicating event occurrences */
 typedef struct {
     /* === System === */
-    /* 初期化完了 */
+    /* Init done */
     uint8_t EVT_INIT_DONE;
-    /* エラー発生 */
+    /* Error occurred */
     uint8_t EVT_ERROR;
 } EventFlags_t;
 
@@ -101,9 +105,11 @@ typedef struct {
 
 #define DATA_COUNTER(ctx)    ((ctx)->data.counter)
 #define DATA_ERROR_CODE(ctx)    ((ctx)->data.error_code)
+#define DATA_ERROR_SEVERITY(ctx)    ((ctx)->data.error_severity)
 #define DATA_RETRY_COUNT(ctx)    ((ctx)->data.retry_count)
-#define DATA_RX_READY(ctx)    ((ctx)->data.rx_ready)
-#define DATA_RX_DATA(ctx)    ((ctx)->data.rx_data)
+#define DATA_RUNNING(ctx)    ((ctx)->data.running)
+#define DATA_MODE(ctx)    ((ctx)->data.mode)
+#define DATA_CONFIRM(ctx)    ((ctx)->data.confirm)
 #define DATA_G_SYSTEM_TICK(ctx)    ((ctx)->data.g_system_tick)
 #define DATA_G_TICK_10MS(ctx)    ((ctx)->data.g_tick_10ms)
 #define FLAG_EVT_INIT_DONE(ctx)   ((ctx)->flags.EVT_INIT_DONE)

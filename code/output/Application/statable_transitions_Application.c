@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 17:26:55
  */
 
 /*==============================================================*/
@@ -21,22 +21,22 @@
 /*==============================================================*/
 
 /* ===== Cell transition function forward declarations ===== */
-static STATE_Application_t t_Boot_BOOT(
+static STATE_Application_t t_Idle_START(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx);
-static STATE_Application_t t_Init_START(
+static STATE_Application_t t_Active_PAUSE(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx);
-static STATE_Application_t t_Running_PAUSE(
+static STATE_Application_t t_Active_STOP(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx);
-static STATE_Application_t t_Running_STOP(
+static STATE_Application_t t_Active_ERROR(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx);
-static STATE_Application_t t_Paused_RESUME(
+static STATE_Application_t t_Waiting_RESUME(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx);
-static STATE_Application_t t_Paused_STOP(
+static STATE_Application_t t_Error_RESET(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx);
 
@@ -51,136 +51,215 @@ typedef STATE_Application_t (*TransitionFunc_Application_t)(
 /* ============================================================== */
 const TransitionFunc_Application_t transition_table_Application
     [STATE_Application_MAX][EVENT_Application_MAX] = {
-    /*           | BOOT           | START          | PAUSE           | RESUME          | STOP           */
-    /* ---------+--------------+--------------+---------------+---------------+--------------*/
-    /* Boot     */ { t_Boot_BOOT   , NULL          , NULL           , NULL           , NULL           },
-    /* Init     */ { NULL          , t_Init_START  , NULL           , NULL           , NULL           },
-    /* Running  */ { NULL          , NULL          , t_Running_PAUSE, NULL           , t_Running_STOP },
-    /* Paused   */ { NULL          , NULL          , NULL           , t_Paused_RESUME, t_Paused_STOP  },
-    /* Stopped  */ { NULL          , NULL          , NULL           , NULL           , NULL           },
+    /*           | START          | PAUSE          | RESUME           | STOP           | ERROR          | RESET          */
+    /* ---------+--------------+--------------+----------------+--------------+--------------+--------------*/
+    /* Idle     */ { t_Idle_START  , NULL          , NULL            , NULL          , NULL          , NULL           },
+    /* Active   */ { NULL          , t_Active_PAUSE, NULL            , t_Active_STOP , t_Active_ERROR, NULL           },
+    /* Waiting  */ { NULL          , NULL          , t_Waiting_RESUME, NULL          , NULL          , NULL           },
+    /* Error    */ { NULL          , NULL          , NULL            , NULL          , NULL          , t_Error_RESET  },
+    /* Done     */ { NULL          , NULL          , NULL            , NULL          , NULL          , NULL           },
 };
 
 
 /**
- * @brief  Cell transition: STATE_Application_Boot -[EVENT_Application_BOOT]-> Init
+ * @brief  Cell transition: STATE_Application_Idle -[EVENT_Application_START]-> (multi)
+ * @note   Transition count: 1
  */
-static STATE_Application_t t_Boot_BOOT(
+static STATE_Application_t t_Idle_START(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 )
 {
     STATE_Application_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] (unconditional) */
-    if (1) {
-        RoleFunc_Application_Boot(transition, ctx);
-        next_state = STATE_Application_Init;
-        return next_state;
+    /* ===== Cell actions (before_transitions) ===== */
+    RoleFunc_App_PreCheck(transition, ctx);
+
+    /* ===== Transition[T1] (Commit) ===== */
+    if (!_handled && counter > 0) {
+        RoleFunc_App_IdleExit(transition, ctx);  /* state exit */
+        RoleFunc_App_InitSession(transition, ctx);
+        next_state = STATE_Application_Active;
+        RoleFunc_App_ActiveEntry1(transition, ctx);  /* state entry */
+        RoleFunc_App_ActiveEntry2(transition, ctx);  /* state entry */
+        _handled = true;
+    } else if (!_handled && !(counter > 0)) {
+        RoleFunc_App_IdleExit(transition, ctx);  /* state exit */
+        RoleFunc_App_LogError(transition, ctx);
+        next_state = STATE_Application_Error;
+        RoleFunc_App_ErrorEntry(transition, ctx);  /* state entry */
+        _handled = true;
+    }
+
+    /* ===== Cell actions (after_transitions) ===== */
+    RoleFunc_App_Cleanup(transition, ctx);
+
+    return next_state;
+}
+
+/**
+ * @brief  Cell transition: STATE_Application_Active -[EVENT_Application_PAUSE]-> (multi)
+ * @note   Transition count: 2
+ */
+static STATE_Application_t t_Active_PAUSE(
+    const TransitionContext_Application_t *transition,
+    SystemContext_t *ctx
+)
+{
+    STATE_Application_t next_state = transition->from_state;
+    bool _handled = false;
+
+    /* ===== Transition[T1] (Commit) ===== */
+    if (!_handled && counter > 10) {
+        RoleFunc_App_HandlePause(transition, ctx);
+        next_state = STATE_Application_Waiting;
+        RoleFunc_App_WaitEntry(transition, ctx);  /* state entry */
+        _handled = true;
+    }
+
+    /* ===== Transition[T2] (Tentative) ===== */
+    if (counter <= 10) {
+        next_state = STATE_Application_Active;
+        RoleFunc_App_ActiveEntry1(transition, ctx);  /* state entry */
+        RoleFunc_App_ActiveEntry2(transition, ctx);  /* state entry */
     }
 
     return next_state;
 }
 
 /**
- * @brief  Cell transition: STATE_Application_Init -[EVENT_Application_START]-> Running
+ * @brief  Cell transition: STATE_Application_Active -[EVENT_Application_STOP]-> (multi)
+ * @note   Transition count: 3
  */
-static STATE_Application_t t_Init_START(
+static STATE_Application_t t_Active_STOP(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 )
 {
     STATE_Application_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] (unconditional) */
-    if (1) {
-        RoleFunc_Application_Start(transition, ctx);
-        next_state = STATE_Application_Running;
-        return next_state;
+    /* ===== Group (shared_condition) ===== */
+    if (running == true) {
+
+        /* ===== Transition[T1] (Commit) ===== */
+        if (!_handled && mode == 0) {
+            RoleFunc_App_HandleStop(transition, ctx);
+            next_state = STATE_Application_Done;
+            _handled = true;
+        }
+
+        /* ===== Group (shared_condition) ===== */
+        if (mode == 1) {
+
+            /* ===== Transition[T2] (Commit) ===== */
+            if (!_handled && confirm == true) {
+                next_state = STATE_Application_Done;
+                _handled = true;
+            }
+
+            /* ===== Transition[T3] (Tentative) ===== */
+            if (confirm == false) {
+                next_state = STATE_Application_Waiting;
+                RoleFunc_App_WaitEntry(transition, ctx);  /* state entry */
+            }
+        }
     }
 
     return next_state;
 }
 
 /**
- * @brief  Cell transition: STATE_Application_Running -[EVENT_Application_PAUSE]-> Paused
+ * @brief  Cell transition: STATE_Application_Active -[EVENT_Application_ERROR]-> (multi)
+ * @note   Transition count: 2
  */
-static STATE_Application_t t_Running_PAUSE(
+static STATE_Application_t t_Active_ERROR(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 )
 {
     STATE_Application_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] */
-    if (counter > 0) {
-        next_state = STATE_Application_Paused;
-        return next_state;
-    }
+    /* ===== Group (shared_condition) ===== */
+    if (error_severity > 0) {
 
-    /* Transition[1] */
-    if (counter == 0) {
-        next_state = STATE_Application_Running;
-        return next_state;
+        /* ===== Transition[T1] (Commit) ===== */
+        if (!_handled && error_code == 1) {
+            next_state = STATE_Application_Error;
+            RoleFunc_App_ErrorEntry(transition, ctx);  /* state entry */
+            _handled = true;
+        }
+
+        /* ===== Transition[T2] (Commit) ===== */
+        if (!_handled && error_code == 2) {
+            next_state = STATE_Application_Error;
+            RoleFunc_App_ErrorEntry(transition, ctx);  /* state entry */
+            _handled = true;
+        }
     }
 
     return next_state;
 }
 
 /**
- * @brief  Cell transition: STATE_Application_Running -[EVENT_Application_STOP]-> Stopped
+ * @brief  Cell transition: STATE_Application_Waiting -[EVENT_Application_RESUME]-> (multi)
+ * @note   Transition count: 1
  */
-static STATE_Application_t t_Running_STOP(
+static STATE_Application_t t_Waiting_RESUME(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 )
 {
     STATE_Application_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] */
-    if (g_system_tick > 100) {
-        RoleFunc_Application_Pause(transition, ctx);
-        next_state = STATE_Application_Stopped;
-        return next_state;
+    /* ===== Transition[T1] (Commit) ===== */
+    if (!_handled && 1) {
+        RoleFunc_App_WaitExit(transition, ctx);  /* state exit */
+        RoleFunc_App_ResumeWork(transition, ctx);
+        next_state = STATE_Application_Active;
+        RoleFunc_App_ActiveEntry1(transition, ctx);  /* state entry */
+        RoleFunc_App_ActiveEntry2(transition, ctx);  /* state entry */
+        _handled = true;
     }
 
     return next_state;
 }
 
 /**
- * @brief  Cell transition: STATE_Application_Paused -[EVENT_Application_RESUME]-> Running
+ * @brief  Cell transition: STATE_Application_Error -[EVENT_Application_RESET]-> (multi)
+ * @note   Transition count: 2
  */
-static STATE_Application_t t_Paused_RESUME(
+static STATE_Application_t t_Error_RESET(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 )
 {
     STATE_Application_t next_state = transition->from_state;
+    bool _handled = false;
 
-    /* Transition[0] (unconditional) */
-    if (1) {
-        RoleFunc_Application_Resume(transition, ctx);
-        next_state = STATE_Application_Running;
-        return next_state;
+    /* ===== Cell actions (before_transitions) ===== */
+    RoleFunc_App_LogReset(transition, ctx);
+
+    /* ===== Transition[T1] (Commit) ===== */
+    if (!_handled && retry_count < 3) {
+        RoleFunc_App_ErrorExit(transition, ctx);  /* state exit */
+        next_state = STATE_Application_Idle;
+        RoleFunc_App_IdleEntry(transition, ctx);  /* state entry */
+        _handled = true;
     }
 
-    return next_state;
-}
-
-/**
- * @brief  Cell transition: STATE_Application_Paused -[EVENT_Application_STOP]-> Stopped
- */
-static STATE_Application_t t_Paused_STOP(
-    const TransitionContext_Application_t *transition,
-    SystemContext_t *ctx
-)
-{
-    STATE_Application_t next_state = transition->from_state;
-
-    /* Transition[0] (unconditional) */
-    if (1) {
-        next_state = STATE_Application_Stopped;
-        return next_state;
+    /* ===== Transition[T2] (Commit) ===== */
+    if (!_handled && retry_count >= 3) {
+        RoleFunc_App_ErrorExit(transition, ctx);  /* state exit */
+        next_state = STATE_Application_Done;
+        _handled = true;
     }
+
+    /* ===== Cell actions (after_transitions) ===== */
+    RoleFunc_App_Cleanup(transition, ctx);
 
     return next_state;
 }

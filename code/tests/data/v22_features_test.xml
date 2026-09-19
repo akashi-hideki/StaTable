@@ -1,0 +1,300 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Project name="V22FeaturesTest">
+    <ProjectSettings>
+        <CodeGeneration project_name="V22FeaturesTest"
+                        table_type="array"
+                        generation_style="table_driven"
+                        os_type="non_rtos"
+                        folder_structure="by_layer"
+                        include_dir_name="include"
+                        source_dir_name="src"
+                        common_dir_name="common"
+                        project_dir_name="project"
+                        generate_super_include="true"
+                        super_include_file="statable_all.h"
+                        max_consecutive_pending_events="16"
+                        external_includes_in_super="true"
+                        external_includes_in_role="true"
+                        external_includes_in_transitions="false"
+                        external_includes_in_common="false" />
+    </ProjectSettings>
+    <GlobalDefinitions>
+        <SystemVariables>
+            <Variable name="counter" type="uint32_t" unit="" default_value="0" group="System" description="General counter" title="Counter" array_size="0" />
+            <Variable name="error_code" type="uint8_t" unit="" default_value="0" group="System" description="Error code" title="Error code" array_size="0" />
+            <Variable name="error_severity" type="uint8_t" unit="" default_value="0" group="System" description="Error severity" title="Error severity" array_size="0" />
+            <Variable name="retry_count" type="uint8_t" unit="" default_value="0" group="System" description="Retry counter" title="Retry counter" array_size="0" />
+            <Variable name="running" type="bool" unit="" default_value="false" group="System" description="Running flag" title="Running" array_size="0" />
+            <Variable name="mode" type="uint8_t" unit="" default_value="0" group="System" description="Operation mode" title="Mode" array_size="0" />
+            <Variable name="confirm" type="bool" unit="" default_value="false" group="System" description="Confirm flag" title="Confirm" array_size="0" />
+            <Variable name="g_system_tick" type="volatile uint32_t" unit="1ms" default_value="0" group="Timer" description="Timer base" title="System tick" array_size="0" />
+            <Variable name="g_tick_10ms" type="uint8_t" unit="10ms" default_value="0" group="Timer" description="Derived timer" title="10ms tick" array_size="0" />
+        </SystemVariables>
+        <EventFlags>
+            <Flag name="EVT_INIT_DONE" min_value="0" max_value="1" group="System" description="Init done" title="Init done" />
+            <Flag name="EVT_ERROR" min_value="0" max_value="1" group="System" description="Error occurred" title="Error flag" />
+        </EventFlags>
+        <Interrupts>
+            <Interrupt name="TIMER0" description="1ms timer" event_names="" is_timer="true" title="Timer0">
+                <Action condition="" action="ctx-&gt;data.g_system_tick++" />
+                <UsedVariable name="g_system_tick" />
+            </Interrupt>
+            <Interrupt name="UART_RX" description="UART RX" event_names="START" is_timer="false" title="UART RX">
+                <Action condition="" action="ctx-&gt;data.rx_ready = true" />
+                <Action condition="ctx-&gt;data.rx_ready" action="Application.HandleRx" />
+                <UsedRoleFunction ref="Application.HandleRx" />
+                <UsedVariable name="rx_ready" />
+            </Interrupt>
+        </Interrupts>
+        <TimerBase>
+            <Timer variable_name="g_system_tick" unit="1ms" data_type="volatile uint32_t" title="System tick" interrupt_name="TIMER0">
+                <Derived period_name="10ms" multiplier="10" variable_name="g_tick_10ms" data_type="uint8_t" title="10ms tick" />
+            </Timer>
+        </TimerBase>
+    </GlobalDefinitions>
+    <SharedLibraries>
+        <RoleFunctionLibrary />
+        <ConditionLibrary />
+        <LiteralLibrary />
+    </SharedLibraries>
+    <Tab name="Application">
+        <StateMachine initial="Idle" layer_priority="5" layer_description="Application layer" layer_name="Application">
+            <States>
+                <!-- v2.2: entry / exit as List[str] (multiple supported) -->
+                <State name="Idle" type="initial" parent="" do="" description="Idle state">
+                    <Entry>
+                        <Action name="App.IdleEntry" />
+                    </Entry>
+                    <Exit>
+                        <Action name="App.IdleExit" />
+                    </Exit>
+                </State>
+                <State name="Active" type="normal" parent="" do="" description="Active state">
+                    <Entry>
+                        <Action name="App.ActiveEntry1" />
+                        <Action name="App.ActiveEntry2" />
+                    </Entry>
+                </State>
+                <State name="Waiting" type="normal" parent="" do="" description="Waiting state">
+                    <Entry>
+                        <Action name="App.WaitEntry" />
+                    </Entry>
+                    <Exit>
+                        <Action name="App.WaitExit" />
+                    </Exit>
+                </State>
+                <State name="Error" type="normal" parent="" do="" description="Error state">
+                    <Entry>
+                        <Action name="App.ErrorEntry" />
+                    </Entry>
+                    <Exit>
+                        <Action name="App.ErrorExit" />
+                    </Exit>
+                </State>
+                <State name="Done" type="final" parent="" do="" description="Done state" />
+            </States>
+            <Events>
+                <Event name="START" id="1" kind="signal" params="" priority="0" description="Start" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Start" />
+                <Event name="PAUSE" id="2" kind="signal" params="" priority="0" description="Pause" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Pause" />
+                <Event name="RESUME" id="3" kind="signal" params="" priority="0" description="Resume" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Resume" />
+                <Event name="STOP" id="4" kind="signal" params="" priority="1" description="Stop" delivery_type="queue" source_layer="middleware" data_type="" data_name="" title="Stop" />
+                <Event name="ERROR" id="5" kind="signal" params="" priority="2" description="Error" delivery_type="queue" source_layer="driver" data_type="uint8_t" data_name="err_code" title="Error" />
+                <Event name="RESET" id="6" kind="signal" params="" priority="0" description="Reset" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Reset" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="IdleEntry" namespace="App" description="Idle entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Idle entry" />
+                <RoleFunction name="IdleExit" namespace="App" description="Idle exit" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Idle exit" />
+                <RoleFunction name="ActiveEntry1" namespace="App" description="Active entry 1" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Active entry 1" />
+                <RoleFunction name="ActiveEntry2" namespace="App" description="Active entry 2" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Active entry 2" />
+                <RoleFunction name="WaitEntry" namespace="App" description="Waiting entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Waiting entry" />
+                <RoleFunction name="WaitExit" namespace="App" description="Waiting exit" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Waiting exit" />
+                <RoleFunction name="ErrorEntry" namespace="App" description="Error entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Error entry" />
+                <RoleFunction name="ErrorExit" namespace="App" description="Error exit" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Error exit" />
+                <RoleFunction name="PreCheck" namespace="App" description="Pre-check action" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Pre-check" />
+                <RoleFunction name="Cleanup" namespace="App" description="Cleanup action" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Cleanup" />
+                <RoleFunction name="InitSession" namespace="App" description="Init session" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Init session" />
+                <RoleFunction name="LogError" namespace="App" description="Log error" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Log error" />
+                <RoleFunction name="LogReset" namespace="App" description="Log reset" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Log reset" />
+                <RoleFunction name="HandlePause" namespace="App" description="Handle pause" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Handle pause" />
+                <RoleFunction name="HandleStop" namespace="App" description="Handle stop" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Handle stop" />
+                <RoleFunction name="ResumeWork" namespace="App" description="Resume work" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Resume work" />
+                <RoleFunction name="HandleRx" namespace="App" description="Handle RX (ISR)" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Handle RX" />
+            </RoleFunctions>
+            <Transitions>
+                <!-- ================================================================
+                     Cell: Idle + START  (Commit with else, Cell Actions)
+                     ================================================================ -->
+                <Transition source="Idle" event="START"
+                            condition="counter &gt; 0"
+                            action="" target="Active"
+                            transition_type="external"
+                            title="Start (counter &gt; 0)"
+                            has_else="true" else_target="Error"
+                            early_return="true" label="T1">
+                    <PreAction action="App.InitSession" />
+                    <ElseAction action="App.LogError" />
+                </Transition>
+
+                <!-- ================================================================
+                     Cell: Active + PAUSE  (2 transitions, sequential relation)
+                     ================================================================ -->
+                <Transition source="Active" event="PAUSE"
+                            condition="counter &gt; 10"
+                            action="" target="Waiting"
+                            transition_type="external"
+                            title="Pause (counter &gt; 10)"
+                            has_else="false" else_target=""
+                            early_return="true" label="T1">
+                    <PreAction action="App.HandlePause" />
+                </Transition>
+                <Transition source="Active" event="PAUSE"
+                            condition="counter &lt;= 10"
+                            action="" target="Active"
+                            transition_type="external"
+                            title="Pause ignored"
+                            has_else="false" else_target=""
+                            early_return="false" label="T2" />
+
+                <!-- ================================================================
+                     Cell: Active + ERROR  (group with shared_condition)
+                     ================================================================ -->
+                <Transition source="Active" event="ERROR"
+                            condition="error_code == 1"
+                            action="" target="Error"
+                            transition_type="external"
+                            title="Error code 1"
+                            has_else="false" else_target=""
+                            early_return="true" label="T1" />
+                <Transition source="Active" event="ERROR"
+                            condition="error_code == 2"
+                            action="" target="Error"
+                            transition_type="external"
+                            title="Error code 2"
+                            has_else="false" else_target=""
+                            early_return="true" label="T2" />
+
+                <!-- ================================================================
+                     Cell: Active + STOP  (nested group: parent + child)
+                     ================================================================ -->
+                <Transition source="Active" event="STOP"
+                            condition="mode == 0"
+                            action="" target="Done"
+                            transition_type="external"
+                            title="Stop (AUTO mode)"
+                            has_else="false" else_target=""
+                            early_return="true" label="T1">
+                    <PreAction action="App.HandleStop" />
+                </Transition>
+                <Transition source="Active" event="STOP"
+                            condition="confirm == true"
+                            action="" target="Done"
+                            transition_type="external"
+                            title="Stop (MANUAL + confirm)"
+                            has_else="false" else_target=""
+                            early_return="true" label="T2" />
+                <Transition source="Active" event="STOP"
+                            condition="confirm == false"
+                            action="" target="Waiting"
+                            transition_type="external"
+                            title="Stop ignored (no confirm)"
+                            has_else="false" else_target=""
+                            early_return="false" label="T3" />
+
+                <!-- ================================================================
+                     Cell: Waiting + RESUME  (simple Commit)
+                     ================================================================ -->
+                <Transition source="Waiting" event="RESUME"
+                            condition=""
+                            action="" target="Active"
+                            transition_type="external"
+                            title="Resume"
+                            has_else="false" else_target=""
+                            early_return="true" label="T1">
+                    <PreAction action="App.ResumeWork" />
+                </Transition>
+
+                <!-- ================================================================
+                     Cell: Error + RESET  (exclusive relation + Cell Actions)
+                     ================================================================ -->
+                <Transition source="Error" event="RESET"
+                            condition="retry_count &lt; 3"
+                            action="" target="Idle"
+                            transition_type="external"
+                            title="Reset (retry)"
+                            has_else="false" else_target=""
+                            early_return="true" label="T1" />
+                <Transition source="Error" event="RESET"
+                            condition="retry_count &gt;= 3"
+                            action="" target="Done"
+                            transition_type="external"
+                            title="Give up"
+                            has_else="false" else_target=""
+                            early_return="true" label="T2" />
+            </Transitions>
+
+            <!-- ================================================================
+                 v2.2 Cell-level metadata (actions / relations)
+                 ================================================================ -->
+            <Cells>
+                <!-- Cell actions: Pre/Post for Idle + START -->
+                <Cell source="Idle" event="START">
+                    <Actions>
+                        <Action role_function="App.PreCheck" trigger="before_transitions" title="Pre-check before transitions" />
+                        <Action role_function="App.Cleanup" trigger="after_transitions" title="Cleanup after transitions" />
+                    </Actions>
+                </Cell>
+
+                <!-- Sequential relation: Active + PAUSE -->
+                <Cell source="Active" event="PAUSE">
+                    <Relations>
+                        <Relation kind="sequential"
+                                  members="T1,T2"
+                                  shared_condition=""
+                                  note="T1 first, then T2" />
+                    </Relations>
+                </Cell>
+
+                <!-- Group relation: Active + ERROR -->
+                <Cell source="Active" event="ERROR">
+                    <Relations>
+                        <Relation kind="group"
+                                  members="T1,T2"
+                                  shared_condition="error_severity &gt; 0"
+                                  note="Both transitions gated by error_severity" />
+                    </Relations>
+                </Cell>
+
+                <!-- Nested group: Active + STOP (parent + child) -->
+                <Cell source="Active" event="STOP">
+                    <Relations>
+                        <Relation kind="group"
+                                  members="T1"
+                                  shared_condition="running == true"
+                                  note="Parent group">
+                            <Children>
+                                <Relation kind="group"
+                                          members="T2,T3"
+                                          shared_condition="mode == 1"
+                                          note="Child group (MANUAL mode)" />
+                            </Children>
+                        </Relation>
+                    </Relations>
+                </Cell>
+
+                <!-- Exclusive relation + Cell Actions: Error + RESET -->
+                <Cell source="Error" event="RESET">
+                    <Actions>
+                        <Action role_function="App.LogReset" trigger="before_transitions" title="Log before reset" />
+                        <Action role_function="App.Cleanup" trigger="after_transitions" title="Cleanup after reset" />
+                    </Actions>
+                    <Relations>
+                        <Relation kind="exclusive"
+                                  members="T1,T2"
+                                  shared_condition=""
+                                  note="At most one fires (retry or give up)" />
+                    </Relations>
+                </Cell>
+            </Cells>
+        </StateMachine>
+    </Tab>
+</Project>

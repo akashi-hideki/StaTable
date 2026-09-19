@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 17:26:55
  */
 
 /*==============================================================*/
@@ -21,7 +21,7 @@
 
 /**
  * @brief  TIMER0 interrupt handler
- * @note   1ms周期タイマ
+ * @note   1ms timer
  */
 void ISR_TIMER0(void)
 {
@@ -47,38 +47,8 @@ void ISR_TIMER0(void)
 }
 
 /**
- * @brief  TIMER1 interrupt handler
- * @note   10ms周期タイマ
- * @note   Used role functions:
- *         - Application.HandleTick
- */
-void ISR_TIMER1(void)
-{
-
-    /* ===== Context reference (auto-generated) ===== */
-    SystemContext_t *ctx = &g_ctx;
-    (void)ctx;
-
-    /* ===== Entry log ===== */
-    LOG_DEBUG("Enter ISR: TIMER1");
-
-    /* ===== Actions (auto-generated) ===== */
-    ctx->data.g_tick_10ms++;
-    RoleFunc_Application_HandleTick(NULL, ctx);
-
-    /* ===== User extension area ===== */
-    /* [[STABLE_USER_CODE_START:TIMER1]] */
-    /* ユーザー追加コードをここに記述 */
-
-    /* [[STABLE_USER_CODE_END:TIMER1]] */
-
-    /* ===== Exit log ===== */
-    LOG_DEBUG("Exit ISR: TIMER1");
-}
-
-/**
  * @brief  UART_RX interrupt handler
- * @note   UART受信割り込み
+ * @note   UART RX
  * @note   Used role functions:
  *         - Application.HandleRx
  */
@@ -104,63 +74,4 @@ void ISR_UARTRX(void)
 
     /* ===== Exit log ===== */
     LOG_DEBUG("Exit ISR: UART_RX");
-}
-
-/**
- * @brief  GPIO_INT interrupt handler
- * @note   GPIO割り込み
- * @note   Used role functions:
- *         - Application.HandleError
- */
-void ISR_GPIOINT(void)
-{
-
-    /* ===== Context reference (auto-generated) ===== */
-    SystemContext_t *ctx = &g_ctx;
-    (void)ctx;
-
-    /* ===== Entry log ===== */
-    LOG_DEBUG("Enter ISR: GPIO_INT");
-
-    /* ===== Actions (auto-generated) ===== */
-    if (ctx->data.error_code != 0) { RoleFunc_Application_HandleError(NULL, ctx); }
-
-    /* ===== User extension area ===== */
-    /* [[STABLE_USER_CODE_START:GPIOINT]] */
-    /* ユーザー追加コードをここに記述 */
-
-    /* [[STABLE_USER_CODE_END:GPIOINT]] */
-
-    /* ===== Exit log ===== */
-    LOG_DEBUG("Exit ISR: GPIO_INT");
-}
-
-/**
- * @brief  DRIVER_INT interrupt handler
- * @note   ドライバ補助割り込み
- * @note   Used role functions:
- *         - Driver.CheckRx
- */
-void ISR_DRIVERINT(void)
-{
-
-    /* ===== Context reference (auto-generated) ===== */
-    SystemContext_t *ctx = &g_ctx;
-    (void)ctx;
-
-    /* ===== Entry log ===== */
-    LOG_DEBUG("Enter ISR: DRIVER_INT");
-
-    /* ===== Actions (auto-generated) ===== */
-    RoleFunc_Driver_CheckRx(NULL, ctx);
-    ctx->data.counter++;
-
-    /* ===== User extension area ===== */
-    /* [[STABLE_USER_CODE_START:DRIVERINT]] */
-    /* ユーザー追加コードをここに記述 */
-
-    /* [[STABLE_USER_CODE_END:DRIVERINT]] */
-
-    /* ===== Exit log ===== */
-    LOG_DEBUG("Exit ISR: DRIVER_INT");
 }

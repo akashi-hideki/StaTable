@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 17:26:55
  */
 
 #ifndef STATABLE_TYPES_H_APPLICATION
@@ -24,11 +24,11 @@
 
 /* Application layer state definitions */
 typedef enum {
-    STATE_Application_Boot = 0,    /* 起動 Type: INITIAL */
-    STATE_Application_Init = 1,    /* 初期化 */
-    STATE_Application_Running = 2,    /* 実行中 */
-    STATE_Application_Paused = 3,    /* 一時停止 */
-    STATE_Application_Stopped = 4,    /* 停止 Type: FINAL */
+    STATE_Application_Idle = 0,    /* Idle state Type: INITIAL */
+    STATE_Application_Active = 1,    /* Active state */
+    STATE_Application_Waiting = 2,    /* Waiting state */
+    STATE_Application_Error = 3,    /* Error state */
+    STATE_Application_Done = 4,    /* Done state Type: FINAL */
     STATE_Application_MAX           /* element count (for system use) */
 } STATE_Application_t;
 
@@ -36,19 +36,20 @@ typedef enum {
 /* Application layer event definitions */
 typedef enum {
     EVENT_Application_NONE = 0,    /* completion transition */
-    EVENT_Application_BOOT = 1,    /* 起動 Title: 起動 */
-    EVENT_Application_START = 2,    /* 開始 Title: 開始 */
-    EVENT_Application_PAUSE = 3,    /* 一時停止 Title: 一時停止 */
-    EVENT_Application_RESUME = 4,    /* 再開 Title: 再開 */
-    EVENT_Application_STOP = 5,    /* 停止 Title: 停止 */
+    EVENT_Application_START = 1,    /* Start Title: Start */
+    EVENT_Application_PAUSE = 2,    /* Pause Title: Pause */
+    EVENT_Application_RESUME = 3,    /* Resume Title: Resume */
+    EVENT_Application_STOP = 4,    /* Stop Title: Stop */
+    EVENT_Application_ERROR = 5,    /* Error Title: Error */
+    EVENT_Application_RESET = 6,    /* Reset Title: Reset */
     EVENT_Application_MAX           /* element count (for system use) */
 } EVENT_Application_t;
 
 
 /* Event flag definitions */
 typedef enum {
-    FLAG_EVT_INIT_DONE = 0,    /* 初期化完了 Title: 初期化完了 */
-    FLAG_EVT_ERROR = 1,    /* エラー発生 Title: エラー */
+    FLAG_EVT_INIT_DONE = 0,    /* Init done Title: Init done */
+    FLAG_EVT_ERROR = 1,    /* Error occurred Title: Error flag */
     FLAG_MAX           /* element count (for system use) */
 } FLAG_t;
 

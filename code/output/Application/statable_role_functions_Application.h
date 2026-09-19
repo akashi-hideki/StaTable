@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 17:26:55
  */
 
 #ifndef STATABLE_ROLE_FUNCTIONS_H_APPLICATION
@@ -23,169 +23,205 @@
 /*==============================================================*/
 
 /**
- * @brief  Role function: アプリ起動
- * @note   アプリ起動
+ * @brief  Role function: Idle entry
+ * @note   Idle entry
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Application_Boot(
+int RoleFunc_App_IdleEntry(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: アプリ開始
- * @note   アプリ開始
+ * @brief  Role function: Idle exit
+ * @note   Idle exit
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Application_Start(
+int RoleFunc_App_IdleExit(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: 一時停止処理
- * @note   一時停止処理
+ * @brief  Role function: Active entry 1
+ * @note   Active entry 1
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Application_Pause(
+int RoleFunc_App_ActiveEntry1(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: 再開処理
- * @note   再開処理
+ * @brief  Role function: Active entry 2
+ * @note   Active entry 2
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Application_Resume(
+int RoleFunc_App_ActiveEntry2(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: 周期処理（ISR用）
- * @note   周期処理（ISR用）
+ * @brief  Role function: Waiting entry
+ * @note   Waiting entry
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Application_HandleTick(
+int RoleFunc_App_WaitEntry(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: RX処理（ISR用）
- * @note   RX処理（ISR用）
+ * @brief  Role function: Waiting exit
+ * @note   Waiting exit
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Application_HandleRx(
+int RoleFunc_App_WaitExit(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: エラー処理（ISR用）
- * @note   エラー処理（ISR用）
+ * @brief  Role function: Error entry
+ * @note   Error entry
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Application_HandleError(
+int RoleFunc_App_ErrorEntry(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: ドライバ初期化
- * @note   ドライバ初期化
+ * @brief  Role function: Error exit
+ * @note   Error exit
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Driver_Init(
+int RoleFunc_App_ErrorExit(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: エラーログ
- * @note   エラーログ
+ * @brief  Role function: Pre-check
+ * @note   Pre-check action
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Driver_LogError(
+int RoleFunc_App_PreCheck(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: リセット処理
- * @note   リセット処理
+ * @brief  Role function: Cleanup
+ * @note   Cleanup action
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Driver_Reset(
+int RoleFunc_App_Cleanup(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: RX確認（ISR用）
- * @note   RX確認処理
+ * @brief  Role function: Init session
+ * @note   Init session
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Driver_CheckRx(
+int RoleFunc_App_InitSession(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: 接続処理
- * @note   接続処理
+ * @brief  Role function: Log error
+ * @note   Log error
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Middleware_Connect(
+int RoleFunc_App_LogError(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: エラー処理
- * @note   エラー処理
+ * @brief  Role function: Log reset
+ * @note   Log reset
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Middleware_HandleErr(
+int RoleFunc_App_LogReset(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );
 
 /**
- * @brief  Role function: 再試行処理
- * @note   再試行処理
+ * @brief  Role function: Handle pause
+ * @note   Handle pause
  * @param  transition  Transition context (may be NULL: called from ISR)
  * @param  ctx         System context pointer
  * @return 0: success, non-zero: error (can also be used for condition checks)
  */
-int RoleFunc_Middleware_Retry(
+int RoleFunc_App_HandlePause(
+    const TransitionContext_Application_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Handle stop
+ * @note   Handle stop
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_App_HandleStop(
+    const TransitionContext_Application_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Resume work
+ * @note   Resume work
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_App_ResumeWork(
+    const TransitionContext_Application_t *transition,
+    SystemContext_t *ctx
+);
+
+/**
+ * @brief  Role function: Handle RX
+ * @note   Handle RX (ISR)
+ * @param  transition  Transition context (may be NULL: called from ISR)
+ * @param  ctx         System context pointer
+ * @return 0: success, non-zero: error (can also be used for condition checks)
+ */
+int RoleFunc_App_HandleRx(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 );

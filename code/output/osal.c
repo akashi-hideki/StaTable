@@ -17,7 +17,7 @@ OSAL_Status_t OSAL_Mutex_Create(OSAL_Mutex_t *mutex)
 
 OSAL_Status_t OSAL_Mutex_Lock(OSAL_Mutex_t *mutex, uint32_t timeout_ms)
 {
-    (void)timeout_ms;  /* Not used in NonRTOS */
+    (void)timeout_ms;
     if (mutex == NULL) {
         return OSAL_ERROR;
     }
@@ -129,12 +129,10 @@ OSAL_Status_t OSAL_Queue_Receive(OSAL_Queue_t *queue, void *item, uint32_t timeo
 /* Critical section implementation */
 void OSAL_Critical_Enter(void)
 {
-    /* Disable interrupts in NonRTOS */
     __disable_irq();
 }
 
 void OSAL_Critical_Exit(void)
 {
-    /* Enable interrupts */
     __enable_irq();
 }

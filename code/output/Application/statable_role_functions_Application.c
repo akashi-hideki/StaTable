@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-18 21:42:39
+ * @date    2026-09-19 17:26:55
  */
 
 /*==============================================================*/
@@ -43,46 +43,54 @@ static uint16_t Transition_GetId(
     uint16_t table_size);
 
 
-/* --- call site table for Boot --- */
-static const RoleFuncCallSiteEntry_Application_t call_sites_Boot[] = {
-    { STATE_Application_Boot, EVENT_Application_BOOT },
+/* --- call site table for InitSession --- */
+static const RoleFuncCallSiteEntry_Application_t call_sites_InitSession[] = {
+    { STATE_Application_Idle, EVENT_Application_START },
 };
-#define CALL_SITES_Boot_COUNT \
-    (sizeof(call_sites_Boot) / sizeof(call_sites_Boot[0]))
+#define CALL_SITES_InitSession_COUNT \
+    (sizeof(call_sites_InitSession) / sizeof(call_sites_InitSession[0]))
 
 
-/* --- call site table for Start --- */
-static const RoleFuncCallSiteEntry_Application_t call_sites_Start[] = {
-    { STATE_Application_Init, EVENT_Application_START },
+/* --- call site table for LogError --- */
+static const RoleFuncCallSiteEntry_Application_t call_sites_LogError[] = {
+    { STATE_Application_Idle, EVENT_Application_START },
 };
-#define CALL_SITES_Start_COUNT \
-    (sizeof(call_sites_Start) / sizeof(call_sites_Start[0]))
+#define CALL_SITES_LogError_COUNT \
+    (sizeof(call_sites_LogError) / sizeof(call_sites_LogError[0]))
 
 
-/* --- call site table for Pause --- */
-static const RoleFuncCallSiteEntry_Application_t call_sites_Pause[] = {
-    { STATE_Application_Running, EVENT_Application_STOP },
+/* --- call site table for HandlePause --- */
+static const RoleFuncCallSiteEntry_Application_t call_sites_HandlePause[] = {
+    { STATE_Application_Active, EVENT_Application_PAUSE },
 };
-#define CALL_SITES_Pause_COUNT \
-    (sizeof(call_sites_Pause) / sizeof(call_sites_Pause[0]))
+#define CALL_SITES_HandlePause_COUNT \
+    (sizeof(call_sites_HandlePause) / sizeof(call_sites_HandlePause[0]))
 
 
-/* --- call site table for Resume --- */
-static const RoleFuncCallSiteEntry_Application_t call_sites_Resume[] = {
-    { STATE_Application_Paused, EVENT_Application_RESUME },
+/* --- call site table for HandleStop --- */
+static const RoleFuncCallSiteEntry_Application_t call_sites_HandleStop[] = {
+    { STATE_Application_Active, EVENT_Application_STOP },
 };
-#define CALL_SITES_Resume_COUNT \
-    (sizeof(call_sites_Resume) / sizeof(call_sites_Resume[0]))
+#define CALL_SITES_HandleStop_COUNT \
+    (sizeof(call_sites_HandleStop) / sizeof(call_sites_HandleStop[0]))
+
+
+/* --- call site table for ResumeWork --- */
+static const RoleFuncCallSiteEntry_Application_t call_sites_ResumeWork[] = {
+    { STATE_Application_Waiting, EVENT_Application_RESUME },
+};
+#define CALL_SITES_ResumeWork_COUNT \
+    (sizeof(call_sites_ResumeWork) / sizeof(call_sites_ResumeWork[0]))
 
 
 /**
- * @brief  Role function: アプリ起動
- * @note   アプリ起動
+ * @brief  Role function: Init session
+ * @note   Init session
  *
  * @note   Call sites:
- *         - [pre_action]  STATE_Application_Boot -[EVENT_Application_BOOT]-> STATE_Application_Init
+ *         - [pre_action]  STATE_Application_Idle -[EVENT_Application_START]-> STATE_Application_Active
  */
-int RoleFunc_Application_Boot(
+int RoleFunc_App_InitSession(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 )
@@ -99,38 +107,39 @@ int RoleFunc_Application_Boot(
 
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
-        transition, call_sites_Boot, (uint16_t)CALL_SITES_Boot_COUNT);
+        transition, call_sites_InitSession, (uint16_t)CALL_SITES_InitSession_COUNT);
 
     /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const error_severity = &ctx->data.error_severity;  /* Error severity */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    uint8_t *const mode = &ctx->data.mode;  /* Operation mode */
+    bool *const confirm = &ctx->data.confirm;  /* Confirm flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
 
     /* TODO: implement the code here */
 
-    /* [[STABLE_USER_CODE_START:Application_Boot]] */
-    /* ユーザー実装コードをここに記述 */
-
-    /* [[STABLE_USER_CODE_END:Application_Boot]] */
+    /* [[STABLE_USER_CODE_START:App_InitSession]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:App_InitSession]] */
 
     return ret;
 }
 
 /**
- * @brief  Role function: アプリ開始
- * @note   アプリ開始
+ * @brief  Role function: Log error
+ * @note   Log error
  *
  * @note   Call sites:
- *         - [pre_action]  STATE_Application_Init -[EVENT_Application_START]-> STATE_Application_Running
+ *         - [else_action]  STATE_Application_Idle -[EVENT_Application_START]-> STATE_Application_Error
  */
-int RoleFunc_Application_Start(
+int RoleFunc_App_LogError(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 )
@@ -147,38 +156,39 @@ int RoleFunc_Application_Start(
 
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
-        transition, call_sites_Start, (uint16_t)CALL_SITES_Start_COUNT);
+        transition, call_sites_LogError, (uint16_t)CALL_SITES_LogError_COUNT);
 
     /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const error_severity = &ctx->data.error_severity;  /* Error severity */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    uint8_t *const mode = &ctx->data.mode;  /* Operation mode */
+    bool *const confirm = &ctx->data.confirm;  /* Confirm flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
 
     /* TODO: implement the code here */
 
-    /* [[STABLE_USER_CODE_START:Application_Start]] */
-    /* ユーザー実装コードをここに記述 */
-
-    /* [[STABLE_USER_CODE_END:Application_Start]] */
+    /* [[STABLE_USER_CODE_START:App_LogError]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:App_LogError]] */
 
     return ret;
 }
 
 /**
- * @brief  Role function: 一時停止処理
- * @note   一時停止処理
+ * @brief  Role function: Handle pause
+ * @note   Handle pause
  *
  * @note   Call sites:
- *         - [pre_action]  STATE_Application_Running -[EVENT_Application_STOP]-> STATE_Application_Stopped
+ *         - [pre_action]  STATE_Application_Active -[EVENT_Application_PAUSE]-> STATE_Application_Waiting
  */
-int RoleFunc_Application_Pause(
+int RoleFunc_App_HandlePause(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 )
@@ -195,38 +205,39 @@ int RoleFunc_Application_Pause(
 
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
-        transition, call_sites_Pause, (uint16_t)CALL_SITES_Pause_COUNT);
+        transition, call_sites_HandlePause, (uint16_t)CALL_SITES_HandlePause_COUNT);
 
     /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const error_severity = &ctx->data.error_severity;  /* Error severity */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    uint8_t *const mode = &ctx->data.mode;  /* Operation mode */
+    bool *const confirm = &ctx->data.confirm;  /* Confirm flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
 
     /* TODO: implement the code here */
 
-    /* [[STABLE_USER_CODE_START:Application_Pause]] */
-    /* ユーザー実装コードをここに記述 */
-
-    /* [[STABLE_USER_CODE_END:Application_Pause]] */
+    /* [[STABLE_USER_CODE_START:App_HandlePause]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:App_HandlePause]] */
 
     return ret;
 }
 
 /**
- * @brief  Role function: 再開処理
- * @note   再開処理
+ * @brief  Role function: Handle stop
+ * @note   Handle stop
  *
  * @note   Call sites:
- *         - [pre_action]  STATE_Application_Paused -[EVENT_Application_RESUME]-> STATE_Application_Running
+ *         - [pre_action]  STATE_Application_Active -[EVENT_Application_STOP]-> STATE_Application_Done
  */
-int RoleFunc_Application_Resume(
+int RoleFunc_App_HandleStop(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 )
@@ -243,37 +254,39 @@ int RoleFunc_Application_Resume(
 
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
-        transition, call_sites_Resume, (uint16_t)CALL_SITES_Resume_COUNT);
+        transition, call_sites_HandleStop, (uint16_t)CALL_SITES_HandleStop_COUNT);
 
     /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const error_severity = &ctx->data.error_severity;  /* Error severity */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    uint8_t *const mode = &ctx->data.mode;  /* Operation mode */
+    bool *const confirm = &ctx->data.confirm;  /* Confirm flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
 
     /* TODO: implement the code here */
 
-    /* [[STABLE_USER_CODE_START:Application_Resume]] */
-    /* ユーザー実装コードをここに記述 */
-
-    /* [[STABLE_USER_CODE_END:Application_Resume]] */
+    /* [[STABLE_USER_CODE_START:App_HandleStop]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:App_HandleStop]] */
 
     return ret;
 }
 
 /**
- * @brief  Role function: 周期処理（ISR用）
- * @note   周期処理（ISR用）
+ * @brief  Role function: Resume work
+ * @note   Resume work
  *
- * @note   Call sites: (none)
+ * @note   Call sites:
+ *         - [pre_action]  STATE_Application_Waiting -[EVENT_Application_RESUME]-> STATE_Application_Active
  */
-int RoleFunc_Application_HandleTick(
+int RoleFunc_App_ResumeWork(
     const TransitionContext_Application_t *transition,
     SystemContext_t *ctx
 )
@@ -290,120 +303,27 @@ int RoleFunc_Application_HandleTick(
 
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
-        transition, NULL, 0);
+        transition, call_sites_ResumeWork, (uint16_t)CALL_SITES_ResumeWork_COUNT);
 
     /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
+    uint32_t *const counter = &ctx->data.counter;  /* General counter */
+    uint8_t *const error_code = &ctx->data.error_code;  /* Error code */
+    uint8_t *const error_severity = &ctx->data.error_severity;  /* Error severity */
+    uint8_t *const retry_count = &ctx->data.retry_count;  /* Retry counter */
+    bool *const running = &ctx->data.running;  /* Running flag */
+    uint8_t *const mode = &ctx->data.mode;  /* Operation mode */
+    bool *const confirm = &ctx->data.confirm;  /* Confirm flag */
+    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
+    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
 
     /* TODO: implement the code here */
 
-    /* [[STABLE_USER_CODE_START:Application_HandleTick]] */
-    /* ユーザー実装コードをここに記述 */
-
-    /* [[STABLE_USER_CODE_END:Application_HandleTick]] */
-
-    return ret;
-}
-
-/**
- * @brief  Role function: RX処理（ISR用）
- * @note   RX処理（ISR用）
- *
- * @note   Call sites: (none)
- */
-int RoleFunc_Application_HandleRx(
-    const TransitionContext_Application_t *transition,
-    SystemContext_t *ctx
-)
-{
-    /* ===== transition NULL guard (supports ISR calls) ===== */
-    STATE_Application_t from_state = STATE_Application_MAX;
-    EVENT_Application_t event = EVENT_Application_NONE;
-    if (transition != NULL) {
-        from_state = transition->from_state;
-        event = transition->event;
-    }
-    (void)from_state;   /* suppress unused warning */
-    (void)event;   /* suppress unused warning */
-
-    /* ===== transition ID (index within call_sites) ===== */
-    const uint16_t transition_id = Transition_GetId(
-        transition, NULL, 0);
-
-    /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
-
-    /* ===== return value ===== */
-    int ret = 0;   /* can be modified in user code */
-
-    /* TODO: implement the code here */
-
-    /* [[STABLE_USER_CODE_START:Application_HandleRx]] */
-    /* ユーザー実装コードをここに記述 */
-
-    /* [[STABLE_USER_CODE_END:Application_HandleRx]] */
-
-    return ret;
-}
-
-/**
- * @brief  Role function: エラー処理（ISR用）
- * @note   エラー処理（ISR用）
- *
- * @note   Call sites: (none)
- */
-int RoleFunc_Application_HandleError(
-    const TransitionContext_Application_t *transition,
-    SystemContext_t *ctx
-)
-{
-    /* ===== transition NULL guard (supports ISR calls) ===== */
-    STATE_Application_t from_state = STATE_Application_MAX;
-    EVENT_Application_t event = EVENT_Application_NONE;
-    if (transition != NULL) {
-        from_state = transition->from_state;
-        event = transition->event;
-    }
-    (void)from_state;   /* suppress unused warning */
-    (void)event;   /* suppress unused warning */
-
-    /* ===== transition ID (index within call_sites) ===== */
-    const uint16_t transition_id = Transition_GetId(
-        transition, NULL, 0);
-
-    /* ===== local pointer to ctx->data ===== */
-    uint32_t *const counter = &ctx->data.counter;  /* 汎用カウンタ */
-    uint8_t *const error_code = &ctx->data.error_code;  /* エラーコード */
-    uint8_t *const retry_count = &ctx->data.retry_count;  /* リトライ回数 */
-    bool *const rx_ready = &ctx->data.rx_ready;  /* RX 準備完了 */
-    uint8_t *const rx_data = &ctx->data.rx_data;  /* RX 受信データ */
-    volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* タイマ基準 [1ms] */
-    uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* 派生タイマ [10ms] */
-
-    /* ===== return value ===== */
-    int ret = 0;   /* can be modified in user code */
-
-    /* TODO: implement the code here */
-
-    /* [[STABLE_USER_CODE_START:Application_HandleError]] */
-    /* ユーザー実装コードをここに記述 */
-
-    /* [[STABLE_USER_CODE_END:Application_HandleError]] */
+    /* [[STABLE_USER_CODE_START:App_ResumeWork]] */
+    /* Write user implementation code here */
+    /* [[STABLE_USER_CODE_END:App_ResumeWork]] */
 
     return ret;
 }
