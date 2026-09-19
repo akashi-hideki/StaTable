@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 07:42:37
+ * @date    2026-09-20 08:37:00
  */
 
 /*==============================================================
@@ -15,6 +15,8 @@
 
 #include "statable_transitions_Application.h"
 #include "statable_role_functions_Application.h"
+#include "Driver/statable_role_functions_Driver.h"
+#include "Middleware/statable_role_functions_Middleware.h"
 
 /*==============================================================
  *  State transition table
@@ -252,4 +254,34 @@ STATE_Application_t StateMachine_Process_Application(
         return func(&transition, ctx);
     }
     return current_state;
+}
+
+
+/*==============================================================
+ *  Event retrieval function
+ *==============================================================*/
+
+/**
+ * @brief  Get next event for Application layer
+ * @param  ctx  System context pointer
+ * @return Next event (EVENT_Application_NONE if no pending event)
+ */
+EVENT_Application_t StateMachine_GetNextEvent_Application(SystemContext_t *ctx)
+{
+    static uint8_t consecutive_count = 0;
+
+    if (ctx->pending_event_valid) {
+        consecutive_count++;
+        if (consecutive_count > MAX_CONSECUTIVE_PENDING_EVENTS) {
+            LOG_ERROR("Pending event chain too long (%d)", consecutive_count);
+            ctx->pending_event_valid = false;
+            consecutive_count = 0;
+            return EVENT_Application_NONE;
+        }
+        EVENT_Application_t evt = (EVENT_Application_t)ctx->pending_event;
+        ctx->pending_event_valid = false;
+        return evt;
+    }
+    consecutive_count = 0;
+    return EVENT_Application_NONE;
 }

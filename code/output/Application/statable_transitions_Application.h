@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 07:42:37
+ * @date    2026-09-20 08:37:00
  */
 
 #ifndef STATABLE_TRANSITIONS_H_APPLICATION
@@ -34,5 +34,12 @@ STATE_Application_t StateMachine_Process_Application(
     EVENT_Application_t event,
     SystemContext_t *ctx
 );
+
+/**
+ * @brief  Get next event for this layer
+ * @param  ctx  System context pointer
+ * @return Next event (EVENT_Application_NONE if none pending)
+ */
+EVENT_Application_t StateMachine_GetNextEvent_Application(SystemContext_t *ctx);
 
 #endif /* STATABLE_TRANSITIONS_H_APPLICATION */

@@ -3,19 +3,28 @@
 C code generation main class
 (step-table driven / 13-file support / multi-layer support / by_layer / ISR)
 
-Version: 2.2.5 (2026-09-19)
-  - Fix: Per-layer TransitionContext_<Layer>_t is now emitted in
-    statable_types_<Layer>.h (was missing since v2.2.1).
-    References in role-function / transition files were previously
-    undefined (CC-RX / GCC compile errors).
-  - Fix (v2.2.1): FLAG_t was emitted in every layer's statable_types_<Layer>.h,
-    causing duplicate typedef. Now emitted once in statable_types_common.h.
-  - Add (v2.2.2): Common function prototypes
-    (SystemContext_Init / Timer_Init / Timer_Update) are emitted
-    in statable_types_common.h so any file that includes
-    statable_all.h sees them.
-  - Fix (v2.2.1): Section header is now a valid C block comment.
+Version: 2.2.8 (2026-09-20 / MISRA 17.3 fixes + get_next_event emission)
+  - Add (MISRA C:2012 Rule 17.3): StateMachine_GetNextEvent_<Layer>
+    implementation is now emitted into statable_transitions_<Layer>.c
+    via a new step `get_next_event`. The prototype is emitted in the
+    header (see _step_state_machine_decl), so the implementation must
+    also be emitted to satisfy the "declared but not defined" check
+    (test_v2_2_p12_10).
 
+Version: 2.2.7 (2026-09-20 / MISRA 17.3 fixes)
+  - Fix (MISRA C:2012 Rule 17.3): LOG_DEBUG / LOG_INFO / LOG_WARNING /
+    LOG_ERROR are now defined as no-op macros in statable_types_common.h
+    (step: common_function_decls).
+  - Fix (MISRA C:2012 Rule 17.3): StateMachine_GetNextEvent_<Layer>
+    prototypes are now emitted in statable_transitions_<Layer>.h.
+
+Version: 2.2.6 (2026-09-20 / MISRA 17.3 cross-layer include)
+  - Fix (MISRA C:2012 Rule 17.3): In by_layer mode, layer-specific .c
+    files may call role functions declared in other layers. Now
+    _step_include_section emits cross-layer role_functions includes.
+    Full layer list is provided via self._all_layers_for_includes.
+
+Version: 2.2.5 (2026-09-19)
 Version: 2.1 (2026-09-13 / Stage 3: ISR context support)
 Version: 1.6 (by_layer suffix / common types)
 """
@@ -160,6 +169,11 @@ class CCodeGenerator:
              'key': 'transition_func'},
             {'action': 'blank'},
             {'action': 'process_func'},
+            {'action': 'blank'},
+            {'action': 'section_header',
+             'key': 'get_next_event'},
+            {'action': 'blank'},
+            {'action': 'get_next_event'},
         ],
         'statable_role_functions.h': [
             {'action': 'file_header',
@@ -280,32 +294,19 @@ class CCodeGenerator:
     # [Table 3] filename -> generator method dispatch
     # ================================================================
     FILE_DISPATCH: Dict[str, str] = {
-        'statable_types_common.h':
-            '_generate_types_common_header',
-        'statable_types.h':
-            '_generate_types_header',
-        'statable_transitions.h':
-            '_generate_transitions_header',
-        'statable_transitions.c':
-            '_generate_transitions_source',
-        'statable_role_functions.h':
-            '_generate_role_functions_header',
-        'statable_role_functions.c':
-            '_generate_role_functions_source',
-        'statable_init.c':
-            '_generate_init_source',
-        'statable_event_queue.c':
-            '_generate_event_queue_source',
-        'statable_interrupt.c':
-            '_generate_interrupt_source',
-        'statable_timer.c':
-            '_generate_timer_source',
-        'osal.h':
-            '_generate_osal_header',
-        'osal.c':
-            '_generate_osal_source',
-        'statable_all.h':
-            '_generate_super_include',
+        'statable_types_common.h':    '_generate_types_common_header',
+        'statable_types.h':           '_generate_types_header',
+        'statable_transitions.h':     '_generate_transitions_header',
+        'statable_transitions.c':     '_generate_transitions_source',
+        'statable_role_functions.h':  '_generate_role_functions_header',
+        'statable_role_functions.c':  '_generate_role_functions_source',
+        'statable_init.c':            '_generate_init_source',
+        'statable_event_queue.c':     '_generate_event_queue_source',
+        'statable_interrupt.c':       '_generate_interrupt_source',
+        'statable_timer.c':           '_generate_timer_source',
+        'osal.h':                     '_generate_osal_header',
+        'osal.c':                     '_generate_osal_source',
+        'statable_all.h':             '_generate_super_include',
     }
 
     # ================================================================
@@ -388,6 +389,10 @@ class CCodeGenerator:
         )
 
         self._current_role_function_library = None
+
+        self._all_layers_for_includes: Optional[
+            List[Tuple[str, StateMachine]]
+        ] = None
 
         self.super_loop_filename = (
             f"{self.config.project_name}_run.c"
@@ -513,8 +518,8 @@ class CCodeGenerator:
             'section_header':     self._step_section_header,
             'enums':              self._step_enums,
             'enums_common':       self._step_enums_common,
-            'layer_transition_context': self._step_layer_transition_context,  # v2.2.5
-            'common_function_decls': self._step_common_function_decls,        # v2.2.2
+            'layer_transition_context': self._step_layer_transition_context,
+            'common_function_decls': self._step_common_function_decls,
             'custom_types':       self._step_custom_types,
             'struct':             self._step_struct,
             'var_macros':         self._step_var_macros,
@@ -523,6 +528,7 @@ class CCodeGenerator:
             'transition_table':   self._step_transition_table,
             'cell_functions':     self._step_cell_functions,
             'process_func':       self._step_process_func,
+            'get_next_event':     self._step_get_next_event,
             'role_decls':         self._step_role_decls,
             'role_impls':         self._step_role_impls,
             'init_func':          self._step_init_func,
@@ -653,11 +659,9 @@ class CCodeGenerator:
     def _normalize_layers(self, layers) -> List[Tuple[str, StateMachine]]:
         if layers is None:
             return []
-
         if isinstance(layers, StateMachine):
             name = self._get_layer_name(layers)
             return [(name, layers)]
-
         result = []
         for item in layers:
             if isinstance(item, tuple) and len(item) == 2:
@@ -670,10 +674,7 @@ class CCodeGenerator:
             if not self._get_layer_name(sm) and name:
                 sm.layer_name = name
             result.append((name, sm))
-
-        result.sort(
-            key=lambda x: getattr(x[1], 'layer_priority', 5)
-        )
+        result.sort(key=lambda x: getattr(x[1], 'layer_priority', 5))
         return result
 
     def _setup_layer_generators(self, state_machine):
@@ -692,10 +693,8 @@ class CCodeGenerator:
                              layer_name: str = '') -> str:
         if '/' in filename or '\\' in filename:
             return filename
-
         if filename == 'statable_all.h':
             return self._resolve_super_include_path(layer_name)
-
         structure = self.config.folder_structure
         resolver_name = self.FOLDER_STRUCTURE_RESOLVERS.get(
             structure, '_resolve_path_flat'
@@ -707,7 +706,6 @@ class CCodeGenerator:
     def _resolve_super_include_path(self, layer_name: str = '') -> str:
         fname = self.config.super_include_file
         structure = self.config.folder_structure
-
         if structure == 'flat':
             return fname
         elif structure == 'by_type':
@@ -763,7 +761,6 @@ class CCodeGenerator:
                          global_defs) -> str:
         if not layers:
             return ""
-
         file_config = self.file_generators[filename]
         steps = self.FILE_STEPS.get(filename, [])
         context = {
@@ -802,11 +799,9 @@ class CCodeGenerator:
     def _step_file_header(self, step, ctx):
         filename = step.get('filename', ctx['filename'])
         layers = ctx.get('layers', [])
-
         if (filename in self.LAYER_SPECIFIC_FILES and layers):
             layer_name = self._get_layer_name(layers[0][1])
             filename = self._layer_filename(filename, layer_name)
-
         desc = ctx['file_config'].get('description', '')
         return [self._generate_file_header(filename, desc)]
 
@@ -838,50 +833,25 @@ class CCodeGenerator:
         return [self._generate_include_guard_end(guard)]
 
     def _step_include_section(self, step, ctx):
-        """Emit the include section for a generated file.
-
-        [v2.2.6 / MISRA 17.3 fix]
-          In `by_layer` mode, the following .c files may call role
-          functions declared in *other* layers:
-
-            - statable_transitions_<Layer>.c
-                (state entry/exit, pre_actions, else_actions,
-                 cell_actions can reference RoleFunc_<OtherNS>_Xxx)
-            - statable_role_functions_<Layer>.c
-                (user code inside the marker may reference
-                 RoleFunc_<OtherNS>_Xxx)
-
-          Previously only the self-layer role_functions header was
-          included, so cross-layer calls produced implicit
-          declarations -> MISRA C:2012 Rule 17.3.
-
-          This method now additionally emits, for those two files,
-          one `#include "<OtherLayer>/statable_role_functions_<OtherLayer>.h"`
-          line per sibling layer. Other files are unaffected.
-        """
         key = step.get('key', '')
         filename = ctx.get('filename', '')
         layers = ctx.get('layers', [])
         structure = ctx['config'].folder_structure
 
-        # ---- Layer-specific files (types / transitions / role_functions) ----
         if filename in self.LAYER_SPECIFIC_FILES and layers:
             layer_name = self._get_layer_name(layers[0][1])
             suffix = self._layer_suffix(layer_name)
 
-            # [MISRA 17.3] Cross-layer role_functions includes for .c files
             if (structure == 'by_layer'
                     and filename in ('statable_transitions.c',
                                      'statable_role_functions.c')):
                 lines = [self._generate_section_header('include'), ""]
-
-                # 1) Self-layer includes (same as the default path)
                 for header in self.include_headers.get(key, []):
                     header = header.replace('{layer_suffix}', suffix)
                     lines.append(header)
-
-                # 2) Cross-layer role_functions headers
-                for other_name, other_sm in layers:
+                all_layers = (self._all_layers_for_includes
+                              or layers)
+                for other_name, other_sm in all_layers:
                     other_layer = self._get_layer_name(other_sm)
                     if not other_layer or other_layer == layer_name:
                         continue
@@ -889,23 +859,19 @@ class CCodeGenerator:
                         f'#include "{other_layer}/'
                         f'statable_role_functions_{other_layer}.h"'
                     )
-
                 lines.append("")
                 return ['\n'.join(lines)]
 
-            # Default: self-layer includes only
             return [self._generate_include_section(
                 key, layer_suffix=suffix
             )]
 
-        # ---- Common .c files in by_layer mode ----
         if structure == 'by_layer' and filename in (
                 'statable_init.c',
                 'statable_event_queue.c',
                 'statable_interrupt.c',
                 'statable_timer.c'):
             lines = [self._generate_section_header('include'), ""]
-
             if filename == 'statable_interrupt.c':
                 lines.append('#include "statable_all.h"')
             else:
@@ -920,7 +886,6 @@ class CCodeGenerator:
             lines.append("")
             return ['\n'.join(lines)]
 
-        # ---- Fallback (flat / by_type) ----
         return [self._generate_include_section(key)]
 
     def _step_section_header(self, step, ctx):
@@ -929,13 +894,6 @@ class CCodeGenerator:
         )]
 
     def _step_enums(self, step, ctx):
-        """Layer-specific enums (states + events only).
-
-        [v2.2.1]
-          FLAG_t is emitted once in statable_types_common.h
-          (see _step_enums_common). Passing flags=None here
-          prevents duplicate typedef of FLAG_t across layers.
-        """
         gd = ctx['global_defs']
         layers = ctx['layers']
         results = []
@@ -953,7 +911,6 @@ class CCodeGenerator:
         return ['\n'.join(results)]
 
     def _step_enums_common(self, step, ctx):
-        """Common enums (flags only) emitted in statable_types_common.h."""
         gd = ctx['global_defs']
         flags = getattr(gd, 'flags', []) or []
         if not flags:
@@ -963,24 +920,6 @@ class CCodeGenerator:
         return [code] if code else ['']
 
     def _step_layer_transition_context(self, step, ctx):
-        """Emit per-layer TransitionContext_<Layer>_t (v2.2.5).
-
-        [v2.2.5 fix]
-          statable_types_<Layer>.h previously emitted only enums
-          (STATE_<Layer>_t / EVENT_<Layer>_t). References to
-          TransitionContext_<Layer>_t in role-function and
-          transition .c/.h files were left undefined, causing
-          CC-RX / GCC compile errors.
-
-          This step emits:
-              typedef struct {
-                  STATE_<Layer>_t from_state;
-                  EVENT_<Layer>_t event;
-              } TransitionContext_<Layer>_t;
-
-          in each layer-specific header, matching the base type
-          TransitionContext_t (emitted in statable_types_common.h).
-        """
         layers = ctx['layers']
         results = []
         for layer_name, sm in layers:
@@ -998,16 +937,28 @@ class CCodeGenerator:
         return ['\n\n'.join(results)] if results else ['']
 
     def _step_common_function_decls(self, step, ctx):
-        """Emit prototypes for functions defined in common .c files.
-
-        [v2.2.2]
-          SystemContext_Init (statable_init.c) and Timer_Init /
-          Timer_Update (statable_timer.c) had no prototypes.
-          Any caller including only statable_all.h saw implicit
-          declarations (C99 warning) or link errors on strict
-          compilers.
-        """
         return [
+            '/* ---- Logging macros (default: no-op) ---- */',
+            '/*',
+            ' * These are safe defaults. To enable real logging,',
+            ' * define the macros before including this header.',
+            ' */',
+            '#ifndef LOG_DEBUG',
+            '#define LOG_DEBUG(...)    ((void)0)',
+            '#endif',
+            '',
+            '#ifndef LOG_INFO',
+            '#define LOG_INFO(...)     ((void)0)',
+            '#endif',
+            '',
+            '#ifndef LOG_WARNING',
+            '#define LOG_WARNING(...)  ((void)0)',
+            '#endif',
+            '',
+            '#ifndef LOG_ERROR',
+            '#define LOG_ERROR(...)    ((void)0)',
+            '#endif',
+            '',
             '/**',
             ' * @brief  Initialize SystemContext_t (implemented in statable_init.c)',
             ' * @param  ctx  System context pointer',
@@ -1062,11 +1013,15 @@ class CCodeGenerator:
             if layer:
                 state_type = f"STATE_{layer}_t"
                 event_type = f"EVENT_{layer}_t"
-                func_name = f"StateMachine_Process_{layer}"
+                process_name = f"StateMachine_Process_{layer}"
+                get_evt_name = f"StateMachine_GetNextEvent_{layer}"
+                event_none = f"EVENT_{layer}_NONE"
             else:
                 state_type = "STATE_t"
                 event_type = "EVENT_t"
-                func_name = "StateMachine_Process"
+                process_name = "StateMachine_Process"
+                get_evt_name = "StateMachine_GetNextEvent"
+                event_none = "EVENT_NONE"
 
             results.append('\n'.join([
                 "/**",
@@ -1076,11 +1031,18 @@ class CCodeGenerator:
                 " * @param  ctx            System context pointer",
                 " * @return State after transition",
                 " */",
-                f"{state_type} {func_name}(",
+                f"{state_type} {process_name}(",
                 f"    {state_type} current_state,",
                 f"    {event_type} event,",
                 "    SystemContext_t *ctx",
                 ");",
+                "",
+                "/**",
+                " * @brief  Get next event for this layer",
+                " * @param  ctx  System context pointer",
+                f" * @return Next event ({event_none} if none pending)",
+                " */",
+                f"{event_type} {get_evt_name}(SystemContext_t *ctx);",
             ]))
         return ['\n'.join(results)] if results else ['']
 
@@ -1127,6 +1089,28 @@ class CCodeGenerator:
                 sm,
                 generation_style=ctx['config'].generation_style,
             )
+            if func:
+                results.append(func)
+        return ['\n'.join(results)] if results else ['']
+
+    def _step_get_next_event(self, step, ctx):
+        """Emit StateMachine_GetNextEvent_<Layer> implementation.
+
+        [v2.2.8 / MISRA 17.3 fix]
+          The prototype is now emitted in statable_transitions_<Layer>.h
+          (see _step_state_machine_decl). Its implementation must be
+          emitted into statable_transitions_<Layer>.c so that the
+          "declared but not defined" cross-check passes
+          (test_v2_2_p12_10).
+
+          TransitionGenerator.generate_get_next_event_function already
+          existed; it simply was not called from FILE_STEPS.
+        """
+        layers = ctx['layers']
+        results = []
+        for layer_name, sm in layers:
+            self._setup_layer_generators(sm)
+            func = self.transition_gen.generate_get_next_event_function(sm)
             if func:
                 results.append(func)
         return ['\n'.join(results)] if results else ['']
@@ -1245,9 +1229,7 @@ class CCodeGenerator:
         T = self.templates.SUPER_INCLUDE_TEMPLATES
         layers = ctx['layers']
         structure = self.config.folder_structure
-
         parts = [T['common_section']]
-
         if structure == 'by_layer':
             parts.append('#include "statable_types_common.h"')
             for layer_name, sm in layers:
@@ -1266,9 +1248,7 @@ class CCodeGenerator:
         T = self.templates.SUPER_INCLUDE_TEMPLATES
         layers = ctx['layers']
         structure = self.config.folder_structure
-
         parts = [T['layer_section']]
-
         if structure == 'by_layer':
             for layer_name, sm in layers:
                 layer = self._get_layer_name(sm)
@@ -1297,7 +1277,6 @@ class CCodeGenerator:
         T = self.templates.SUPER_INCLUDE_TEMPLATES
         layers = ctx['layers']
         parts = [T['extern_var_section'], T['extern_context']]
-
         for layer_name, sm in layers:
             layer = self._get_layer_name(sm)
             if layer:
@@ -1314,8 +1293,6 @@ class CCodeGenerator:
             T['extern_init'].format(project_name=project),
             T['extern_run'].format(project_name=project),
         ]
-
-        # v2.2.3: ISR prototypes (referenced from vector table / startup)
         gd = ctx['global_defs']
         interrupts = getattr(gd, 'interrupts', []) or []
         if interrupts:
@@ -1330,7 +1307,6 @@ class CCodeGenerator:
                         continue
                     isr_name = f"ISR_{self.naming.to_pascal_case(name)}"
                 parts.append(f"void {isr_name}(void);")
-
         return parts
 
     def _step_super_include_external(self, step, ctx):
@@ -1381,7 +1357,6 @@ class CCodeGenerator:
         layers = ctx['layers']
         project = self.config.project_name
         T = self.templates.SUPER_LOOP_TEMPLATES
-
         parts = [
             T['init_func_comment'],
             T['init_func_signature'].format(project_name=project),
@@ -1406,7 +1381,6 @@ class CCodeGenerator:
         layers = ctx['layers']
         project = self.config.project_name
         T = self.templates.SUPER_LOOP_TEMPLATES
-
         parts = [
             T['run_func_comment'],
             T['run_func_signature'].format(project_name=project),
@@ -1481,7 +1455,6 @@ class CCodeGenerator:
     def generate_all(self, state_machine, global_defs,
                      role_function_library=None):
         self._setup_layer_generators(state_machine)
-
         prev = self._current_role_function_library
         self._current_role_function_library = role_function_library
         try:
@@ -1506,7 +1479,6 @@ class CCodeGenerator:
     def generate_file(self, filename, state_machine, global_defs,
                       role_function_library=None):
         self._setup_layer_generators(state_machine)
-
         prev = self._current_role_function_library
         self._current_role_function_library = role_function_library
         try:
@@ -1523,17 +1495,13 @@ class CCodeGenerator:
         norm_layers = self._normalize_layers(layers)
         if not norm_layers:
             return {}
-
         structure = self.config.folder_structure
-
         if structure == 'by_layer':
             return self._generate_all_by_layer(
                 norm_layers, global_defs, role_function_library
             )
-
         primary_sm = norm_layers[0][1]
         self._setup_layer_generators(primary_sm)
-
         prev = self._current_role_function_library
         self._current_role_function_library = role_function_library
         try:
@@ -1555,13 +1523,13 @@ class CCodeGenerator:
             f"_generate_all_by_layer: {len(layers)} layers"
         )
         generated_files = {}
-
         prev = self._current_role_function_library
         self._current_role_function_library = role_function_library
+        prev_layers = self._all_layers_for_includes
+        self._all_layers_for_includes = list(layers)
         try:
             for layer_name, sm in layers:
                 self._setup_layer_generators(sm)
-
                 if not layer_name:
                     for fname in self.LAYER_SPECIFIC_FILES:
                         method_name = self.FILE_DISPATCH.get(fname)
@@ -1574,7 +1542,6 @@ class CCodeGenerator:
                             sm, global_defs
                         )
                     continue
-
                 for fname in self.LAYER_SPECIFIC_FILES:
                     method_name = self.FILE_DISPATCH.get(fname)
                     if method_name is None:
@@ -1583,14 +1550,12 @@ class CCodeGenerator:
                     if method is None:
                         continue
                     content = method(sm, global_defs)
-
                     fname_with_layer = self._layer_filename(
                         fname, layer_name
                     )
                     generated_files[
                         f"{layer_name}/{fname_with_layer}"
                     ] = content
-
             common_names = list(self.COMMON_FILES) + [
                 self.super_loop_filename
             ]
@@ -1602,30 +1567,26 @@ class CCodeGenerator:
                     fname, layers, global_defs
                 )
                 generated_files[fname] = content
-
             return generated_files
         finally:
             self._current_role_function_library = prev
+            self._all_layers_for_includes = prev_layers
 
     def save_generated_code(self, generated_files, output_dir,
                             layer_name: str = ''):
         saved_files = []
         os.makedirs(output_dir, exist_ok=True)
-
         for filename, content in generated_files.items():
             rel_path = self._resolve_output_path(
                 filename, layer_name
             )
             filepath = os.path.join(output_dir, rel_path)
-
             parent = os.path.dirname(filepath)
             if parent:
                 os.makedirs(parent, exist_ok=True)
-
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
             saved_files.append(filepath)
-
         return saved_files
 
     def save_generated_code_with_merge(self, generated_files,

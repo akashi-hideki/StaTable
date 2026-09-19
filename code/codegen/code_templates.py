@@ -2,10 +2,15 @@
 """
 Code generation template definitions (multi-layer state machine / ISR support)
 
+Version: 2.2.3 (2026-09-20 / MISRA 17.3 fix)
+  - Fix: OSAL NonRTOS critical section now declares the ARM CMSIS
+    intrinsics __disable_irq / __enable_irq before use. cppcheck +
+    MISRA addon treated them as implicit function declarations
+    (MISRA C:2012 Rule 17.3). The declarations are harmless on real
+    ARM toolchains (GCC/ARMCC/IAR) which provide these as builtins.
+
 Version: 2.2.2 (2026-09-19)
   - Fix (v2.2.1): section header emitted an invalid C block comment.
-      Old: "/*==========*/\n *  Title\n/*==========*/"
-      New: "/*==========\n *  Title\n *==========*/"
   - Add (v2.2.2): SECTION_HEADERS['common_function_decls'] for the new
     prototype section in statable_types_common.h
 """
@@ -401,7 +406,20 @@ void OSAL_Critical_Exit(void);''',
     queue->count--;
     return OSAL_OK;
 }''',
-            'critical_enter_nonrtos': '''void OSAL_Critical_Enter(void)
+            # [v2.2.3 / MISRA 17.3 fix]
+            # Prototypes for the ARM CMSIS intrinsics are declared
+            # before the critical section functions. cppcheck + the
+            # MISRA addon do not know these compiler built-ins and
+            # would otherwise flag them as implicit declarations
+            # (MISRA C:2012 Rule 17.3).
+            # On real toolchains (GCC/ARMCC/IAR) the declarations are
+            # redundant but harmless.
+            'critical_enter_nonrtos': '''/* ARM Cortex-M interrupt intrinsics (declared for static analyzers; */
+/* the toolchain also provides them as builtins).                   */
+extern void __disable_irq(void);
+extern void __enable_irq(void);
+
+void OSAL_Critical_Enter(void)
 {
     __disable_irq();
 }''',

@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 07:42:37
+ * @date    2026-09-20 08:37:00
  */
 
 #ifndef STATABLE_TYPES_COMMON_H
@@ -117,6 +117,27 @@ typedef struct {
 /*==============================================================
  *  Common function declarations
  *==============================================================*/
+
+/* ---- Logging macros (default: no-op) ---- */
+/*
+ * These are safe defaults. To enable real logging,
+ * define the macros before including this header.
+ */
+#ifndef LOG_DEBUG
+#define LOG_DEBUG(...)    ((void)0)
+#endif
+
+#ifndef LOG_INFO
+#define LOG_INFO(...)     ((void)0)
+#endif
+
+#ifndef LOG_WARNING
+#define LOG_WARNING(...)  ((void)0)
+#endif
+
+#ifndef LOG_ERROR
+#define LOG_ERROR(...)    ((void)0)
+#endif
 
 /**
  * @brief  Initialize SystemContext_t (implemented in statable_init.c)

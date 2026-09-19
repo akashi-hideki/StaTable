@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 07:42:37
+ * @date    2026-09-20 08:37:00
  */
 
 /*==============================================================
@@ -14,6 +14,8 @@
  *==============================================================*/
 
 #include "statable_role_functions_Driver.h"
+#include "Middleware/statable_role_functions_Middleware.h"
+#include "Application/statable_role_functions_Application.h"
 
 /*==============================================================
  *  Role function implementations

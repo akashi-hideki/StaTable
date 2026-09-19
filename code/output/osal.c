@@ -126,6 +126,11 @@ OSAL_Status_t OSAL_Queue_Receive(OSAL_Queue_t *queue, void *item, uint32_t timeo
 }
 
 /* Critical section implementation */
+/* ARM Cortex-M interrupt intrinsics (declared for static analyzers; */
+/* the toolchain also provides them as builtins).                   */
+extern void __disable_irq(void);
+extern void __enable_irq(void);
+
 void OSAL_Critical_Enter(void)
 {
     __disable_irq();

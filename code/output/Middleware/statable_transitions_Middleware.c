@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 07:42:37
+ * @date    2026-09-20 08:37:00
  */
 
 /*==============================================================
@@ -15,6 +15,8 @@
 
 #include "statable_transitions_Middleware.h"
 #include "statable_role_functions_Middleware.h"
+#include "Driver/statable_role_functions_Driver.h"
+#include "Application/statable_role_functions_Application.h"
 
 /*==============================================================
  *  State transition table
@@ -216,4 +218,34 @@ STATE_Middleware_t StateMachine_Process_Middleware(
         return func(&transition, ctx);
     }
     return current_state;
+}
+
+
+/*==============================================================
+ *  Event retrieval function
+ *==============================================================*/
+
+/**
+ * @brief  Get next event for Middleware layer
+ * @param  ctx  System context pointer
+ * @return Next event (EVENT_Middleware_NONE if no pending event)
+ */
+EVENT_Middleware_t StateMachine_GetNextEvent_Middleware(SystemContext_t *ctx)
+{
+    static uint8_t consecutive_count = 0;
+
+    if (ctx->pending_event_valid) {
+        consecutive_count++;
+        if (consecutive_count > MAX_CONSECUTIVE_PENDING_EVENTS) {
+            LOG_ERROR("Pending event chain too long (%d)", consecutive_count);
+            ctx->pending_event_valid = false;
+            consecutive_count = 0;
+            return EVENT_Middleware_NONE;
+        }
+        EVENT_Middleware_t evt = (EVENT_Middleware_t)ctx->pending_event;
+        ctx->pending_event_valid = false;
+        return evt;
+    }
+    consecutive_count = 0;
+    return EVENT_Middleware_NONE;
 }
