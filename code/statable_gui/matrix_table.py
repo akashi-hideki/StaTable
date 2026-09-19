@@ -267,6 +267,14 @@ class MatrixTableWidget(QTableWidget):
             fi = transition_to_flow_item(trans)
             draft.flow_items.append(fi)
 
+        # === v2.2: populate cell_actions / cell_relations from SM ===
+        draft.cell_actions = list(
+            self.sm.get_actions_for_cell(state, event_name)
+        )
+        draft.cell_relations = list(
+            self.sm.get_relations_for_cell(state, event_name)
+        )
+
         # Merge shared library and current SM role functions
         role_func_names = []
         _seen = set()
@@ -308,15 +316,20 @@ class MatrixTableWidget(QTableWidget):
             new_transitions = []
             for item in draft.flow_items:
                 if item.item_type == "transition":
-                    new_transitions.append(flow_item_to_transition(item, state, event_name))
+                    new_transitions.append(
+                        flow_item_to_transition(item, state, event_name)
+                    )
 
             StaTableLogger.debug(
                 f"  -> D&D editor accepted, {len(new_transitions)} transitions")
 
-            # Preserve cell-level actions / relations across regeneration
-            old_actions = self.sm.get_actions_for_cell(state, event_name)
-            old_relations = self.sm.get_relations_for_cell(state, event_name)
+            # === v2.2: write back cell metadata from draft ===
+            self.sm.set_actions_for_cell(state, event_name,
+                                          list(draft.cell_actions))
+            self.sm.set_relations_for_cell(state, event_name,
+                                            list(draft.cell_relations))
 
+            # Replace transitions in the cell
             self.sm.transitions = [
                 t for t in self.sm.transitions
                 if not (t.source == state and t.event == event_name)
@@ -324,17 +337,13 @@ class MatrixTableWidget(QTableWidget):
             for trans in new_transitions:
                 self.sm.add_transition(trans)
 
-            # Restore cell metadata
-            if old_actions:
-                self.sm.set_actions_for_cell(state, event_name, old_actions)
-            if old_relations:
-                self.sm.set_relations_for_cell(state, event_name, old_relations)
-
             self.populate()
             self.transition_changed.emit()
             StaTableLogger.info(
                 f"Transition updated: {state} -{event_name or 'Completion'}-> "
-                f"{len(new_transitions)} transition(s)")
+                f"{len(new_transitions)} transition(s), "
+                f"actions={len(draft.cell_actions)}, "
+                f"relations={len(draft.cell_relations)}")
         else:
             StaTableLogger.debug("  -> D&D editor cancelled")
 

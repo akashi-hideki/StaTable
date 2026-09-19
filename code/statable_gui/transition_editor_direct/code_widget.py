@@ -2,7 +2,8 @@
 """Code display widget (read-only, ActionDraft support / v2.2).
 
 [v2.2 changes]
-  - Renders cell_actions (always / before_transitions / after_transitions).
+  - Renders cell_actions (before_transitions / after_transitions).
+    Legacy "always" trigger is treated as "before_transitions".
   - Respects early_return per transition (`_handled` guard).
   - Renders `group` shared_condition as an outer `if`.
   - Handles entry / exit via State.entry / State.exit lists.
@@ -174,26 +175,26 @@ class CodeWidget(QPlainTextEdit):
             if item.item_type == "transition"
         )
 
-        # Cell actions (always / before_transitions)
-        for trigger in ("always", "before_transitions"):
-            trigger_actions = [a for a in self.draft.cell_actions
-                               if a.trigger == trigger]
-            if trigger_actions:
-                lines.append(f"/* ===== Cell actions ({trigger}) ===== */")
-                for a in trigger_actions:
-                    lines.append("    " + self._call_stmt(a.role_function))
-                lines.append("")
+        # ---- Cell actions (pre): before_transitions (+ legacy always) ----
+        pre_actions_for_cell = [
+            a for a in self.draft.cell_actions
+            if a.trigger in ("before_transitions", "always")
+        ]
+        if pre_actions_for_cell:
+            lines.append("/* ===== Cell actions (before transitions) ===== */")
+            for a in pre_actions_for_cell:
+                lines.append("    " + self._call_stmt(a.role_function))
+            lines.append("")
 
-        # Transitions
+        # ---- Transitions ----
         transitions = [it for it in self.draft.flow_items
                        if it.item_type == "transition"]
         if transitions:
-            # Open _handled declaration
             if needs_handled:
                 lines.append("bool _handled = false;")
                 lines.append("")
 
-            # Group map
+            # Group map (label -> shared_condition)
             group_map = {}
             for rel in self.draft.cell_relations:
                 if rel.kind == "group" and rel.shared_condition:
@@ -209,14 +210,15 @@ class CodeWidget(QPlainTextEdit):
                 pre_actions = ensure_list(params.get('pre_actions', []))
                 else_actions = ensure_list(params.get('else_actions', []))
                 has_else = params.get('has_else', True)
-                else_target = params.get('else_target', '') or self.draft.default_target
+                else_target = (params.get('else_target', '')
+                               or self.draft.default_target)
                 early_return = params.get('early_return', False)
 
                 sc = group_map.get(label)
                 # Open group
                 if sc and sc != open_group_cond:
                     lines.append(
-                        f"/* ===== Group (shared_condition) ===== */")
+                        "/* ===== Group (shared_condition) ===== */")
                     lines.append(f"if ({sc}) {{")
                     open_group_cond = sc
                 # Close previous group if changed
@@ -227,7 +229,8 @@ class CodeWidget(QPlainTextEdit):
                 indent = "    " if open_group_cond else ""
                 cond_expr = cond if cond else "1"
                 mode = "Commit" if early_return else "Tentative"
-                lines.append(f"{indent}/* ===== Transition[{label}] ({mode}) ===== */")
+                lines.append(
+                    f"{indent}/* ===== Transition[{label}] ({mode}) ===== */")
 
                 # Condition
                 if early_return:
@@ -266,11 +269,11 @@ class CodeWidget(QPlainTextEdit):
                 lines.append("}")
                 lines.append("")
 
-        # Cell actions (after_transitions)
+        # ---- Cell actions (post): after_transitions ----
         after_actions = [a for a in self.draft.cell_actions
                          if a.trigger == "after_transitions"]
         if after_actions:
-            lines.append("/* ===== Cell actions (after_transitions) ===== */")
+            lines.append("/* ===== Cell actions (after transitions) ===== */")
             for a in after_actions:
                 lines.append("    " + self._call_stmt(a.role_function))
             lines.append("")

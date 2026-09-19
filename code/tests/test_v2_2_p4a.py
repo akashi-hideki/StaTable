@@ -1,5 +1,3 @@
-## 📄 File: `tests/test_v2_2_p4a.py`（TDD Red）
-
 #!/usr/bin/env python3
 """
 P4-A (Editor UI: Transitions / Actions / Relations tabs) test suite for StaTable v2.2.
@@ -7,10 +5,10 @@ P4-A (Editor UI: Transitions / Actions / Relations tabs) test suite for StaTable
 Verifies:
   1. ActionDraft.cell_actions / cell_relations  (draft.py extension)
   2. transition_to_flow_item / flow_item_to_transition  (early_return / label)
-  3. TransitionsTab  API
+  3. TransitionsTab  API  (+ Target / Else target / Has else ComboBox)
   4. ActionsTab      API
   5. RelationsTab    API
-  6. ActionEditorDialog 4-tab structure
+  6. ActionEditorDialog 5-tab structure
   7. CodeWidget (Preview) cell_actions rendering
 
 Run:
@@ -138,10 +136,8 @@ def test_draft_to_dict_roundtrip():
     ]
     data = d.to_dict()
 
-    check("to_dict has cell_actions",
-          "cell_actions" in data)
-    check("to_dict has cell_relations",
-          "cell_relations" in data)
+    check("to_dict has cell_actions", "cell_actions" in data)
+    check("to_dict has cell_relations", "cell_relations" in data)
 
     d2 = ActionDraft.from_dict(data)
     check("cell_actions round-trip",
@@ -180,7 +176,6 @@ def test_transition_to_flow_item_with_early_return():
           fi.params.get("label") == "T1",
           f"params={fi.params}")
 
-    # Round-trip
     t2 = flow_item_to_transition(fi, "Idle", "START")
     check("early_return round-trip", t2.early_return is True)
     check("label round-trip", t2.label == "T1")
@@ -211,19 +206,16 @@ def test_transitions_tab():
 
     check("initial row count 0", tab.row_count() == 0)
 
-    # add
     row = tab.add_transition()
     check("add_transition returns 0", row == 0)
     check("row count 1", tab.row_count() == 1)
 
-    # add with explicit
     t = Transition(source="Idle", event="START", condition="cond_A",
                    target="Active", early_return=True, label="T2")
     row = tab.add_transition(t)
     check("add_transition with explicit returns 1", row == 1)
     check("row count 2", tab.row_count() == 2)
 
-    # move up
     new_row = tab.move_up(1)
     check("move_up returns 0", new_row == 0)
     transitions = tab.get_transitions()
@@ -231,15 +223,12 @@ def test_transitions_tab():
           transitions[0].label == "T2" and transitions[1].label != "T2",
           f"got {[t.label for t in transitions]}")
 
-    # move down
     new_row = tab.move_down(0)
     check("move_down returns 1", new_row == 1)
 
-    # delete
     tab.delete_transition(0)
     check("delete row count 1", tab.row_count() == 1)
 
-    # set / get
     t3 = Transition(source="Idle", event="START", condition="cond_C",
                     target="Error", early_return=False, label="T3")
     tab.set_transitions([t3])
@@ -282,6 +271,124 @@ def test_transitions_tab_early_return_preserved():
     check("T2 label preserved", got[1].label == "T2")
 
 
+def test_transitions_tab_target_combo():
+    print("\n[4c] TransitionsTab: Target / Else target / Has else as ComboBox")
+    app = qapp()
+    if app is None:
+        RESULT.skip("TransitionsTab combo", "PySide6")
+        return
+
+    try:
+        from PySide6.QtWidgets import QComboBox
+        from statable_gui.transition_editor_direct.draft import ActionDraft
+        from statable_gui.transition_editor_direct.transitions_tab import (
+            TransitionsTab,
+            COL_TARGET, COL_HAS_ELSE, COL_ELSE_TARGET, COL_MODE,
+            NONE_LABEL,
+        )
+        from statable.model import Transition
+    except ImportError as e:
+        RESULT.fail("import combo test", str(e))
+        return
+
+    draft = ActionDraft(source="Idle", event="START")
+    tab = TransitionsTab(draft, states=["Idle", "Active", "Error"])
+
+    t = Transition(source="Idle", event="START",
+                   condition="cA", target="Active",
+                   has_else=True, else_target="Error",
+                   early_return=True, label="T1")
+    tab.add_transition(t)
+
+    # Widgets exist
+    for col, name in (
+        (COL_TARGET, "Target"),
+        (COL_HAS_ELSE, "Has else"),
+        (COL_ELSE_TARGET, "Else target"),
+        (COL_MODE, "Mode"),
+    ):
+        w = tab.table.cellWidget(0, col)
+        check(f"{name} is QComboBox",
+              isinstance(w, QComboBox),
+              f"got {type(w).__name__}")
+
+    # Target combo items
+    target_w = tab.table.cellWidget(0, COL_TARGET)
+    items = [target_w.itemText(i) for i in range(target_w.count())]
+    check("Target has (none)", NONE_LABEL in items, f"got {items}")
+    check("Target has Active", "Active" in items, f"got {items}")
+    check("Target has Error", "Error" in items, f"got {items}")
+    check("Target currentText is Active",
+          target_w.currentText() == "Active",
+          f"got {target_w.currentText()}")
+
+    # Else target combo
+    et_w = tab.table.cellWidget(0, COL_ELSE_TARGET)
+    check("Else target currentText is Error",
+          et_w.currentText() == "Error",
+          f"got {et_w.currentText()}")
+
+    # Has else combo
+    he_w = tab.table.cellWidget(0, COL_HAS_ELSE)
+    check("Has else currentText is Yes",
+          he_w.currentText() == "Yes",
+          f"got {he_w.currentText()}")
+
+    # Get back
+    got = tab.get_transitions()
+    check("get: target preserved", got[0].target == "Active")
+    check("get: else_target preserved", got[0].else_target == "Error")
+    check("get: has_else preserved", got[0].has_else is True)
+
+    # Set to (none)
+    target_w.setCurrentText(NONE_LABEL)
+    got = tab.get_transitions()
+    check("get: (none) -> empty target", got[0].target == "")
+
+
+def test_transitions_tab_has_else_link():
+    print("\n[4d] TransitionsTab: has_else <-> else_target link")
+    app = qapp()
+    if app is None:
+        RESULT.skip("has_else link", "PySide6")
+        return
+
+    try:
+        from statable_gui.transition_editor_direct.draft import ActionDraft
+        from statable_gui.transition_editor_direct.transitions_tab import (
+            TransitionsTab, COL_HAS_ELSE, COL_ELSE_TARGET,
+        )
+        from statable.model import Transition
+    except ImportError as e:
+        RESULT.fail("import", str(e))
+        return
+
+    draft = ActionDraft(source="Idle", event="START")
+    tab = TransitionsTab(draft, states=["Idle", "Active"])
+
+    t = Transition(source="Idle", event="START",
+                   condition="cA", target="Active",
+                   has_else=True, else_target="Idle",
+                   early_return=True, label="T1")
+    tab.add_transition(t)
+
+    et_w = tab.table.cellWidget(0, COL_ELSE_TARGET)
+    he_w = tab.table.cellWidget(0, COL_HAS_ELSE)
+
+    check("else_target enabled when has_else=Yes",
+          et_w.isEnabled() is True)
+
+    # Change has_else to No
+    he_w.setCurrentText("No")
+    check("else_target disabled when has_else=No",
+          et_w.isEnabled() is False)
+
+    # Change back
+    he_w.setCurrentText("Yes")
+    check("else_target re-enabled",
+          et_w.isEnabled() is True)
+
+
 # ======================================================================
 # 5. ActionsTab
 # ======================================================================
@@ -322,17 +429,14 @@ def test_actions_tab():
     check("get_actions preserves role_function",
           got[1].role_function == "Driver.Cleanup")
 
-    # move
     tab.move_up(1)
     got = tab.get_actions()
     check("move_up works",
           got[0].role_function == "Driver.Cleanup")
 
-    # delete
     tab.delete_action(0)
     check("delete row count 1", tab.row_count() == 1)
 
-    # round-trip
     tab.set_actions([
         ActionStep(role_function="A", trigger="always"),
         ActionStep(role_function="B", trigger="before_transitions"),
@@ -388,7 +492,6 @@ def test_relations_tab():
     tab.delete_relation(0)
     check("delete row count 1", tab.row_count() == 1)
 
-    # Round-trip
     tab.set_relations([
         TransitionRelation(kind="sequential", members=["T1", "T2"]),
         TransitionRelation(kind="exclusive", members=["T3"]),
@@ -401,10 +504,10 @@ def test_relations_tab():
 
 
 # ======================================================================
-# 7. ActionEditorDialog 4-tab structure
+# 7. ActionEditorDialog 5-tab structure
 # ======================================================================
 def test_dialog_tabs():
-    print("\n[7] ActionEditorDialog: 4-tab structure")
+    print("\n[7] ActionEditorDialog: 5-tab structure")
     app = qapp()
     if app is None:
         RESULT.skip("ActionEditorDialog tabs", "PySide6")
@@ -428,12 +531,12 @@ def test_dialog_tabs():
     )
 
     names = dlg.get_tab_names()
-    check("has 4 tabs", len(names) == 4,
-          f"got {names}")
+    check("has 5 tabs", len(names) == 5, f"got {names}")
     check("tab 0 is Transitions", names[0] == "Transitions", f"got {names}")
     check("tab 1 is Actions", names[1] == "Actions", f"got {names}")
     check("tab 2 is Relations", names[2] == "Relations", f"got {names}")
-    check("tab 3 is Preview", names[3] == "Preview", f"got {names}")
+    check("tab 3 is Overview", names[3] == "Overview", f"got {names}")
+    check("tab 4 is Preview", names[4] == "Preview", f"got {names}")
 
 
 # ======================================================================
@@ -490,7 +593,7 @@ def test_code_widget_cell_actions():
 
 
 # ======================================================================
-# 9. Full integration: draft round-trip via dialog
+# 9. Full integration: draft -> TransitionsTab -> get_transitions
 # ======================================================================
 def test_draft_roundtrip_via_dialog():
     print("\n[9] Full: draft -> TransitionsTab -> get_transitions")
@@ -544,6 +647,8 @@ def main():
     test_transition_to_flow_item_with_early_return()
     test_transitions_tab()
     test_transitions_tab_early_return_preserved()
+    test_transitions_tab_target_combo()
+    test_transitions_tab_has_else_link()
     test_actions_tab()
     test_relations_tab()
     test_dialog_tabs()

@@ -2,11 +2,17 @@
 """Action edit main dialog (v2.2: 5-tab structure).
 
 Tabs:
-  - Transitions : ordered list of transitions
-  - Actions     : cell actions (transition-independent)
-  - Relations   : relations between transitions
-  - Overview    : coverage / reachability report
-  - Preview     : generated C code
+  - Transitions       : ordered list of transitions
+  - Pre / Post Actions: cell-level actions (before / after transitions)
+  - Relations         : relations between transitions
+  - Overview          : coverage / reachability report
+  - Preview           : generated C code
+
+[v2.2 fix]
+  - _load_draft() order: Actions -> Relations -> Transitions (last)
+    to prevent intermediate signals from wiping cell_actions /
+    cell_relations before they are loaded.
+  - _loading flag suppresses _on_content_changed during initial load.
 """
 
 import logging
@@ -48,7 +54,8 @@ logger = logging.getLogger("transition_editor_direct.dialog")
 class ActionEditorDialog(QDialog):
     """Main dialog for editing a transition cell (v2.2 / 5 tabs)."""
 
-    TAB_NAMES = ("Transitions", "Actions", "Relations", "Overview", "Preview")
+    TAB_NAMES = ("Transitions", "Pre / Post Actions",
+                 "Relations", "Overview", "Preview")
 
     def __init__(self, draft: ActionDraft,
                  role_functions=None, transition_events=None,
@@ -74,6 +81,9 @@ class ActionEditorDialog(QDialog):
             literal_library if literal_library
             else LiteralLibrary()
         )
+
+        # v2.2 fix: guard flag for _load_draft
+        self._loading = False
 
         logger.debug("=== ActionEditorDialog init ===")
         logger.debug(f"source={draft.source}, event={draft.event}")
@@ -102,16 +112,22 @@ class ActionEditorDialog(QDialog):
         self.tabs = QTabWidget()
         main_layout.addWidget(self.tabs)
 
+        # ==============================================================
         # Tab 1: Transitions
+        # ==============================================================
         self.transitions_tab = TransitionsTab(
             self.draft,
             states=self.states,
             global_defs=self.global_defs,
             state_machine=self.state_machine,
         )
+        # v2.2: provide role function candidates to the TransitionsTab
+        self.transitions_tab.set_role_functions(self.role_functions)
         self.tabs.addTab(self.transitions_tab, self.TAB_NAMES[0])
 
-        # Tab 2: Actions
+        # ==============================================================
+        # Tab 2: Pre / Post Actions
+        # ==============================================================
         self.actions_tab = ActionsTab(
             self.draft,
             role_functions=self.role_functions,
@@ -120,22 +136,30 @@ class ActionEditorDialog(QDialog):
         )
         self.tabs.addTab(self.actions_tab, self.TAB_NAMES[1])
 
+        # ==============================================================
         # Tab 3: Relations
+        # ==============================================================
         self.relations_tab = RelationsTab(self.draft)
         self.tabs.addTab(self.relations_tab, self.TAB_NAMES[2])
 
+        # ==============================================================
         # Tab 4: Overview
+        # ==============================================================
         self.overview_tab = OverviewTab(
             self.draft,
             state_machine=self.state_machine,
         )
         self.tabs.addTab(self.overview_tab, self.TAB_NAMES[3])
 
+        # ==============================================================
         # Tab 5: Preview
+        # ==============================================================
         self.code_widget = CodeWidget(self.draft)
         self.tabs.addTab(self.code_widget, self.TAB_NAMES[4])
 
+        # ==============================================================
         # Signal connections
+        # ==============================================================
         self.transitions_tab.transitions_changed.connect(
             self._on_content_changed)
         self.actions_tab.actions_changed.connect(
@@ -143,7 +167,9 @@ class ActionEditorDialog(QDialog):
         self.relations_tab.relations_changed.connect(
             self._on_content_changed)
 
+        # ==============================================================
         # OK / Cancel
+        # ==============================================================
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
         cancel_btn = QPushButton("Cancel")
@@ -158,18 +184,55 @@ class ActionEditorDialog(QDialog):
     # Load / save
     # ------------------------------------------------------------------
     def _load_draft(self):
-        transitions = []
-        for item in self.draft.flow_items:
-            if item.item_type == "transition":
-                t = flow_item_to_transition(
-                    item, self.draft.source, self.draft.event)
-                transitions.append(t)
-        self.transitions_tab.set_transitions(transitions)
+        """Populate tabs from the current draft state.
 
-        self.actions_tab.set_actions(list(self.draft.cell_actions))
-        self.relations_tab.set_relations(list(self.draft.cell_relations))
+        [v2.2 fix]
+          Order: Actions -> Relations -> Transitions (last).
+          TransitionsTab.set_transitions() emits transitions_changed
+          for each row insertion, which calls _on_content_changed ->
+          _save_draft. If Transitions were loaded first, the subsequent
+          _save_draft would overwrite draft.cell_actions / cell_relations
+          with the still-empty tab contents.
+
+          The _loading flag additionally suppresses _on_content_changed
+          during the initial load.
+        """
+        self._loading = True
+        try:
+            # 1. Actions first
+            actions = list(self.draft.cell_actions)
+            logger.debug(
+                f"_load_draft: actions={len(actions)}, "
+                f"relations={len(self.draft.cell_relations)}")
+            self.actions_tab.set_actions(actions)
+
+            # 2. Relations
+            relations = list(self.draft.cell_relations)
+            self.relations_tab.set_relations(relations)
+
+            # 3. Transitions last (emits signals)
+            transitions = []
+            for item in self.draft.flow_items:
+                if item.item_type == "transition":
+                    t = flow_item_to_transition(
+                        item, self.draft.source, self.draft.event)
+                    transitions.append(t)
+            self.transitions_tab.set_transitions(transitions)
+        finally:
+            self._loading = False
+
+        # Refresh preview / overview once after load
+        try:
+            self.code_widget.update_code()
+        except Exception as e:
+            logger.warning(f"code update failed: {e}")
+        try:
+            self.overview_tab.refresh()
+        except Exception as e:
+            logger.warning(f"overview refresh failed: {e}")
 
     def _save_draft(self):
+        """Sync tab contents back to the draft."""
         transitions = self.transitions_tab.get_transitions()
         self.draft.flow_items = [
             transition_to_flow_item(t) for t in transitions
@@ -181,9 +244,12 @@ class ActionEditorDialog(QDialog):
     # Slots
     # ------------------------------------------------------------------
     def _on_content_changed(self):
+        # v2.2 fix: ignore signals emitted during initial load
+        if getattr(self, "_loading", False):
+            return
+
         self._save_draft()
         self.code_widget.update_code()
-        # Refresh overview so it reflects the latest edits
         try:
             self.overview_tab.refresh()
         except Exception as e:

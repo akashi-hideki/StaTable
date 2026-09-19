@@ -2,12 +2,13 @@ from .state_machine import StateMachine
 
 
 # ============================================================
-# Mermaid label sanitization (v2.0 added)
+# Mermaid label sanitization (v2.0 / v2.2)
+#   All replacements use ASCII to satisfy the English-only policy.
 # ============================================================
 _MERMAID_LABEL_REPLACEMENTS = (
-    (":",  "："),
-    ("[",  "［"),
-    ("]",  "］"),
+    (":",  "-"),   # colon -> dash
+    ("[",  "("),   # opening bracket -> paren
+    ("]",  ")"),   # closing bracket -> paren
     ('"',  "'"),
     ("`",  "'"),
     ("\n", " "),
@@ -51,9 +52,6 @@ def _mode_suffix(trans) -> str:
     er = getattr(trans, 'early_return', None)
     if er is True:
         return " [Commit]"
-    if er is False:
-        # Do not add "[Tentative]" to keep labels short by default.
-        return ""
     return ""
 
 
@@ -131,7 +129,8 @@ def generate_mermaid(sm: StateMachine) -> str:
                 ev_safe = _sanitize_label(ev)
                 if ev_safe:
                     else_label_parts.append(f"({ev_safe})")
-            else_label_parts.append("(completion)")
+            else:
+                else_label_parts.append("(completion)")
             else_label_parts.append("else")
             # Add mode suffix
             mode = _mode_suffix(t)
