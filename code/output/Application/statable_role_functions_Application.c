@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 02:21:47
+ * @date    2026-09-20 03:21:38
  */
 
 /*==============================================================
@@ -196,6 +196,7 @@ int RoleFunc_App_BootEntry(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_BootEntry, (uint16_t)CALL_SITES_BootEntry_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -204,6 +205,12 @@ int RoleFunc_App_BootEntry(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -212,6 +219,7 @@ int RoleFunc_App_BootEntry(
 
     /* [[STABLE_USER_CODE_START:App_BootEntry]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_BootEntry]] */
 
     return ret;
@@ -242,6 +250,7 @@ int RoleFunc_App_BootExit(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_BootExit, (uint16_t)CALL_SITES_BootExit_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -250,6 +259,12 @@ int RoleFunc_App_BootExit(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -258,6 +273,7 @@ int RoleFunc_App_BootExit(
 
     /* [[STABLE_USER_CODE_START:App_BootExit]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_BootExit]] */
 
     return ret;
@@ -288,6 +304,7 @@ int RoleFunc_App_InitEntry(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_InitEntry, (uint16_t)CALL_SITES_InitEntry_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -296,6 +313,12 @@ int RoleFunc_App_InitEntry(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -304,6 +327,7 @@ int RoleFunc_App_InitEntry(
 
     /* [[STABLE_USER_CODE_START:App_InitEntry]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_InitEntry]] */
 
     return ret;
@@ -334,6 +358,7 @@ int RoleFunc_App_RunEntry1(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_RunEntry1, (uint16_t)CALL_SITES_RunEntry1_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -342,6 +367,12 @@ int RoleFunc_App_RunEntry1(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -350,6 +381,7 @@ int RoleFunc_App_RunEntry1(
 
     /* [[STABLE_USER_CODE_START:App_RunEntry1]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_RunEntry1]] */
 
     return ret;
@@ -380,6 +412,7 @@ int RoleFunc_App_RunEntry2(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_RunEntry2, (uint16_t)CALL_SITES_RunEntry2_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -388,6 +421,12 @@ int RoleFunc_App_RunEntry2(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -396,6 +435,7 @@ int RoleFunc_App_RunEntry2(
 
     /* [[STABLE_USER_CODE_START:App_RunEntry2]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_RunEntry2]] */
 
     return ret;
@@ -426,6 +466,7 @@ int RoleFunc_App_PauseEntry(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_PauseEntry, (uint16_t)CALL_SITES_PauseEntry_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -434,6 +475,12 @@ int RoleFunc_App_PauseEntry(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -442,6 +489,7 @@ int RoleFunc_App_PauseEntry(
 
     /* [[STABLE_USER_CODE_START:App_PauseEntry]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_PauseEntry]] */
 
     return ret;
@@ -472,6 +520,7 @@ int RoleFunc_App_StopEntry(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_StopEntry, (uint16_t)CALL_SITES_StopEntry_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -480,6 +529,12 @@ int RoleFunc_App_StopEntry(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -488,6 +543,7 @@ int RoleFunc_App_StopEntry(
 
     /* [[STABLE_USER_CODE_START:App_StopEntry]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_StopEntry]] */
 
     return ret;
@@ -518,6 +574,7 @@ int RoleFunc_App_Boot(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_Boot, (uint16_t)CALL_SITES_Boot_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -526,6 +583,12 @@ int RoleFunc_App_Boot(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -534,6 +597,7 @@ int RoleFunc_App_Boot(
 
     /* [[STABLE_USER_CODE_START:App_Boot]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_Boot]] */
 
     return ret;
@@ -564,6 +628,7 @@ int RoleFunc_App_Start(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_Start, (uint16_t)CALL_SITES_Start_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -572,6 +637,12 @@ int RoleFunc_App_Start(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -580,6 +651,7 @@ int RoleFunc_App_Start(
 
     /* [[STABLE_USER_CODE_START:App_Start]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_Start]] */
 
     return ret;
@@ -610,6 +682,7 @@ int RoleFunc_App_Pause(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_Pause, (uint16_t)CALL_SITES_Pause_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -618,6 +691,12 @@ int RoleFunc_App_Pause(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -626,6 +705,7 @@ int RoleFunc_App_Pause(
 
     /* [[STABLE_USER_CODE_START:App_Pause]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_Pause]] */
 
     return ret;
@@ -656,6 +736,7 @@ int RoleFunc_App_Resume(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_Resume, (uint16_t)CALL_SITES_Resume_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -664,6 +745,12 @@ int RoleFunc_App_Resume(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -672,6 +759,7 @@ int RoleFunc_App_Resume(
 
     /* [[STABLE_USER_CODE_START:App_Resume]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_Resume]] */
 
     return ret;
@@ -702,6 +790,7 @@ int RoleFunc_App_HandleStop(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_HandleStop, (uint16_t)CALL_SITES_HandleStop_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -710,6 +799,12 @@ int RoleFunc_App_HandleStop(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -718,6 +813,7 @@ int RoleFunc_App_HandleStop(
 
     /* [[STABLE_USER_CODE_START:App_HandleStop]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_HandleStop]] */
 
     return ret;
@@ -748,6 +844,7 @@ int RoleFunc_App_PreCheck(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_PreCheck, (uint16_t)CALL_SITES_PreCheck_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -756,6 +853,12 @@ int RoleFunc_App_PreCheck(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -764,6 +867,7 @@ int RoleFunc_App_PreCheck(
 
     /* [[STABLE_USER_CODE_START:App_PreCheck]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_PreCheck]] */
 
     return ret;
@@ -794,6 +898,7 @@ int RoleFunc_App_Cleanup(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_Cleanup, (uint16_t)CALL_SITES_Cleanup_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -802,6 +907,12 @@ int RoleFunc_App_Cleanup(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -810,6 +921,7 @@ int RoleFunc_App_Cleanup(
 
     /* [[STABLE_USER_CODE_START:App_Cleanup]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_Cleanup]] */
 
     return ret;
@@ -840,6 +952,7 @@ int RoleFunc_App_Pre(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_Pre, (uint16_t)CALL_SITES_Pre_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -848,6 +961,12 @@ int RoleFunc_App_Pre(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -856,6 +975,7 @@ int RoleFunc_App_Pre(
 
     /* [[STABLE_USER_CODE_START:App_Pre]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_Pre]] */
 
     return ret;
@@ -886,6 +1006,7 @@ int RoleFunc_App_Post(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_Post, (uint16_t)CALL_SITES_Post_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -894,6 +1015,12 @@ int RoleFunc_App_Post(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -902,6 +1029,7 @@ int RoleFunc_App_Post(
 
     /* [[STABLE_USER_CODE_START:App_Post]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:App_Post]] */
 
     return ret;
@@ -949,4 +1077,5 @@ static uint16_t Transition_GetId(
 /* ============================================================== */
 /* [[STABLE_USER_CODE_TAIL_START]] */
 /* Write user-added code here (helper functions, etc.) */
+
 /* [[STABLE_USER_CODE_TAIL_END]] */

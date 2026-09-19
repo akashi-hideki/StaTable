@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 02:21:47
+ * @date    2026-09-20 03:21:38
  */
 
 /*==============================================================
@@ -67,22 +67,20 @@ static STATE_Driver_t t_Idle_INIT(
 )
 {
     STATE_Driver_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Cell actions (before_transitions) ===== */
-    RoleFunc_Driver_PreCheck(transition, ctx);
+    (void)RoleFunc_Driver_PreCheck(transition, ctx);
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (!_handled && 1) {
-        RoleFunc_Driver_IdleExit(transition, ctx);  /* state exit */
-        RoleFunc_Driver_Init(transition, ctx);
+    if (1) {
+        (void)RoleFunc_Driver_IdleExit(transition, ctx);  /* state exit */
+        (void)RoleFunc_Driver_Init(transition, ctx);
         next_state = STATE_Driver_Initializing;
-        RoleFunc_Driver_InitEntry(transition, ctx);  /* state entry */
-        _handled = true;
+        (void)RoleFunc_Driver_InitEntry(transition, ctx);  /* state entry */
     }
 
     /* ===== Cell actions (after_transitions) ===== */
-    RoleFunc_Driver_Cleanup(transition, ctx);
+    (void)RoleFunc_Driver_Cleanup(transition, ctx);
 
     return next_state;
 }
@@ -97,20 +95,18 @@ static STATE_Driver_t t_Initializing_READY(
 )
 {
     STATE_Driver_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (!_handled && error_code == 0) {
+    if (error_code == 0) {
         next_state = STATE_Driver_Ready;
-        RoleFunc_Driver_ReadyEntry(transition, ctx);  /* state entry */
-        _handled = true;
+        (void)RoleFunc_Driver_ReadyEntry(transition, ctx);  /* state entry */
     }
 
     /* ===== Transition[T2] (Tentative) ===== */
     if (error_code != 0) {
-        RoleFunc_Driver_LogError(transition, ctx);
+        (void)RoleFunc_Driver_LogError(transition, ctx);
         next_state = STATE_Driver_Error;
-        RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
+        (void)RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
     }
 
     return next_state;
@@ -126,14 +122,12 @@ static STATE_Driver_t t_Initializing_FAIL(
 )
 {
     STATE_Driver_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (!_handled && 1) {
-        RoleFunc_Driver_LogError(transition, ctx);
+    if (1) {
+        (void)RoleFunc_Driver_LogError(transition, ctx);
         next_state = STATE_Driver_Error;
-        RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
-        _handled = true;
+        (void)RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
     }
 
     return next_state;
@@ -149,14 +143,12 @@ static STATE_Driver_t t_Ready_FAIL(
 )
 {
     STATE_Driver_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (!_handled && 1) {
-        RoleFunc_Driver_LogError(transition, ctx);
+    if (1) {
+        (void)RoleFunc_Driver_LogError(transition, ctx);
         next_state = STATE_Driver_Error;
-        RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
-        _handled = true;
+        (void)RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
     }
 
     return next_state;
@@ -178,24 +170,24 @@ static STATE_Driver_t t_Error_RESET(
     if (running == false) {
 
         /* ===== Transition[T1] (Commit) ===== */
-        if (!_handled && retry_count < 3) {
-            RoleFunc_Driver_ErrorExit(transition, ctx);  /* state exit */
-            RoleFunc_Driver_Reset(transition, ctx);
+        if ((!_handled) && (retry_count < 3)) {
+            (void)RoleFunc_Driver_ErrorExit(transition, ctx);  /* state exit */
+            (void)RoleFunc_Driver_Reset(transition, ctx);
             next_state = STATE_Driver_Idle;
-            RoleFunc_Driver_IdleEntry(transition, ctx);  /* state entry */
+            (void)RoleFunc_Driver_IdleEntry(transition, ctx);  /* state entry */
             _handled = true;
-        } else if (!_handled && !(retry_count < 3)) {
-            RoleFunc_Driver_ErrorExit(transition, ctx);  /* state exit */
+        } else if ((!_handled) && (!(retry_count < 3))) {
+            (void)RoleFunc_Driver_ErrorExit(transition, ctx);  /* state exit */
             next_state = STATE_Driver_Error;
-            RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
+            (void)RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
             _handled = true;
         }
 
         /* ===== Transition[T2] (Commit) ===== */
-        if (!_handled && retry_count >= 3) {
-            RoleFunc_Driver_ErrorExit(transition, ctx);  /* state exit */
+        if ((!_handled) && (retry_count >= 3)) {
+            (void)RoleFunc_Driver_ErrorExit(transition, ctx);  /* state exit */
             next_state = STATE_Driver_Error;
-            RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
+            (void)RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
             _handled = true;
         }
     }

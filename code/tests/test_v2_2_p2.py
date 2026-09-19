@@ -14,6 +14,14 @@ Verifies:
   9. Backward compat: single transition without cell metadata
  10. Backward compat: old-style data (no early_return)
 
+Version: 2.2.6 (2026-09-20 / MISRA-aware codegen expectations)
+  - Expected output aligned with v2.5 transition_generator:
+      * Single Commit no longer declares `_handled`
+        (knownConditionTrueFalse / variableScope fix).
+      * Mixed !/&& conditions are parenthesized
+        (MISRA C:2012 Rule 12.1 fix).
+  - Function signatures (arg / return types) are unchanged.
+
 Run:
   python tests/test_v2_2_p2.py
 """
@@ -141,9 +149,14 @@ def test_single_commit():
     sm = make_sm_with_cell(["Idle", "Active"], ["START"], [t])
     code = generate_cell(sm)
 
-    check_contains("has _handled flag", code, "bool _handled = false;")
-    check_contains("has !_handled guard", code, "if (!_handled && cond_A)")
-    check_contains("has _handled = true", code, "_handled = true;")
+    # [v2.2.6] Single Commit: `_handled` is not emitted
+    # (would trigger knownConditionTrueFalse / variableScope in cppcheck).
+    check_not_contains("no _handled flag (single Commit)",
+                       code, "bool _handled = false;")
+    check_contains("has plain if (no _handled)",
+                   code, "if (cond_A) {")
+    check_not_contains("no _handled = true (single Commit)",
+                       code, "_handled = true;")
     check_contains("has next_state assign",
                    code, "next_state = STATE_Driver_Active;")
     check_not_contains("no return inside if", code, "return next_state;\n        }")
@@ -167,14 +180,15 @@ def test_commit_with_else():
     sm = make_sm_with_cell(["Idle", "Active", "Error"], ["START"], [t])
     code = generate_cell(sm)
 
-    check_contains("has else if (!_handled && !(cond))",
-                   code, "} else if (!_handled && !(cond_A)) {")
+    # [v2.2.6] Single Commit + else: plain `else`, no `_handled` reference.
+    check_contains("has plain else",
+                   code, "} else {")
     check_contains("then target Active",
                    code, "next_state = STATE_Driver_Active;")
     check_contains("else target Error",
                    code, "next_state = STATE_Driver_Error;")
-    check_contains("has _handled = true in else",
-                   code, "_handled = true;")
+    check_not_contains("no _handled = true in else (single Commit)",
+                       code, "_handled = true;")
 
 
 # ======================================================================
@@ -233,8 +247,9 @@ def test_unconditional():
     sm = make_sm_with_cell(["Idle", "Active"], ["START"], [t])
     code = generate_cell(sm)
 
+    # [v2.2.6] Single Commit: unconditional uses plain `if (1)`.
     check_contains("uses '1' as condition",
-                   code, "if (!_handled && 1)")
+                   code, "if (1) {")
 
 
 # ======================================================================
@@ -356,10 +371,11 @@ def test_group_shared_condition():
     check_contains("has Group header", code, "Group (shared_condition)")
     check_contains("has shared_condition if",
                    code, "if (cond_common) {")
+    # [v2.2.6] Two Commit transitions -> _handled present; MISRA 12.1 parens.
     check_contains("T1 inside group",
-                   code, "        if (!_handled && cond_A)")
+                   code, "        if ((!_handled) && (cond_A))")
     check_contains("T2 inside group",
-                   code, "        if (!_handled && cond_B)")
+                   code, "        if ((!_handled) && (cond_B))")
 
 
 def test_group_closed():
@@ -391,8 +407,9 @@ def test_group_closed():
     )
     code = generate_cell(sm)
 
+    # [v2.2.6] MISRA 12.1 parens; 4-space indent (outside group).
     check_contains("T3 outside group (no indent)",
-                   code, "    if (!_handled && cond_C)")
+                   code, "    if ((!_handled) && (cond_C))")
 
 
 # ======================================================================
@@ -492,12 +509,13 @@ def test_three_transitions():
                    "Transition[T2] (Tentative)")
     check_contains("T3 has Commit marker", code, "Transition[T3] (Commit)")
 
+    # [v2.2.6] Two Commit (T1, T3) -> _handled present; MISRA 12.1 parens.
     check_contains("T1 uses !_handled",
-                   code, "if (!_handled && cond_A)")
+                   code, "if ((!_handled) && (cond_A))")
     check_contains("T2 uses plain cond",
                    code, "if (cond_B)")
     check_contains("T3 uses !_handled",
-                   code, "if (!_handled && cond_C)")
+                   code, "if ((!_handled) && (cond_C))")
 
 
 # ======================================================================
@@ -614,8 +632,9 @@ def test_full_integration():
     check_contains("has ActiveEntry", code, "RoleFunc_Driver_ActiveEntry")
     check_contains("has T1 Commit", code, "Transition[T1] (Commit)")
     check_contains("has T2 Commit", code, "Transition[T2] (Commit)")
+    # [v2.2.6] Two Commit -> MISRA 12.1 parens around mixed !/&&.
     check_contains("has else block",
-                   code, "else if (!_handled && !(cond_B))")
+                   code, "else if ((!_handled) && (!(cond_B)))")
 
     i_pre = code.find("PreCheck")
     i_t1 = code.find("Transition[T1]")

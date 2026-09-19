@@ -1,21 +1,31 @@
 # codegen/transition_generator.py
 """
-State transition function generation module (v2.2 multi-transition + nesting support).
+State transition function generation module (v2.5 multi-transition + nesting).
+
+Version: 2.5 (2026-09-20 / MISRA fixes + _handled emission fix)
+  - [BUGFIX] When only one Commit transition exists in a cell, the
+    `_handled` variable is no longer declared. The transition block
+    generator now also omits `!_handled` guards and `_handled = true;`
+    assignments in that case (previously they were emitted regardless,
+    causing an undeclared-variable compile error).
+
+  - [Design] Role functions return `int` because their return value is
+    meaningful in condition checks. Role function calls are emitted
+    differently depending on context:
+
+      * `_role_func_call_expr(fn)`   -> "RoleFunc_Xxx(transition, ctx)"
+            Used inside condition expressions. Return value preserved.
+      * `_role_func_call_action(fn)` -> "(void)RoleFunc_Xxx(transition, ctx)"
+            Used for action statements (MISRA 17.7 compliant).
+      * `_role_func_call_bare(fn)`   -> "RoleFunc_Xxx"
+
+  - MISRA 12.1: `if` / `else if` conditions with mixed `!` and `&&`
+    now have explicit parentheses.
+  - knownConditionTrueFalse / variableScope: `_handled` guard is only
+    emitted when 2+ Commit transitions exist (was: always when any).
 
 Version: 2.2.1 (2026-09-19)
-  - Fix: Nested group emitted duplicate transition blocks when parent
-    and child both declared the same members. Now the parent skips
-    labels that any descendant declares (see _collect_child_labels).
-  - Fix: Section header is now a valid C block comment (see c_code_generator).
-
-[v2.2 changes]
-  - Multiple transitions per cell
-  - `_handled` guard pattern (Commit / Tentative)
-  - Cell actions (before_transitions / after_transitions)
-  - Relations (group with shared_condition)
-  - State entry / exit calls from State.entry / State.exit
-  - §12-5: Recursive group nesting via TransitionRelation.children
-  - Backward compatible: single transition without cell metadata
+  - Fix: Nested group emitted duplicate transition blocks.
 """
 
 import sys
@@ -57,7 +67,7 @@ def ensure_list(value) -> List[str]:
 
 
 class TransitionGenerator:
-    """State transition function generator (v2.2 multi-transition support)"""
+    """State transition function generator (v2.5 multi-transition support)"""
 
     SHORT_CELL_NAMES = True
     TABLE_MIN_COL_WIDTH = 14
@@ -323,35 +333,62 @@ class TransitionGenerator:
         return f"transition_{self.layer_name}_{s}_{e}" if self.layer_name \
             else f"transition_{s}_{e}"
 
-    def _role_func_call(self, func_name: str) -> str:
-        """Generate a role function call statement."""
-        if not func_name:
-            return "/* empty role function reference */"
+    # ==================================================================
+    # Role function call generation (context-aware)
+    # ==================================================================
+    def _resolve_role_func_name(self, func_name: str) -> str:
+        """Resolve a role function reference to its full C name.
+
+        Returns "" if the reference is empty / unrepresentable.
+        """
+        if not func_name or not func_name.strip():
+            return ""
         if func_name.startswith("RoleFunc_"):
-            return f"{func_name}(transition, ctx)"
+            return func_name
         if "." in func_name:
             ns, name = func_name.split(".", 1)
             ns_pascal = self.naming.to_pascal_case(ns)
             name_pascal = self.naming.to_pascal_case(name)
-            return f"RoleFunc_{ns_pascal}_{name_pascal}(transition, ctx)"
+            return f"RoleFunc_{ns_pascal}_{name_pascal}"
         pascal = self.naming.to_pascal_case(func_name)
         if self.layer_name:
-            full = f"RoleFunc_{self.layer_name}_{pascal}"
-        else:
-            full = f"RoleFunc_{pascal}"
+            return f"RoleFunc_{self.layer_name}_{pascal}"
+        return f"RoleFunc_{pascal}"
+
+    def _role_func_call_expr(self, func_name: str) -> str:
+        """Return the role function call as an **expression**.
+
+        The int return value is preserved. Use inside condition
+        expressions or when the return value matters.
+        """
+        full = self._resolve_role_func_name(func_name)
+        if not full:
+            return "/* empty role function reference */"
         return f"{full}(transition, ctx)"
 
+    def _role_func_call_action(self, func_name: str) -> str:
+        """Return the role function call as an **action statement**.
+
+        The int return value is discarded with `(void)` to satisfy
+        MISRA C:2012 Rule 17.7. Use for action contexts where the
+        return value is not used.
+        """
+        full = self._resolve_role_func_name(func_name)
+        if not full:
+            return "/* empty role function reference */"
+        return f"(void){full}(transition, ctx)"
+
     def _role_func_call_bare(self, func_name: str) -> str:
-        """Return only the C function name (no call suffix)."""
-        if not func_name or not func_name.strip():
-            return ""
-        full = self._role_func_call(func_name)
-        suffix = "(transition, ctx)"
-        if full.endswith(suffix):
-            return full[:-len(suffix)]
-        if full.startswith("/*"):
-            return ""
-        return full
+        """Return only the C function name (no call syntax)."""
+        return self._resolve_role_func_name(func_name)
+
+    # ==================================================================
+    # Backward-compatible alias
+    # ==================================================================
+    def _role_func_call(self, func_name: str) -> str:
+        """Legacy alias. New code should use _role_func_call_expr()
+        or _role_func_call_action()."""
+        return self._role_func_call_action(func_name)
 
     # ==================================================================
     # State entry / exit call generation
@@ -367,10 +404,10 @@ class TransitionGenerator:
             return ''
         lines = []
         for fn in exit_list:
-            name = self._role_func_call_bare(fn)
-            if not name:
+            call = self._role_func_call_action(fn)
+            if call.startswith("/*"):
                 continue
-            lines.append(f'        {name}(transition, ctx);  /* state exit */\n')
+            lines.append(f'        {call};  /* state exit */\n')
         return ''.join(lines)
 
     def _build_entry_call(self, state_name: str) -> str:
@@ -384,17 +421,31 @@ class TransitionGenerator:
             return ''
         lines = []
         for fn in entry_list:
-            name = self._role_func_call_bare(fn)
-            if not name:
+            call = self._role_func_call_action(fn)
+            if call.startswith("/*"):
                 continue
-            lines.append(f'        {name}(transition, ctx);  /* state entry */\n')
+            lines.append(f'        {call};  /* state entry */\n')
         return ''.join(lines)
 
     # ==================================================================
     # Transition block generation
     # ==================================================================
-    def _build_transition_block(self, trans, idx: int) -> str:
-        """Build one transition block (Commit / Tentative, with / without else)."""
+    def _build_transition_block(self, trans, idx: int,
+                                use_handled: bool = True) -> str:
+        """Build one transition block.
+
+        Parameters
+        ----------
+        use_handled : bool
+            If True, Commit transitions are emitted with `!_handled`
+            guards and `_handled = true;` assignments, matching the
+            original v2.2 behavior. If False, Commit transitions are
+            emitted as if they were the only one in the cell, i.e.
+            without any reference to `_handled`. This MUST be False
+            when the caller does not declare `bool _handled` in the
+            function prologue (otherwise the generated C references
+            an undeclared variable).
+        """
         condition = getattr(trans, 'condition', '')
         early_return = getattr(trans, 'early_return', False)
         target = getattr(trans, 'target', '')
@@ -408,15 +459,21 @@ class TransitionGenerator:
         cond_expr = condition if condition else "1"
         commit_str = "Commit" if early_return else "Tentative"
 
+        # [v2.5] Only reference `_handled` when it is declared AND
+        # the transition is a Commit.
+        emit_handled = early_return and use_handled
+
         exit_calls = self._build_exit_call(trans.source)
         entry_calls = self._build_entry_call(target)
         else_entry_calls = self._build_entry_call(else_target)
 
         pre_lines = ''.join(
-            f'        {self._role_func_call(a)};\n' for a in pre_actions
+            f'        {self._role_func_call_action(a)};\n'
+            for a in pre_actions
         )
         else_lines = ''.join(
-            f'        {self._role_func_call(a)};\n' for a in else_actions
+            f'        {self._role_func_call_action(a)};\n'
+            for a in else_actions
         )
 
         target_line = (
@@ -431,8 +488,11 @@ class TransitionGenerator:
         lines = []
         lines.append(f'\n    /* ===== Transition[{label}] ({commit_str}) ===== */\n')
 
-        if early_return:
-            lines.append(f'    if (!_handled && {cond_expr}) {{\n')
+        # [v2.5 / MISRA 12.1] explicit parentheses around mixed !/&&
+        if emit_handled:
+            lines.append(
+                f'    if ((!_handled) && ({cond_expr})) {{\n'
+            )
         else:
             lines.append(f'    if ({cond_expr}) {{\n')
 
@@ -440,20 +500,24 @@ class TransitionGenerator:
         lines.append(pre_lines)
         lines.append(target_line)
         lines.append(entry_calls)
-        if early_return:
+        if emit_handled:
             lines.append('        _handled = true;\n')
 
         if has_else_body:
-            if early_return:
-                lines.append(f'    }} else if (!_handled && !({cond_expr})) {{\n')
+            if emit_handled:
+                # [v2.5 / MISRA 12.1] explicit parentheses
+                lines.append(
+                    f'    }} else if ((!_handled) && (!({cond_expr}))) {{\n'
+                )
             else:
+                # Single Commit or Tentative -> plain else
                 lines.append('    } else {\n')
 
             lines.append(exit_calls)
             lines.append(else_lines)
             lines.append(else_target_line)
             lines.append(else_entry_calls)
-            if early_return:
+            if emit_handled:
                 lines.append('        _handled = true;\n')
 
         lines.append('    }\n')
@@ -462,18 +526,17 @@ class TransitionGenerator:
     # ==================================================================
     # §12-5: Transitions block with recursive group support
     # ==================================================================
-    def _build_transitions_block(self, state, transitions, relations) -> str:
+    def _build_transitions_block(self, state, transitions, relations,
+                                 use_handled: bool = True) -> str:
         """Build the sequence of transition blocks (v2.2 §12-5 nesting)."""
         parts = []
 
-        # Build label -> transition map
         by_label = {}
         for t in transitions:
             lbl = getattr(t, 'label', '') or ''
             if lbl:
                 by_label[lbl] = t
 
-        # Collect all labels mentioned anywhere in the relation tree
         mentioned = set()
 
         def collect(r):
@@ -485,41 +548,32 @@ class TransitionGenerator:
         for r in relations:
             collect(r)
 
-        # Emit relations in order
         for r in relations:
-            parts.append(self._emit_relation(r, by_label, indent_level=1))
+            parts.append(self._emit_relation(
+                r, by_label, indent_level=1, use_handled=use_handled,
+            ))
 
-        # Emit transitions not covered by any relation (backward compat)
         for t in transitions:
             lbl = getattr(t, 'label', '') or ''
             if lbl and lbl in mentioned:
                 continue
-            parts.append(self._build_transition_block(t, 0))
+            parts.append(self._build_transition_block(
+                t, 0, use_handled=use_handled,
+            ))
 
         return ''.join(parts)
 
     def _collect_child_labels(self, rel) -> set:
-        """Recursively collect all labels mentioned in descendants of rel.
-
-        [v2.2.1 fix]
-          Used to avoid emitting the same transition twice when a parent
-          and its child both declare the same members. The parent skips
-          any label that any descendant declares.
-        """
+        """Recursively collect all labels mentioned in descendants of rel."""
         labels = set()
         for child in (getattr(rel, 'children', None) or []):
             labels.update(getattr(child, 'members', None) or [])
             labels.update(self._collect_child_labels(child))
         return labels
 
-    def _emit_relation(self, rel, by_label, indent_level=1) -> str:
-        """Emit one relation (recursively for children).
-
-        [v2.2.1 fix]
-          If a child relation declares the same members as its parent,
-          the child takes over and the parent does not emit them.
-          This prevents duplicate transition blocks in the generated C.
-        """
+    def _emit_relation(self, rel, by_label, indent_level: int = 1,
+                       use_handled: bool = True) -> str:
+        """Emit one relation (recursively for children)."""
         parts = []
         pad = '    ' * indent_level
 
@@ -529,31 +583,35 @@ class TransitionGenerator:
         if has_cond:
             parts.append(
                 f'\n{pad}/* ===== Group (shared_condition) ===== */\n')
+            # shared_condition is raw text; role function calls inside
+            # it preserve their int return value (used as condition).
             parts.append(f'{pad}if ({shared_cond}) {{\n')
             inner_indent = indent_level + 1
         else:
             inner_indent = indent_level
 
-        # v2.2.1: labels handled by descendant relations are skipped here
         child_labels = self._collect_child_labels(rel)
 
-        # Members (skip those delegated to children)
         for label in (getattr(rel, 'members', None) or []):
             if label in child_labels:
                 continue
             t = by_label.get(label)
             if t is None:
                 continue
-            block = self._build_transition_block(t, 0)
+            block = self._build_transition_block(
+                t, 0, use_handled=use_handled,
+            )
             extra = inner_indent - 1
             if extra > 0:
                 block = self._indent_block(block, extra_indent=extra)
             parts.append(block)
 
-        # Children (recursively)
         for child in (getattr(rel, 'children', None) or []):
-            parts.append(self._emit_relation(child, by_label,
-                                             indent_level=inner_indent))
+            parts.append(self._emit_relation(
+                child, by_label,
+                indent_level=inner_indent,
+                use_handled=use_handled,
+            ))
 
         if has_cond:
             parts.append(f'{pad}}}\n')
@@ -590,16 +648,21 @@ class TransitionGenerator:
         return '\n'.join(cell_blocks)
 
     def _build_cell_function(self, state, event, transitions) -> str:
-        """Build one cell transition function (v2.2)."""
+        """Build one cell transition function (v2.5)."""
         T = self.CELL_TEMPLATES
 
         sm = self._current_state_machine
         cell_actions = sm.get_actions_for_cell(state.name, event.name) if sm else []
         cell_relations = sm.get_relations_for_cell(state.name, event.name) if sm else []
 
-        needs_handled = any(
-            getattr(t, 'early_return', False) for t in transitions
+        # [v2.5] `_handled` is meaningful only when 2+ Commit transitions
+        # exist. With a single Commit, `!_handled` is always true at the
+        # point of the check (guaranteed by initialization), so we omit
+        # both the declaration and its usage entirely.
+        early_return_count = sum(
+            1 for t in transitions if getattr(t, 'early_return', False)
         )
+        needs_handled = early_return_count >= 2
 
         parts = []
 
@@ -631,12 +694,13 @@ class TransitionGenerator:
                 trigger="before_transitions"))
             for a in pre_actions_for_cell:
                 parts.append(T['cell_action_call'].substitute(
-                    call=self._role_func_call(a.role_function)
+                    call=self._role_func_call_action(a.role_function)
                 ))
 
         # Transitions (recursive)
         parts.append(self._build_transitions_block(
-            state, transitions, cell_relations
+            state, transitions, cell_relations,
+            use_handled=needs_handled,
         ))
 
         # Cell actions (post): after_transitions
@@ -647,7 +711,7 @@ class TransitionGenerator:
                 trigger="after_transitions"))
             for a in after_actions:
                 parts.append(T['cell_action_call'].substitute(
-                    call=self._role_func_call(a.role_function)
+                    call=self._role_func_call_action(a.role_function)
                 ))
 
         parts.append(T['body_close'])

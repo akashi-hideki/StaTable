@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 02:21:47
+ * @date    2026-09-20 03:21:38
  */
 
 /*==============================================================
@@ -158,6 +158,7 @@ int RoleFunc_Driver_IdleEntry(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_IdleEntry, (uint16_t)CALL_SITES_IdleEntry_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -166,6 +167,12 @@ int RoleFunc_Driver_IdleEntry(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -174,6 +181,7 @@ int RoleFunc_Driver_IdleEntry(
 
     /* [[STABLE_USER_CODE_START:Driver_IdleEntry]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Driver_IdleEntry]] */
 
     return ret;
@@ -204,6 +212,7 @@ int RoleFunc_Driver_IdleExit(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_IdleExit, (uint16_t)CALL_SITES_IdleExit_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -212,6 +221,12 @@ int RoleFunc_Driver_IdleExit(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -220,6 +235,7 @@ int RoleFunc_Driver_IdleExit(
 
     /* [[STABLE_USER_CODE_START:Driver_IdleExit]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Driver_IdleExit]] */
 
     return ret;
@@ -250,6 +266,7 @@ int RoleFunc_Driver_InitEntry(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_InitEntry, (uint16_t)CALL_SITES_InitEntry_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -258,6 +275,12 @@ int RoleFunc_Driver_InitEntry(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -266,6 +289,7 @@ int RoleFunc_Driver_InitEntry(
 
     /* [[STABLE_USER_CODE_START:Driver_InitEntry]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Driver_InitEntry]] */
 
     return ret;
@@ -296,6 +320,7 @@ int RoleFunc_Driver_ReadyEntry(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_ReadyEntry, (uint16_t)CALL_SITES_ReadyEntry_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -304,6 +329,12 @@ int RoleFunc_Driver_ReadyEntry(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -312,6 +343,7 @@ int RoleFunc_Driver_ReadyEntry(
 
     /* [[STABLE_USER_CODE_START:Driver_ReadyEntry]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Driver_ReadyEntry]] */
 
     return ret;
@@ -342,6 +374,7 @@ int RoleFunc_Driver_ErrorEntry(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_ErrorEntry, (uint16_t)CALL_SITES_ErrorEntry_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -350,6 +383,12 @@ int RoleFunc_Driver_ErrorEntry(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -358,6 +397,7 @@ int RoleFunc_Driver_ErrorEntry(
 
     /* [[STABLE_USER_CODE_START:Driver_ErrorEntry]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Driver_ErrorEntry]] */
 
     return ret;
@@ -388,6 +428,7 @@ int RoleFunc_Driver_ErrorExit(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_ErrorExit, (uint16_t)CALL_SITES_ErrorExit_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -396,6 +437,12 @@ int RoleFunc_Driver_ErrorExit(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -404,6 +451,7 @@ int RoleFunc_Driver_ErrorExit(
 
     /* [[STABLE_USER_CODE_START:Driver_ErrorExit]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Driver_ErrorExit]] */
 
     return ret;
@@ -434,6 +482,7 @@ int RoleFunc_Driver_Init(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_Init, (uint16_t)CALL_SITES_Init_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -442,6 +491,12 @@ int RoleFunc_Driver_Init(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -450,6 +505,7 @@ int RoleFunc_Driver_Init(
 
     /* [[STABLE_USER_CODE_START:Driver_Init]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Driver_Init]] */
 
     return ret;
@@ -482,6 +538,7 @@ int RoleFunc_Driver_LogError(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_LogError, (uint16_t)CALL_SITES_LogError_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -490,6 +547,12 @@ int RoleFunc_Driver_LogError(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -498,6 +561,7 @@ int RoleFunc_Driver_LogError(
 
     /* [[STABLE_USER_CODE_START:Driver_LogError]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Driver_LogError]] */
 
     return ret;
@@ -528,6 +592,7 @@ int RoleFunc_Driver_Reset(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_Reset, (uint16_t)CALL_SITES_Reset_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -536,6 +601,12 @@ int RoleFunc_Driver_Reset(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -544,6 +615,7 @@ int RoleFunc_Driver_Reset(
 
     /* [[STABLE_USER_CODE_START:Driver_Reset]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Driver_Reset]] */
 
     return ret;
@@ -574,6 +646,7 @@ int RoleFunc_Driver_PreCheck(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_PreCheck, (uint16_t)CALL_SITES_PreCheck_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -582,6 +655,12 @@ int RoleFunc_Driver_PreCheck(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -590,6 +669,7 @@ int RoleFunc_Driver_PreCheck(
 
     /* [[STABLE_USER_CODE_START:Driver_PreCheck]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Driver_PreCheck]] */
 
     return ret;
@@ -620,6 +700,7 @@ int RoleFunc_Driver_Cleanup(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_Cleanup, (uint16_t)CALL_SITES_Cleanup_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -628,6 +709,12 @@ int RoleFunc_Driver_Cleanup(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -636,6 +723,7 @@ int RoleFunc_Driver_Cleanup(
 
     /* [[STABLE_USER_CODE_START:Driver_Cleanup]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Driver_Cleanup]] */
 
     return ret;
@@ -683,4 +771,5 @@ static uint16_t Transition_GetId(
 /* ============================================================== */
 /* [[STABLE_USER_CODE_TAIL_START]] */
 /* Write user-added code here (helper functions, etc.) */
+
 /* [[STABLE_USER_CODE_TAIL_END]] */

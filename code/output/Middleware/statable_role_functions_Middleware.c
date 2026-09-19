@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 02:21:47
+ * @date    2026-09-20 03:21:38
  */
 
 /*==============================================================
@@ -135,6 +135,7 @@ int RoleFunc_Middleware_IdleEntry(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_IdleEntry, (uint16_t)CALL_SITES_IdleEntry_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -143,6 +144,12 @@ int RoleFunc_Middleware_IdleEntry(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -151,6 +158,7 @@ int RoleFunc_Middleware_IdleEntry(
 
     /* [[STABLE_USER_CODE_START:Middleware_IdleEntry]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Middleware_IdleEntry]] */
 
     return ret;
@@ -181,6 +189,7 @@ int RoleFunc_Middleware_ConnEntry(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_ConnEntry, (uint16_t)CALL_SITES_ConnEntry_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -189,6 +198,12 @@ int RoleFunc_Middleware_ConnEntry(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -197,6 +212,7 @@ int RoleFunc_Middleware_ConnEntry(
 
     /* [[STABLE_USER_CODE_START:Middleware_ConnEntry]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Middleware_ConnEntry]] */
 
     return ret;
@@ -227,6 +243,7 @@ int RoleFunc_Middleware_ConnExit(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_ConnExit, (uint16_t)CALL_SITES_ConnExit_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -235,6 +252,12 @@ int RoleFunc_Middleware_ConnExit(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -243,6 +266,7 @@ int RoleFunc_Middleware_ConnExit(
 
     /* [[STABLE_USER_CODE_START:Middleware_ConnExit]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Middleware_ConnExit]] */
 
     return ret;
@@ -273,6 +297,7 @@ int RoleFunc_Middleware_ConnOkEntry(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_ConnOkEntry, (uint16_t)CALL_SITES_ConnOkEntry_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -281,6 +306,12 @@ int RoleFunc_Middleware_ConnOkEntry(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -289,6 +320,7 @@ int RoleFunc_Middleware_ConnOkEntry(
 
     /* [[STABLE_USER_CODE_START:Middleware_ConnOkEntry]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Middleware_ConnOkEntry]] */
 
     return ret;
@@ -319,6 +351,7 @@ int RoleFunc_Middleware_ErrorEntry(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_ErrorEntry, (uint16_t)CALL_SITES_ErrorEntry_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -327,6 +360,12 @@ int RoleFunc_Middleware_ErrorEntry(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -335,6 +374,7 @@ int RoleFunc_Middleware_ErrorEntry(
 
     /* [[STABLE_USER_CODE_START:Middleware_ErrorEntry]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Middleware_ErrorEntry]] */
 
     return ret;
@@ -365,6 +405,7 @@ int RoleFunc_Middleware_Connect(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_Connect, (uint16_t)CALL_SITES_Connect_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -373,6 +414,12 @@ int RoleFunc_Middleware_Connect(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -381,6 +428,7 @@ int RoleFunc_Middleware_Connect(
 
     /* [[STABLE_USER_CODE_START:Middleware_Connect]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Middleware_Connect]] */
 
     return ret;
@@ -413,6 +461,7 @@ int RoleFunc_Middleware_HandleErr(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_HandleErr, (uint16_t)CALL_SITES_HandleErr_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -421,6 +470,12 @@ int RoleFunc_Middleware_HandleErr(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -429,6 +484,7 @@ int RoleFunc_Middleware_HandleErr(
 
     /* [[STABLE_USER_CODE_START:Middleware_HandleErr]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Middleware_HandleErr]] */
 
     return ret;
@@ -460,6 +516,7 @@ int RoleFunc_Middleware_Retry(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, call_sites_Retry, (uint16_t)CALL_SITES_Retry_COUNT);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -468,6 +525,12 @@ int RoleFunc_Middleware_Retry(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -476,6 +539,7 @@ int RoleFunc_Middleware_Retry(
 
     /* [[STABLE_USER_CODE_START:Middleware_Retry]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Middleware_Retry]] */
 
     return ret;
@@ -505,6 +569,7 @@ int RoleFunc_Middleware_BeforeConnect(
     /* ===== transition ID (index within call_sites) ===== */
     const uint16_t transition_id = Transition_GetId(
         transition, NULL, 0);
+    (void)transition_id;   /* suppress unused warning */
 
     /* ===== local pointer to ctx->data ===== */
     uint32_t *const counter = &ctx->data.counter;  /* General counter */
@@ -513,6 +578,12 @@ int RoleFunc_Middleware_BeforeConnect(
     bool *const running = &ctx->data.running;  /* Running flag */
     volatile uint32_t *const g_system_tick = &ctx->data.g_system_tick;  /* Timer base [1ms] */
     uint8_t *const g_tick_10ms = &ctx->data.g_tick_10ms;  /* Derived timer [10ms] */
+    (void)counter;   /* suppress unused warning */
+    (void)error_code;   /* suppress unused warning */
+    (void)retry_count;   /* suppress unused warning */
+    (void)running;   /* suppress unused warning */
+    (void)g_system_tick;   /* suppress unused warning */
+    (void)g_tick_10ms;   /* suppress unused warning */
 
     /* ===== return value ===== */
     int ret = 0;   /* can be modified in user code */
@@ -521,6 +592,7 @@ int RoleFunc_Middleware_BeforeConnect(
 
     /* [[STABLE_USER_CODE_START:Middleware_BeforeConnect]] */
     /* Write user implementation code here */
+
     /* [[STABLE_USER_CODE_END:Middleware_BeforeConnect]] */
 
     return ret;
@@ -568,4 +640,5 @@ static uint16_t Transition_GetId(
 /* ============================================================== */
 /* [[STABLE_USER_CODE_TAIL_START]] */
 /* Write user-added code here (helper functions, etc.) */
+
 /* [[STABLE_USER_CODE_TAIL_END]] */

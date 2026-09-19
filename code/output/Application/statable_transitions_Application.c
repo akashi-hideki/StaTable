@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 02:21:47
+ * @date    2026-09-20 03:21:38
  */
 
 /*==============================================================
@@ -71,22 +71,20 @@ static STATE_Application_t t_Boot_BOOT(
 )
 {
     STATE_Application_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Cell actions (before_transitions) ===== */
-    RoleFunc_App_PreCheck(transition, ctx);
+    (void)RoleFunc_App_PreCheck(transition, ctx);
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (!_handled && 1) {
-        RoleFunc_App_BootExit(transition, ctx);  /* state exit */
-        RoleFunc_App_Boot(transition, ctx);
+    if (1) {
+        (void)RoleFunc_App_BootExit(transition, ctx);  /* state exit */
+        (void)RoleFunc_App_Boot(transition, ctx);
         next_state = STATE_Application_Init;
-        RoleFunc_App_InitEntry(transition, ctx);  /* state entry */
-        _handled = true;
+        (void)RoleFunc_App_InitEntry(transition, ctx);  /* state entry */
     }
 
     /* ===== Cell actions (after_transitions) ===== */
-    RoleFunc_App_Cleanup(transition, ctx);
+    (void)RoleFunc_App_Cleanup(transition, ctx);
 
     return next_state;
 }
@@ -101,22 +99,20 @@ static STATE_Application_t t_Init_START(
 )
 {
     STATE_Application_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Cell actions (before_transitions) ===== */
-    RoleFunc_App_Pre(transition, ctx);
+    (void)RoleFunc_App_Pre(transition, ctx);
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (!_handled && 1) {
-        RoleFunc_App_Start(transition, ctx);
+    if (1) {
+        (void)RoleFunc_App_Start(transition, ctx);
         next_state = STATE_Application_Running;
-        RoleFunc_App_RunEntry1(transition, ctx);  /* state entry */
-        RoleFunc_App_RunEntry2(transition, ctx);  /* state entry */
-        _handled = true;
+        (void)RoleFunc_App_RunEntry1(transition, ctx);  /* state entry */
+        (void)RoleFunc_App_RunEntry2(transition, ctx);  /* state entry */
     }
 
     /* ===== Cell actions (after_transitions) ===== */
-    RoleFunc_App_Post(transition, ctx);
+    (void)RoleFunc_App_Post(transition, ctx);
 
     return next_state;
 }
@@ -131,21 +127,19 @@ static STATE_Application_t t_Running_PAUSE(
 )
 {
     STATE_Application_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (!_handled && counter > 0) {
-        RoleFunc_App_Pause(transition, ctx);
+    if (counter > 0) {
+        (void)RoleFunc_App_Pause(transition, ctx);
         next_state = STATE_Application_Paused;
-        RoleFunc_App_PauseEntry(transition, ctx);  /* state entry */
-        _handled = true;
+        (void)RoleFunc_App_PauseEntry(transition, ctx);  /* state entry */
     }
 
     /* ===== Transition[T2] (Tentative) ===== */
     if (counter == 0) {
         next_state = STATE_Application_Running;
-        RoleFunc_App_RunEntry1(transition, ctx);  /* state entry */
-        RoleFunc_App_RunEntry2(transition, ctx);  /* state entry */
+        (void)RoleFunc_App_RunEntry1(transition, ctx);  /* state entry */
+        (void)RoleFunc_App_RunEntry2(transition, ctx);  /* state entry */
     }
 
     return next_state;
@@ -161,17 +155,15 @@ static STATE_Application_t t_Running_STOP(
 )
 {
     STATE_Application_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Group (shared_condition) ===== */
     if (running == true) {
 
         /* ===== Transition[T1] (Commit) ===== */
-        if (!_handled && g_system_tick > 100) {
-            RoleFunc_App_HandleStop(transition, ctx);
+        if (g_system_tick > 100) {
+            (void)RoleFunc_App_HandleStop(transition, ctx);
             next_state = STATE_Application_Stopped;
-            RoleFunc_App_StopEntry(transition, ctx);  /* state entry */
-            _handled = true;
+            (void)RoleFunc_App_StopEntry(transition, ctx);  /* state entry */
         }
 
         /* ===== Group (shared_condition) ===== */
@@ -180,7 +172,7 @@ static STATE_Application_t t_Running_STOP(
             /* ===== Transition[T2] (Tentative) ===== */
             if (g_system_tick <= 100) {
                 next_state = STATE_Application_Paused;
-                RoleFunc_App_PauseEntry(transition, ctx);  /* state entry */
+                (void)RoleFunc_App_PauseEntry(transition, ctx);  /* state entry */
             }
         }
     }
@@ -198,15 +190,13 @@ static STATE_Application_t t_Paused_RESUME(
 )
 {
     STATE_Application_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (!_handled && 1) {
-        RoleFunc_App_Resume(transition, ctx);
+    if (1) {
+        (void)RoleFunc_App_Resume(transition, ctx);
         next_state = STATE_Application_Running;
-        RoleFunc_App_RunEntry1(transition, ctx);  /* state entry */
-        RoleFunc_App_RunEntry2(transition, ctx);  /* state entry */
-        _handled = true;
+        (void)RoleFunc_App_RunEntry1(transition, ctx);  /* state entry */
+        (void)RoleFunc_App_RunEntry2(transition, ctx);  /* state entry */
     }
 
     return next_state;
@@ -222,17 +212,14 @@ static STATE_Application_t t_Paused_STOP(
 )
 {
     STATE_Application_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (!_handled && 1) {
+    if (1) {
         next_state = STATE_Application_Stopped;
-        RoleFunc_App_StopEntry(transition, ctx);  /* state entry */
-        _handled = true;
-    } else if (!_handled && !(1)) {
+        (void)RoleFunc_App_StopEntry(transition, ctx);  /* state entry */
+    } else {
         next_state = STATE_Application_Paused;
-        RoleFunc_App_PauseEntry(transition, ctx);  /* state entry */
-        _handled = true;
+        (void)RoleFunc_App_PauseEntry(transition, ctx);  /* state entry */
     }
 
     return next_state;

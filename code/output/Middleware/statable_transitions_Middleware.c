@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 02:21:47
+ * @date    2026-09-20 03:21:38
  */
 
 /*==============================================================
@@ -67,14 +67,12 @@ static STATE_Middleware_t t_Idle_CONNECT(
 )
 {
     STATE_Middleware_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (!_handled && 1) {
-        RoleFunc_Middleware_Connect(transition, ctx);
+    if (1) {
+        (void)RoleFunc_Middleware_Connect(transition, ctx);
         next_state = STATE_Middleware_Connecting;
-        RoleFunc_Middleware_ConnEntry(transition, ctx);  /* state entry */
-        _handled = true;
+        (void)RoleFunc_Middleware_ConnEntry(transition, ctx);  /* state entry */
     }
 
     return next_state;
@@ -96,19 +94,19 @@ static STATE_Middleware_t t_Connecting_CONNECTED(
     if (error_code == 0) {
 
         /* ===== Transition[T1] (Commit) ===== */
-        if (!_handled && retry_count < 3) {
-            RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
+        if ((!_handled) && (retry_count < 3)) {
+            (void)RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
             next_state = STATE_Middleware_Connected;
-            RoleFunc_Middleware_ConnOkEntry(transition, ctx);  /* state entry */
+            (void)RoleFunc_Middleware_ConnOkEntry(transition, ctx);  /* state entry */
             _handled = true;
         }
 
         /* ===== Transition[T2] (Commit) ===== */
-        if (!_handled && retry_count >= 3) {
-            RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
-            RoleFunc_Middleware_HandleErr(transition, ctx);
+        if ((!_handled) && (retry_count >= 3)) {
+            (void)RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
+            (void)RoleFunc_Middleware_HandleErr(transition, ctx);
             next_state = STATE_Middleware_Error;
-            RoleFunc_Middleware_ErrorEntry(transition, ctx);  /* state entry */
+            (void)RoleFunc_Middleware_ErrorEntry(transition, ctx);  /* state entry */
             _handled = true;
         }
     }
@@ -126,21 +124,18 @@ static STATE_Middleware_t t_Connecting_ERROR(
 )
 {
     STATE_Middleware_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (!_handled && 1) {
-        RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
-        RoleFunc_Middleware_HandleErr(transition, ctx);
+    if (1) {
+        (void)RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
+        (void)RoleFunc_Middleware_HandleErr(transition, ctx);
         next_state = STATE_Middleware_Error;
-        RoleFunc_Middleware_ErrorEntry(transition, ctx);  /* state entry */
-        _handled = true;
-    } else if (!_handled && !(1)) {
-        RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
-        RoleFunc_Middleware_Retry(transition, ctx);
+        (void)RoleFunc_Middleware_ErrorEntry(transition, ctx);  /* state entry */
+    } else {
+        (void)RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
+        (void)RoleFunc_Middleware_Retry(transition, ctx);
         next_state = STATE_Middleware_Idle;
-        RoleFunc_Middleware_IdleEntry(transition, ctx);  /* state entry */
-        _handled = true;
+        (void)RoleFunc_Middleware_IdleEntry(transition, ctx);  /* state entry */
     }
 
     return next_state;
@@ -156,14 +151,12 @@ static STATE_Middleware_t t_Connected_ERROR(
 )
 {
     STATE_Middleware_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (!_handled && 1) {
-        RoleFunc_Middleware_HandleErr(transition, ctx);
+    if (1) {
+        (void)RoleFunc_Middleware_HandleErr(transition, ctx);
         next_state = STATE_Middleware_Error;
-        RoleFunc_Middleware_ErrorEntry(transition, ctx);  /* state entry */
-        _handled = true;
+        (void)RoleFunc_Middleware_ErrorEntry(transition, ctx);  /* state entry */
     }
 
     return next_state;
@@ -179,20 +172,18 @@ static STATE_Middleware_t t_Error_RETRY(
 )
 {
     STATE_Middleware_t next_state = transition->from_state;
-    bool _handled = false;
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (!_handled && retry_count < 3) {
-        RoleFunc_Middleware_Retry(transition, ctx);
+    if (retry_count < 3) {
+        (void)RoleFunc_Middleware_Retry(transition, ctx);
         next_state = STATE_Middleware_Idle;
-        RoleFunc_Middleware_IdleEntry(transition, ctx);  /* state entry */
-        _handled = true;
+        (void)RoleFunc_Middleware_IdleEntry(transition, ctx);  /* state entry */
     }
 
     /* ===== Transition[T2] (Tentative) ===== */
     if (retry_count >= 3) {
         next_state = STATE_Middleware_Error;
-        RoleFunc_Middleware_ErrorEntry(transition, ctx);  /* state entry */
+        (void)RoleFunc_Middleware_ErrorEntry(transition, ctx);  /* state entry */
     }
 
     return next_state;

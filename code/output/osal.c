@@ -2,8 +2,7 @@
  * @file    osal.c
  * @brief   OSAL (OS Abstraction Layer) - NonRTOS
  */
-#include <stdint.h>
-#include <stdbool.h>
+#include "osal.h"
 
 /* Mutex implementation */
 OSAL_Status_t OSAL_Mutex_Create(OSAL_Mutex_t *mutex)

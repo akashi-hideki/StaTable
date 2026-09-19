@@ -2,31 +2,26 @@
 """
 Role function generation module (multi-layer state machine / ISR support)
 
+Version: 3.2 (2026-09-20 / MISRA fixes)
+  - MISRA 17.7 / unreadVariable: `transition_id` and per-variable data
+    pointers are now explicitly discarded via `(void)` immediately after
+    declaration. User code markers can still freely use them.
+    This removes ~250 unreadVariable warnings in generated C without
+    changing the function signature (arg/return types are design-fixed).
+
 Version: 3.1 (2026-09-19 / v2.2.5 fixes)
   - _collect_call_sites now also collects:
       * State entry / exit references
       * Cell-level actions (before_transitions / after_transitions)
-    This matches v2.2 XML extensions. Without it, functions referenced
-    only from state entry/exit or cell actions were declared in .h but
-    never defined in .c (link error on strict compilers).
-  - _should_emit_implementation now accepts namespace prefix matches
-    (e.g. namespace="App" matches layer_name="Application") to avoid
-    dropping self-layer functions due to naming inconsistency.
+  - _should_emit_implementation now accepts namespace prefix matches.
 
 Version: 3.0 (2026-09-13 / Stage 4: transition-side Namespace.Name support)
-  - _normalize_func_ref preserves qualified_name
-  - _extract_func_names_from_condition detects 'Driver.Init' form
-  - _get_call_sites_for_func supports both qualified / bare search
 
 [v1.5 addition]
   - _VALID_C_IDENTIFIER guard added to _normalize_func_ref
-    -> rejects C-operator-contaminated refs like 'retry_count++'
-  - Added warning log for undefined references in generate_all_implementations
 
 [v1.6 addition]
   - _should_emit_implementation added (layer filter / Option A)
-  - generate_all_implementations filters so only self-layer functions
-    and functions with callers are emitted (empty stub reduction)
 """
 
 import sys
@@ -188,9 +183,12 @@ class RoleFunctionGenerator:
         'local_transition_id_header': (
             '    /* ===== transition ID (index within call_sites) ===== */\n'
         ),
+        # [v3.2 / MISRA 17.7] 宣言直後に (void) で参照を明示。
+        # ユーザーコードマーカー内では自由に使用可能。
         'local_transition_id_decl': Template(
             '    const uint16_t transition_id = Transition_GetId(\n'
             '        transition, $table_arg, $count_arg);\n'
+            '    (void)transition_id;   /* suppress unused warning */\n'
         ),
 
         'local_data_header': '    /* ===== local pointer to ctx->data ===== */\n',
@@ -558,10 +556,6 @@ class RoleFunctionGenerator:
           Extended to also collect:
             - State entry / exit references
             - Cell-level actions (before_transitions / after_transitions)
-          Previously only Transition condition / pre_actions / else_actions
-          were scanned, which caused functions referenced solely from
-          state entry/exit or cell actions to be declared in .h but never
-          defined in .c (link error on strict compilers).
         """
         if state_machine is None:
             return {}
@@ -908,6 +902,14 @@ class RoleFunctionGenerator:
         ])
 
     def _generate_local_data_pointers(self, global_defs) -> str:
+        """Generate local pointers to ctx->data and explicitly discard
+        them with (void) so that unused ones don't raise warnings.
+
+        [v3.2 / MISRA 17.7 / unreadVariable]
+          User code marker may use only a subset of these pointers.
+          The (void) cast suppresses the warning while leaving the
+          pointers usable inside the marker.
+        """
         if global_defs is None:
             return ""
         variables = getattr(global_defs, 'variables', []) or []
@@ -934,6 +936,13 @@ class RoleFunctionGenerator:
                     c_type=c_type, var_name=var_name,
                     comment=comment,
                 ))
+        # [v3.2] Explicit discard to suppress unreadVariable warnings.
+        for var in variables:
+            var_name = self.naming.sanitize_identifier(
+                getattr(var, 'name', 'unnamed')
+            )
+            parts.append(f'    (void){var_name};'
+                         f'   /* suppress unused warning */\n')
         parts.append(T['blank'])
         return ''.join(parts)
 

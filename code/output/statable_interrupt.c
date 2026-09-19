@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 02:21:47
+ * @date    2026-09-20 03:21:38
  */
 
 /*==============================================================
@@ -39,6 +39,7 @@ void ISR_TIMER0(void)
     /* ===== User extension area ===== */
     /* [[STABLE_USER_CODE_START:TIMER0]] */
     /* Add user code here */
+
     /* [[STABLE_USER_CODE_END:TIMER0]] */
 
     /* ===== Exit log ===== */
