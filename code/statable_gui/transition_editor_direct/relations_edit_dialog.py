@@ -1,14 +1,19 @@
 # statable_gui/transition_editor_direct/relations_edit_dialog.py
-"""Dialog to edit one TransitionRelation (v2.2)."""
+"""Dialog to edit one TransitionRelation (v2.2).
+
+[v2.2 enhancement]
+  - Members list shows each transition as "T1: cond_A -> Active"
+    so the user can identify which label belongs to which condition.
+"""
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QLineEdit, QListWidget, QListWidgetItem, QDialogButtonBox,
-    QGroupBox,
+    QGroupBox, QMessageBox,
 )
 
 from statable.model import TransitionRelation
@@ -18,17 +23,32 @@ logger = logging.getLogger("transition_editor_direct.relations_edit_dialog")
 KIND_CHOICES = ["sequential", "exclusive", "group"]
 
 
+def _fmt_member(label: str, detail: str) -> str:
+    """Format a member list entry: 'T1: cond_A -> Active'."""
+    if detail:
+        return f"{label}: {detail}"
+    return label
+
+
 class RelationsEditDialog(QDialog):
     """Edit a single relation (kind / members / shared_condition)."""
 
     def __init__(self, parent=None,
                  relation: Optional[TransitionRelation] = None,
-                 available_labels: Optional[List[str]] = None):
+                 available_labels: Optional[List[str]] = None,
+                 member_details: Optional[Dict[str, str]] = None):
+        """
+        Args:
+            relation: existing relation (None for new)
+            available_labels: list of Transition labels in this cell
+            member_details: {label: "cond_A -> Active"} for display
+        """
         super().__init__(parent)
         self.setWindowTitle("Edit relation")
-        self.setMinimumSize(500, 450)
+        self.setMinimumSize(600, 500)
 
         self.available_labels = list(available_labels or [])
+        self.member_details = dict(member_details or {})
 
         layout = QVBoxLayout(self)
 
@@ -41,14 +61,19 @@ class RelationsEditDialog(QDialog):
         kind_layout.addStretch()
         layout.addLayout(kind_layout)
 
-        # ---- Members (checkbox list) ----
+        # ---- Members (checkbox list with condition/target) ----
         members_group = QGroupBox("Members (Transition labels)")
         members_layout = QVBoxLayout(members_group)
         self.members_list = QListWidget()
         for lbl in self.available_labels:
-            item = QListWidgetItem(lbl)
+            detail = self.member_details.get(lbl, "")
+            text = _fmt_member(lbl, detail)
+            item = QListWidgetItem(text)
+            item.setData(Qt.UserRole, lbl)   # store the raw label
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
             item.setCheckState(Qt.Unchecked)
+            if detail:
+                item.setToolTip(f"{lbl}\n{detail}")
             self.members_list.addItem(item)
         members_layout.addWidget(self.members_list)
 
@@ -95,15 +120,14 @@ class RelationsEditDialog(QDialog):
         selected = set(relation.members or [])
         for i in range(self.members_list.count()):
             item = self.members_list.item(i)
-            if item.text() in selected:
+            raw_label = item.data(Qt.UserRole) or item.text()
+            if raw_label in selected:
                 item.setCheckState(Qt.Checked)
 
     def _on_accept(self):
         members = self.get_members()
         kind = self.kind_combo.currentText()
         if kind == "group" and not members:
-            # Group requires at least one member
-            from PySide6.QtWidgets import QMessageBox
             QMessageBox.warning(
                 self, "Warning",
                 "A group relation requires at least one member.")
@@ -114,11 +138,13 @@ class RelationsEditDialog(QDialog):
     # Public API
     # ------------------------------------------------------------------
     def get_members(self) -> List[str]:
+        """Return only the raw labels (T1, T2, ...)."""
         result = []
         for i in range(self.members_list.count()):
             item = self.members_list.item(i)
             if item.checkState() == Qt.Checked:
-                result.append(item.text())
+                label = item.data(Qt.UserRole) or item.text()
+                result.append(label)
         return result
 
     def get_relation(self) -> TransitionRelation:

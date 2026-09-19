@@ -327,11 +327,6 @@ def test_overview_tab():
 
     text = tab.get_summary_text()
     check("summary is str", isinstance(text, str))
-
-
-# ======================================================================
-# 4. ActionEditorDialog: 5 tabs
-# ======================================================================
 def test_dialog_five_tabs():
     print("\n[4] ActionEditorDialog: 5 tabs")
     app = qapp()
@@ -358,7 +353,8 @@ def test_dialog_five_tabs():
     names = dlg.get_tab_names()
     check("has 5 tabs", len(names) == 5, f"got {names}")
     check("tab 0 is Transitions", names[0] == "Transitions", f"{names}")
-    check("tab 1 is Actions", names[1] == "Actions", f"{names}")
+    check("tab 1 is Pre / Post Actions",
+          names[1] == "Pre / Post Actions", f"{names}")
     check("tab 2 is Relations", names[2] == "Relations", f"{names}")
     check("tab 3 is Overview", names[3] == "Overview", f"{names}")
     check("tab 4 is Preview", names[4] == "Preview", f"{names}")

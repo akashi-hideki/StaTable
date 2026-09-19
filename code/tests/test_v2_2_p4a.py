@@ -387,13 +387,8 @@ def test_transitions_tab_has_else_link():
     he_w.setCurrentText("Yes")
     check("else_target re-enabled",
           et_w.isEnabled() is True)
-
-
-# ======================================================================
-# 5. ActionsTab
-# ======================================================================
 def test_actions_tab():
-    print("\n[5] ActionsTab")
+    print("\n[5] ActionsTab (Pre / Post groups)")
     app = qapp()
     if app is None:
         RESULT.skip("ActionsTab", "PySide6")
@@ -402,7 +397,7 @@ def test_actions_tab():
     try:
         from statable_gui.transition_editor_direct.draft import ActionDraft
         from statable_gui.transition_editor_direct.actions_tab import (
-            ActionsTab,
+            ActionsTab, TRIGGER_PRE, TRIGGER_POST,
         )
         from statable.model import ActionStep
     except ImportError as e:
@@ -414,43 +409,62 @@ def test_actions_tab():
 
     check("initial row count 0", tab.row_count() == 0)
 
-    tab.add_action()
-    check("row count 1", tab.row_count() == 1)
+    # Add a Pre action (explicit ActionStep)
+    tab.add_action(ActionStep(role_function="Driver.PreCheck",
+                              trigger=TRIGGER_PRE))
+    check("row count 1 after add_action(Pre)", tab.row_count() == 1)
 
-    a = ActionStep(role_function="Driver.Cleanup",
-                   trigger="after_transitions")
-    tab.add_action(a)
-    check("row count 2", tab.row_count() == 2)
+    # Add a Post action
+    tab.add_action(ActionStep(role_function="Driver.Cleanup",
+                              trigger=TRIGGER_POST))
+    check("row count 2 after add_action(Post)", tab.row_count() == 2)
 
+    # get_actions returns Pre rows first, then Post rows
     got = tab.get_actions()
-    check("get_actions preserves trigger",
-          got[1].trigger == "after_transitions",
-          f"got {[a.trigger for a in got]}")
-    check("get_actions preserves role_function",
-          got[1].role_function == "Driver.Cleanup")
+    check("2 actions returned", len(got) == 2,
+          f"got {len(got)}")
+    check("action[0] is Pre (before_transitions)",
+          got[0].trigger == TRIGGER_PRE,
+          f"got {got[0].trigger}")
+    check("action[1] is Post (after_transitions)",
+          got[1].trigger == TRIGGER_POST,
+          f"got {got[1].trigger}")
+    check("action[0] role_function preserved",
+          got[0].role_function == "Driver.PreCheck",
+          f"got {got[0].role_function}")
+    check("action[1] role_function preserved",
+          got[1].role_function == "Driver.Cleanup",
+          f"got {got[1].role_function}")
 
-    tab.move_up(1)
-    got = tab.get_actions()
-    check("move_up works",
-          got[0].role_function == "Driver.Cleanup")
-
+    # Delete the Pre row
     tab.delete_action(0)
-    check("delete row count 1", tab.row_count() == 1)
+    check("row count 1 after delete Pre", tab.row_count() == 1)
+    got = tab.get_actions()
+    check("remaining action is Post",
+          len(got) == 1 and got[0].trigger == TRIGGER_POST,
+          f"got {[(a.trigger, a.role_function) for a in got]}")
 
+    # Round-trip with mixed Pre/Post
     tab.set_actions([
-        ActionStep(role_function="A", trigger="always"),
+        ActionStep(role_function="A", trigger="before_transitions"),
         ActionStep(role_function="B", trigger="before_transitions"),
+        ActionStep(role_function="C", trigger="after_transitions"),
     ])
     got = tab.get_actions()
-    check("set/get round-trip",
-          len(got) == 2
-          and got[0].trigger == "always"
-          and got[1].trigger == "before_transitions")
-
-
-# ======================================================================
-# 6. RelationsTab
-# ======================================================================
+    check("3 actions round-trip", len(got) == 3)
+    check("two Pre actions first",
+          got[0].trigger == TRIGGER_PRE
+          and got[1].trigger == TRIGGER_PRE,
+          f"got {[a.trigger for a in got]}")
+    check("one Post action last",
+          got[2].trigger == TRIGGER_POST,
+          f"got {[a.trigger for a in got]}")
+    check("Pre actions preserve order",
+          got[0].role_function == "A" and got[1].role_function == "B",
+          f"got {[a.role_function for a in got]}")
+    check("Post action role_function",
+          got[2].role_function == "C",
+          f"got {got[2].role_function}")
 def test_relations_tab():
     print("\n[6] RelationsTab")
     app = qapp()
@@ -473,12 +487,16 @@ def test_relations_tab():
 
     check("initial row count 0", tab.row_count() == 0)
 
-    tab.add_relation()
-    check("row count 1", tab.row_count() == 1)
+    # Add relations with explicit objects (bypasses the dialog)
+    r1 = TransitionRelation(kind="sequential", members=["T1", "T2"])
+    row = tab.add_relation(r1)
+    check("add_relation(explicit) returns 0", row == 0)
+    check("row count 1 after add_relation(explicit)",
+          tab.row_count() == 1)
 
-    r = TransitionRelation(kind="group", members=["T1", "T2"],
-                           shared_condition="cond_common")
-    tab.add_relation(r)
+    r2 = TransitionRelation(kind="group", members=["T1", "T2"],
+                            shared_condition="cond_common")
+    tab.add_relation(r2)
     check("row count 2", tab.row_count() == 2)
 
     got = tab.get_relations()
@@ -492,6 +510,7 @@ def test_relations_tab():
     tab.delete_relation(0)
     check("delete row count 1", tab.row_count() == 1)
 
+    # set / get round-trip
     tab.set_relations([
         TransitionRelation(kind="sequential", members=["T1", "T2"]),
         TransitionRelation(kind="exclusive", members=["T3"]),
@@ -502,10 +521,9 @@ def test_relations_tab():
           and got[0].kind == "sequential"
           and got[1].kind == "exclusive")
 
-
-# ======================================================================
-# 7. ActionEditorDialog 5-tab structure
-# ======================================================================
+    # NOTE: add_relation(None) opens a QMessageBox modal that hangs in
+    # offscreen mode, so we do NOT call it here. GUI users still see
+    # the warning when no transitions are defined.
 def test_dialog_tabs():
     print("\n[7] ActionEditorDialog: 5-tab structure")
     app = qapp()
@@ -533,7 +551,8 @@ def test_dialog_tabs():
     names = dlg.get_tab_names()
     check("has 5 tabs", len(names) == 5, f"got {names}")
     check("tab 0 is Transitions", names[0] == "Transitions", f"got {names}")
-    check("tab 1 is Actions", names[1] == "Actions", f"got {names}")
+    check("tab 1 is Pre / Post Actions",
+          names[1] == "Pre / Post Actions", f"got {names}")
     check("tab 2 is Relations", names[2] == "Relations", f"got {names}")
     check("tab 3 is Overview", names[3] == "Overview", f"got {names}")
     check("tab 4 is Preview", names[4] == "Preview", f"got {names}")

@@ -13,6 +13,8 @@ Tabs:
     to prevent intermediate signals from wiping cell_actions /
     cell_relations before they are loaded.
   - _loading flag suppresses _on_content_changed during initial load.
+  - _sync_member_details() propagates {label: "cond -> target"} to
+    RelationsTab so the member list shows identifiable entries.
 """
 
 import logging
@@ -221,6 +223,9 @@ class ActionEditorDialog(QDialog):
         finally:
             self._loading = False
 
+        # v2.2: sync member details before refreshing preview
+        self._sync_member_details()
+
         # Refresh preview / overview once after load
         try:
             self.code_widget.update_code()
@@ -241,6 +246,34 @@ class ActionEditorDialog(QDialog):
         self.draft.cell_relations = list(self.relations_tab.get_relations())
 
     # ------------------------------------------------------------------
+    # v2.2: member details propagation
+    # ------------------------------------------------------------------
+    def _sync_member_details(self):
+        """Build {label: 'cond -> target [mode]'} from the TransitionsTab
+        and pass it to RelationsTab so members are identifiable.
+
+        Example entry:
+            T1: err_code != 0 -> Error  [Commit]
+        """
+        details = {}
+        try:
+            transitions = self.transitions_tab.get_transitions()
+        except Exception as e:
+            logger.warning(f"_sync_member_details failed: {e}")
+            return
+
+        for t in transitions:
+            label = getattr(t, 'label', '') or ''
+            if not label:
+                continue
+            cond = (getattr(t, 'condition', '') or '').strip() or "(no cond)"
+            target = (getattr(t, 'target', '') or '').strip() or "(none)"
+            mode = "Commit" if getattr(t, 'early_return', False) else "Tentative"
+            details[label] = f"{cond} -> {target}  [{mode}]"
+
+        self.relations_tab.set_member_details(details)
+
+    # ------------------------------------------------------------------
     # Slots
     # ------------------------------------------------------------------
     def _on_content_changed(self):
@@ -249,6 +282,7 @@ class ActionEditorDialog(QDialog):
             return
 
         self._save_draft()
+        self._sync_member_details()
         self.code_widget.update_code()
         try:
             self.overview_tab.refresh()
@@ -257,6 +291,7 @@ class ActionEditorDialog(QDialog):
 
     def _on_refresh_preview(self):
         self._save_draft()
+        self._sync_member_details()
         self.code_widget.update_code()
         try:
             self.overview_tab.refresh()

@@ -3,10 +3,14 @@
 
 Sequential / Exclusive / Group relations between transitions.
 Editing is done via RelationsEditDialog.
+
+[v2.2 enhancement]
+  - Members list shows "T1: cond_A -> Active" so labels are identifiable.
+  - set_transitions() lets the dialog pass transition details.
 """
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -35,6 +39,8 @@ class RelationsTab(QWidget):
     def __init__(self, draft: ActionDraft, parent=None):
         super().__init__(parent)
         self.draft = draft
+        # v2.2: {label: "cond_A -> Active"} populated by set_transitions()
+        self.member_details: Dict[str, str] = {}
         self._build_ui()
 
     def _build_ui(self):
@@ -72,6 +78,16 @@ class RelationsTab(QWidget):
         layout.addLayout(btn_layout)
 
     # ------------------------------------------------------------------
+    # Member details (called by dialog.py)
+    # ------------------------------------------------------------------
+    def set_member_details(self, details: Dict[str, str]):
+        """Update the {label: 'cond -> target'} map.
+
+        Called by ActionEditorDialog whenever transitions change.
+        """
+        self.member_details = dict(details or {})
+
+    # ------------------------------------------------------------------
     # Available labels (from current cell's transitions)
     # ------------------------------------------------------------------
     def _get_available_labels(self) -> List[str]:
@@ -103,6 +119,7 @@ class RelationsTab(QWidget):
                 parent=self,
                 relation=None,
                 available_labels=available,
+                member_details=self.member_details,
             )
             if dlg.exec() != RelationsEditDialog.Accepted:
                 return -1
@@ -146,7 +163,6 @@ class RelationsTab(QWidget):
     def set_relations(self, relations: List[TransitionRelation]) -> None:
         self.table.setRowCount(0)
         for r in relations:
-            # Bypass the dialog for programmatic setting
             row = self.table.rowCount()
             self.table.insertRow(row)
             self.table.setItem(row, COL_KIND, QTableWidgetItem(r.kind))
@@ -169,7 +185,6 @@ class RelationsTab(QWidget):
         if row < 0 or row >= self.table.rowCount():
             return
 
-        # Reconstruct the relation from the row
         def _txt(col: int) -> str:
             it = self.table.item(row, col)
             return it.text().strip() if it else ""
@@ -187,6 +202,7 @@ class RelationsTab(QWidget):
             parent=self,
             relation=current,
             available_labels=available,
+            member_details=self.member_details,
         )
         if dlg.exec() != RelationsEditDialog.Accepted:
             return
