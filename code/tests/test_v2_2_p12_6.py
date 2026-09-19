@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
-P12-6 (AI action extensions) test suite for StaTable v2.2 §12-6.
+P12-6 (AI action extensions) test suite for StaTable v2.2 Section12-6.
 
 Verifies 7 new ChangeActionType members + their apply() handlers:
 

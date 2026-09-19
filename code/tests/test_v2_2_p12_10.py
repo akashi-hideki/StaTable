@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 P12-10 Comprehensive validation for StaTable v2.2.5 (v8).
 
@@ -106,7 +106,7 @@ def clean(t):
 
 
 # ======================================================================
-# Track 2 — symbol extraction
+# Track 2 - symbol extraction
 # ======================================================================
 C_KEYWORDS = {
     'return','if','while','for','switch','case','do','else','goto','break',
@@ -179,7 +179,7 @@ def check_symbols(S, files, structure):
 
 
 # ======================================================================
-# Track 1 — pycparser (by_layer only)
+# Track 1 - pycparser (by_layer only)
 # ======================================================================
 FAKE_HEADERS = """
 typedef unsigned char uint8_t;
@@ -300,7 +300,7 @@ def heuristic_lint(files, structure):
 
 
 # ======================================================================
-# Track 3 — folder_structure coverage
+# Track 3 - folder_structure coverage
 # ======================================================================
 def load_xml():
     from statable.xml_io import project_from_xml
@@ -388,7 +388,7 @@ def run_light(structure, files, key_files):
 
 def test_flat():
     print("\n" + "=" * 70)
-    print("  STRUCTURE: flat (informational — not production)")
+    print("  STRUCTURE: flat (informational - not production)")
     print("=" * 70)
     try:
         files = generate_single_tab('flat')
@@ -401,7 +401,7 @@ def test_flat():
 
 def test_by_type():
     print("\n" + "=" * 70)
-    print("  STRUCTURE: by_type (informational — not production)")
+    print("  STRUCTURE: by_type (informational - not production)")
     print("=" * 70)
     try:
         files = generate_single_tab('by_type')

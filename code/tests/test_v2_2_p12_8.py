@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 P12-8 (Generated C code structural test) test suite for StaTable v2.2.5.
 
@@ -246,8 +246,8 @@ def test_pre_post_in_cell():
         'Application/statable_transitions_Application.c', '')
 
     # Match the *definition* (not the forward declaration):
-    #   static STATE_Application_t t_Init_START(...)   ← forward decl (ends with ;)
-    #   static STATE_Application_t t_Init_START(...)   ← definition (followed by { )
+    #   static STATE_Application_t t_Init_START(...)   <- forward decl (ends with ;)
+    #   static STATE_Application_t t_Init_START(...)   <- definition (followed by { )
     #                                                        ... }
     # Use `[^;]*?` inside the parens to avoid crossing `;`,
     # and require `\n{` right after the closing `)`.
