@@ -6,7 +6,7 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from validate.logger import logger
+from .logger import logger
 
 
 class ClipboardManager:

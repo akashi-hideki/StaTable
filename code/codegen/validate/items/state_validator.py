@@ -7,10 +7,10 @@ from typing import List
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from validate.logger import logger
-from validate.models import ValidationIssue, ValidationSeverity, ValidationContext
-from validate.data.validation_rules import VALIDATION_RULES
-from validate.items.base_validator import BaseValidator
+from ..logger import logger
+from ..models import ValidationIssue, ValidationSeverity, ValidationContext
+from ..data.validation_rules import VALIDATION_RULES
+from .base_validator import BaseValidator
 
 
 class StateValidator(BaseValidator):

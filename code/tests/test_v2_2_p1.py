@@ -10,6 +10,7 @@ Verifies:
   5. XML round-trip (new format)
   6. Backward compatibility (old XML format)
   7. Sample data migration
+  8. State defensive normalization
 
 Run:
   python tests/test_v2_2_p1.py
@@ -117,8 +118,8 @@ def test_action_step():
     a1 = ActionStep()
     check("default role_function is empty",
           a1.role_function == "")
-    check("default trigger is 'always'",
-          a1.trigger == "always")
+    check("default trigger is 'before_transitions'",
+          a1.trigger == "before_transitions")
 
     a2 = ActionStep(role_function="Driver.PreCheck",
                     trigger="after_transitions")
@@ -181,8 +182,10 @@ def test_statemachine_cell_accessors():
 
     # set actions
     actions = [
-        ActionStep(role_function="Driver.PreCheck", trigger="always"),
-        ActionStep(role_function="Driver.Cleanup", trigger="after_transitions"),
+        ActionStep(role_function="Driver.PreCheck",
+                   trigger="before_transitions"),
+        ActionStep(role_function="Driver.Cleanup",
+                   trigger="after_transitions"),
     ]
     sm.set_actions_for_cell("Idle", "START", actions)
     got = sm.get_actions_for_cell("Idle", "START")
@@ -285,7 +288,8 @@ def test_xml_roundtrip_new_format():
     ))
 
     sm.set_actions_for_cell("Idle", "START", [
-        ActionStep(role_function="Driver.PreCheck", trigger="always"),
+        ActionStep(role_function="Driver.PreCheck",
+                   trigger="before_transitions"),
         ActionStep(role_function="Driver.Cleanup",
                    trigger="after_transitions"),
     ])
@@ -342,7 +346,7 @@ def test_xml_roundtrip_new_format():
         check("action[0] role_function",
               actions[0].role_function == "Driver.PreCheck")
         check("action[0] trigger",
-              actions[0].trigger == "always")
+              actions[0].trigger == "before_transitions")
         check("action[1] trigger",
               actions[1].trigger == "after_transitions")
 
@@ -481,7 +485,8 @@ def test_full_project_roundtrip():
     ))
 
     sm.set_actions_for_cell("Idle", "START",
-        [ActionStep(role_function="Driver.Pre", trigger="always")])
+        [ActionStep(role_function="Driver.Pre",
+                    trigger="before_transitions")])
     sm.set_relations_for_cell("Idle", "START",
         [TransitionRelation(kind="group", members=["T1"],
                             shared_condition="cX")])
@@ -498,7 +503,6 @@ def test_full_project_roundtrip():
 
         check("XML file created", os.path.exists(tmp_path))
 
-        # File content sanity check
         with open(tmp_path, encoding='utf-8') as f:
             content = f.read()
         check("XML has <Entry>", "<Entry>" in content)
@@ -507,7 +511,6 @@ def test_full_project_roundtrip():
         check("XML has label attr", 'label="T1"' in content)
         check("XML has <Cells>", "<Cells>" in content)
 
-        # Load
         tabs, gd2, rl, cl, ll, ps = project_from_xml(tmp_path)
 
         check("one tab loaded", len(tabs) == 1)
@@ -573,7 +576,7 @@ def test_sample_data_loads():
 
 
 # ======================================================================
-# 7. Simulate realistic P4 workflow
+# 7. Realistic cell workflow
 # ======================================================================
 def test_realistic_cell_workflow():
     print("\n[13] Realistic cell workflow (Idle+START with 2 transitions)")
@@ -588,11 +591,9 @@ def test_realistic_cell_workflow():
     sm.add_state(State(name="Error"))
     sm.add_event(Event(name="START"))
 
-    # T1 (Commit): cond_A -> Active
     t1 = Transition(source="Idle", event="START",
                     condition="cond_A", target="Active",
                     has_else=False, early_return=True, label="T1")
-    # T2 (Commit with else): cond_B -> Active / else -> Error
     t2 = Transition(source="Idle", event="START",
                     condition="cond_B", target="Active",
                     has_else=True, else_target="Error",
@@ -602,8 +603,10 @@ def test_realistic_cell_workflow():
     sm.add_transition(t2)
 
     sm.set_actions_for_cell("Idle", "START", [
-        ActionStep(role_function="Driver.PreCheck", trigger="always"),
-        ActionStep(role_function="Driver.Log", trigger="after_transitions"),
+        ActionStep(role_function="Driver.PreCheck",
+                   trigger="before_transitions"),
+        ActionStep(role_function="Driver.Log",
+                   trigger="after_transitions"),
     ])
     sm.set_relations_for_cell("Idle", "START", [
         TransitionRelation(kind="sequential", members=["T1", "T2"]),
@@ -619,6 +622,30 @@ def test_realistic_cell_workflow():
 
     rels = sm.get_relations_for_cell("Idle", "START")
     check("1 relation in cell", len(rels) == 1)
+
+
+# ======================================================================
+# 8. State defensive normalization
+# ======================================================================
+def test_state_defensive_normalization():
+    print("\n[14] State defensive normalization (str -> List[str])")
+    from statable.model import State
+
+    s1 = State(name="A", entry="Foo", exit="Bar")
+    check("str entry -> list", s1.entry == ["Foo"], f"got {s1.entry}")
+    check("str exit -> list", s1.exit == ["Bar"], f"got {s1.exit}")
+
+    s2 = State(name="B", entry=None, exit=None)
+    check("None entry -> []", s2.entry == [])
+    check("None exit -> []", s2.exit == [])
+
+    s3 = State(name="C", entry="", exit="")
+    check("empty str entry -> []", s3.entry == [])
+    check("empty str exit -> []", s3.exit == [])
+
+    s4 = State(name="D", entry=["A", "B"], exit=["C"])
+    check("list entry preserved", s4.entry == ["A", "B"])
+    check("list exit preserved", s4.exit == ["C"])
 
 
 # ======================================================================
@@ -645,6 +672,7 @@ def main():
     test_full_project_roundtrip()
     test_sample_data_loads()
     test_realistic_cell_workflow()
+    test_state_defensive_normalization()
 
     ok = RESULT.summary()
     sys.exit(0 if ok else 1)

@@ -9,9 +9,9 @@ from typing import List, Dict, Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from validate.logger import logger
-from validate.change_actions import ChangeRequest, ChangeActionType
-from validate.data.keywords import MARKERS
+from .logger import logger
+from .change_actions import ChangeRequest, ChangeActionType
+from .data.keywords import MARKERS
 
 
 class AIResponseParser:

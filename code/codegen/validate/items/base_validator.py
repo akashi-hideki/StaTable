@@ -7,7 +7,7 @@ from typing import List
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from validate.models import ValidationIssue, ValidationContext
+from ..models import ValidationIssue, ValidationContext
 
 
 class BaseValidator:

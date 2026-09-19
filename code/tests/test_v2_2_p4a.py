@@ -6,8 +6,8 @@ Verifies:
   1. ActionDraft.cell_actions / cell_relations  (draft.py extension)
   2. transition_to_flow_item / flow_item_to_transition  (early_return / label)
   3. TransitionsTab  API  (+ Target / Else target / Has else ComboBox)
-  4. ActionsTab      API
-  5. RelationsTab    API
+  4. ActionsTab      API  (Pre / Post groups)
+  5. RelationsTab    API  (explicit add; dialog disabled in offscreen mode)
   6. ActionEditorDialog 5-tab structure
   7. CodeWidget (Preview) cell_actions rendering
 
@@ -128,7 +128,8 @@ def test_draft_to_dict_roundtrip():
 
     d = ActionDraft(source="Idle", event="START")
     d.cell_actions = [
-        ActionStep(role_function="Driver.PreCheck", trigger="always"),
+        ActionStep(role_function="Driver.PreCheck",
+                   trigger="before_transitions"),
     ]
     d.cell_relations = [
         TransitionRelation(kind="group", members=["T1", "T2"],
@@ -300,7 +301,6 @@ def test_transitions_tab_target_combo():
                    early_return=True, label="T1")
     tab.add_transition(t)
 
-    # Widgets exist
     for col, name in (
         (COL_TARGET, "Target"),
         (COL_HAS_ELSE, "Has else"),
@@ -312,7 +312,6 @@ def test_transitions_tab_target_combo():
               isinstance(w, QComboBox),
               f"got {type(w).__name__}")
 
-    # Target combo items
     target_w = tab.table.cellWidget(0, COL_TARGET)
     items = [target_w.itemText(i) for i in range(target_w.count())]
     check("Target has (none)", NONE_LABEL in items, f"got {items}")
@@ -322,25 +321,21 @@ def test_transitions_tab_target_combo():
           target_w.currentText() == "Active",
           f"got {target_w.currentText()}")
 
-    # Else target combo
     et_w = tab.table.cellWidget(0, COL_ELSE_TARGET)
     check("Else target currentText is Error",
           et_w.currentText() == "Error",
           f"got {et_w.currentText()}")
 
-    # Has else combo
     he_w = tab.table.cellWidget(0, COL_HAS_ELSE)
     check("Has else currentText is Yes",
           he_w.currentText() == "Yes",
           f"got {he_w.currentText()}")
 
-    # Get back
     got = tab.get_transitions()
     check("get: target preserved", got[0].target == "Active")
     check("get: else_target preserved", got[0].else_target == "Error")
     check("get: has_else preserved", got[0].has_else is True)
 
-    # Set to (none)
     target_w.setCurrentText(NONE_LABEL)
     got = tab.get_transitions()
     check("get: (none) -> empty target", got[0].target == "")
@@ -378,15 +373,18 @@ def test_transitions_tab_has_else_link():
     check("else_target enabled when has_else=Yes",
           et_w.isEnabled() is True)
 
-    # Change has_else to No
     he_w.setCurrentText("No")
     check("else_target disabled when has_else=No",
           et_w.isEnabled() is False)
 
-    # Change back
     he_w.setCurrentText("Yes")
     check("else_target re-enabled",
           et_w.isEnabled() is True)
+
+
+# ======================================================================
+# 5. ActionsTab
+# ======================================================================
 def test_actions_tab():
     print("\n[5] ActionsTab (Pre / Post groups)")
     app = qapp()
@@ -409,17 +407,14 @@ def test_actions_tab():
 
     check("initial row count 0", tab.row_count() == 0)
 
-    # Add a Pre action (explicit ActionStep)
     tab.add_action(ActionStep(role_function="Driver.PreCheck",
                               trigger=TRIGGER_PRE))
     check("row count 1 after add_action(Pre)", tab.row_count() == 1)
 
-    # Add a Post action
     tab.add_action(ActionStep(role_function="Driver.Cleanup",
                               trigger=TRIGGER_POST))
     check("row count 2 after add_action(Post)", tab.row_count() == 2)
 
-    # get_actions returns Pre rows first, then Post rows
     got = tab.get_actions()
     check("2 actions returned", len(got) == 2,
           f"got {len(got)}")
@@ -436,7 +431,6 @@ def test_actions_tab():
           got[1].role_function == "Driver.Cleanup",
           f"got {got[1].role_function}")
 
-    # Delete the Pre row
     tab.delete_action(0)
     check("row count 1 after delete Pre", tab.row_count() == 1)
     got = tab.get_actions()
@@ -444,7 +438,6 @@ def test_actions_tab():
           len(got) == 1 and got[0].trigger == TRIGGER_POST,
           f"got {[(a.trigger, a.role_function) for a in got]}")
 
-    # Round-trip with mixed Pre/Post
     tab.set_actions([
         ActionStep(role_function="A", trigger="before_transitions"),
         ActionStep(role_function="B", trigger="before_transitions"),
@@ -465,6 +458,11 @@ def test_actions_tab():
     check("Post action role_function",
           got[2].role_function == "C",
           f"got {got[2].role_function}")
+
+
+# ======================================================================
+# 6. RelationsTab
+# ======================================================================
 def test_relations_tab():
     print("\n[6] RelationsTab")
     app = qapp()
@@ -487,7 +485,6 @@ def test_relations_tab():
 
     check("initial row count 0", tab.row_count() == 0)
 
-    # Add relations with explicit objects (bypasses the dialog)
     r1 = TransitionRelation(kind="sequential", members=["T1", "T2"])
     row = tab.add_relation(r1)
     check("add_relation(explicit) returns 0", row == 0)
@@ -510,7 +507,6 @@ def test_relations_tab():
     tab.delete_relation(0)
     check("delete row count 1", tab.row_count() == 1)
 
-    # set / get round-trip
     tab.set_relations([
         TransitionRelation(kind="sequential", members=["T1", "T2"]),
         TransitionRelation(kind="exclusive", members=["T3"]),
@@ -521,9 +517,13 @@ def test_relations_tab():
           and got[0].kind == "sequential"
           and got[1].kind == "exclusive")
 
-    # NOTE: add_relation(None) opens a QMessageBox modal that hangs in
-    # offscreen mode, so we do NOT call it here. GUI users still see
-    # the warning when no transitions are defined.
+    # NOTE: add_relation(None) opens a modal QMessageBox and would hang
+    # in offscreen mode; we intentionally do not call it here.
+
+
+# ======================================================================
+# 7. ActionEditorDialog 5-tab structure
+# ======================================================================
 def test_dialog_tabs():
     print("\n[7] ActionEditorDialog: 5-tab structure")
     app = qapp()
@@ -581,7 +581,8 @@ def test_code_widget_cell_actions():
     draft = ActionDraft(source="Idle", event="START",
                         layer_name="Driver")
     draft.cell_actions = [
-        ActionStep(role_function="Driver.PreCheck", trigger="always"),
+        ActionStep(role_function="Driver.PreCheck",
+                   trigger="before_transitions"),
         ActionStep(role_function="Driver.Cleanup",
                    trigger="after_transitions"),
     ]
@@ -612,7 +613,7 @@ def test_code_widget_cell_actions():
 
 
 # ======================================================================
-# 9. Full integration: draft -> TransitionsTab -> get_transitions
+# 9. Full integration
 # ======================================================================
 def test_draft_roundtrip_via_dialog():
     print("\n[9] Full: draft -> TransitionsTab -> get_transitions")

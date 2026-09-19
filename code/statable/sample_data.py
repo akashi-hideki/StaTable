@@ -135,7 +135,7 @@ def create_sample_state_machine() -> StateMachine:
     ))
 
     # ==================================================================
-    # Transitions (v2.2: valid role function references only)
+    # Transitions
     # ==================================================================
 
     # Idle --START--> Active
@@ -223,7 +223,7 @@ def create_sample_state_machine() -> StateMachine:
     # Idle + START: sensor init before condition check
     sm.set_actions_for_cell("Idle", "START", [
         ActionStep(role_function="Sensor_Init",
-                   trigger="always",
+                   trigger="before_transitions",
                    title="Initialize sensor on startup"),
     ])
 

@@ -8,22 +8,22 @@ from typing import List, Dict, Type
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Logger referenced directly
-from validate.logger import logger
+from .logger import logger
 
 # Model
-from validate.models import ValidationResult, ValidationIssue, ValidationContext
+from .models import ValidationResult, ValidationIssue, ValidationContext
 
 # Validator
-from validate.items.state_validator import StateValidator
-from validate.items.event_validator import EventValidator
-from validate.items.transition_validator import TransitionValidator
-from validate.items.role_function_validator import RoleFunctionValidator
-from validate.items.variable_validator import VariableValidator
-from validate.items.flag_validator import FlagValidator
-from validate.items.queue_validator import QueueValidator
-from validate.items.interrupt_validator import InterruptValidator
-from validate.items.timer_validator import TimerValidator
-from validate.items.custom_type_validator import CustomTypeValidator
+from .items.state_validator import StateValidator
+from .items.event_validator import EventValidator
+from .items.transition_validator import TransitionValidator
+from .items.role_function_validator import RoleFunctionValidator
+from .items.variable_validator import VariableValidator
+from .items.flag_validator import FlagValidator
+from .items.queue_validator import QueueValidator
+from .items.interrupt_validator import InterruptValidator
+from .items.timer_validator import TimerValidator
+from .items.custom_type_validator import CustomTypeValidator
 
 
 class CodeGenerationValidator:

@@ -12,11 +12,11 @@ from typing import Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from validate.logger import logger
-from validate.data.prompt_templates import (
+from .logger import logger
+from .data.prompt_templates import (
     PROMPT_TEMPLATES, FEW_SHOT_EXAMPLE, VALIDATION_POINTS
 )
-from validate.data.action_definitions import format_action_definitions
+from .data.action_definitions import format_action_definitions
 
 
 class AIPromptGenerator:

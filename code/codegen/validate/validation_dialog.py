@@ -17,12 +17,12 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from validate.validator import CodeGenerationValidator
-from validate.prompt_generator import AIPromptGenerator
-from validate.response_parser import AIResponseParser
-from validate.change_applier import ChangeApplier
-from validate.clipboard_manager import ClipboardManager
-from validate.models import ValidationResult
+from .validator import CodeGenerationValidator
+from .prompt_generator import AIPromptGenerator
+from .response_parser import AIResponseParser
+from .change_applier import ChangeApplier
+from .clipboard_manager import ClipboardManager
+from .models import ValidationResult
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("validation_dialog")

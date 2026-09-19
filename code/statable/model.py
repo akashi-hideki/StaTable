@@ -39,16 +39,29 @@ class State:
 
     [v2.2 change]
       entry / exit: str -> List[str]
-        Multiple entry / exit actions are now supported.
-        Old XML (`entry="Foo"`) is auto-migrated in xml_io.py.
+        Multiple entry / exit actions are supported.
+        For defensive compatibility, str / None are auto-normalized
+        in __post_init__.
     """
     name: str
     type: StateType = StateType.NORMAL
     parent: Optional[str] = None
-    entry: List[str] = field(default_factory=list)   # v2.2: was str
-    exit: List[str] = field(default_factory=list)    # v2.2: was str
+    entry: List[str] = field(default_factory=list)
+    exit: List[str] = field(default_factory=list)
     do: str = ""
     description: str = ""
+
+    def __post_init__(self):
+        # v2.2: defensive normalization
+        if self.entry is None:
+            self.entry = []
+        elif isinstance(self.entry, str):
+            self.entry = [self.entry] if self.entry.strip() else []
+
+        if self.exit is None:
+            self.exit = []
+        elif isinstance(self.exit, str):
+            self.exit = [self.exit] if self.exit.strip() else []
 
 
 @dataclass
@@ -77,17 +90,13 @@ class Transition:
 
     [v2.2 additions]
       early_return: bool = False
-        - True  : "Commit"    — stop evaluating later transitions in the same cell
-        - False : "Tentative" — later transitions may overwrite the target
-        Generated code: `if (!_handled && cond)` for True,
-                        `if (cond)`              for False.
+        - True  : "Commit"    - stop evaluating later transitions in the same cell
+        - False : "Tentative" - later transitions may overwrite the target
 
       label: str = ""
         Stable identifier within a cell (e.g. "T1", "T2").
         Referenced by TransitionRelation.members.
         Persisted in XML.
-
-    [v1.6] kw_only=True (positional-argument safety)
     """
     source: str
     event: str
@@ -97,8 +106,8 @@ class Transition:
     has_else: bool = True
     else_target: str = ""
     else_actions: List[str] = field(default_factory=list)
-    early_return: bool = False   # v2.2
-    label: str = ""              # v2.2
+    early_return: bool = False
+    label: str = ""
     action: str = ""
     transition_type: str = "external"
     title: str = ""
@@ -112,16 +121,18 @@ class Transition:
 class ActionStep:
     """Transition-independent action step (v2.2).
 
-    Represents an action that runs unconditionally or at a fixed
-    phase, independent of any transition condition.
+    Represents an action that runs at a fixed phase of the cell,
+    independent of any transition condition.
 
     trigger:
-      "always"             — runs at the very beginning of the cell body
-      "before_transitions" — runs just before evaluating transitions
-      "after_transitions"  — runs at the end of the cell body
+      "before_transitions" - runs just before evaluating transitions
+      "after_transitions"  - runs at the end of the cell body
+
+    Note: legacy "always" is silently mapped to "before_transitions"
+    when loading old XML.
     """
-    role_function: str = ""      # qualified name (e.g. "Driver.PreCheck")
-    trigger: str = "always"
+    role_function: str = ""
+    trigger: str = "before_transitions"
     title: str = ""
 
     def __post_init__(self):
@@ -134,10 +145,10 @@ class TransitionRelation:
     """Relation between transitions in one cell (v2.2).
 
     kind:
-      "sequential"  — evaluate members in order (default)
-      "exclusive"   — at most one member fires; codegen enforces early return
-      "group"       — logical grouping; shared_condition is hoisted
-                      as an outer `if` (evaluated once)
+      "sequential"  - evaluate members in order (default)
+      "exclusive"   - at most one member fires; codegen enforces early return
+      "group"       - logical grouping; shared_condition is hoisted
+                      as an outer if (evaluated once)
 
     members: Transition.label values (e.g. ["T1", "T2"]).
     shared_condition: only used when kind == "group".
@@ -167,7 +178,6 @@ class RoleFunction:
 
     @property
     def qualified_name(self) -> str:
-        """For GUI display / ISR reference"""
         if self.namespace:
             return f"{self.namespace}.{self.name}"
         return self.name
@@ -175,7 +185,6 @@ class RoleFunction:
     @classmethod
     def from_legacy_name(cls, legacy_name: str,
                          layer_names: Optional[List[str]] = None) -> 'RoleFunction':
-        """\n        Old form 'Driver_Init' -> namespace='Driver', name='Init'\n"""
         if not legacy_name:
             return cls(name="")
         if layer_names:

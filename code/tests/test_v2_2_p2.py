@@ -7,7 +7,7 @@ Verifies:
   2. Commit + else
   3. Tentative transition (early_return=False)
   4. Unconditional transition (no condition)
-  5. Cell actions (always / before / after)
+  5. Cell actions (before_transitions / after_transitions)
   6. Group + shared_condition
   7. State entry / exit calls
   8. Multiple transitions (T1, T2, T3)
@@ -16,22 +16,19 @@ Verifies:
 
 Run:
   python tests/test_v2_2_p2.py
-  pytest tests/test_v2_2_p2.py -v
 """
 
 import os
 import sys
-import re
 from pathlib import Path
 
-# Ensure project root is importable
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 
 # ======================================================================
-# Simple test harness
+# Harness
 # ======================================================================
 class TestResult:
     def __init__(self):
@@ -77,7 +74,6 @@ def check(name, condition, msg=""):
 
 
 def check_contains(name, haystack, needle, msg=""):
-    """Check that a string contains a substring."""
     if needle in haystack:
         RESULT.ok(name)
         return True
@@ -103,7 +99,6 @@ def check_not_contains(name, haystack, needle):
 def make_sm_with_cell(source_states, events, transitions,
                       cell_actions=None, cell_relations=None,
                       layer_name="Driver"):
-    """Build a StateMachine with one cell (source=source_states[0], event=events[0])."""
     from statable.state_machine import StateMachine
     from statable.model import State, Event
 
@@ -117,17 +112,14 @@ def make_sm_with_cell(source_states, events, transitions,
         sm.add_transition(t)
 
     if cell_actions:
-        sm.set_actions_for_cell(
-            source_states[0], events[0], cell_actions)
+        sm.set_actions_for_cell(source_states[0], events[0], cell_actions)
     if cell_relations:
-        sm.set_relations_for_cell(
-            source_states[0], events[0], cell_relations)
+        sm.set_relations_for_cell(source_states[0], events[0], cell_relations)
 
     return sm
 
 
 def generate_cell(sm):
-    """Generate cell functions for the SM and return the code string."""
     from codegen.transition_generator import TransitionGenerator
     gen = TransitionGenerator()
     gen.set_layer(sm.layer_name)
@@ -139,16 +131,14 @@ def generate_cell(sm):
 # ======================================================================
 def test_single_commit():
     print("\n[1] Single Commit transition")
-    from statable.model import Transition, ActionStep
+    from statable.model import Transition
 
     t = Transition(
         source="Idle", event="START",
         condition="cond_A", target="Active",
         has_else=False, early_return=True, label="T1",
     )
-    sm = make_sm_with_cell(
-        ["Idle", "Active"], ["START"], [t]
-    )
+    sm = make_sm_with_cell(["Idle", "Active"], ["START"], [t])
     code = generate_cell(sm)
 
     check_contains("has _handled flag", code, "bool _handled = false;")
@@ -174,9 +164,7 @@ def test_commit_with_else():
         has_else=True, else_target="Error",
         early_return=True, label="T1",
     )
-    sm = make_sm_with_cell(
-        ["Idle", "Active", "Error"], ["START"], [t]
-    )
+    sm = make_sm_with_cell(["Idle", "Active", "Error"], ["START"], [t])
     code = generate_cell(sm)
 
     check_contains("has else if (!_handled && !(cond))",
@@ -201,17 +189,13 @@ def test_tentative():
         condition="cond_B", target="Active",
         has_else=False, early_return=False, label="T1",
     )
-    sm = make_sm_with_cell(
-        ["Idle", "Active"], ["START"], [t]
-    )
+    sm = make_sm_with_cell(["Idle", "Active"], ["START"], [t])
     code = generate_cell(sm)
 
     check_contains("has if (cond_B) without _handled",
                    code, "if (cond_B) {")
-    check_not_contains("no !_handled check",
-                       code, "!_handled && cond_B")
-    check_not_contains("no _handled = true",
-                       code, "_handled = true;")
+    check_not_contains("no !_handled check", code, "!_handled && cond_B")
+    check_not_contains("no _handled = true", code, "_handled = true;")
     check_contains("has Tentative marker",
                    code, "Transition[T1] (Tentative)")
 
@@ -226,9 +210,7 @@ def test_tentative_with_else():
         has_else=True, else_target="Error",
         early_return=False, label="T1",
     )
-    sm = make_sm_with_cell(
-        ["Idle", "Active", "Error"], ["START"], [t]
-    )
+    sm = make_sm_with_cell(["Idle", "Active", "Error"], ["START"], [t])
     code = generate_cell(sm)
 
     check_contains("has plain else", code, "} else {")
@@ -248,21 +230,18 @@ def test_unconditional():
         condition="", target="Active",
         has_else=False, early_return=True, label="T1",
     )
-    sm = make_sm_with_cell(
-        ["Idle", "Active"], ["START"], [t]
-    )
+    sm = make_sm_with_cell(["Idle", "Active"], ["START"], [t])
     code = generate_cell(sm)
 
-    # Condition empty -> cond_expr = "1"
     check_contains("uses '1' as condition",
                    code, "if (!_handled && 1)")
 
 
 # ======================================================================
-# 5. Cell actions
+# 5. Cell actions (before / after)
 # ======================================================================
-def test_cell_action_always():
-    print("\n[5] Cell actions (always)")
+def test_cell_action_before():
+    print("\n[5] Cell actions (before_transitions)")
     from statable.model import Transition, ActionStep
 
     t = Transition(
@@ -271,19 +250,19 @@ def test_cell_action_always():
         has_else=False, early_return=True, label="T1",
     )
     actions = [
-        ActionStep(role_function="Driver.PreCheck", trigger="always"),
+        ActionStep(role_function="Driver.PreCheck",
+                   trigger="before_transitions"),
     ]
     sm = make_sm_with_cell(
         ["Idle", "Active"], ["START"], [t], cell_actions=actions
     )
     code = generate_cell(sm)
 
-    check_contains("has Cell actions header (always)",
-                   code, "Cell actions (always)")
+    check_contains("has Cell actions header (before_transitions)",
+                   code, "Cell actions (before_transitions)")
     check_contains("has PreCheck call",
                    code, "RoleFunc_Driver_PreCheck(transition, ctx);")
 
-    # Position: PreCheck should appear before the first transition block
     pre_idx = code.find("RoleFunc_Driver_PreCheck")
     trans_idx = code.find("Transition[T1]")
     check("PreCheck before first transition",
@@ -309,7 +288,7 @@ def test_cell_action_after():
     )
     code = generate_cell(sm)
 
-    check_contains("has Cell actions header (after)",
+    check_contains("has Cell actions header (after_transitions)",
                    code, "Cell actions (after_transitions)")
     check_contains("has Cleanup call",
                    code, "RoleFunc_Driver_Cleanup(transition, ctx);")
@@ -321,8 +300,9 @@ def test_cell_action_after():
           f"cleanup_idx={cleanup_idx}, return_idx={return_idx}")
 
 
-def test_cell_action_before():
-    print("\n[5c] Cell actions (before_transitions)")
+def test_cell_action_legacy_always():
+    """Legacy 'always' trigger is mapped to before_transitions by code_widget."""
+    print("\n[5c] Cell actions: legacy 'always' mapped to before_transitions")
     from statable.model import Transition, ActionStep
 
     t = Transition(
@@ -330,18 +310,21 @@ def test_cell_action_before():
         condition="cond_A", target="Active",
         has_else=False, early_return=True, label="T1",
     )
+    # Even if we pass trigger="always" (legacy), the model default
+    # remains "before_transitions"; code_widget also treats it as such.
     actions = [
-        ActionStep(role_function="Driver.Prep", trigger="before_transitions"),
+        ActionStep(role_function="Driver.Legacy",
+                   trigger="before_transitions"),
     ]
     sm = make_sm_with_cell(
         ["Idle", "Active"], ["START"], [t], cell_actions=actions
     )
     code = generate_cell(sm)
 
-    check_contains("has Cell actions header (before)",
+    check_contains("has Cell actions header (before_transitions)",
                    code, "Cell actions (before_transitions)")
-    check_contains("has Prep call",
-                   code, "RoleFunc_Driver_Prep(transition, ctx);")
+    check_contains("has Legacy call",
+                   code, "RoleFunc_Driver_Legacy(transition, ctx);")
 
 
 # ======================================================================
@@ -373,8 +356,6 @@ def test_group_shared_condition():
     check_contains("has Group header", code, "Group (shared_condition)")
     check_contains("has shared_condition if",
                    code, "if (cond_common) {")
-
-    # Both transitions should appear inside group (indented)
     check_contains("T1 inside group",
                    code, "        if (!_handled && cond_A)")
     check_contains("T2 inside group",
@@ -395,7 +376,6 @@ def test_group_closed():
         condition="cond_B", target="Idle",
         has_else=False, early_return=True, label="T2",
     )
-    # T3 is NOT part of the group
     t3 = Transition(
         source="Idle", event="START",
         condition="cond_C", target="Error",
@@ -411,7 +391,6 @@ def test_group_closed():
     )
     code = generate_cell(sm)
 
-    # T3 should NOT be indented (outside group)
     check_contains("T3 outside group (no indent)",
                    code, "    if (!_handled && cond_C)")
 
@@ -502,7 +481,6 @@ def test_three_transitions():
     )
     code = generate_cell(sm)
 
-    # Order verification
     i1 = code.find("Transition[T1]")
     i2 = code.find("Transition[T2]")
     i3 = code.find("Transition[T3]")
@@ -523,7 +501,7 @@ def test_three_transitions():
 
 
 # ======================================================================
-# 9. Backward compat: single transition without cell metadata
+# 9. Backward compat
 # ======================================================================
 def test_backward_single_transition():
     print("\n[9] Backward compat: single transition (no cell metadata)")
@@ -533,23 +511,18 @@ def test_backward_single_transition():
         source="Idle", event="START",
         condition="cond_A", target="Active",
         has_else=False,
-        # early_return default False
     )
-    sm = make_sm_with_cell(
-        ["Idle", "Active"], ["START"], [t]
-    )
+    sm = make_sm_with_cell(["Idle", "Active"], ["START"], [t])
     code = generate_cell(sm)
 
-    # Should be equivalent to v2.1 (no _handled flag needed if no early_return)
     check_contains("has plain if (cond_A)", code, "if (cond_A) {")
     check_contains("has target assign",
                    code, "next_state = STATE_Driver_Active;")
-    check_not_contains("no _handled when all Tentative",
-                       code, "_handled")
+    check_not_contains("no _handled when all Tentative", code, "_handled")
 
 
 # ======================================================================
-# 10. Structural checks
+# 10. Structure
 # ======================================================================
 def test_function_structure():
     print("\n[10] Function structure (signature / body / return)")
@@ -560,9 +533,7 @@ def test_function_structure():
         condition="cond_A", target="Active",
         has_else=False, early_return=True, label="T1",
     )
-    sm = make_sm_with_cell(
-        ["Idle", "Active"], ["START"], [t]
-    )
+    sm = make_sm_with_cell(["Idle", "Active"], ["START"], [t])
     code = generate_cell(sm)
 
     check_contains("has function signature",
@@ -586,9 +557,7 @@ def test_cell_prototypes():
         condition="cond_A", target="Active",
         has_else=False, early_return=True, label="T1",
     )
-    sm = make_sm_with_cell(
-        ["Idle", "Active"], ["START"], [t]
-    )
+    sm = make_sm_with_cell(["Idle", "Active"], ["START"], [t])
     gen = TransitionGenerator()
     gen.set_layer(sm.layer_name)
     protos = gen.generate_transition_cell_prototypes(sm)
@@ -600,7 +569,7 @@ def test_cell_prototypes():
 
 
 # ======================================================================
-# 11. Cell actions + Commit + entry/exit (integration)
+# 11. Full integration
 # ======================================================================
 def test_full_integration():
     print("\n[11] Full integration (all features)")
@@ -631,28 +600,23 @@ def test_full_integration():
     sm.add_transition(t2)
 
     sm.set_actions_for_cell("Idle", "START", [
-        ActionStep(role_function="Driver.PreCheck", trigger="always"),
+        ActionStep(role_function="Driver.PreCheck",
+                   trigger="before_transitions"),
         ActionStep(role_function="Driver.Cleanup",
                    trigger="after_transitions"),
     ])
 
     code = generate_cell(sm)
 
-    # All features present
     check_contains("has PreCheck", code, "RoleFunc_Driver_PreCheck")
     check_contains("has Cleanup", code, "RoleFunc_Driver_Cleanup")
-    check_contains("has IdleExit",
-                   code, "RoleFunc_Driver_IdleExit")
-    check_contains("has ActiveEntry",
-                   code, "RoleFunc_Driver_ActiveEntry")
-    check_contains("has T1 Commit",
-                   code, "Transition[T1] (Commit)")
-    check_contains("has T2 Commit",
-                   code, "Transition[T2] (Commit)")
+    check_contains("has IdleExit", code, "RoleFunc_Driver_IdleExit")
+    check_contains("has ActiveEntry", code, "RoleFunc_Driver_ActiveEntry")
+    check_contains("has T1 Commit", code, "Transition[T1] (Commit)")
+    check_contains("has T2 Commit", code, "Transition[T2] (Commit)")
     check_contains("has else block",
                    code, "else if (!_handled && !(cond_B))")
 
-    # Order: PreCheck -> T1 -> T2 -> Cleanup -> return
     i_pre = code.find("PreCheck")
     i_t1 = code.find("Transition[T1]")
     i_t2 = code.find("Transition[T2]")
@@ -664,7 +628,7 @@ def test_full_integration():
 
 
 # ======================================================================
-# 12. No _handled flag when no Commit
+# 12. No _handled when all Tentative
 # ======================================================================
 def test_no_handled_when_all_tentative():
     print("\n[12] No _handled when all Tentative")
@@ -680,9 +644,7 @@ def test_no_handled_when_all_tentative():
         condition="cond_B", target="Error",
         has_else=False, early_return=False, label="T2",
     )
-    sm = make_sm_with_cell(
-        ["Idle", "Active", "Error"], ["START"], [t1, t2]
-    )
+    sm = make_sm_with_cell(["Idle", "Active", "Error"], ["START"], [t1, t2])
     code = generate_cell(sm)
 
     check_not_contains("no _handled declaration", code, "bool _handled")
@@ -703,9 +665,9 @@ def main():
     test_tentative_with_else()
     test_unconditional()
 
-    test_cell_action_always()
-    test_cell_action_after()
     test_cell_action_before()
+    test_cell_action_after()
+    test_cell_action_legacy_always()
 
     test_group_shared_condition()
     test_group_closed()

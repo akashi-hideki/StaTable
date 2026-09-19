@@ -13,8 +13,8 @@ from typing import List, Dict, Tuple
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from validate.logger import logger
-from validate.change_actions import ChangeRequest, ChangeActionType
+from .logger import logger
+from .change_actions import ChangeRequest, ChangeActionType
 
 
 class ChangeApplier:
