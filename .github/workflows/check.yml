@@ -7,11 +7,10 @@ on:
     branches: [main, develop]
   workflow_dispatch:
 
-
-# ★ 全 run ステップの作業ディレクトリを code/ に固定
 defaults:
   run:
     working-directory: code
+
 jobs:
   # ==============================================================
   # Job 1: No Japanese / non-ASCII characters
@@ -53,7 +52,7 @@ jobs:
           python -m compileall -q statable statable_gui codegen
 
   # ==============================================================
-  # Job 3: Unit tests (539 tests)
+  # Job 3: Unit tests
   # ==============================================================
   tests:
     name: Unit tests
