@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 03:21:38
+ * @date    2026-09-20 07:42:37
  */
 
 /*==============================================================
@@ -219,7 +219,6 @@ int RoleFunc_App_BootEntry(
 
     /* [[STABLE_USER_CODE_START:App_BootEntry]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_BootEntry]] */
 
     return ret;
@@ -273,7 +272,6 @@ int RoleFunc_App_BootExit(
 
     /* [[STABLE_USER_CODE_START:App_BootExit]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_BootExit]] */
 
     return ret;
@@ -327,7 +325,6 @@ int RoleFunc_App_InitEntry(
 
     /* [[STABLE_USER_CODE_START:App_InitEntry]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_InitEntry]] */
 
     return ret;
@@ -381,7 +378,6 @@ int RoleFunc_App_RunEntry1(
 
     /* [[STABLE_USER_CODE_START:App_RunEntry1]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_RunEntry1]] */
 
     return ret;
@@ -435,7 +431,6 @@ int RoleFunc_App_RunEntry2(
 
     /* [[STABLE_USER_CODE_START:App_RunEntry2]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_RunEntry2]] */
 
     return ret;
@@ -489,7 +484,6 @@ int RoleFunc_App_PauseEntry(
 
     /* [[STABLE_USER_CODE_START:App_PauseEntry]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_PauseEntry]] */
 
     return ret;
@@ -543,7 +537,6 @@ int RoleFunc_App_StopEntry(
 
     /* [[STABLE_USER_CODE_START:App_StopEntry]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_StopEntry]] */
 
     return ret;
@@ -597,7 +590,6 @@ int RoleFunc_App_Boot(
 
     /* [[STABLE_USER_CODE_START:App_Boot]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_Boot]] */
 
     return ret;
@@ -651,7 +643,6 @@ int RoleFunc_App_Start(
 
     /* [[STABLE_USER_CODE_START:App_Start]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_Start]] */
 
     return ret;
@@ -705,7 +696,6 @@ int RoleFunc_App_Pause(
 
     /* [[STABLE_USER_CODE_START:App_Pause]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_Pause]] */
 
     return ret;
@@ -759,7 +749,6 @@ int RoleFunc_App_Resume(
 
     /* [[STABLE_USER_CODE_START:App_Resume]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_Resume]] */
 
     return ret;
@@ -813,7 +802,6 @@ int RoleFunc_App_HandleStop(
 
     /* [[STABLE_USER_CODE_START:App_HandleStop]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_HandleStop]] */
 
     return ret;
@@ -867,7 +855,6 @@ int RoleFunc_App_PreCheck(
 
     /* [[STABLE_USER_CODE_START:App_PreCheck]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_PreCheck]] */
 
     return ret;
@@ -921,7 +908,6 @@ int RoleFunc_App_Cleanup(
 
     /* [[STABLE_USER_CODE_START:App_Cleanup]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_Cleanup]] */
 
     return ret;
@@ -975,7 +961,6 @@ int RoleFunc_App_Pre(
 
     /* [[STABLE_USER_CODE_START:App_Pre]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_Pre]] */
 
     return ret;
@@ -1029,7 +1014,6 @@ int RoleFunc_App_Post(
 
     /* [[STABLE_USER_CODE_START:App_Post]] */
     /* Write user implementation code here */
-
     /* [[STABLE_USER_CODE_END:App_Post]] */
 
     return ret;
@@ -1077,5 +1061,4 @@ static uint16_t Transition_GetId(
 /* ============================================================== */
 /* [[STABLE_USER_CODE_TAIL_START]] */
 /* Write user-added code here (helper functions, etc.) */
-
 /* [[STABLE_USER_CODE_TAIL_END]] */

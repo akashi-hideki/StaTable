@@ -1057,9 +1057,25 @@ class RoleFunctionGenerator:
         return f"{full_name}(transition, ctx)"
 
     def generate_all_declarations(self, role_functions: List) -> str:
+        """Generate declarations for self-layer role functions only.
+
+    [v3.2 / MISRA 8.5 fix]
+      Previously every layer emitted declarations for ALL role functions
+      from the shared library, so `Driver.Init` was declared in
+      Driver/statable_role_functions_Driver.h AND in
+      Application/statable_role_functions_Application.h AND in
+      Middleware/... -> MISRA 8.5 (declared more than once).
+
+      Now only functions whose namespace belongs to this layer are
+      declared here. Cross-layer prototypes are made visible by
+      including the other layers' role_functions headers (see
+      c_code_generator._step_include_section).
+    """
         unique_funcs = self._dedupe_by_name(role_functions)
         parts = []
         for func in unique_funcs:
+            if not self._should_declare_here(func):
+                continue
             parts.append(self.generate_declaration(func))
             parts.append('\n')
         return ''.join(parts)
@@ -1157,3 +1173,18 @@ class RoleFunctionGenerator:
             ),
             ('ctx', 'SystemContext_t *', 'system context pointer'),
         ]
+
+    def _should_declare_here(self, func) -> bool:
+        """True if `func` belongs to this layer (same rules as
+        _should_emit_implementation)."""
+        if not self.layer_name:
+            return True
+        name, namespace = self._resolve_name_and_namespace(func)
+        layer = self.layer_name
+        if namespace == layer:
+            return True
+        ns_l, ly_l = namespace.lower(), layer.lower()
+        if min(len(ns_l), len(ly_l)) >= 3:
+            if ly_l.startswith(ns_l) or ns_l.startswith(ly_l):
+                return True
+        return False

@@ -838,18 +838,67 @@ class CCodeGenerator:
         return [self._generate_include_guard_end(guard)]
 
     def _step_include_section(self, step, ctx):
+        """Emit the include section for a generated file.
+
+        [v2.2.6 / MISRA 17.3 fix]
+          In `by_layer` mode, the following .c files may call role
+          functions declared in *other* layers:
+
+            - statable_transitions_<Layer>.c
+                (state entry/exit, pre_actions, else_actions,
+                 cell_actions can reference RoleFunc_<OtherNS>_Xxx)
+            - statable_role_functions_<Layer>.c
+                (user code inside the marker may reference
+                 RoleFunc_<OtherNS>_Xxx)
+
+          Previously only the self-layer role_functions header was
+          included, so cross-layer calls produced implicit
+          declarations -> MISRA C:2012 Rule 17.3.
+
+          This method now additionally emits, for those two files,
+          one `#include "<OtherLayer>/statable_role_functions_<OtherLayer>.h"`
+          line per sibling layer. Other files are unaffected.
+        """
         key = step.get('key', '')
         filename = ctx.get('filename', '')
         layers = ctx.get('layers', [])
         structure = ctx['config'].folder_structure
 
+        # ---- Layer-specific files (types / transitions / role_functions) ----
         if filename in self.LAYER_SPECIFIC_FILES and layers:
             layer_name = self._get_layer_name(layers[0][1])
             suffix = self._layer_suffix(layer_name)
+
+            # [MISRA 17.3] Cross-layer role_functions includes for .c files
+            if (structure == 'by_layer'
+                    and filename in ('statable_transitions.c',
+                                     'statable_role_functions.c')):
+                lines = [self._generate_section_header('include'), ""]
+
+                # 1) Self-layer includes (same as the default path)
+                for header in self.include_headers.get(key, []):
+                    header = header.replace('{layer_suffix}', suffix)
+                    lines.append(header)
+
+                # 2) Cross-layer role_functions headers
+                for other_name, other_sm in layers:
+                    other_layer = self._get_layer_name(other_sm)
+                    if not other_layer or other_layer == layer_name:
+                        continue
+                    lines.append(
+                        f'#include "{other_layer}/'
+                        f'statable_role_functions_{other_layer}.h"'
+                    )
+
+                lines.append("")
+                return ['\n'.join(lines)]
+
+            # Default: self-layer includes only
             return [self._generate_include_section(
                 key, layer_suffix=suffix
             )]
 
+        # ---- Common .c files in by_layer mode ----
         if structure == 'by_layer' and filename in (
                 'statable_init.c',
                 'statable_event_queue.c',
@@ -871,6 +920,7 @@ class CCodeGenerator:
             lines.append("")
             return ['\n'.join(lines)]
 
+        # ---- Fallback (flat / by_type) ----
         return [self._generate_include_section(key)]
 
     def _step_section_header(self, step, ctx):
