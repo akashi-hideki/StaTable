@@ -1,22 +1,15 @@
 # codegen/transition_generator.py
 """
-State transition function generation module (v2.2 multi-transition support)
+State transition function generation module (v2.2 multi-transition + nesting support).
 
 [v2.2 changes]
   - Multiple transitions per cell
   - `_handled` guard pattern (Commit / Tentative)
-  - Cell actions (always / before_transitions / after_transitions)
+  - Cell actions (before_transitions / after_transitions)
   - Relations (group with shared_condition)
   - State entry / exit calls from State.entry / State.exit
+  - §12-5: Recursive group nesting via TransitionRelation.children
   - Backward compatible: single transition without cell metadata
-    produces equivalent behavior.
-
-Generated artifacts (unchanged):
-  1. Per-cell transition functions
-  2. Transition table
-  3. Function dictionary
-  4. StateMachine_Process_<Layer>()
-  5. StateMachine_GetNextEvent_<Layer>()
 """
 
 import sys
@@ -69,15 +62,12 @@ class TransitionGenerator:
     # [v2.2] Cell function templates
     # ==================================================================
     CELL_TEMPLATES = {
-        # ---- Header comment ----
         'header': Template(
             '/**\n'
             ' * @brief  Cell transition: $state_enum -[$event_enum]-> (multi)\n'
             ' * @note   Transition count: $transition_count\n'
             ' */\n'
         ),
-
-        # ---- Signature ----
         'signature': Template(
             'static $state_type $func_name(\n'
             '    const $context_type *transition,\n'
@@ -85,26 +75,18 @@ class TransitionGenerator:
             ')\n'
             '{\n'
         ),
-
-        # ---- Body open (with _handled) ----
         'body_open': Template(
             '    $state_type next_state = transition->from_state;\n'
             '    bool _handled = false;\n'
         ),
-
-        # ---- Body open (without _handled) ----
         'body_open_simple': Template(
             '    $state_type next_state = transition->from_state;\n'
         ),
-
-        # ---- Cell action section header ----
         'cell_actions_header': Template(
             '\n'
             '    /* ===== Cell actions ($trigger) ===== */\n'
         ),
         'cell_action_call': Template('    $call;\n'),
-
-        # ---- Function body close ----
         'body_close': (
             '\n'
             '    return next_state;\n'
@@ -113,7 +95,7 @@ class TransitionGenerator:
     }
 
     # ==================================================================
-    # Forward declarations (unchanged)
+    # Forward declarations
     # ==================================================================
     CELL_PROTO_TEMPLATES = {
         'section_comment': '/* ===== Cell transition function forward declarations ===== */\n',
@@ -125,7 +107,7 @@ class TransitionGenerator:
     }
 
     # ==================================================================
-    # Transition table (unchanged)
+    # Transition table
     # ==================================================================
     TABLE_TEMPLATES = {
         'func_ptr_comment': '/* Transition function pointer type */\n',
@@ -165,7 +147,7 @@ class TransitionGenerator:
     }
 
     # ==================================================================
-    # Function dictionary (unchanged)
+    # Function dictionary
     # ==================================================================
     DICT_TEMPLATES = {
         'struct_comment': (
@@ -198,7 +180,7 @@ class TransitionGenerator:
     }
 
     # ==================================================================
-    # Process function (unchanged)
+    # Process function
     # ==================================================================
     PROCESS_TEMPLATES = {
         'comment': Template(
@@ -233,7 +215,7 @@ class TransitionGenerator:
     }
 
     # ==================================================================
-    # GetNextEvent (unchanged)
+    # GetNextEvent
     # ==================================================================
     GET_NEXT_TEMPLATES = {
         'comment': Template(
@@ -296,7 +278,7 @@ class TransitionGenerator:
         log_func(message)
 
     # ==================================================================
-    # Name generation (unchanged)
+    # Name generation
     # ==================================================================
     def _state_enum(self, state_name: str) -> str:
         s = self.naming.to_pascal_case(state_name) if state_name else "Unknown"
@@ -361,16 +343,14 @@ class TransitionGenerator:
         suffix = "(transition, ctx)"
         if full.endswith(suffix):
             return full[:-len(suffix)]
-        # If invalid (comment), return empty to skip
         if full.startswith("/*"):
             return ""
         return full
 
     # ==================================================================
-    # v2.2: State entry / exit call generation
+    # State entry / exit call generation
     # ==================================================================
     def _build_exit_call(self, state_name: str) -> str:
-        """Emit state exit calls (State.exit list)."""
         if not state_name or self._current_state_machine is None:
             return ''
         state = self._current_state_machine.states.get(state_name)
@@ -384,13 +364,10 @@ class TransitionGenerator:
             name = self._role_func_call_bare(fn)
             if not name:
                 continue
-            lines.append(
-                f'        {name}(transition, ctx);  /* state exit */\n'
-            )
+            lines.append(f'        {name}(transition, ctx);  /* state exit */\n')
         return ''.join(lines)
 
     def _build_entry_call(self, state_name: str) -> str:
-        """Emit state entry calls (State.entry list)."""
         if not state_name or self._current_state_machine is None:
             return ''
         state = self._current_state_machine.states.get(state_name)
@@ -404,13 +381,11 @@ class TransitionGenerator:
             name = self._role_func_call_bare(fn)
             if not name:
                 continue
-            lines.append(
-                f'        {name}(transition, ctx);  /* state entry */\n'
-            )
+            lines.append(f'        {name}(transition, ctx);  /* state entry */\n')
         return ''.join(lines)
 
     # ==================================================================
-    # v2.2: Transition block generation
+    # Transition block generation
     # ==================================================================
     def _build_transition_block(self, trans, idx: int) -> str:
         """Build one transition block (Commit / Tentative, with / without else)."""
@@ -427,7 +402,6 @@ class TransitionGenerator:
         cond_expr = condition if condition else "1"
         commit_str = "Commit" if early_return else "Tentative"
 
-        # Component strings
         exit_calls = self._build_exit_call(trans.source)
         entry_calls = self._build_entry_call(target)
         else_entry_calls = self._build_entry_call(else_target)
@@ -465,9 +439,7 @@ class TransitionGenerator:
 
         if has_else_body:
             if early_return:
-                lines.append(
-                    f'    }} else if (!_handled && !({cond_expr})) {{\n'
-                )
+                lines.append(f'    }} else if (!_handled && !({cond_expr})) {{\n')
             else:
                 lines.append('    } else {\n')
 
@@ -482,55 +454,78 @@ class TransitionGenerator:
         return ''.join(lines)
 
     # ==================================================================
-    # v2.2: Transitions block (with group support)
+    # §12-5: Transitions block with recursive group support
     # ==================================================================
     def _build_transitions_block(self, state, transitions, relations) -> str:
-        """Build the sequence of transition blocks (with optional groups)."""
+        """Build the sequence of transition blocks (v2.2 §12-5 nesting)."""
         parts = []
 
-        # Map label -> shared_condition
-        group_map: Dict[str, str] = {}
-        for rel in relations:
-            if rel.kind == "group" and rel.shared_condition:
-                for label in rel.members:
-                    group_map[label] = rel.shared_condition
+        # Build label -> transition map
+        by_label = {}
+        for t in transitions:
+            lbl = getattr(t, 'label', '') or ''
+            if lbl:
+                by_label[lbl] = t
 
-        # Track currently open group
-        current_group_cond: Optional[str] = None
-        open_group = False
+        # Collect all labels mentioned anywhere in the relation tree
+        mentioned = set()
 
-        for idx, trans in enumerate(transitions):
-            label = getattr(trans, 'label', '') or f"T{idx + 1}"
-            sc = group_map.get(label)
+        def collect(r):
+            for m in (getattr(r, 'members', None) or []):
+                mentioned.add(m)
+            for c in (getattr(r, 'children', None) or []):
+                collect(c)
 
-            # If entering a group, open it
-            if sc and not open_group:
-                parts.append(
-                    '\n'
-                    '    /* ===== Group (shared_condition) ===== */\n'
-                    f'    if ({sc}) {{\n'
-                )
-                current_group_cond = sc
-                open_group = True
+        for r in relations:
+            collect(r)
 
-            # If leaving a group (different sc or no sc), close it
-            if open_group and sc != current_group_cond:
-                parts.append('    }\n')
-                open_group = False
-                current_group_cond = None
+        # Emit relations in order
+        for r in relations:
+            parts.append(self._emit_relation(r, by_label, indent_level=1))
 
-            # Build transition block
-            block = self._build_transition_block(trans, idx)
+        # Emit transitions not covered by any relation (backward compat)
+        for t in transitions:
+            lbl = getattr(t, 'label', '') or ''
+            if lbl and lbl in mentioned:
+                continue
+            parts.append(self._build_transition_block(t, 0))
 
-            # If inside group, indent by 1 level
-            if open_group:
-                block = self._indent_block(block, extra_indent=1)
+        return ''.join(parts)
 
+    def _emit_relation(self, rel, by_label, indent_level=1) -> str:
+        """Emit one relation (recursively for children)."""
+        parts = []
+        pad = '    ' * indent_level
+
+        shared_cond = (getattr(rel, 'shared_condition', '') or '').strip()
+        has_cond = bool(shared_cond)
+
+        if has_cond:
+            parts.append(
+                f'\n{pad}/* ===== Group (shared_condition) ===== */\n')
+            parts.append(f'{pad}if ({shared_cond}) {{\n')
+            inner_indent = indent_level + 1
+        else:
+            inner_indent = indent_level
+
+        # Members
+        for label in (getattr(rel, 'members', None) or []):
+            t = by_label.get(label)
+            if t is None:
+                continue
+            block = self._build_transition_block(t, 0)
+            extra = inner_indent - 1
+            if extra > 0:
+                block = self._indent_block(block, extra_indent=extra)
             parts.append(block)
 
-        # Close any remaining open group
-        if open_group:
-            parts.append('    }\n')
+        # Children (recursively)
+        for child in (getattr(rel, 'children', None) or []):
+            parts.append(self._emit_relation(child, by_label,
+                                             indent_level=inner_indent))
+
+        if has_cond:
+            parts.append(f'{pad}}}\n')
 
         return ''.join(parts)
 
@@ -543,7 +538,7 @@ class TransitionGenerator:
         )
 
     # ==================================================================
-    # v2.2: Cell function (rewritten)
+    # Cell function (with nesting)
     # ==================================================================
     def generate_transition_cell_functions(self, state_machine: StateMachine) -> str:
         """Generate transition functions for all cells (v2.2)."""
@@ -567,56 +562,53 @@ class TransitionGenerator:
         """Build one cell transition function (v2.2)."""
         T = self.CELL_TEMPLATES
 
-        # Get cell metadata
         sm = self._current_state_machine
         cell_actions = sm.get_actions_for_cell(state.name, event.name) if sm else []
         cell_relations = sm.get_relations_for_cell(state.name, event.name) if sm else []
 
-        # Decide whether we need _handled flag
         needs_handled = any(
             getattr(t, 'early_return', False) for t in transitions
         )
 
         parts = []
 
-        # ---- Header comment ----
         parts.append(T['header'].substitute(
             state_enum=self._state_enum(state.name),
             event_enum=self._event_enum(event.name),
             transition_count=len(transitions),
         ))
 
-        # ---- Signature ----
         parts.append(T['signature'].substitute(
             state_type=self._state_type(),
             func_name=self._cell_func_name(state.name, event.name),
             context_type=self._context_type(),
         ))
 
-        # ---- Body open ----
         if needs_handled:
             parts.append(T['body_open'].substitute(state_type=self._state_type()))
         else:
             parts.append(T['body_open_simple'].substitute(
                 state_type=self._state_type()))
 
-        # ---- Cell actions (always / before_transitions) ----
-        for trigger in ("always", "before_transitions"):
-            trigger_actions = [a for a in cell_actions if a.trigger == trigger]
-            if trigger_actions:
-                parts.append(T['cell_actions_header'].substitute(
-                    trigger=trigger))
-                for a in trigger_actions:
-                    parts.append(T['cell_action_call'].substitute(
-                        call=self._role_func_call(a.role_function)
-                    ))
+        # Cell actions (pre): before_transitions (+ legacy always)
+        pre_actions_for_cell = [
+            a for a in cell_actions
+            if a.trigger in ("before_transitions", "always")
+        ]
+        if pre_actions_for_cell:
+            parts.append(T['cell_actions_header'].substitute(
+                trigger="before_transitions"))
+            for a in pre_actions_for_cell:
+                parts.append(T['cell_action_call'].substitute(
+                    call=self._role_func_call(a.role_function)
+                ))
 
-        # ---- Transitions ----
+        # Transitions (recursive)
         parts.append(self._build_transitions_block(
             state, transitions, cell_relations
         ))
 
-        # ---- Cell actions (after_transitions) ----
+        # Cell actions (post): after_transitions
         after_actions = [a for a in cell_actions
                          if a.trigger == "after_transitions"]
         if after_actions:
@@ -627,12 +619,11 @@ class TransitionGenerator:
                     call=self._role_func_call(a.role_function)
                 ))
 
-        # ---- Body close ----
         parts.append(T['body_close'])
         return ''.join(parts)
 
     # ==================================================================
-    # Forward declarations (unchanged)
+    # Forward declarations
     # ==================================================================
     def generate_transition_cell_prototypes(self, state_machine: StateMachine) -> str:
         T = self.CELL_PROTO_TEMPLATES
@@ -651,7 +642,7 @@ class TransitionGenerator:
         return ''.join(parts)
 
     # ==================================================================
-    # Transition table (dispatch, unchanged)
+    # Transition table (dispatch)
     # ==================================================================
     def generate_transition_table(self, state_machine: StateMachine,
                                   table_type: str = None) -> str:
@@ -733,7 +724,7 @@ class TransitionGenerator:
     def _generate_table_dictionary(self, sm): return self._generate_table_array(sm)
 
     # ==================================================================
-    # Table header / dict / process / get_next (unchanged)
+    # Table header / dict / process / get_next
     # ==================================================================
     def generate_transition_table_header(self, state_machine: StateMachine) -> str:
         T = self.TABLE_HEADER_TEMPLATES

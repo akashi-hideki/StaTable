@@ -5,7 +5,7 @@
   - Renders cell_actions (before_transitions / after_transitions).
     Legacy "always" trigger is treated as "before_transitions".
   - Respects early_return per transition (`_handled` guard).
-  - Renders `group` shared_condition as an outer `if`.
+  - §12-5: Recursive group nesting via TransitionRelation.children.
   - Handles entry / exit via State.entry / State.exit lists.
 """
 
@@ -129,13 +129,13 @@ class CodeWidget(QPlainTextEdit):
 
         context_type = self._context_type()
 
-        # System globals
+        # ---- System globals ----
         for g in self.draft.system_globals:
             lines.append(f"{g.type} {g.name} = {g.initial_value};")
         if self.draft.system_globals:
             lines.append("")
 
-        # Collect role function prototypes
+        # ---- Collect role function prototypes ----
         proto_names = set()
         for item in self.draft.flow_items:
             if item.item_type == "transition":
@@ -148,7 +148,6 @@ class CodeWidget(QPlainTextEdit):
             elif item.item_type == "function":
                 proto_names.add(item.name)
 
-        # Cell actions also need prototypes
         for a in self.draft.cell_actions:
             if a.role_function:
                 proto_names.add(a.role_function)
@@ -168,7 +167,6 @@ class CodeWidget(QPlainTextEdit):
             lines.append("")
 
         # ---- Body ----
-        # Determine whether we need _handled
         needs_handled = any(
             item.params.get('early_return', False)
             for item in self.draft.flow_items
@@ -181,12 +179,12 @@ class CodeWidget(QPlainTextEdit):
             if a.trigger in ("before_transitions", "always")
         ]
         if pre_actions_for_cell:
-            lines.append("/* ===== Cell actions (before transitions) ===== */")
+            lines.append("/* ===== Cell actions (before_transitions) ===== */")
             for a in pre_actions_for_cell:
                 lines.append("    " + self._call_stmt(a.role_function))
             lines.append("")
 
-        # ---- Transitions ----
+        # ---- Transitions (v2.2 §12-5 recursive) ----
         transitions = [it for it in self.draft.flow_items
                        if it.item_type == "transition"]
         if transitions:
@@ -194,86 +192,42 @@ class CodeWidget(QPlainTextEdit):
                 lines.append("bool _handled = false;")
                 lines.append("")
 
-            # Group map (label -> shared_condition)
-            group_map = {}
+            # Build by_label map
+            by_label = {}
+            for it in transitions:
+                lbl = it.params.get('label', '') or ''
+                if lbl:
+                    by_label[lbl] = it
+
+            # Collect mentioned labels
+            mentioned = set()
+
+            def collect(rel):
+                for m in (rel.members or []):
+                    mentioned.add(m)
+                for c in (getattr(rel, 'children', None) or []):
+                    collect(c)
+
             for rel in self.draft.cell_relations:
-                if rel.kind == "group" and rel.shared_condition:
-                    for lbl in rel.members:
-                        group_map[lbl] = rel.shared_condition
+                collect(rel)
 
-            open_group_cond = None
-            for idx, item in enumerate(transitions):
-                params = item.params
-                label = params.get('label', '') or f"T{idx + 1}"
-                cond = params.get('condition', '')
-                target = params.get('target', '') or self.draft.default_target
-                pre_actions = ensure_list(params.get('pre_actions', []))
-                else_actions = ensure_list(params.get('else_actions', []))
-                has_else = params.get('has_else', True)
-                else_target = (params.get('else_target', '')
-                               or self.draft.default_target)
-                early_return = params.get('early_return', False)
+            # Emit relations in order
+            for rel in self.draft.cell_relations:
+                self._emit_relation_inline(
+                    rel, by_label, lines, indent_level=1)
 
-                sc = group_map.get(label)
-                # Open group
-                if sc and sc != open_group_cond:
-                    lines.append(
-                        "/* ===== Group (shared_condition) ===== */")
-                    lines.append(f"if ({sc}) {{")
-                    open_group_cond = sc
-                # Close previous group if changed
-                elif open_group_cond and sc != open_group_cond:
-                    lines.append("}")
-                    open_group_cond = None
-
-                indent = "    " if open_group_cond else ""
-                cond_expr = cond if cond else "1"
-                mode = "Commit" if early_return else "Tentative"
-                lines.append(
-                    f"{indent}/* ===== Transition[{label}] ({mode}) ===== */")
-
-                # Condition
-                if early_return:
-                    lines.append(f"{indent}if (!_handled && {cond_expr}) {{")
-                else:
-                    lines.append(f"{indent}if ({cond_expr}) {{")
-
-                for p in pre_actions:
-                    lines.append(f"{indent}    " + self._call_stmt(p))
-
-                if target:
-                    lines.append(f"{indent}    next_state = {target};")
-
-                if early_return:
-                    lines.append(f"{indent}    _handled = true;")
-
-                # else branch
-                if has_else and (else_target or else_actions):
-                    if early_return:
-                        lines.append(
-                            f"{indent}}} else if (!_handled && !({cond_expr})) {{")
-                    else:
-                        lines.append(f"{indent}}} else {{")
-                    for ea in else_actions:
-                        lines.append(f"{indent}    " + self._call_stmt(ea))
-                    if else_target:
-                        lines.append(f"{indent}    next_state = {else_target};")
-                    if early_return:
-                        lines.append(f"{indent}    _handled = true;")
-
-                lines.append(f"{indent}}}")
-                lines.append("")
-
-            # Close group
-            if open_group_cond:
-                lines.append("}")
-                lines.append("")
+            # Emit un-mentioned transitions
+            for it in transitions:
+                lbl = it.params.get('label', '') or ''
+                if lbl and lbl in mentioned:
+                    continue
+                self._emit_transition_item(it, lines, indent=1)
 
         # ---- Cell actions (post): after_transitions ----
         after_actions = [a for a in self.draft.cell_actions
                          if a.trigger == "after_transitions"]
         if after_actions:
-            lines.append("/* ===== Cell actions (after transitions) ===== */")
+            lines.append("/* ===== Cell actions (after_transitions) ===== */")
             for a in after_actions:
                 lines.append("    " + self._call_stmt(a.role_function))
             lines.append("")
@@ -283,3 +237,80 @@ class CodeWidget(QPlainTextEdit):
         logger.debug(generated)
         logger.debug("=== _generate_code END ===")
         return generated
+
+    # ==================================================================
+    # §12-5: Recursive relation emission
+    # ==================================================================
+    def _emit_relation_inline(self, rel, by_label, lines, indent_level=1):
+        """Recursively emit one relation into `lines`."""
+        pad = "    " * indent_level
+        shared_cond = (getattr(rel, 'shared_condition', '') or '').strip()
+        has_cond = bool(shared_cond)
+
+        if has_cond:
+            lines.append("/* ===== Group (shared_condition) ===== */")
+            lines.append(f"{pad}if ({shared_cond}) {{")
+            inner_indent = indent_level + 1
+        else:
+            inner_indent = indent_level
+
+        # Members
+        for label in (getattr(rel, 'members', None) or []):
+            it = by_label.get(label)
+            if it is None:
+                continue
+            self._emit_transition_item(it, lines, indent=inner_indent)
+
+        # Children (recursively)
+        for child in (getattr(rel, 'children', None) or []):
+            self._emit_relation_inline(child, by_label, lines,
+                                       indent_level=inner_indent)
+
+        if has_cond:
+            lines.append(f"{pad}}}")
+
+    def _emit_transition_item(self, item, lines, indent=1):
+        """Emit one transition item into `lines` at the given indent."""
+        params = item.params
+        pad = "    " * indent
+        label = params.get('label', '') or ''
+        cond = params.get('condition', '')
+        target = params.get('target', '') or self.draft.default_target
+        pre_actions = ensure_list(params.get('pre_actions', []))
+        else_actions = ensure_list(params.get('else_actions', []))
+        has_else = params.get('has_else', True)
+        else_target = (params.get('else_target', '')
+                       or self.draft.default_target)
+        early_return = params.get('early_return', False)
+
+        cond_expr = cond if cond else "1"
+        mode = "Commit" if early_return else "Tentative"
+        lines.append(f"{pad}/* ===== Transition[{label}] ({mode}) ===== */")
+
+        if early_return:
+            lines.append(f"{pad}if (!_handled && {cond_expr}) {{")
+        else:
+            lines.append(f"{pad}if ({cond_expr}) {{")
+
+        for p in pre_actions:
+            lines.append(f"{pad}    " + self._call_stmt(p))
+        if target:
+            lines.append(f"{pad}    next_state = {target};")
+        if early_return:
+            lines.append(f"{pad}    _handled = true;")
+
+        if has_else and (else_target or else_actions):
+            if early_return:
+                lines.append(
+                    f"{pad}}} else if (!_handled && !({cond_expr})) {{")
+            else:
+                lines.append(f"{pad}}} else {{")
+            for ea in else_actions:
+                lines.append(f"{pad}    " + self._call_stmt(ea))
+            if else_target:
+                lines.append(f"{pad}    next_state = {else_target};")
+            if early_return:
+                lines.append(f"{pad}    _handled = true;")
+
+        lines.append(f"{pad}}}")
+        lines.append("")

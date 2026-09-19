@@ -121,9 +121,6 @@ class Transition:
 class ActionStep:
     """Transition-independent action step (v2.2).
 
-    Represents an action that runs at a fixed phase of the cell,
-    independent of any transition condition.
-
     trigger:
       "before_transitions" - runs just before evaluating transitions
       "after_transitions"  - runs at the end of the cell body
@@ -152,11 +149,15 @@ class TransitionRelation:
 
     members: Transition.label values (e.g. ["T1", "T2"]).
     shared_condition: only used when kind == "group".
+
+    [v2.2 §12-5] children: nested sub-relations (recursive).
+      A child relation is emitted inside the parent's if-block.
     """
     kind: str = "sequential"
     members: List[str] = field(default_factory=list)
     shared_condition: str = ""
     note: str = ""
+    children: List["TransitionRelation"] = field(default_factory=list)
 
 
 @dataclass(kw_only=True)

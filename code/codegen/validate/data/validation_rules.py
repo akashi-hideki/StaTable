@@ -1,5 +1,5 @@
 # codegen/validate/data/validation_rules.py
-"""\nValidation rule definitions (data only)\n"""
+"""Validation rule definitions (data only)."""
 
 VALIDATION_RULES = {
     'state': {
@@ -10,7 +10,7 @@ VALIDATION_RULES = {
         },
         'STATE_UNREACHABLE': {
             'severity': 'warning',
-            'message': 'State \"{name}\" is unreachable',
+            'message': 'State "{name}" is unreachable',
             'suggestion': 'Add a transition or delete the state',
         },
         'STATE_NO_TRANSITION': {
@@ -20,19 +20,19 @@ VALIDATION_RULES = {
         },
         'STATE_DUPLICATE': {
             'severity': 'warning',
-            'message': 'State names \"{name}\" and \"{other}\" differ in case',
+            'message': 'State names "{name}" and "{other}" differ in case',
             'suggestion': 'Please unify the naming convention',
         },
     },
     'event': {
         'EVENT_UNUSED': {
             'severity': 'warning',
-            'message': 'Event \"{name}\" is not used',
+            'message': 'Event "{name}" is not used',
             'suggestion': 'Add a transition or delete the event',
         },
         'EVENT_NO_TRANSITION': {
             'severity': 'warning',
-            'message': 'No transition defined for event \"{name}\"',
+            'message': 'No transition defined for event "{name}"',
             'suggestion': 'Please add a transition',
         },
     },
@@ -44,22 +44,22 @@ VALIDATION_RULES = {
         },
         'TRANSITION_EVENT_UNDEFINED': {
             'severity': 'error',
-            'message': 'Event \"{event}\" is not defined',
+            'message': 'Event "{event}" is not defined',
             'suggestion': 'Please define the event',
         },
         'TRANSITION_SOURCE_UNDEFINED': {
             'severity': 'error',
-            'message': 'Source \"{source}\" is not defined',
+            'message': 'Source "{source}" is not defined',
             'suggestion': 'Please define the source state',
         },
         'TRANSITION_DUPLICATE': {
             'severity': 'warning',
-            'message': 'Transition \"{source} --[{event}]--> {target}\" is duplicated',
+            'message': 'Transition "{source} --[{event}]--> {target}" is duplicated',
             'suggestion': 'Please delete the duplicate transition',
         },
         'TRANSITION_SELF_LOOP': {
             'severity': 'info',
-            'message': 'Self transition \"{source} --[{event}]--> {source}\"',
+            'message': 'Self transition "{source} --[{event}]--> {source}"',
             'suggestion': 'Please confirm whether the self transition is intentional',
         },
     },
@@ -105,7 +105,7 @@ VALIDATION_RULES = {
         },
         'FLAG_INVALID_RANGE': {
             'severity': 'warning',
-            'message': 'Flag \"{name}\" has invalid range',
+            'message': 'Flag "{name}" has invalid range',
             'suggestion': 'min_value <= max_value required',
         },
     },
@@ -117,7 +117,7 @@ VALIDATION_RULES = {
         },
         'QUEUE_UNDEFINED_EVENT': {
             'severity': 'warning',
-            'message': 'Queue \"{name}\" contains undefined events',
+            'message': 'Queue "{name}" contains undefined events',
             'suggestion': 'Please confirm the event definitions',
         },
     },
@@ -129,7 +129,7 @@ VALIDATION_RULES = {
         },
         'INTERRUPT_UNDEFINED_EVENT': {
             'severity': 'warning',
-            'message': 'Interrupt \"{name}\" contains undefined events',
+            'message': 'Interrupt "{name}" contains undefined events',
             'suggestion': 'Please confirm the event definitions',
         },
     },
@@ -155,6 +155,51 @@ VALIDATION_RULES = {
             'severity': 'warning',
             'message': 'Type "{name}" has no members defined',
             'suggestion': 'Please add a member',
+        },
+    },
+    # ==============================================================
+    # v2.2: cell-level validation rules
+    # ==============================================================
+    'cell': {
+        'CELL_EMPTY_CONDITION': {
+            'severity': 'warning',
+            'message': 'Transition has no condition and no target (no-op)',
+            'suggestion': 'Remove the no-op transition or add a condition/target',
+        },
+        'CELL_DUPLICATE_LABEL': {
+            'severity': 'error',
+            'message': 'Duplicate transition label "{label}"',
+            'suggestion': 'Assign a unique label to each transition',
+        },
+        'CELL_DANGLING_RELATION': {
+            'severity': 'error',
+            'message': 'Relation references missing label "{label}"',
+            'suggestion': 'Fix the relation members or add the referenced transition',
+        },
+        'CELL_UNREACHABLE_TRANSITION': {
+            'severity': 'warning',
+            'message': 'Transition "{label}" is unreachable',
+            'suggestion': 'Remove it or adjust the preceding Commit transition',
+        },
+        'CELL_OVERLAP_POSSIBLE': {
+            'severity': 'warning',
+            'message': 'Two transitions share condition "{condition}"',
+            'suggestion': 'Differentiate the conditions or merge the transitions',
+        },
+        'CELL_DUPLICATE_TARGET': {
+            'severity': 'info',
+            'message': 'Multiple transitions target "{target}"',
+            'suggestion': 'Confirm whether this is intentional',
+        },
+        'CELL_EXCLUSIVE_NO_RETURN': {
+            'severity': 'info',
+            'message': 'Exclusive member "{label}" lacks early_return=True',
+            'suggestion': 'Enable early_return to enforce mutual exclusion',
+        },
+        'CELL_EMPTY_TARGET': {
+            'severity': 'warning',
+            'message': 'Transition "{label}" has no target and no early_return',
+            'suggestion': 'Set a target or enable early_return',
         },
     },
 }
