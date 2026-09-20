@@ -1,16 +1,48 @@
 # statable_gui/widgets.py
-"""StaTable main widget (shared library support / v2.2 entry-exit list)"""
+"""StaTable main widget (shared library support / v2.2 entry-exit list)
+
+Version: 3.4 (2026-09-20)
+  - MermaidWidget: fix PySide6 runJavaScript array-loss by returning
+    JSON strings from JS.
+
+    [v3.4 changes]
+      * `getSvgSize()` in JS now returns `JSON.stringify([w, h])`
+        instead of a bare array. PySide6's runJavaScript callback
+        sometimes converts JS arrays to '' (empty string) at the
+        Qt boundary; a string return value is 100% reliable.
+        `_apply_svg_size` already parses JSON strings, so no
+        Python-side change was needed beyond the existing
+        json.loads() handling.
+
+    [v3.3 behavior retained]
+      * QScrollArea viewport background set to #fafafa (dark-mode fix).
+      * json.loads() parses the JSON string form of the size array.
+
+    [v3.2 behavior retained]
+      * Only Python triggers rendering (no window.load listener).
+      * renderMermaid() awaits mermaid.init / run / polls.
+      * Python retries up to 5 times (200 ms apart).
+      * JS console.log is forwarded to StaTableLogger.
+
+    [v3.0 change] MAX_SVG_WIDTH raised 1200 -> 3000.
+
+    [v2.8] Persistent debug copy of the generated HTML is retained.
+
+    [v2.2] entry / exit are List[str]; display uses "; " separator.
+"""
 
 import os
+import json
+import shutil
 import tempfile
 from typing import Optional, List
 
 from PySide6.QtCore import Qt, Signal, QUrl, QTimer
-from PySide6.QtGui import QFont, QKeyEvent
+from PySide6.QtGui import QFont, QKeyEvent, QPalette, QColor
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
     QPushButton, QPlainTextEdit, QSplitter, QLabel, QHeaderView,
-    QTabWidget, QAbstractItemView, QMessageBox, QDialog
+    QTabWidget, QAbstractItemView, QMessageBox, QDialog, QScrollArea
 )
 
 # ============================================================
@@ -21,16 +53,19 @@ _DISABLE_MERMAID = os.environ.get("STATABLE_DISABLE_MERMAID") == "1"
 if not _DISABLE_MERMAID:
     try:
         from PySide6.QtWebEngineWidgets import QWebEngineView
-        from PySide6.QtWebEngineCore import QWebEngineSettings
+        from PySide6.QtWebEngineCore import (
+            QWebEngineSettings, QWebEnginePage)
         WEBENGINE_AVAILABLE = True
     except ImportError:
         WEBENGINE_AVAILABLE = False
         QWebEngineView = None
         QWebEngineSettings = None
+        QWebEnginePage = None
 else:
     WEBENGINE_AVAILABLE = False
     QWebEngineView = None
     QWebEngineSettings = None
+    QWebEnginePage = None
 
 from statable.model import State, Event, Transition, StateType, EventKind, RoleFunction
 from statable.state_machine import StateMachine
@@ -57,6 +92,11 @@ from statable_gui.libcntrl.literal_library import LiteralLibrary
 # ======================================================================
 _ENTRY_EXIT_SEP = "; "
 
+# [v3.3] Background color shared between the HTML body and the
+# QScrollArea viewport, so the empty area around a small diagram
+# blends in (important for dark mode).
+_MERMAID_BG = "#fafafa"
+
 
 def _list_to_display(items) -> str:
     """Convert List[str] to a display string ('A; B; C')."""
@@ -79,16 +119,67 @@ def _display_to_list(text: str) -> List[str]:
     return [p.strip() for p in parts if p.strip()]
 
 
+# ======================================================================
+# [v3.2-debug] Custom page to forward JS console to StaTableLogger
+# ======================================================================
+if WEBENGINE_AVAILABLE:
+    class _DebugWebEnginePage(QWebEnginePage):
+        """Forward JS console messages to StaTableLogger."""
+
+        def javaScriptConsoleMessage(self, level, message, line, source):
+            try:
+                lvl_name = {
+                    0: "INFO",
+                    1: "WARN",
+                    2: "ERROR",
+                }.get(int(level), str(level))
+            except (TypeError, ValueError):
+                lvl_name = str(level)
+            StaTableLogger.debug(
+                f"[JSConsole:{lvl_name}] {message} "
+                f"(line {line}, {os.path.basename(source)})")
+
+
 class MermaidWidget(QWidget):
-    """Mermaid diagram preview widget."""
+    """Mermaid diagram preview widget.
+
+    [v3.4] getSvgSize() returns a JSON string (reliable across
+      PySide6 runJavaScript array-conversion quirks).
+
+    [v3.3] QScrollArea viewport background set to _MERMAID_BG;
+      _apply_svg_size parses JSON strings as well as lists.
+
+    [v3.2] Async render (mermaid.init/run + polling) and
+      retry-based sizing; JS console forwarded to StaTableLogger.
+
+    [v3.0] MAX_SVG_WIDTH raised 1200 -> 3000.
+
+    [v2.8] Persistent debug copy of the generated HTML is written to
+      %USERPROFILE%\\statable_mermaid_debug.html
+    """
+
+    MAX_SVG_WIDTH = 3000
+    MAX_CONTENT_W = 20000
+    MAX_CONTENT_H = 20000
+    SIZE_RETRY_MAX = 5
+    SIZE_RETRY_DELAY_MS = 200
 
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
         self.web_view = None
         self.text_view = None
+        self.scroll_area = None
         self._disabled = (
             os.environ.get("STATABLE_DISABLE_MERMAID") == "1"
+        )
+
+        StaTableLogger.debug(
+            f"MermaidWidget.__init__: MAX_SVG_WIDTH={self.MAX_SVG_WIDTH}, "
+            f"disabled={self._disabled}, webengine_available={WEBENGINE_AVAILABLE}"
         )
 
         if self._disabled:
@@ -100,16 +191,54 @@ class MermaidWidget(QWidget):
             return
 
         if WEBENGINE_AVAILABLE:
+            self.scroll_area = QScrollArea()
+            self.scroll_area.setWidgetResizable(False)
+            self.scroll_area.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+            self.scroll_area.setHorizontalScrollBarPolicy(
+                Qt.ScrollBarAsNeeded)
+            self.scroll_area.setVerticalScrollBarPolicy(
+                Qt.ScrollBarAsNeeded)
+
+            # [v3.3] Viewport background = HTML body color.
+            self.scroll_area.viewport().setAutoFillBackground(True)
+            pal = self.scroll_area.viewport().palette()
+            pal.setColor(QPalette.Window, QColor(_MERMAID_BG))
+            self.scroll_area.viewport().setPalette(pal)
+            StaTableLogger.debug(
+                f"MermaidWidget: scroll_area viewport background set "
+                f"to {_MERMAID_BG}")
+
             self.web_view = QWebEngineView()
+
+            # [v3.2-debug] JS console -> Python log.
+            try:
+                self.web_view.setPage(_DebugWebEnginePage(self.web_view))
+                StaTableLogger.debug(
+                    "MermaidWidget: _DebugWebEnginePage attached")
+            except Exception as e:
+                StaTableLogger.warning(
+                    f"Failed to attach debug page: {e}")
+
+            self.web_view.setFixedSize(100, 100)
+
+            try:
+                self.web_view.setZoomFactor(1.0)
+                StaTableLogger.debug("MermaidWidget: zoomFactor set to 1.0")
+            except Exception as e:
+                StaTableLogger.warning(f"setZoomFactor failed: {e}")
+
             settings = self.web_view.settings()
             settings.setAttribute(
                 QWebEngineSettings.LocalContentCanAccessFileUrls, True)
             settings.setAttribute(
                 QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
             self.web_view.loadFinished.connect(self._on_load_finished)
-            layout.addWidget(self.web_view)
+
+            self.scroll_area.setWidget(self.web_view)
+            layout.addWidget(self.scroll_area)
             StaTableLogger.debug(
-                "MermaidWidget: WebEngine available + file access enabled")
+                "MermaidWidget: WebEngine available + file access enabled "
+                "(wrapped in QScrollArea)")
         else:
             self.text_view = QPlainTextEdit()
             self.text_view.setReadOnly(True)
@@ -124,6 +253,8 @@ class MermaidWidget(QWidget):
     def set_mermaid_code(self, code: str):
         StaTableLogger.debug("MermaidWidget.set_mermaid_code called")
         if self._disabled:
+            StaTableLogger.debug(
+                "MermaidWidget.set_mermaid_code: skipped (disabled)")
             return
 
         if self.web_view:
@@ -134,24 +265,207 @@ class MermaidWidget(QWidget):
                 return
 
             js_abs_url = QUrl.fromLocalFile(str(mermaid_js_path)).toString()
+            StaTableLogger.debug(
+                f"MermaidWidget: mermaid.js url = {js_abs_url}")
 
             html = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <style>
+        html, body {{
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: {_MERMAID_BG};
+        }}
+        .mermaid {{
+            padding: 20px;
+            margin: 0;
+            background-color: transparent;
+            display: inline-block;
+            width: max-content;
+        }}
+    </style>
     <script src="{js_abs_url}"></script>
     <script>
-        mermaid.initialize({{ startOnLoad: false, theme: 'default' }});
-        function renderMermaid() {{
-            mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+        var MAX_SVG_WIDTH = {self.MAX_SVG_WIDTH};
+        console.log('[MermaidDebug] script loaded');
+        console.log('[MermaidDebug] MAX_SVG_WIDTH =', MAX_SVG_WIDTH);
+        console.log('[MermaidDebug] typeof mermaid =', typeof mermaid);
+        if (typeof mermaid !== 'undefined') {{
+            console.log('[MermaidDebug] mermaid.run type =',
+                        typeof mermaid.run);
+            console.log('[MermaidDebug] mermaid.init type =',
+                        typeof mermaid.init);
+            console.log('[MermaidDebug] mermaid.initialize type =',
+                        typeof mermaid.initialize);
         }}
-        window.addEventListener('load', renderMermaid);
+
+        try {{
+            mermaid.initialize({{
+                startOnLoad: false,
+                theme: 'default',
+                themeVariables: {{
+                    fontSize: '16px',
+                    fontFamily: 'Segoe UI, Yu Gothic UI, sans-serif',
+                }},
+                'stateDiagram-v2': {{
+                    nodeSpacing: 50,
+                    rankSpacing: 60,
+                    padding: 15,
+                    useMaxWidth: false,
+                }},
+                stateDiagram: {{
+                    nodeSpacing: 50,
+                    rankSpacing: 60,
+                    padding: 15,
+                    useMaxWidth: false,
+                }},
+            }});
+            console.log('[MermaidDebug] mermaid.initialize done');
+        }} catch (e) {{
+            console.error('[MermaidDebug] mermaid.initialize failed:', e);
+        }}
+
+        function waitForSvg(timeoutMs) {{
+            return new Promise(function(resolve) {{
+                var start = Date.now();
+                (function poll() {{
+                    var svg = document.querySelector('.mermaid svg');
+                    if (svg && svg.getAttribute('viewBox')) {{
+                        resolve(true);
+                        return;
+                    }}
+                    if (Date.now() - start > timeoutMs) {{
+                        resolve(false);
+                        return;
+                    }}
+                    setTimeout(poll, 50);
+                }})();
+            }});
+        }}
+
+        async function renderMermaid() {{
+            console.log('[MermaidDebug] renderMermaid: ENTER');
+
+            var nodes = document.querySelectorAll('.mermaid');
+            console.log('[MermaidDebug] .mermaid node count =', nodes.length);
+            if (!nodes.length) {{
+                console.warn('[MermaidDebug] no .mermaid nodes; abort');
+                return 'no-nodes';
+            }}
+
+            try {{
+                var promise = null;
+                if (typeof mermaid.run === 'function') {{
+                    console.log('[MermaidDebug] branch: mermaid.run');
+                    promise = mermaid.run({{ nodes: nodes }});
+                }} else if (typeof mermaid.init === 'function') {{
+                    console.log('[MermaidDebug] branch: mermaid.init');
+                    promise = mermaid.init(undefined, nodes);
+                }} else {{
+                    console.warn('[MermaidDebug] no run/init available');
+                }}
+
+                if (promise && typeof promise.then === 'function') {{
+                    console.log('[MermaidDebug] awaiting promise');
+                    await promise;
+                    console.log('[MermaidDebug] promise resolved');
+                }} else {{
+                    console.log(
+                        '[MermaidDebug] no promise; polling for SVG');
+                    var ok = await waitForSvg(3000);
+                    console.log('[MermaidDebug] waitForSvg =', ok);
+                }}
+            }} catch (e) {{
+                console.error('[MermaidDebug] render failed:', e);
+                console.error('[MermaidDebug] stack:', e && e.stack);
+                return 'render-failed';
+            }}
+
+            var svgs = document.querySelectorAll('.mermaid svg');
+            console.log(
+                '[MermaidDebug] SVG count after render =', svgs.length);
+
+            svgs.forEach(function(svg, i) {{
+                var vb = svg.getAttribute('viewBox');
+                console.log('[MermaidDebug] svg[' + i + '] viewBox =', vb);
+                if (!vb) return;
+                var parts = vb.split(/\\s+/);
+                if (parts.length !== 4) return;
+                var w = parseFloat(parts[2]);
+                var h = parseFloat(parts[3]);
+                if (!w || !h) return;
+                var scale = 1.0;
+                if (w > MAX_SVG_WIDTH) scale = MAX_SVG_WIDTH / w;
+                var newW = Math.round(w * scale);
+                var newH = Math.round(h * scale);
+                svg.removeAttribute('style');
+                svg.setAttribute('width', newW);
+                svg.setAttribute('height', newH);
+                console.log('[MermaidDebug] svg[' + i +
+                            '] forced ' + newW + 'x' + newH +
+                            ' (natural ' + w + 'x' + h + ')');
+            }});
+
+            console.log('[MermaidDebug] renderMermaid: EXIT');
+            return 'ok';
+        }}
+
+        /* [v3.4] Returns a JSON string instead of a bare array.
+           PySide6's runJavaScript callback sometimes converts JS
+           arrays to '' at the Qt boundary; a string is reliable. */
+        function getSvgSize() {{
+            console.log('[MermaidDebug] getSvgSize: ENTER');
+            var svg = document.querySelector('.mermaid svg');
+            console.log('[MermaidDebug] getSvgSize: svg exists =', !!svg);
+            if (!svg) return JSON.stringify([0, 0]);
+
+            var w = parseFloat(svg.getAttribute('width'));
+            var h = parseFloat(svg.getAttribute('height'));
+            console.log('[MermaidDebug] getSvgSize: raw width/height =',
+                        w, h);
+
+            if (!w || !h) {{
+                var vb = svg.getAttribute('viewBox');
+                console.log('[MermaidDebug] getSvgSize: viewBox =', vb);
+                if (vb) {{
+                    var parts = vb.split(/\\s+/);
+                    if (parts.length === 4) {{
+                        var nw = parseFloat(parts[2]);
+                        var nh = parseFloat(parts[3]);
+                        var sc = 1.0;
+                        if (nw > MAX_SVG_WIDTH) sc = MAX_SVG_WIDTH / nw;
+                        w = Math.round(nw * sc);
+                        h = Math.round(nh * sc);
+                    }}
+                }}
+            }}
+
+            if (!w || !h) {{
+                console.log('[MermaidDebug] getSvgSize: returning [0,0]');
+                return JSON.stringify([0, 0]);
+            }}
+
+            var pad = 40;
+            var result = [Math.round(w + pad), Math.round(h + pad)];
+            var jsonStr = JSON.stringify(result);
+            console.log('[MermaidDebug] getSvgSize: returning ' + jsonStr);
+            return jsonStr;
+        }}
     </script>
 </head>
 <body>
 <pre class="mermaid">
 {code}
 </pre>
+<script>
+    console.log('[MermaidDebug] body loaded; .mermaid count =',
+                document.querySelectorAll('.mermaid').length);
+</script>
 </body>
 </html>"""
 
@@ -161,17 +475,118 @@ class MermaidWidget(QWidget):
                         delete=False, encoding='utf-8') as f:
                     f.write(html)
                     temp_path = f.name
+                StaTableLogger.debug(
+                    f"MermaidWidget: temp HTML written: {temp_path}")
+
+                try:
+                    debug_path = os.path.join(
+                        os.path.expanduser("~"),
+                        "statable_mermaid_debug.html")
+                    shutil.copy(temp_path, debug_path)
+                    StaTableLogger.info(
+                        f"[DEBUG] Mermaid HTML saved to: {debug_path}")
+                except Exception as e:
+                    StaTableLogger.warning(
+                        f"[DEBUG] failed to save debug HTML: {e}")
+
                 self.web_view.load(QUrl.fromLocalFile(temp_path))
+                StaTableLogger.debug(
+                    f"MermaidWidget: loading URL {temp_path}")
             except Exception as e:
                 StaTableLogger.error(
                     f"Failed to create temporary HTML: {e}")
         elif self.text_view:
             self.text_view.setPlainText(code)
+            StaTableLogger.debug(
+                "MermaidWidget: text fallback updated")
 
     def _on_load_finished(self, ok: bool):
-        StaTableLogger.debug(f"WebEngine loadFinished: ok={ok}")
+        StaTableLogger.debug(
+            f"MermaidWidget._on_load_finished: ok={ok}")
         if ok and self.web_view:
-            self.web_view.page().runJavaScript("renderMermaid();")
+            StaTableLogger.debug(
+                "MermaidWidget: invoking renderMermaid() via JS")
+            self.web_view.page().runJavaScript(
+                "renderMermaid();",
+                lambda r: StaTableLogger.debug(
+                    f"renderMermaid() returned: {r!r}"),
+            )
+            QTimer.singleShot(
+                self.SIZE_RETRY_DELAY_MS,
+                lambda: self._request_svg_size(retry=0),
+            )
+        elif not ok:
+            StaTableLogger.warning(
+                "MermaidWidget: WebEngine load FAILED")
+
+    def _request_svg_size(self, retry: int = 0):
+        StaTableLogger.debug(
+            f"MermaidWidget._request_svg_size: retry={retry}")
+        if not self.web_view:
+            StaTableLogger.warning(
+                "MermaidWidget._request_svg_size: no web_view")
+            return
+        self.web_view.page().runJavaScript(
+            "getSvgSize();",
+            lambda result: self._apply_svg_size(result, retry),
+        )
+
+    def _apply_svg_size(self, result, retry: int = 0):
+        """[v3.4] Accept JSON string (new) or list/tuple (legacy)."""
+        StaTableLogger.debug(
+            f"MermaidWidget._apply_svg_size: retry={retry}, "
+            f"result={result!r}, type={type(result).__name__}")
+
+        values = None
+        if isinstance(result, (list, tuple)) and len(result) >= 2:
+            values = result
+        elif isinstance(result, str):
+            s = result.strip()
+            if s:
+                try:
+                    parsed = json.loads(s)
+                    if isinstance(parsed, (list, tuple)) and len(parsed) >= 2:
+                        values = parsed
+                        StaTableLogger.debug(
+                            f"MermaidWidget: parsed JSON string -> {values}")
+                except (json.JSONDecodeError, ValueError) as e:
+                    StaTableLogger.debug(
+                        f"MermaidWidget: JSON parse failed: {e}")
+
+        valid = False
+        w = h = 0
+        if values is not None:
+            try:
+                w = int(values[0])
+                h = int(values[1])
+                if w > 0 and h > 0:
+                    valid = True
+            except (ValueError, TypeError) as e:
+                StaTableLogger.warning(
+                    f"_apply_svg_size: int() failed: {e}")
+
+        if not valid:
+            if retry < self.SIZE_RETRY_MAX:
+                next_retry = retry + 1
+                StaTableLogger.debug(
+                    f"MermaidWidget: size not ready, scheduling retry "
+                    f"{next_retry}/{self.SIZE_RETRY_MAX}")
+                QTimer.singleShot(
+                    self.SIZE_RETRY_DELAY_MS,
+                    lambda: self._request_svg_size(retry=next_retry),
+                )
+            else:
+                StaTableLogger.warning(
+                    f"MermaidWidget: size query failed after "
+                    f"{self.SIZE_RETRY_MAX} retries; keeping current size")
+            return
+
+        w = min(w, self.MAX_CONTENT_W)
+        h = min(h, self.MAX_CONTENT_H)
+
+        StaTableLogger.debug(
+            f"MermaidWidget: setting web_view fixed size to {w}x{h}")
+        self.web_view.setFixedSize(w, h)
 
 
 class SettingsPanel(QWidget):
@@ -267,7 +682,6 @@ class SettingsPanel(QWidget):
             self.state_table.setItem(row, 0, QTableWidgetItem(state.name))
             self.state_table.setItem(row, 1, QTableWidgetItem(state.description))
 
-            # v2.2: entry / exit are List[str]; convert to display string
             entry_display = _list_to_display(getattr(state, 'entry', []))
             exit_display = _list_to_display(getattr(state, 'exit', []))
 
@@ -352,7 +766,6 @@ class SettingsPanel(QWidget):
                     t for t in self.sm.transitions
                     if t.source != name and t.target != name
                 ]
-                # Also clean cell metadata
                 for (src, evt) in list(self.sm.get_cell_keys()):
                     if src == name:
                         self.sm.remove_cell_metadata(src, evt)
@@ -409,14 +822,12 @@ class SettingsPanel(QWidget):
         [v2.2]
           entry / exit: display string -> List[str] via split(';')
         """
-        # === State table ===
         for row in range(self.state_table.rowCount()):
             name = (self.state_table.item(row, 0).text().strip()
                     if self.state_table.item(row, 0) else "")
             desc = (self.state_table.item(row, 1).text().strip()
                     if self.state_table.item(row, 1) else "")
 
-            # v2.2: convert display string to List[str]
             entry_text = (self.state_table.item(row, 2).text().strip()
                           if self.state_table.item(row, 2) else "")
             exit_text = (self.state_table.item(row, 3).text().strip()
@@ -443,7 +854,6 @@ class SettingsPanel(QWidget):
                         entry=entry_list, exit=exit_list, do=do,
                     ))
 
-        # === Role function table ===
         self.sm.role_functions.clear()
         for row in range(self.role_table.rowCount()):
             title = (self.role_table.item(row, 0).text().strip()
