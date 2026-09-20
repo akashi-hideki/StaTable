@@ -1,512 +1,480 @@
-# StaTable Screen Transition Specification v1.2 (English)
+# `docs/SPEC_SCREENS_en.md` v2.3 (English, Screen Specification)
 
-Version: 1.2
-Date: 2026-09-20
-Scope: All GUI screens, dialogs, and the embedded state transition diagram
-Source basis: `statable_gui/main_window.py` (v1.5), `statable_gui/widgets.py` (v2.2)
+**Note**: Since the existing `SPEC_SCREENS_en.md` content is not available, this is a **reconstructed complete version** based on `SPEC_OVERVIEW_en.md` v2.3 and the pre-implementation investigation results. If it differs from the existing file, apply only the relevant diffs.
+
+```markdown
+# StaTable Screen Specification v2.3 (English)
+
+Version: 2.3
+Date: 2026-09-21
+Scope: StaTable GUI screens (whole)
+Prerequisite: See `SPEC_OVERVIEW_en.md` v2.3
 
 ---
 
 ## Table of Contents
 
-1. Overview
-2. State Transition Diagram (MermaidWidget)
-3. Screen Hierarchy
-4. Main Window Layout
-5. Toolbar / Menu → Dialog Transitions
-6. Tab-Level Transitions
-7. Dialog-Level Transitions
-8. Modal / Modeless Classification
-9. Transition Matrix
-10. Revision History
+1. Screen List
+2. MainWindow
+3. Menu Bar
+4. Toolbar
+5. Tab Widget
+6. Dialog List
+7. New Project Feature (v2.3)
+8. Unsaved Changes Dialog (v2.3)
+9. Window Title (v2.3)
+10. Status Bar (v2.3)
+11. Revision History
 
 ---
 
-## 1. Overview
+## 1. Screen List
 
-StaTable's GUI consists of:
-
-- **1 MainWindow** (persistent, title: `StaTable - State Transition Editor`)
-- **N Tabs** (one per layer, closable, minimum 1)
-- **16 dialogs** (opened/closed on demand)
-- **1 embedded state transition diagram** (`MermaidWidget` inside each tab)
-
-The state transition diagram is a **read-only visualization** of the current `StateMachine`, rendered by Mermaid.js inside a `QWebEngineView`.
+| # | Screen / Widget | Class | File | Modal |
+|---|-----------------|-------|------|-------|
+| 1 | Main window | `MainWindow` | `statable_gui/main_window.py` | – |
+| 2 | State machine tab | `StateMachineTab` | `statable_gui/widgets.py` | – |
+| 3 | Settings panel | `SettingsPanel` | `statable_gui/widgets.py` | – |
+| 4 | Mermaid preview | `MermaidWidget` | `statable_gui/widgets.py` | – |
+| 5 | Transition matrix | `MatrixTableWidget` | `statable_gui/matrix_table.py` | – |
+| 6 | Global definitions | `GlobalDefinitionsDialog` | `statable_gui/global_defs_dialog.py` | Modal |
+| 7 | Type manager | `TypeManagerDialog` | `statable_gui/common_widgets.py` | Modal |
+| 8 | Event definitions | `EventDefinitionDialog` | `statable_gui/event_definition_dialog.py` | Modal |
+| 9 | Event delivery settings | `EventDeliverySettingsDialog` | `statable_gui/event_delivery_settings_dialog.py` | Modal |
+| 10 | Interrupt handler edit | `InterruptHandlerEditDialog` | `statable_gui/interrupt_handler_edit_dialog.py` | Modal |
+| 11 | Layer settings | `LayerSettingsDialog` | `statable_gui/layer_settings_dialog.py` | Modal |
+| 12 | Validation dialog | `ValidationDialog` | `statable_gui/validation_dialog.py` | Modal |
+| 13 | Code generation | `CodeGenerationDialog` | `statable_gui/code_generation_dialog.py` | Modal |
+| 14 | Code generation settings | `CodeGenerationSettingsDialog` | `statable_gui/code_generation_settings_dialog.py` | Modal |
+| 15 | Transition editor | `ActionEditorDialog` | `statable_gui/transition_editor_direct/dialog.py` | Modal |
+| 16 | TraceBall log | `TraceBallWidget` | `statable_gui/traceball.py` | Dock |
+| 17 | **Unsaved Changes dialog (v2.3)** | `QMessageBox` | (Qt standard) | Modal |
+| 18 | **Tab name input (v2.3, existing)** | `QInputDialog` | (Qt standard) | Modal |
 
 ---
 
-## 2. State Transition Diagram (MermaidWidget)
+## 2. MainWindow
 
-### 2.1 Overview
+### 2.1 Overall Layout
 
-Each `StateMachineTab` contains a `MermaidWidget` that displays a **state transition diagram** of the current `StateMachine`. It is a read-only visualization, always kept in sync with the underlying model.
+```
+┌────────────────────────────────────────────────────────────┐
+│ MainWindow (QMainWindow)                                   │
+│ ┌────────────────────────────────────────────────────────┐ │
+│ │ Menu bar (File / Edit / Validate / Code generation / View)│
+│ ├────────────────────────────────────────────────────────┤ │
+│ │ Toolbar                                                │ │
+│ ├────────────────────────────────────────────────────────┤ │
+│ │ ┌────────────────────────────────────────────────────┐ │ │
+│ │ │ QTabWidget                                          │ │ │
+│ │ │ ┌─────────────────────────────────────────────────┐│ │ │
+│ │ │ │ StateMachineTab "Application"                   ││ │ │
+│ │ │ │ ┌──────────────────────────┬──────────────────┐││ │ │
+│ │ │ │ │ MatrixTableWidget        │ SettingsPanel    │││ │ │
+│ │ │ │ │ (transition matrix)      │ (states / roles) │││ │ │
+│ │ │ │ ├──────────────────────────┤                  │││ │ │
+│ │ │ │ │ MermaidWidget            │                  │││ │ │
+│ │ │ │ │ (state diagram preview)  │                  │││ │ │
+│ │ │ │ └──────────────────────────┴──────────────────┘││ │ │
+│ │ │ └─────────────────────────────────────────────────┘│ │ │
+│ │ └────────────────────────────────────────────────────┘ │ │
+│ ├────────────────────────────────────────────────────────┤ │
+│ │ TraceBall dock (hidden by default, toggleable)         │ │
+│ ├────────────────────────────────────────────────────────┤ │
+│ │ Status bar                                             │ │
+│ └────────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────┘
+```
+
+### 2.2 Attributes
+
+| Attribute | Value |
+|-----------|-------|
+| Base class | `QMainWindow` |
+| Initial size | `WINDOW_WIDTH × WINDOW_HEIGHT` |
+| Window title | `Untitled[*] - StaTable` (v2.3) |
+| Menu bar | 5 menus (see §3) |
+| Toolbar | `TopToolBarArea` |
+| Central widget | `QTabWidget` |
+| Dock widget | `TraceBallWidget` (`BottomDockWidgetArea`, initially hidden) |
+| Status bar | `QStatusBar` (used from v2.3) |
+
+---
+
+## 3. Menu Bar
+
+### 3.1 Menu Structure (v2.3)
+
+```
+File
+├── New Project...          (Ctrl+N)        ★v2.3 added
+├── ─────────────
+├── Open Project...         (none)
+├── Save Project...         (none)
+├── Rename Tab...           (none)
+├── ─────────────
+└── New State Machine       (none)
+
+Edit
+├── Global Definitions...   (none)
+├── Type Definitions...     (none)
+├── Event Definitions...    (none)
+├── Event Delivery Settings... (none)
+├── Interrupt Handlers...   (none)
+└── Layer Settings...       (none)
+
+Validate(&V)
+└── Validate Project...     (Ctrl+Shift+V)
+
+Code generation(&G)
+├── Generate Code...        (Ctrl+G)
+├── Generation Settings...  (Ctrl+Shift+G)
+└── Save Generated Code...  (Ctrl+Shift+S)
+
+View
+└── TraceBall               (checkable)
+```
+
+### 3.2 File Menu Details
+
+| # | Item | Shortcut | Connected to | v2.3 |
+|---|------|----------|--------------|------|
+| 1 | **New Project...** | `Ctrl+N` | `MainWindow.new_project` | ★Added |
+| 2 | ───────────── | – | – | ★Added |
+| 3 | Open Project... | none | `MainWindow.open_project` | Existing |
+| 4 | Save Project... | none | `MainWindow.save_project` | Existing |
+| 5 | Rename Tab... | none | `MainWindow.rename_current_tab` | Existing |
+| 6 | ───────────── | – | – | Existing |
+| 7 | New State Machine | none | `MainWindow.add_new_tab` | Existing |
+
+### 3.3 Existing Shortcuts (v2.3)
+
+| Shortcut | Menu | Purpose |
+|----------|------|---------|
+| `Ctrl+N` | File | New Project ★Added |
+| `Ctrl+Shift+V` | Validate | Run validation |
+| `Ctrl+G` | Code generation | Generate code |
+| `Ctrl+Shift+G` | Code generation | Generation settings |
+| `Ctrl+Shift+S` | Code generation | Save generated code |
+
+**No conflict**: `Ctrl+N` is unused until v2.3. It does not collide with any existing shortcut.
+
+---
+
+## 4. Toolbar
+
+### 4.1 Toolbar Layout
+
+Placed in `TopToolBarArea`. Built by `MainWindow.create_toolbar()`.
+
+| # | Button | Connected to |
+|---|--------|--------------|
+| 1 | Global definitions | `open_global_defs_dialog` |
+| 2 | Type definitions | `open_type_manager` |
+| 3 | Event definitions | `open_event_definition_dialog` |
+| 4 | Event delivery | `open_event_delivery_settings` |
+| 5 | Interrupts | `open_interrupt_settings` |
+| 6 | Layer settings | `open_layer_settings` |
+| 7 | Validate | `open_validation_dialog` |
+| 8 | Generate | `open_code_generation_dialog` |
+| 9 | Generation settings | `open_code_generation_settings` |
+| 10 | Save generated code | `save_generated_code_direct` |
+| 11 | Show log | `toggle_traceball` (checkable) |
+
+**v2.3 change**: No `New Project` button is added to the toolbar (menu only). Reason: preserve toolbar consistency (editing/generation categories only).
+
+---
+
+## 5. Tab Widget
+
+### 5.1 Tab Structure
+
+Each layer is a tab in `QTabWidget`. Each tab is a `StateMachineTab` instance.
+
+### 5.2 StateMachineTab Layout
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ QHBoxLayout                                              │
+│ ┌────────────────────────────────┬──────────────────────┐│
+│ │ QSplitter (Vertical)           │ SettingsPanel        ││
+│ │ ┌────────────────────────────┐ │ ┌──────────────────┐││
+│ │ │ MatrixTableWidget          │ │ │ State list tab   │││
+│ │ │ (transition matrix)        │ │ │ Role function tab│││
+│ │ │ min height 300px           │ │ └──────────────────┘││
+│ │ ├────────────────────────────┤ │                      ││
+│ │ │ MermaidWidget              │ │                      ││
+│ │ │ (state diagram preview)    │ │                      ││
+│ │ │ min height MERMAID_PREVIEW_MIN_HEIGHT                ││
+│ │ └────────────────────────────┘ │                      ││
+│ └────────────────────────────────┴──────────────────────┘│
+└──────────────────────────────────────────────────────────┘
+```
+
+### 5.3 v2.3 Added Signal
+
+| Signal | Emitted from | Connected to |
+|--------|-------------|--------------|
+| `dataModified` | signal-to-signal connection in `__init__` | `MainWindow._on_tab_data_modified` |
+
+Internal connection (end of `__init__`):
+```python
+self.table.transition_changed.connect(self.dataModified)
+self.settings.settings_changed.connect(self.dataModified)
+```
+
+---
+
+## 6. Dialog List
+
+| # | Dialog | Modal | `exec()` return used | v2.3 modified-flag |
+|---|--------|-------|---------------------|-------------------|
+| 1 | `GlobalDefinitionsDialog` | Modal | **No** (C-36) | Not reflected |
+| 2 | `TypeManagerDialog` | Modal | **No** (C-37) | Not reflected |
+| 3 | `EventDefinitionDialog` | Modal | Yes (`QDialog.Accepted`) | Not reflected (C-36) |
+| 4 | `EventDeliverySettingsDialog` | Modal | Yes | Not reflected (C-37) |
+| 5 | `InterruptHandlerEditDialog` | Modal | **No** (C-37) | Not reflected |
+| 6 | `LayerSettingsDialog` | Modal | Yes (`_on_ok` → `accept`) | Not reflected (C-37) |
+| 7 | `ValidationDialog` | Modal | No | – |
+| 8 | `CodeGenerationDialog` | Modal | No | – |
+| 9 | `CodeGenerationSettingsDialog` | Modal | No | – |
+| 10 | `ActionEditorDialog` | Modal | – | In-tab edits reflected |
+
+**v2.3 scope**: Dialog-driven edits are not reflected in `windowModified` (C-36〜C-39). Only in-tab edits are reflected.
+
+---
+
+## 7. New Project Feature (v2.3 / F-15)
+
+### 7.1 Screen Transition
+
+```
+┌─────────────────────────┐
+│ MainWindow              │
+│ (showing sample project)│
+└───────────┬─────────────┘
+            │
+            │ File > New Project... or Ctrl+N
+            ▼
+┌─────────────────────────┐
+│ Unsaved Changes dialog  │ ← Only when windowModified == True
+│ (Save / Discard / Cancel)│
+└───────────┬─────────────┘
+            │
+            ├── Cancel ────→ MainWindow (unchanged)
+            │
+            ├── Save ────→ Save dialog ──→ Save OK ──┐
+            │                            └── Save failed ──→ MainWindow (unchanged)
+            │
+            └── Discard ───────────────────────────────┐
+                                                       │
+                                                       ▼
+                                        ┌─────────────────────────┐
+                                        │ MainWindow (new project) │
+                                        │ ・One Application tab    │
+                                        │ ・states/events/trans 0  │
+                                        │ ・GlobalDefinitions empty│
+                                        │ ・Shared libraries empty │
+                                        │ ・ConfigManager default  │
+                                        │ ・windowModified = False │
+                                        │ ・Title: Untitled        │
+                                        │ ・Status bar: 3s notice  │
+                                        └─────────────────────────┘
+```
+
+### 7.2 State Changes on New Project
+
+| Target | Change | Decision # |
+|--------|--------|-----------|
+| Tabs | All removed → one `Application` tab | #2 |
+| States / events / transitions | All cleared (0) | – |
+| `StateMachine.role_functions` | All cleared (0) | – |
+| `cell_actions` / `cell_relations` | All cleared (`{}`) | – |
+| GlobalDefinitions | Regenerated (empty) | – |
+| **RoleFunctionLibrary** | **Regenerated (empty)** | **#5 revised** |
+| **ConditionLibrary** | **Regenerated (empty)** | **#5 revised** |
+| **LiteralLibrary** | **Regenerated (empty)** | **#5 revised** |
+| ConfigManager | `reset()` | #6 |
+| Preferences | Preserved | #7 |
+| TraceBall log | Preserved | #8 |
+| `windowModified` | `False` | #4 |
+
+### 7.3 Menu Item Display
+
+| Item | Display text | Shortcut | Tooltip |
+|------|-------------|----------|---------|
+| New Project | `New Project...` | `Ctrl+N` | None (default) |
+
+### 7.4 Comparison with Startup
+
+| Aspect | At startup | On New Project |
+|--------|-----------|---------------|
+| Tabs | `Application` (sample) | `Application` (empty) |
+| States/events/transitions | Sample data | Empty |
+| GlobalDefinitions | Demo data | Empty |
+| Shared libraries | Sample registered | Empty |
+| ConfigManager | Default | Default (`reset()`) |
+| Preferences | Loaded | Preserved |
+| TraceBall log | Startup log | Preserved (previous log) |
+| Title | Initially `StaTable - State Transition Editor` | `Untitled[*] - StaTable` |
+
+**Note**: At startup the title remains `StaTable - State Transition Editor` in v2.3. `_update_window_title()` is called only on `new_project` / `open_project` / successful `save_project` / tab edit.
+
+---
+
+## 8. Unsaved Changes Dialog (v2.3)
+
+### 8.1 Display Conditions
+
+Called from `MainWindow._maybe_save()`. Invoked at three places:
+
+| Trigger | Caller |
+|---------|--------|
+| `File > New Project...` / `Ctrl+N` | Start of `MainWindow.new_project` |
+| `File > Open Project...` | Start of `MainWindow.open_project` |
+| Window close | `MainWindow.closeEvent` |
+
+### 8.2 Dialog Specification
 
 | Item | Value |
 |------|-------|
-| Widget class | `MermaidWidget` (`statable_gui/widgets.py`) |
-| Generator | `statable.mermaid_gen.generate_mermaid(sm)` |
-| Renderer | Mermaid.js (`mermaidwin.js` resource) |
-| Renderer host | `QWebEngineView` (PySide6-Addons) |
-| Output format | `stateDiagram-v2` |
-| Update trigger | `StateMachineTab.update_mermaid()` |
-| Fallback (WebEngine unavailable) | `QPlainTextEdit` showing raw Mermaid code + install hint |
-| Fallback (`STATABLE_DISABLE_MERMAID=1`) | `QLabel` with `"Mermaid rendering disabled (test mode)"` |
+| Class | `QMessageBox` |
+| Icon | `QMessageBox.Warning` |
+| Title | `"Unsaved Changes"` |
+| Message | `"The current project has unsaved changes.\nDo you want to save them before continuing?"` |
+| Buttons | `Save` / `Discard` / `Cancel` |
+| Default button | `Save` |
 
-### 2.2 Layout within `StateMachineTab`
+### 8.3 Per-Button Behavior
+
+| Button | `_maybe_save()` return | Caller behavior |
+|--------|----------------------|-----------------|
+| Save | Return value of `save_project()` | Save OK → proceed; save cancelled/failed → abort |
+| Discard | `True` | Proceed |
+| Cancel | `False` | Abort |
+
+### 8.4 No Changes
+
+When `windowModified == False`, **no dialog is shown**; `_maybe_save()` returns `True`.
+
+### 8.5 Text-based Mock-up
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│  StateMachineTab (QWidget)                                     │
-│  QHBoxLayout                                                   │
-│  ┌────────────────────────────────────────┐  ┌───────────────┐ │
-│  │ QSplitter(Qt.Vertical)  [stretch=3]    │  │ SettingsPanel │ │
-│  │ ┌────────────────────────────────────┐ │  │ [stretch=1]   │ │
-│  │ │ MatrixTableWidget                  │ │  │               │ │
-│  │ │ (transition matrix)                │ │  │  QTabWidget   │ │
-│  │ │                                    │ │  │ ┌───────────┐ │ │
-│  │ │  [state × event cells]             │ │  │ │State list │ │ │
-│  │ ├────────────────────────────────────┤ │  │ ├───────────┤ │ │
-│  │ │ MermaidWidget                      │ │  │ │Role       │ │ │
-│  │ │ (state transition diagram)  ★      │ │  │ │function   │ │ │
-│  │ │                                    │ │  │ └───────────┘ │ │
-│  │ │  [*] --> Idle                      │ │  │               │ │
-│  │ │  Idle --> Active : (START)         │ │  │ [Add][Delete] │ │
-│  │ │  Active --> Idle : (STOP)          │ │  │               │ │
-│  │ │  ...                               │ │  │ [Event        │ │
-│  │ │                                    │ │  │  definitions] │ │
-│  │ └────────────────────────────────────┘ │  │               │ │
-│  └────────────────────────────────────────┘  └───────────────┘ │
-└────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  ⚠  Unsaved Changes                             │
+│                                                 │
+│  The current project has unsaved changes.       │
+│  Do you want to save them before continuing?    │
+│                                                 │
+│       [ Save ]  [ Discard ]  [ Cancel ]         │
+└─────────────────────────────────────────────────┘
 ```
 
-**Splitter sizes** (from `widgets.py`):
+---
+
+## 9. Window Title (v2.3)
+
+### 9.1 Title Formats
+
+| State | Title |
+|-------|-------|
+| At startup (unchanged from v2.0) | `StaTable - State Transition Editor` |
+| After `new_project` | `Untitled[*] - StaTable` |
+| After successful `open_project` | `Untitled[*] - StaTable` |
+| After successful `save_project` | `Untitled[*] - StaTable` |
+| When `windowModified == True` | `Untitled* - StaTable` (`[*]` replaced by `*`) |
+| When `windowModified == False` | `Untitled - StaTable` (`[*]` removed) |
+
+### 9.2 `[*]` Placeholder
+
+Works in combination with Qt's `QMainWindow.setWindowTitle("[*] ...")` and `setWindowModified(bool)`:
 
 ```python
-table_height   = int(WINDOW_HEIGHT * TABLE_PREVIEW_RATIO)
-mermaid_height = WINDOW_HEIGHT - table_height
-left_split.setSizes([table_height, mermaid_height])
+def _update_window_title(self) -> None:
+    self.setWindowTitle("Untitled[*] - StaTable")
 ```
 
-**Minimum sizes**:
-- `MatrixTableWidget`: `setMinimumHeight(300)`
-- `MermaidWidget`: `setMinimumHeight(MERMAID_PREVIEW_MIN_HEIGHT)`
+`setWindowModified(True)` → title becomes `Untitled* - StaTable`
+`setWindowModified(False)` → title becomes `Untitled - StaTable`
 
-### 2.3 Generation Rules (`mermaid_gen.py`)
+### 9.3 Constraints
 
-`generate_mermaid(sm)` produces:
-
-```
-stateDiagram-v2
-    direction LR
-    [*] --> <initial_state>                         # if sm.initial_state set
-    <source> --> <target> : <label>                 # for each transition with target
-    note right of <source> : internal: <label>      # for internal transitions (no target)
-```
-
-**Label composition** (`label_parts`, joined by space):
-
-| Order | Element | Condition |
-|-------|---------|-----------|
-| 1 | `t.title` | if `title` set and not `"(無題遷移)"` |
-| 1 (alt) | `t.target` | if title empty and target exists |
-| 1 (alt) | `"(内部)"` | if title empty and no target |
-| 2 | `(<event>)` | if `t.event` non-empty |
-| 3 | `[<condition>]` | if `t.condition` non-empty (truncated, see §2.4) |
-
-**Notes**:
-- Actions are **not** shown in the diagram.
-- Title default is `"(無題遷移)"`; when equal to this, it is treated as empty.
-
-### 2.4 Condition Truncation (`_truncate_condition`)
-
-```python
-def _truncate_condition(condition: str, max_chars: int = 50) -> str:
-    if not condition:
-        return ""
-    lines = condition.split('\n')
-    first_line = lines[0].strip() if lines else ""
-    if not first_line:
-        return ""
-    if len(first_line) > max_chars:
-        return first_line[:max_chars].rstrip() + "..."
-    if len(lines) > 1:
-        return first_line + " ..."
-    return first_line
-```
-
-| Input | Output |
-|-------|--------|
-| `""` | `""` |
-| `"a == 1"` | `"a == 1"` |
-| `"a == 1\nb == 2"` | `"a == 1 ..."` |
-| `"x" * 60` | `"x" * 50 + "..."` |
-
-### 2.5 Rendering Pipeline
-
-```mermaid
-sequenceDiagram
-    participant ST as StateMachineTab
-    participant MW as MermaidWidget
-    participant FS as FileSystem
-    participant Web as QWebEngineView
-
-    ST->>ST: update_mermaid()
-    ST->>ST: settings.apply_changes()
-    ST->>ST: table.populate()
-    ST->>ST: code = generate_mermaid(sm)
-    ST->>MW: set_mermaid_code(code)
-    alt _disabled (STATABLE_DISABLE_MERMAID=1)
-        MW-->>ST: return (no-op)
-    else web_view available
-        MW->>FS: check mermaidwin.js exists
-        alt not exists
-            MW-->>ST: log error, return
-        else exists
-            MW->>FS: write temp .html with inline <pre class="mermaid">
-            MW->>Web: load(QUrl.fromLocalFile(temp_html))
-            Web-->>MW: loadFinished(ok)
-            MW->>Web: page().runJavaScript("renderMermaid();")
-        end
-    else text_view fallback
-        MW->>MW: text_view.setPlainText(code)
-    end
-```
-
-### 2.6 Environment Variable: `STATABLE_DISABLE_MERMAID`
-
-Set `STATABLE_DISABLE_MERMAID=1` to disable Mermaid rendering entirely.
-
-| Environment | Behavior |
-|-------------|----------|
-| Unset / `0` | Normal: `QWebEngineView` + `mermaidwin.js` |
-| `1` | `QLabel("Mermaid rendering disabled (test mode)")` — no import attempted |
-
-**Important**: When `STATABLE_DISABLE_MERMAID=1`, the `QWebEngineView` import is **skipped at module load time**, so `PySide6-Addons` is not required.
-
-This is used by CI (the `tests` job) to avoid requiring QtWebEngine.
-
-### 2.7 Fallback Behavior
-
-| Condition | Widget | Content |
-|-----------|--------|---------|
-| Normal | `QWebEngineView` | Rendered Mermaid diagram |
-| `STATABLE_DISABLE_MERMAID=1` | `QLabel` | `"Mermaid rendering disabled (test mode)"` |
-| WebEngine import failed | `QPlainTextEdit` | Raw Mermaid code + `"pip install PySide6-Addons"` hint |
-| `mermaidwin.js` missing | `QWebEngineView` (unchanged) | Logged error; last content remains |
+- The project file name (`project_path`) is not tracked in v2.3. The title is always `Untitled`.
+- A future v2.4 could track `project_path` and expand to `<filename>[*] - StaTable`.
 
 ---
 
-## 3. Screen Hierarchy
+## 10. Status Bar (v2.3)
 
-```mermaid
-flowchart TD
-    MW[MainWindow<br/>title: StaTable - State Transition Editor]
-    MW --> TB[Toolbar]
-    MW --> MN[Menu bar]
-    MW --> TW[QTabWidget]
-    MW --> TR[TraceBallWidget<br/>bottom dock, hidden]
+### 10.1 Usage
 
-    TW --> T1[StateMachineTab #1<br/>Application]
-    TW --> T2[StateMachineTab #2<br/>Driver]
-    TW --> TN[StateMachineTab #N]
+| Trigger | Message | Timeout |
+|---------|---------|---------|
+| On `new_project` completion | `"New project created"` | 3000 ms |
+| On `open_project` completion | (not implemented / future) | – |
+| On successful `save_project` | (not implemented / future) | – |
 
-    T1 --> MT[MatrixTableWidget<br/>transition matrix]
-    T1 --> MR[MermaidWidget<br/>state transition diagram]
-    T1 --> SP[SettingsPanel]
+### 10.2 Mock-up
 
-    SP --> SP1[State list tab]
-    SP --> SP2[Role function tab]
-
-    MT --> AED[ActionEditorDialog]
-    AED --> PW[PaletteWidget]
-    AED --> FC[FlowCanvas]
-    AED --> CW[CodeWidget]
-    AED --> SGD[SystemGlobalDialog]
-
-    SP1 --> AED2[ActionEditDialog<br/>legacy]
-    SP2 --> RDF[RoleFunctionDialog]
-    SP2 --> EDD[EventDefinitionDialog]
 ```
+┌─────────────────────────────────────────────────┐
+│ New project created                             │  ← 3 s display
+└─────────────────────────────────────────────────┘
+```
+
+### 10.3 `QMainWindow` Base Class Confirmation
+
+Since `MainWindow(QMainWindow)` is inherited, `statusBar()` is available automatically (confirmed in B-5).
 
 ---
 
-## 4. Main Window Layout
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Menu bar: File / Edit / Validate(&V) /                     │
-│            Code generation(&G) / View                       │
-├─────────────────────────────────────────────────────────────┤
-│  Toolbar: Global definitions | Type definitions |           │
-│           Event definitions | Event delivery settings |     │
-│           Interrupt settings | Layer settings |             │
-│           Validation / AI diagnosis |                       │
-│           Code generation | Generation settings |           │
-│           Save generated code | Open | Save |               │
-│           New tab | Rename tab | Show log                   │
-├─────────────────────────────────────────────────────────────┤
-│  centralWidget = QTabWidget (closable)                      │
-│  cornerWidget (top-right): "+" button                       │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ ┌───────┐┌───────┐┌───────┐                           │  │
-│  │ │ App   ││ Drv   ││ Mid   │                    [+]    │  │
-│  │ └───────┘└───────┘└───────┘                           │  │
-│  ├───────────────────────────────────────────────────────┤  │
-│  │  StateMachineTab (see §2.2 for layout)                │  │
-│  └───────────────────────────────────────────────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│  TraceBallWidget (BottomDockWidgetArea, hidden by default)  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Window title**: `StaTable - State Transition Editor`
-
----
-
-## 5. Toolbar / Menu → Dialog Transitions
-
-### 5.1 Toolbar Buttons (exact labels from source)
-
-| Button | Action | Opened dialog |
-|--------|--------|--------------|
-| `Global definitions` | `open_global_defs_dialog` | `GlobalDefinitionsDialog` |
-| `Type definitions` | `open_type_manager` | `TypeManagerDialog` |
-| `Event definitions` | `open_event_definition_dialog` | `EventDefinitionDialog` |
-| `Event delivery settings` | `open_event_delivery_settings` | `EventDeliverySettingsDialog` |
-| `Interrupt settings` | `open_interrupt_settings` | `InterruptHandlerEditDialog` |
-| `Layer settings` | `open_layer_settings` | `LayerSettingsDialog` |
-| `Validation / AI diagnosis` | `open_validation_dialog` | `ValidationDialog` |
-| `Code generation` | `open_code_generation_dialog` | `CodeGenerationDialog` |
-| `Generation settings` | `open_code_generation_settings` | `CodeGenerationSettingsDialog` |
-| `Save generated code` | `save_generated_code_direct` | (direct) |
-| `Open` | `open_project` | `QFileDialog` |
-| `Save` | `save_project` | `QFileDialog` |
-| `New tab` | `add_new_tab` | `QInputDialog` |
-| `Rename tab` | `rename_current_tab` | `QInputDialog` |
-| `Show log` | `toggle_traceball` | TraceBallWidget |
-
-### 5.2 Menu Items (exact labels)
-
-| Menu | Item | Shortcut |
-|------|------|----------|
-| `File` | `Open Project...` | – |
-| `File` | `Save Project...` | – |
-| `File` | `Rename Tab...` | – |
-| `File` | `New State Machine` | – |
-| `Edit` | `Global Definitions...` | – |
-| `Edit` | `Type Definitions...` | – |
-| `Edit` | `Event Definitions...` | – |
-| `Edit` | `Event Delivery Settings...` | – |
-| `Edit` | `Interrupt Settings...` | – |
-| `Edit` | `Layer Settings...` | – |
-| `Validate(&V)` | `Validation / AI diagnosis...` | `Ctrl+Shift+V` |
-| `Code generation(&G)` | `Code generation...` | `Ctrl+G` |
-| `Code generation(&G)` | `Generation settings...` | `Ctrl+Shift+G` |
-| `Code generation(&G)` | `Save generated code...` | `Ctrl+Shift+S` |
-| `View` | `TraceBall` | – |
-
----
-
-## 6. Tab-Level Transitions
-
-### 6.1 Tab Operations
-
-| Operation | Trigger | Handler |
-|-----------|---------|---------|
-| Add tab | `+` button / `New tab` | `add_new_tab` |
-| Close tab | Tab close button | `close_tab` |
-| Rename tab | Double-click tab bar | `rename_tab_at` |
-| Switch tab | Click tab | (Qt default) |
-
-**Note**: `close_tab` refuses to close the last tab (`"At least one tab is required."`).
-
-### 6.2 Cell Editing (from `MatrixTableWidget`)
-
-```mermaid
-flowchart LR
-    MT[MatrixTableWidget] -->|cellDoubleClicked| OTD[open_transition_dialog]
-    OTD -->|build draft| AED[ActionEditorDialog]
-    AED -->|OK| FTT[flow_item_to_transition]
-    FTT -->|update| MT
-    MT -->|transition_changed| UM[update_mermaid]
-    AED -->|Cancel| MT
-```
-
-### 6.3 Settings Panel Editing
-
-```mermaid
-flowchart TD
-    SP[SettingsPanel]
-    SP -->|Double-click entry/exit/do column| AED2[ActionEditDialog<br/>legacy]
-    SP -->|Add role function| RDF[RoleFunctionDialog]
-    SP -->|Event definitions...| EDD[EventDefinitionDialog]
-    SP -->|settings_changed| UM[update_mermaid]
-```
-
-**SettingsPanel tabs and columns (exact from source)**:
-
-| Tab | Columns |
-|-----|---------|
-| `State list` | Name, Description, entry function, exit function, do function, Type |
-| `Role function` | Title, Function name, Namespace, Description, Return type, Arg 1 type, Arg 1 name, Arg 2 type, Arg 2 name |
-
-**Buttons**:
-
-| Tab | Buttons |
-|-----|---------|
-| `State list` | `Add`, `Delete` |
-| `Role function` | `Add`, `Delete`, `Event definitions...` |
-
-### 6.4 entry / exit Handling (v2.2)
-
-`State.entry` and `State.exit` are `List[str]`. The UI displays them as `"; "`-joined strings.
-
-| Function | Purpose |
-|----------|---------|
-| `_list_to_display(items)` | `List[str]` → `"A; B; C"` |
-| `_display_to_list(text)` | `"A; B; C"` → `List[str]` |
-
-- Populate: `_list_to_display(state.entry)`
-- Apply: `_display_to_list(item.text())`
-- Tooltip: `"Multiple functions: separate with '; '\nDouble-click to edit via action dialog"`
-
----
-
-## 7. Dialog-Level Transitions
-
-### 7.1 `CodeGenerationDialog`
-
-```mermaid
-flowchart TD
-    CGD[CodeGenerationDialog]
-    CGD -->|Advanced Settings...| CGSD[CodeGenerationSettingsDialog]
-    CGD -->|Browse...| FD[QFileDialog]
-    CGD -->|Generate| GEN[generate_all_layers]
-    CGD -->|Save| SAVE[save_generated_code*]
-    CGSD -->|OK| CGD
-    CGSD -->|Cancel| CGD
-```
-
-### 7.2 `ActionEditorDialog`
-
-```mermaid
-flowchart TD
-    AED[ActionEditorDialog]
-    AED -->|node_edit_requested<br/>function| RFED[RoleFunctionEditDialog]
-    AED -->|node_edit_requested<br/>transition| CBD[ConditionBuilderDialog]
-    AED -->|edit_function_requested| RFED
-    AED -->|edit_transition_requested| CBD
-    AED -->|System Globals...| SGD[SystemGlobalDialog]
-    RFED -->|OK| AED
-    CBD -->|OK| AED
-    SGD -->|close| AED
-```
-
-### 7.3 `ConditionBuilderDialog`
-
-```mermaid
-flowchart TD
-    CBD[ConditionBuilderDialog]
-    CBD -->|Literalize| LD[LiteralizationDialog]
-    LD -->|OK| CBD
-    LD -->|Cancel| CBD
-```
-
-### 7.4 `LiteralManagementDialog`
-
-```mermaid
-flowchart TD
-    LMD[LiteralManagementDialog]
-    LMD -->|Add| LED[LiteralEditDialog]
-    LMD -->|Edit| LED
-    LED -->|OK| LMD
-    LED -->|Cancel| LMD
-```
-
----
-
-## 8. Modal / Modeless Classification
-
-All dialogs are modal (`exec()`).
-
-| Dialog | Type |
-|--------|------|
-| `GlobalDefinitionsDialog` | Modal |
-| `TypeManagerDialog` | Modal |
-| `EventDefinitionDialog` | Modal |
-| `EventDeliverySettingsDialog` | Modal |
-| `InterruptHandlerEditDialog` | Modal |
-| `LayerSettingsDialog` | Modal |
-| `ValidationDialog` | Modal |
-| `CodeGenerationDialog` | Modal |
-| `CodeGenerationSettingsDialog` | Modal |
-| `ActionEditorDialog` | Modal |
-| `RoleFunctionEditDialog` | Modal |
-| `ConditionBuilderDialog` | Modal |
-| `SystemGlobalDialog` | Modal |
-| `LiteralizationDialog` | Modal |
-| `LiteralManagementDialog` | Modal |
-| `LiteralEditDialog` | Modal |
-| `QFileDialog` | Modal |
-| `QInputDialog` | Modal |
-
----
-
-## 9. Transition Matrix
-
-### 9.1 From MainWindow
-
-| Source | → Dialog | Method |
-|--------|----------|--------|
-| Toolbar `Global definitions` | GlobalDefinitionsDialog | `open_global_defs_dialog` |
-| Toolbar `Type definitions` | TypeManagerDialog | `open_type_manager` |
-| Toolbar `Event definitions` | EventDefinitionDialog | `open_event_definition_dialog` |
-| Toolbar `Event delivery settings` | EventDeliverySettingsDialog | `open_event_delivery_settings` |
-| Toolbar `Interrupt settings` | InterruptHandlerEditDialog | `open_interrupt_settings` |
-| Toolbar `Layer settings` | LayerSettingsDialog | `open_layer_settings` |
-| Toolbar `Validation / AI diagnosis` | ValidationDialog | `open_validation_dialog` |
-| Toolbar `Code generation` | CodeGenerationDialog | `open_code_generation_dialog` |
-| Toolbar `Generation settings` | CodeGenerationSettingsDialog | `open_code_generation_settings` |
-| Toolbar `New tab` | QInputDialog | `add_new_tab` |
-| Toolbar `Rename tab` | QInputDialog | `rename_current_tab` |
-| Menu `Open Project...` | QFileDialog | `open_project` |
-| Menu `Save Project...` | QFileDialog | `save_project` |
-
-### 9.2 Between Dialogs / Widgets
-
-| Source | → Target | Trigger |
-|--------|----------|---------|
-| CodeGenerationDialog | CodeGenerationSettingsDialog | `Advanced Settings...` |
-| CodeGenerationDialog | QFileDialog | `Browse...` |
-| ActionEditorDialog | RoleFunctionEditDialog | palette / node double-click |
-| ActionEditorDialog | ConditionBuilderDialog | transition node double-click |
-| ActionEditorDialog | SystemGlobalDialog | `System Globals...` |
-| ConditionBuilderDialog | LiteralizationDialog | `Literalize` |
-| LiteralManagementDialog | LiteralEditDialog | `Add` / `Edit` |
-| SettingsPanel (State list) | ActionEditDialog | entry/exit/do column double-click |
-| SettingsPanel (Role function) | RoleFunctionDialog | `Add` |
-| SettingsPanel (Role function) | EventDefinitionDialog | `Event definitions...` |
-| MatrixTableWidget | ActionEditorDialog | `cellDoubleClicked` |
-
-### 9.3 Signal Flow → Mermaid Update
-
-| Signal | Source | → Slot |
-|--------|--------|--------|
-| `transition_changed` | `MatrixTableWidget` | `StateMachineTab.update_mermaid` |
-| `settings_changed` | `SettingsPanel` | `StateMachineTab.update_mermaid` |
-
-`update_mermaid()` sequence:
-1. `settings.apply_changes()`
-2. `table.populate()`
-3. `generate_mermaid(sm)`
-4. `mermaid.set_mermaid_code(code)`
-
----
-
-## 10. Revision History
+## 11. Revision History
 
 | Version | Date | Content |
 |---------|------|---------|
-| 1.0 | 2026-09-20 | Initial English version |
-| 1.1 | 2026-09-20 | Corrected UI labels to match `main_window.py` v1.5 |
-| 1.2 | 2026-09-20 | Added §2 State Transition Diagram (MermaidWidget); corrected SettingsPanel columns and v2.2 entry/exit handling |
+| 1.0 | 2026-09-20 | Initial |
+| 2.0 | 2026-09-20 | Detailed (dialog list, tab structure added) |
+| 2.3 | 2026-09-21 | New Project feature (F-15): |
+| | | - §1: Added "Unsaved Changes dialog" and "Tab name input" to screen list |
+| | | - §3: Added `New Project...` (Ctrl+N) to File menu; shortcut list updated |
+| | | - §4: Documented that no New Project button is added to the toolbar (menu only) |
+| | | - §5: Added `StateMachineTab.dataModified` signal |
+| | | - §6: Added table of dialog `windowModified` reflection status (C-36〜C-39) |
+| | | - §7: New Project feature section added (screen transition, state changes, decision #5 reflected) |
+| | | - §8: Unsaved Changes dialog specification added |
+| | | - §9: Window title specification added (`Untitled[*] - StaTable`) |
+| | | - §10: Status bar specification added (used from v2.3) |
+| | | - §11: Revision history (this entry) |
+
+---
+
+End of document.
+```
+
+---
+
+**Note**: This file is a **reconstructed version**. If the existing `SPEC_SCREENS_en.md` differs, the following merge approach is recommended:
+
+1. Check the existing file's structure (chapter organization, granularity)
+2. Merge only the diffs into that structure
+3. In particular, §3 (Menu Bar), §7 (New Project), and §8 (Unsaved Changes) are the substantive additions
+
+## Summary of v2.3 Files Output
+
+| # | File | Status |
+|---|------|--------|
+| 1 | `docs/IMPLEMENTATION_PLAN_v2_3.md` | ✅ Output |
+| 2 | `docs/SPEC_OVERVIEW_ja.md` | ✅ Output |
+| 3 | `docs/SPEC_OVERVIEW_en.md` | ✅ Output |
+| 4 | `docs/SPEC_SCREENS_ja.md` | ✅ Output |
+| 5 | `docs/SPEC_SCREENS_en.md` | ✅ Output (this response) |
+
+## Next Action
+
+All 5 documents are now available. The next steps are:
+
+1. **Apply the documents to the actual files** in the repository
+2. **Begin implementation** following `IMPLEMENTATION_PLAN_v2_3.md` Step 1
+3. **Update CI** (`.github/workflows/check.yml`) to include `test_v2_3_p1.py`
+
+If any document needs further refinement (e.g., existing `SPEC_SCREENS_*.md` structure integration), or if you want a **Step 1 implementation code diff**, let me know.

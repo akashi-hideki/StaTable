@@ -1,7 +1,9 @@
-```markdown
-# StaTable Overall Specification v2.2 (English, Detailed)
+# `docs/SPEC_OVERVIEW_en.md` v2.3（決定#5 反映済み完全版）
 
-Version: 2.2
+```markdown
+# StaTable Overall Specification v2.3 (English, Detailed)
+
+Version: 2.3
 Date: 2026-09-21
 Scope: StaTable project (whole)
 Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
@@ -60,6 +62,7 @@ Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 | F-12 | CI verification | Automated checks via GitHub Actions |
 | F-13 | MISRA C:2012 compliance | Generated C code is verified against MISRA C:2012 (informational) |
 | F-14 | Cell-level AI actions | v2.2: 17 change action types (10 legacy + 7 cell-level) |
+| F-15 | New Project | v2.3: Discards sample data and starts from an empty Application layer (Ctrl+N) |
 
 ### 1.4 Non-functional Requirements
 
@@ -71,7 +74,7 @@ Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 | I/O | XML (UTF-8), C sources (UTF-8) |
 | Dependencies | PySide6, pycparser (tests only) |
 | Generated code | C99-compliant, `static` functions used extensively |
-| Testing | 12 suites (`tests/test_v2_2_p*.py`), 537 PASS / 2 SKIP |
+| Testing | 13 suites (`tests/test_v2_2_p*.py` + `tests/test_v2_3_p1.py`), 551 PASS / 2 SKIP |
 | CI | GitHub Actions, `ubuntu-latest` |
 | MISRA | cppcheck 2.x + MISRA addon (informational only) |
 
@@ -95,6 +98,9 @@ Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 | Cell relation | v2.2: A `TransitionRelation` (sequential/exclusive/group) |
 | `early_return` | v2.2: `True` = Commit (stops evaluating later transitions in the cell) |
 | `label` | v2.2: Stable identifier within a cell (e.g., `"T1"`, `"T2"`) |
+| `windowModified` | v2.3: Qt's standard modified flag; reflected via the `[*]` title placeholder |
+| `_maybe_save()` | v2.3: MainWindow method that unifies the unsaved-changes confirmation |
+| `dataModified` | v2.3: `StateMachineTab` change-notification signal |
 
 ---
 
@@ -236,6 +242,26 @@ ValidationDialog / CodeGenerationDialog
   └── ChangeApplier(sm, gd).apply_all(changes)
 ```
 
+#### 2.4.5 New Project Flow (v2.3)
+
+```
+MainWindow.new_project()
+  ├── _maybe_save()                      # Unsaved-changes check (Save/Discard/Cancel)
+  │    └── abort if False
+  ├── close_all_tabs()                   # Remove all tabs (no confirmation dialog)
+  ├── Regenerate GlobalDefinitions()      # empty
+  ├── Clear shared libraries (decision #5)
+  │    ├── Regenerate RoleFunctionLibrary()
+  │    ├── Regenerate ConditionLibrary()
+  │    └── Regenerate LiteralLibrary()
+  ├── config_manager.reset()             # back to CodeGenerationConfig()
+  ├── Create StateMachine(layer_name="Application")
+  ├── add_state_machine_tab("Application", empty_sm)
+  ├── setWindowModified(False)
+  ├── _update_window_title()
+  └── statusBar().showMessage("New project created", 3000)
+```
+
 ### 2.5 Startup Sequence
 
 ```
@@ -254,6 +280,8 @@ ValidationDialog / CodeGenerationDialog
    └── add_state_machine_tab("Application", sample_sm)
 4. app.exec() enters event loop
 ```
+
+**v2.3 unchanged**: Startup still begins with the sample project (decision #1). For an empty start, use `File > New Project` (Ctrl+N).
 
 ---
 
@@ -654,11 +682,83 @@ stateDiagram-v2
 
 ### 4.2 `MainWindow`
 
-*(Unchanged from v2.0, except that `codegen/validate/` integration is added in v2.2.)*
+*(Unchanged from v2.0, except that `codegen/validate/` integration is added in v2.2, and the New Project feature is added in v2.3.)*
+
+#### 4.2.1 v2.3 Added Methods
+
+| Method | Purpose |
+|--------|---------|
+| `new_project()` | Initialize the project from an empty Application layer |
+| `_maybe_save() -> bool` | Unsaved-changes check (Save/Discard/Cancel). Called from `new_project` / `open_project` / `closeEvent` |
+| `closeEvent(event)` | Unsaved-changes check on window close |
+| `_update_window_title()` | Set title in `Untitled[*] - StaTable` form |
+| `_on_tab_data_modified()` | Slot that receives `StateMachineTab.dataModified` |
+
+#### 4.2.2 v2.3 Modified Methods
+
+| Method | Change |
+|--------|--------|
+| `save_project()` | Return type changed from `None` to `bool` (`True` on success, `False` on cancel/failure). On success, calls `setWindowModified(False)` + `_update_window_title()` |
+| `open_project()` | Added `_maybe_save()` at the beginning. On success, calls `setWindowModified(False)` + `_update_window_title()` |
+| `add_state_machine_tab()` | Added `tab.dataModified.connect(self._on_tab_data_modified)` |
+| `add_new_tab` / `rename_tab_at` / `close_tab` | Added `setWindowModified(True)` + `_update_window_title()` on success |
+| `create_menus()` | Added `File > New Project...` (Ctrl+N) before `Open Project...` |
+
+#### 4.2.3 Preserve / Reset Targets (v2.3 decision)
+
+| Target | On New |
+|--------|--------|
+| Preferences | **Preserve** |
+| shared libraries (`libcntrl`) | **Clear** (regenerate `RoleFunctionLibrary()` / `ConditionLibrary()` / `LiteralLibrary()`) ★Changed |
+| TraceBall log | **Preserve** (decision #8) |
+| GlobalDefinitions | **Reset** (regenerate `GlobalDefinitions()`) |
+| ConfigManager | **Reset** (`reset()` → back to `CodeGenerationConfig()`) |
+| Tabs | One empty `Application` tab |
+| `windowModified` | Set to `False` |
+
+**Background of decision #5 change**: To eliminate the asymmetry with `open_project`, which replaces the libraries (lines 691-697), `new_project` now also clears them. This makes both `New` and `Open` symmetric in that neither inherits the previous project's libraries.
+
+#### 4.2.4 `_maybe_save()` Behavior
+
+| Input | Output | Behavior |
+|-------|--------|----------|
+| `windowModified == False` | `True` | Skip confirmation |
+| `windowModified == True` + Save chosen | Return value of `save_project()` | `True` if saved, `False` if save failed |
+| `windowModified == True` + Discard chosen | `True` | Discard changes |
+| `windowModified == True` + Cancel chosen | `False` | Abort |
+
+#### 4.2.5 v2.3 Shortcut Policy
+
+Existing `setShortcut` calls use string-based shortcuts (e.g., `"Ctrl+Shift+V"`); `QKeySequence` is unused. To match this convention, use `setShortcut("Ctrl+N")` and do not add a `QKeySequence` import.
 
 ### 4.3 `StateMachineTab`
 
-*(Unchanged from v2.0.)*
+*(Unchanged from v2.0. v2.3 adds the `dataModified` signal.)*
+
+#### 4.3.1 Structure
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `sm` | `StateMachine` | Target state machine |
+| `global_defs` | `GlobalDefinitions` | Shared global definitions |
+| `role_function_library` | `RoleFunctionLibrary` | Shared role functions |
+| `condition_library` | `ConditionLibrary` | Shared conditions |
+| `literal_library` | `LiteralLibrary` | Shared literals |
+| `table` | `MatrixTableWidget` | Transition matrix |
+| `mermaid` | `MermaidWidget` | Diagram preview |
+| `settings` | `SettingsPanel` | States / role functions panel |
+
+#### 4.3.2 v2.3 Additions
+
+- `dataModified = Signal()`: propagates child-widget edits to MainWindow
+- Added at the end of `__init__` (right after lines 955-956):
+
+```python
+self.table.transition_changed.connect(self.dataModified)
+self.settings.settings_changed.connect(self.dataModified)
+```
+
+`Signal.connect(Signal)` performs a signal-to-signal connection, so child modifications propagate directly to MainWindow.
 
 ### 4.4 `MermaidWidget`
 
@@ -672,6 +772,9 @@ stateDiagram-v2
 - Cell label shows multiple targets, Commit/Tentative markers
 - Event header uses `[Q]` / `[D]` prefixes for `QUEUE` / `DOUBLE` delivery
 
+**Signal**:
+- `transition_changed = Signal()`: fires when a transition edit is committed (in `open_transition_dialog` and `keyPressEvent`)
+
 ### 4.6 `SettingsPanel` (v2.2)
 
 | Tab name | Columns |
@@ -680,6 +783,9 @@ stateDiagram-v2
 | `Role function` | Title / Function name / **Namespace** / Description / Return type / Arg 1 type / Arg 1 name / Arg 2 type / Arg 2 name |
 
 `State.entry` and `State.exit` are `List[str]`; UI joins/splits via `"; "`.
+
+**Signal**:
+- `settings_changed = Signal()`: fires when the state/role-function table edit is committed (emitted from `_emit_settings_changed`, `on_state_table_cell_double_clicked`, `delete_state`, `add_role_function`, `delete_role_function`)
 
 ### 4.7 `CodeGenerationDialog`
 
@@ -1017,7 +1123,7 @@ This distinction is implemented via:
 |-----|-----------|---------|
 | `no-japanese` | – | Detect non-ASCII |
 | `syntax` | – | compileall |
-| `tests` | syntax | 12 test suites |
+| `tests` | syntax | 13 test suites (v2.3: +1) |
 | `generated-code` | syntax | C code generation verification |
 
 ### 8.3 Environment Variables
@@ -1080,6 +1186,7 @@ python -m statable_gui.main
 cd code
 python tests/test_v2_2_p1.py
 # ... 11 other suites
+python tests/test_v2_3_p1.py     # v2.3 addition
 ```
 
 ### 9.5 MISRA Verification
@@ -1123,7 +1230,7 @@ python tools/analyze_misra_impact.py \
 
 ## 11. Testing Policy
 
-### 11.1 Test Suites (12)
+### 11.1 Test Suites (13)
 
 | File | Target | Expected result |
 |------|--------|-----------------|
@@ -1139,8 +1246,9 @@ python tools/analyze_misra_impact.py \
 | `test_v2_2_p12_8.py` | Stage 8 features (generated C struct) | 25 PASS / 0 FAIL |
 | `test_v2_2_p12_9.py` | Stage 9 features (XML round-trip) | 41 PASS / 0 FAIL |
 | `test_v2_2_p12_10.py` | Stage 10 features (structure) | 29 PASS / 2 SKIP / 0 FAIL |
+| `test_v2_3_p1.py` | New Project (v2.3) | 14 PASS / 0 FAIL |
 
-**Total**: **537 PASS / 0 FAIL / 2 SKIP**
+**Total**: **551 PASS / 0 FAIL / 2 SKIP**
 
 ### 11.2 `test_v2_2_p2.py` Update History
 
@@ -1150,19 +1258,45 @@ python tools/analyze_misra_impact.py \
   - `_role_func_call_action()` emits `(void)` in action contexts
   - Two or more Commit transitions → `_handled` flag is emitted
 
-### 11.3 Execution Environment
+### 11.3 `test_v2_3_p1.py` Contents
+
+14 tests for the New Project feature (v2.3):
+
+| Test | Verification |
+|------|-------------|
+| `test_new_project_creates_one_application_tab` | One tab (Application) |
+| `test_new_project_resets_state_machine` | states/events/transitions/role_functions empty |
+| `test_new_project_resets_global_defs` | GlobalDefinitions empty |
+| `test_new_project_clears_shared_libraries` | Shared libraries are cleared (decision #5 revised) |
+| `test_new_project_resets_config_manager` | ConfigManager is `reset()` |
+| `test_new_project_keeps_preferences` | Preferences preserved (decision #7) |
+| `test_new_project_clears_window_modified` | `windowModified` is `False` |
+| `test_new_project_cancelled_by_user` | Cancel aborts |
+| `test_new_project_discard_proceeds` | Discard proceeds |
+| `test_new_project_save_calls_save_project` | Save calls `save_project()` |
+| `test_maybe_save_no_changes_returns_true` | No changes → `True` |
+| `test_save_project_returns_bool` | `save_project` returns bool |
+| `test_tab_data_modified_signal_exists` | `dataModified` signal exists |
+| `test_tab_data_modified_sets_window_modified` | emit → `windowModified == True` |
+
+### 11.4 Execution Environment
 
 - Local: works on Windows too
 - CI: `ubuntu-latest` + `QT_QPA_PLATFORM=offscreen`
 
-### 11.4 Verification Tools
+### 11.5 Verification Tools
 
 - `tools/find_all_japanese.py`: non-ASCII detection
 - `tools/verify_generated_code.py`: syntax and structure verification of generated C code
 - `tools/run_misra_check.py`: MISRA C:2012 check via cppcheck + addon
 - `tools/analyze_misra_impact.py`: Maps MISRA violations to responsible codegen sources
+- `tools/investigate_new_project.py` (v2.3): Pre-investigation of the New Project feature
+- `tools/investigate_new_project_step2.py` (v2.3): Second-stage investigation
+- `tools/verify_new_project_remaining.py` (v2.3): R-1/R-2/R-3 verification
+- `tools/verify_new_project_final.py` (v2.3): Final pre-implementation verification
+- `tools/verify_new_project_code_facts.py` (v2.3): B-1〜B-6 code-fact verification
 
-### 11.5 Testing Gaps
+### 11.6 Testing Gaps
 
 | Gap | Impact |
 |-----|--------|
@@ -1172,6 +1306,7 @@ python tools/analyze_misra_impact.py \
 | No test for empty-event `transition_to_flow_item` | Bug remains |
 | Legacy `flow_widget.py` / `edit_dialogs.py` untested | Dead code drift |
 | No test for `codegen/validate/` subsystem | Validation bugs undetected |
+| v2.3: Dialog edits are not reflected in `windowModified` | See C-36〜C-39 |
 
 ---
 
@@ -1214,6 +1349,10 @@ python tools/analyze_misra_impact.py \
 | C-33 | `StateMachine.role_functions` key | **Pure name only** | Cross-namespace collision (see C-11) |
 | C-34 | `libcntrl.RoleFunctionLibrary` key | **qualified_name** | No collision (different from `StateMachine`) |
 | C-35 | `RoleFunction` dual definition | **Two distinct classes** | `statable.model` (C signature) vs `libcntrl` (GUI tracking) |
+| C-36 | `GlobalDefinitionsDialog` / `EventDefinitionDialog` edits not reflected in `windowModified` | **Not addressed (v2.4)** | accept/reject not used |
+| C-37 | `InterruptSettingsDialog` / `TypeManagerDialog` edits not reflected in `windowModified` | **Not addressed (v2.4)** | exec() return value not used |
+| C-38 | `SettingsPanel.add_state` does not emit `settings_changed` | **Existing behavior** | Adding a state does not propagate to windowModified |
+| C-39 | Dialog-driven edits do not propagate to `dataModified` | **Design decision** | v2.3 scope limited to in-tab edits |
 
 ---
 
@@ -1241,6 +1380,9 @@ python tools/analyze_misra_impact.py \
 | cppcheck | Static analysis tool for C/C++ |
 | Commit | v2.2: `early_return=True` (stops evaluating later transitions) |
 | Tentative | v2.2: `early_return=False` (later transitions may overwrite) |
+| `windowModified` | v2.3: Qt's standard modified flag; the `[*]` title placeholder is replaced with `*` |
+| `_maybe_save()` | v2.3: MainWindow method that unifies the unsaved-changes confirmation |
+| `dataModified` | v2.3: `StateMachineTab` change-notification signal |
 
 ---
 
@@ -1354,11 +1496,29 @@ StaTable/
 │   │           ├── custom_type_validator.py
 │   │           └── cell_validator.py
 │   ├── tests/
+│   │   ├── test_v2_2_p1.py
+│   │   ├── test_v2_2_p2.py
+│   │   ├── test_v2_2_p3.py
+│   │   ├── test_v2_2_p4a.py
+│   │   ├── test_v2_2_p4b.py
+│   │   ├── test_v2_2_p12_2.py
+│   │   ├── test_v2_2_p12_5.py
+│   │   ├── test_v2_2_p12_6.py
+│   │   ├── test_v2_2_p12_7.py
+│   │   ├── test_v2_2_p12_8.py
+│   │   ├── test_v2_2_p12_9.py
+│   │   ├── test_v2_2_p12_10.py
+│   │   └── test_v2_3_p1.py       (v2.3)
 │   ├── tools/
 │   │   ├── run_misra_check.py
 │   │   ├── analyze_misra_impact.py
 │   │   ├── find_all_japanese.py
-│   │   └── verify_generated_code.py
+│   │   ├── verify_generated_code.py
+│   │   ├── investigate_new_project.py           (v2.3)
+│   │   ├── investigate_new_project_step2.py     (v2.3)
+│   │   ├── verify_new_project_remaining.py      (v2.3)
+│   │   ├── verify_new_project_final.py          (v2.3)
+│   │   └── verify_new_project_code_facts.py     (v2.3)
 │   ├── misra/
 │   │   ├── suppressions.txt
 │   │   └── baseline.md
@@ -1371,7 +1531,8 @@ StaTable/
 │   ├── SPEC_SCREENS_ja.md
 │   ├── SPEC_SCREENS_en.md
 │   ├── SPEC_AUDIT_ja.md
-│   └── SPEC_CODEGEN_v3.md
+│   ├── SPEC_CODEGEN_v3.md
+│   └── IMPLEMENTATION_PLAN_v2_3.md    (v2.3)
 └── README.md
 ```
 
@@ -1384,7 +1545,7 @@ StaTable/
 | `codegen/code_templates.py` | ~750 |
 | `codegen/transition_generator.py` | ~700 |
 | `statable/xml_io.py` | ~700 |
-| `statable_gui/main_window.py` | ~1,000 |
+| `statable_gui/main_window.py` | ~1,100 (v2.3: +100) |
 | `statable_gui/code_generation_dialog.py` | ~400 |
 | `transition_editor_direct/canvas_widget.py` | ~450 |
 
@@ -1434,8 +1595,44 @@ StaTable/
 | | | - §14.1: file tree updated with `validate/` subsystem |
 | | | - §14.2: file sizes adjusted |
 | | | - §14.3: XML filename corrected |
+| 2.3 | 2026-09-21 | New Project feature (F-15): |
+| | | - §1.3: F-15 added (New Project, Ctrl+N) |
+| | | - §1.4: test suites updated to 13, 551 PASS / 2 SKIP |
+| | | - §1.5: `windowModified` / `_maybe_save` / `dataModified` terms added |
+| | | - §2.4.5: New Project flow added |
+| | | - §2.5: startup sample preservation documented |
+| | | - §4.2: MainWindow v2.3 added/Modified methods, preserve/reset targets, `_maybe_save()` behavior added |
+| | | - §4.2.3: **Decision #5 change**: shared libraries changed from "Preserve" to "**Clear**" (for symmetry with `open_project`) |
+| | | - §4.2.5: v2.3 shortcut policy (string-based `"Ctrl+N"`, no `QKeySequence` import) added |
+| | | - §4.3: StateMachineTab `dataModified` signal and connection method documented |
+| | | - §4.5: `transition_changed` signal emission points added |
+| | | - §4.6: `settings_changed` signal emission points added |
+| | | - §8.2: test job updated to 13 suites |
+| | | - §9.4: `test_v2_3_p1.py` added |
+| | | - §11.1: test suite table updated with v2.3; total updated to 551 PASS / 2 SKIP |
+| | | - §11.3: `test_v2_3_p1.py` contents (14 tests) added. Updated to `test_new_project_clears_shared_libraries` |
+| | | - §11.5: 5 v2.3 verification tools added |
+| | | - §11.6: v2.3 test gap (dialog edits) added |
+| | | - §12: C-36〜C-39 added (v2.3 scope-limited items) |
+| | | - §13: `windowModified` / `_maybe_save` / `dataModified` added |
+| | | - §14.1: file tree updated with `test_v2_3_p1.py`, 5 v2.3 verification tools, and `IMPLEMENTATION_PLAN_v2_3.md` |
+| | | - §14.2: `main_window.py` updated to ~1,100 LOC |
+| | | - §15: v2.3 revision history (this entry) |
+
+---
+
+End of document.
 ```
 
 ---
 
-以上。
+**Decision #5 reflection points** (diff from v2.3 initial):
+
+| Section | Change |
+|---------|--------|
+| §2.4.5 | Shared libraries changed from "Preserve" to "Clear" |
+| §4.2.3 | `shared libraries` changed from "Preserve" to "**Clear**", background explanation added |
+| §11.3 | `test_new_project_keeps_shared_libraries` → `test_new_project_clears_shared_libraries` |
+| §15 | v2.3 entry updated with decision #5 change |
+
+「次」で `docs/SPEC_SCREENS_ja.md`（`File > New Project...` メニュー追記版）を出力します。ただし、既存の `SPEC_SCREENS_ja.md` の内容が手元にないため、**追記すべき差分セクションのみ**を提示する形になります。それとも、既存ファイルの該当部分を貼っていただければ、完全版として出力しますか？

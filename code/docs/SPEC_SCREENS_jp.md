@@ -1,512 +1,462 @@
-# StaTable 画面遷移仕様書 v1.2（日本語版）
+# `docs/SPEC_SCREENS_ja.md` v2.3（画面仕様書、決定#5 反映済み）
 
-版: 1.2
-作成日: 2026-09-20
-対象: 全 GUI 画面、ダイアログ、および埋め込み状態遷移図
-根拠: `statable_gui/main_window.py` (v1.5), `statable_gui/widgets.py` (v2.2)
+**注記**：既存の `SPEC_SCREENS_ja.md` の内容が手元にないため、`SPEC_OVERVIEW_ja.md` v2.3 の記述と事前調査結果から**再構成した完全版**を出力します。既存ファイルと差異がある場合は、該当セクションのみ差分適用してください。
+
+```markdown
+# StaTable 画面仕様書 v2.3（日本語）
+
+Version: 2.3
+Date: 2026-09-21
+Scope: StaTable GUI 画面全体
+Prerequisite: `SPEC_OVERVIEW_ja.md` v2.3 参照
 
 ---
 
 ## 目次
 
-1. 概要
-2. 状態遷移図（MermaidWidget）
-3. 画面階層
-4. メインウィンドウ レイアウト
-5. ツールバー / メニュー → ダイアログ遷移
-6. タブレベル遷移
-7. ダイアログレベル遷移
-8. モーダル / モードレス分類
-9. 遷移マトリクス
-10. 改訂履歴
+1. 画面一覧
+2. MainWindow
+3. メニューバー
+4. ツールバー
+5. タブウィジェット
+6. ダイアログ一覧
+7. 新規プロジェクト機能（v2.3）
+8. 未保存確認ダイアログ（v2.3）
+9. ウィンドウタイトル（v2.3）
+10. ステータスバー（v2.3）
+11. 改訂履歴
 
 ---
 
-## 1. 概要
+## 1. 画面一覧
 
-StaTable の GUI は以下で構成される：
-
-- **MainWindow 1 個**（常駐、タイトル: `StaTable - State Transition Editor`）
-- **タブ N 個**（層ごとに 1 個、閉じ可能、最小 1）
-- **ダイアログ 16 個**（必要時に開閉）
-- **埋め込み状態遷移図 1 個**（各タブ内の `MermaidWidget`）
-
-状態遷移図は現在の `StateMachine` を **読み取り専用で可視化** するもので、Mermaid.js により `QWebEngineView` 内に描画される。
+| # | 画面 / ウィジェット | クラス | ファイル | モーダル |
+|---|---------------------|--------|---------|---------|
+| 1 | メインウィンドウ | `MainWindow` | `statable_gui/main_window.py` | – |
+| 2 | ステートマシンタブ | `StateMachineTab` | `statable_gui/widgets.py` | – |
+| 3 | 設定パネル | `SettingsPanel` | `statable_gui/widgets.py` | – |
+| 4 | Mermaid プレビュー | `MermaidWidget` | `statable_gui/widgets.py` | – |
+| 5 | 遷移マトリクス | `MatrixTableWidget` | `statable_gui/matrix_table.py` | – |
+| 6 | グローバル定義 | `GlobalDefinitionsDialog` | `statable_gui/global_defs_dialog.py` | モーダル |
+| 7 | 型定義マネージャ | `TypeManagerDialog` | `statable_gui/common_widgets.py` | モーダル |
+| 8 | イベント定義 | `EventDefinitionDialog` | `statable_gui/event_definition_dialog.py` | モーダル |
+| 9 | イベント配送設定 | `EventDeliverySettingsDialog` | `statable_gui/event_delivery_settings_dialog.py` | モーダル |
+| 10 | 割り込みハンドラ編集 | `InterruptHandlerEditDialog` | `statable_gui/interrupt_handler_edit_dialog.py` | モーダル |
+| 11 | 層設定 | `LayerSettingsDialog` | `statable_gui/layer_settings_dialog.py` | モーダル |
+| 12 | 検証ダイアログ | `ValidationDialog` | `statable_gui/validation_dialog.py` | モーダル |
+| 13 | コード生成 | `CodeGenerationDialog` | `statable_gui/code_generation_dialog.py` | モーダル |
+| 14 | コード生成設定 | `CodeGenerationSettingsDialog` | `statable_gui/code_generation_settings_dialog.py` | モーダル |
+| 15 | 遷移エディタ | `ActionEditorDialog` | `statable_gui/transition_editor_direct/dialog.py` | モーダル |
+| 16 | TraceBall ログ | `TraceBallWidget` | `statable_gui/traceball.py` | ドック |
+| 17 | **未保存確認ダイアログ（v2.3）** | `QMessageBox` | （Qt 標準） | モーダル |
+| 18 | **タブ名入力（v2.3 既存）** | `QInputDialog` | （Qt 標準） | モーダル |
 
 ---
 
-## 2. 状態遷移図（MermaidWidget）
+## 2. MainWindow
 
-### 2.1 概要
+### 2.1 全体レイアウト
 
-各 `StateMachineTab` には `MermaidWidget` が含まれ、現在の `StateMachine` の **状態遷移図** を表示する。読み取り専用で、常にモデルと同期される。
+```
+┌────────────────────────────────────────────────────────────┐
+│ MainWindow (QMainWindow)                                   │
+│ ┌────────────────────────────────────────────────────────┐ │
+│ │ メニューバー（File / Edit / Validate / Code generation / View）│
+│ ├────────────────────────────────────────────────────────┤ │
+│ │ ツールバー                                              │ │
+│ ├────────────────────────────────────────────────────────┤ │
+│ │ ┌────────────────────────────────────────────────────┐ │ │
+│ │ │ QTabWidget                                          │ │ │
+│ │ │ ┌─────────────────────────────────────────────────┐│ │ │
+│ │ │ │ StateMachineTab "Application"                   ││ │ │
+│ │ │ │ ┌──────────────────────────┬──────────────────┐││ │ │
+│ │ │ │ │ MatrixTableWidget        │ SettingsPanel    │││ │ │
+│ │ │ │ │ （遷移マトリクス）        │ （状態/ロール関数）│││ │ │
+│ │ │ │ ├──────────────────────────┤                  │││ │ │
+│ │ │ │ │ MermaidWidget            │                  │││ │ │
+│ │ │ │ │ （状態図プレビュー）      │                  │││ │ │
+│ │ │ │ └──────────────────────────┴──────────────────┘││ │ │
+│ │ │ └─────────────────────────────────────────────────┘│ │ │
+│ │ └────────────────────────────────────────────────────┘ │ │
+│ ├────────────────────────────────────────────────────────┤ │
+│ │ TraceBall ドック（非表示、トグル可）                    │ │
+│ ├────────────────────────────────────────────────────────┤ │
+│ │ ステータスバー                                          │ │
+│ └────────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────┘
+```
+
+### 2.2 属性
+
+| 属性 | 値 |
+|------|-----|
+| 基底クラス | `QMainWindow` |
+| 初期サイズ | `WINDOW_WIDTH × WINDOW_HEIGHT` |
+| ウィンドウタイトル | `Untitled[*] - StaTable`（v2.3） |
+| メニューバー | 5メニュー（§3 参照） |
+| ツールバー | `TopToolBarArea` |
+| 中央ウィジェット | `QTabWidget` |
+| ドックウィジェット | `TraceBallWidget`（`BottomDockWidgetArea`、初期非表示） |
+| ステータスバー | `QStatusBar`（v2.3 で使用開始） |
+
+---
+
+## 3. メニューバー
+
+### 3.1 メニュー構成（v2.3）
+
+```
+File
+├── New Project...          (Ctrl+N)         ★v2.3 追加
+├── ─────────────
+├── Open Project...         (なし)
+├── Save Project...         (なし)
+├── Rename Tab...           (なし)
+├── ─────────────
+└── New State Machine       (なし)
+
+Edit
+├── Global Definitions...   (なし)
+├── Type Definitions...     (なし)
+├── Event Definitions...    (なし)
+├── Event Delivery Settings... (なし)
+├── Interrupt Handlers...   (なし)
+└── Layer Settings...       (なし)
+
+Validate(&V)
+└── Validate Project...     (Ctrl+Shift+V)
+
+Code generation(&G)
+├── Generate Code...        (Ctrl+G)
+├── Generation Settings...  (Ctrl+Shift+G)
+└── Save Generated Code...  (Ctrl+Shift+S)
+
+View
+└── TraceBall               (チェック可能)
+```
+
+### 3.2 File メニュー詳細
+
+| # | 項目 | ショートカット | 接続先 | v2.3 |
+|---|------|--------------|--------|------|
+| 1 | **New Project...** | `Ctrl+N` | `MainWindow.new_project` | ★追加 |
+| 2 | ───────────── | – | – | ★追加 |
+| 3 | Open Project... | なし | `MainWindow.open_project` | 既存 |
+| 4 | Save Project... | なし | `MainWindow.save_project` | 既存 |
+| 5 | Rename Tab... | なし | `MainWindow.rename_current_tab` | 既存 |
+| 6 | ───────────── | – | – | 既存 |
+| 7 | New State Machine | なし | `MainWindow.add_new_tab` | 既存 |
+
+### 3.3 既存ショートカット一覧（v2.3）
+
+| ショートカット | メニュー | 用途 |
+|---------------|---------|------|
+| `Ctrl+N` | File | 新規プロジェクト ★追加 |
+| `Ctrl+Shift+V` | Validate | 検証実行 |
+| `Ctrl+G` | Code generation | コード生成 |
+| `Ctrl+Shift+G` | Code generation | 生成設定 |
+| `Ctrl+Shift+S` | Code generation | 生成コード保存 |
+
+**競合なし**：`Ctrl+N` は v2.3 まで未使用。既存ショートカットと衝突しない。
+
+---
+
+## 4. ツールバー
+
+### 4.1 ツールバー構成
+
+`TopToolBarArea` に配置。`MainWindow.create_toolbar()` で生成。
+
+| # | ボタン | 接続先 |
+|---|--------|--------|
+| 1 | Global definitions | `open_global_defs_dialog` |
+| 2 | Type definitions | `open_type_manager` |
+| 3 | Event definitions | `open_event_definition_dialog` |
+| 4 | Event delivery | `open_event_delivery_settings` |
+| 5 | Interrupts | `open_interrupt_settings` |
+| 6 | Layer settings | `open_layer_settings` |
+| 7 | Validate | `open_validation_dialog` |
+| 8 | Generate | `open_code_generation_dialog` |
+| 9 | Generation settings | `open_code_generation_settings` |
+| 10 | Save generated code | `save_generated_code_direct` |
+| 11 | Show log | `toggle_traceball`（チェック可能） |
+
+**v2.3 変更**：ツールバーへの `New Project` ボタン追加は**なし**（メニューのみ）。理由：既存ツールバーの一貫性（編集系・生成系のみ）を保つ。
+
+---
+
+## 5. タブウィジェット
+
+### 5.1 タブ構成
+
+`QTabWidget` に各層（Layer）をタブとして配置。各タブは `StateMachineTab` インスタンス。
+
+### 5.2 StateMachineTab レイアウト
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ QHBoxLayout                                              │
+│ ┌────────────────────────────────┬──────────────────────┐│
+│ │ QSplitter (Vertical)           │ SettingsPanel        ││
+│ │ ┌────────────────────────────┐ │ ┌──────────────────┐││
+│ │ │ MatrixTableWidget          │ │ │ State list タブ  │││
+│ │ │ （遷移マトリクス）          │ │ │ Role function タブ│││
+│ │ │ 最小高 300px               │ │ └──────────────────┘││
+│ │ ├────────────────────────────┤ │                      ││
+│ │ │ MermaidWidget              │ │                      ││
+│ │ │ （状態図プレビュー）        │ │                      ││
+│ │ │ 最小高 MERMAID_PREVIEW_MIN_HEIGHT│                  ││
+│ │ └────────────────────────────┘ │                      ││
+│ └────────────────────────────────┴──────────────────────┘│
+└──────────────────────────────────────────────────────────┘
+```
+
+### 5.3 v2.3 追加シグナル
+
+| シグナル | 発火元 | 接続先 |
+|---------|--------|--------|
+| `dataModified` | `__init__` 内で signal-to-signal 接続 | `MainWindow._on_tab_data_modified` |
+
+内部接続（`__init__` 末尾）：
+```python
+self.table.transition_changed.connect(self.dataModified)
+self.settings.settings_changed.connect(self.dataModified)
+```
+
+---
+
+## 6. ダイアログ一覧
+
+| # | ダイアログ | モーダル | `exec()` 戻り値使用 | v2.3 での変更フラグ |
+|---|-----------|---------|-------------------|-------------------|
+| 1 | `GlobalDefinitionsDialog` | モーダル | **なし**（C-36） | 反映されない |
+| 2 | `TypeManagerDialog` | モーダル | **なし**（C-37） | 反映されない |
+| 3 | `EventDefinitionDialog` | モーダル | あり（`QDialog.Accepted`） | 反映されない（C-36） |
+| 4 | `EventDeliverySettingsDialog` | モーダル | あり | 反映されない（C-37） |
+| 5 | `InterruptHandlerEditDialog` | モーダル | **なし**（C-37） | 反映されない |
+| 6 | `LayerSettingsDialog` | モーダル | あり（`_on_ok` → `accept`） | 反映されない（C-37） |
+| 7 | `ValidationDialog` | モーダル | なし | – |
+| 8 | `CodeGenerationDialog` | モーダル | なし | – |
+| 9 | `CodeGenerationSettingsDialog` | モーダル | なし | – |
+| 10 | `ActionEditorDialog` | モーダル | – | タブ内編集は反映 |
+
+**v2.3 のスコープ**：ダイアログ経由の編集は `windowModified` に反映されない（C-36〜C-39）。タブ内編集のみ反映。
+
+---
+
+## 7. 新規プロジェクト機能（v2.3 / F-15）
+
+### 7.1 画面遷移
+
+```
+┌─────────────────────────┐
+│ MainWindow              │
+│ （サンプルプロジェクト表示中）│
+└───────────┬─────────────┘
+            │
+            │ File > New Project... または Ctrl+N
+            ▼
+┌─────────────────────────┐
+│ 未保存確認ダイアログ       │ ← windowModified == True の場合のみ
+│ （Save / Discard / Cancel）│
+└───────────┬─────────────┘
+            │
+            ├── Cancel ────→ MainWindow（変化なし）
+            │
+            ├── Save ────→ 保存ダイアログ ──→ 保存成功 ──┐
+            │                                └── 保存失敗 ──→ MainWindow（変化なし）
+            │
+            └── Discard ────────────────────────────────┐
+                                                        │
+                                                        ▼
+                                        ┌─────────────────────────┐
+                                        │ MainWindow（新規プロジェクト）│
+                                        │ ・Application タブ1個      │
+                                        │ ・状態/イベント/遷移 0件    │
+                                        │ ・GlobalDefinitions 空     │
+                                        │ ・共有ライブラリ 空        │
+                                        │ ・ConfigManager デフォルト │
+                                        │ ・windowModified = False   │
+                                        │ ・タイトル: Untitled       │
+                                        │ ・ステータスバー: 通知3秒   │
+                                        └─────────────────────────┘
+```
+
+### 7.2 新規プロジェクト実行時の状態変化
+
+| 対象 | 変化 | 決定# |
+|------|------|-------|
+| タブ | 全削除 → `Application` タブ1個 | #2 |
+| 状態/イベント/遷移 | 全削除（0件） | – |
+| `StateMachine.role_functions` | 全削除（0件） | – |
+| `cell_actions` / `cell_relations` | 全削除（`{}`） | – |
+| GlobalDefinitions | 再生成（空） | – |
+| **RoleFunctionLibrary** | **再生成（空）** | **#5 変更** |
+| **ConditionLibrary** | **再生成（空）** | **#5 変更** |
+| **LiteralLibrary** | **再生成（空）** | **#5 変更** |
+| ConfigManager | `reset()` | #6 |
+| Preferences | 保持 | #7 |
+| TraceBall ログ | 保持 | #8 |
+| `windowModified` | `False` | #4 |
+
+### 7.3 メニュー項目の表示仕様
+
+| 項目 | 表示テキスト | ショートカット | ツールチップ |
+|------|-------------|--------------|-------------|
+| New Project | `New Project...` | `Ctrl+N` | なし（デフォルト） |
+
+### 7.4 起動時との対比
+
+| 動作 | 起動時 | New Project 時 |
+|------|-------|---------------|
+| タブ | `Application`（サンプル） | `Application`（空） |
+| 状態/イベント/遷移 | サンプルデータ | 空 |
+| GlobalDefinitions | デモデータ | 空 |
+| 共有ライブラリ | サンプル登録済み | 空 |
+| ConfigManager | デフォルト | デフォルト（`reset()`） |
+| Preferences | ロード済み | 保持 |
+| TraceBall ログ | 起動ログ | 保持（前のログ） |
+| タイトル | 初期は `StaTable - State Transition Editor` | `Untitled[*] - StaTable` |
+
+**注意**：起動時のタイトルは v2.3 でも `StaTable - State Transition Editor` のまま。`_update_window_title()` は `new_project` / `open_project` / `save_project` 成功時 / タブ編集時にのみ呼ばれる。
+
+---
+
+## 8. 未保存確認ダイアログ（v2.3）
+
+### 8.1 表示条件
+
+`MainWindow._maybe_save()` から呼ばれる。以下の3箇所で実行：
+
+| トリガ | 呼び出し元 |
+|--------|-----------|
+| `File > New Project...` / `Ctrl+N` | `MainWindow.new_project` 冒頭 |
+| `File > Open Project...` | `MainWindow.open_project` 冒頭 |
+| ウィンドウクローズ | `MainWindow.closeEvent` |
+
+### 8.2 ダイアログ仕様
 
 | 項目 | 値 |
 |------|-----|
-| ウィジェットクラス | `MermaidWidget`（`statable_gui/widgets.py`） |
-| 生成器 | `statable.mermaid_gen.generate_mermaid(sm)` |
-| 描画エンジン | Mermaid.js（`mermaidwin.js` リソース） |
-| 描画ホスト | `QWebEngineView`（PySide6-Addons） |
-| 出力形式 | `stateDiagram-v2` |
-| 更新トリガー | `StateMachineTab.update_mermaid()` |
-| フォールバック（WebEngine 不可） | `QPlainTextEdit` に生の Mermaid コード + インストール案内 |
-| フォールバック（`STATABLE_DISABLE_MERMAID=1`） | `QLabel` に `"Mermaid rendering disabled (test mode)"` |
+| クラス | `QMessageBox` |
+| アイコン | `QMessageBox.Warning` |
+| タイトル | `"Unsaved Changes"` |
+| メッセージ | `"The current project has unsaved changes.\nDo you want to save them before continuing?"` |
+| ボタン | `Save` / `Discard` / `Cancel` |
+| デフォルトボタン | `Save` |
 
-### 2.2 `StateMachineTab` 内のレイアウト
+### 8.3 ボタン別動作
+
+| ボタン | `_maybe_save()` の戻り値 | 呼び出し元の動作 |
+|--------|------------------------|----------------|
+| Save | `save_project()` の戻り値 | 保存成功 → 続行、保存キャンセル/失敗 → 中止 |
+| Discard | `True` | 続行 |
+| Cancel | `False` | 中止 |
+
+### 8.4 変更なしの場合
+
+`windowModified == False` の場合は**ダイアログを表示せず** `True` を返す。
+
+### 8.5 表示例（テキストベース）
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│  StateMachineTab (QWidget)                                     │
-│  QHBoxLayout                                                   │
-│  ┌────────────────────────────────────────┐  ┌───────────────┐ │
-│  │ QSplitter(Qt.Vertical)  [stretch=3]    │  │ SettingsPanel │ │
-│  │ ┌────────────────────────────────────┐ │  │ [stretch=1]   │ │
-│  │ │ MatrixTableWidget                  │ │  │               │ │
-│  │ │ (transition matrix)                │ │  │  QTabWidget   │ │
-│  │ │                                    │ │  │ ┌───────────┐ │ │
-│  │ │  [state × event cells]             │ │  │ │State list │ │ │
-│  │ ├────────────────────────────────────┤ │  │ ├───────────┤ │ │
-│  │ │ MermaidWidget                      │ │  │ │Role       │ │ │
-│  │ │ (state transition diagram)  ★      │ │  │ │function   │ │ │
-│  │ │                                    │ │  │ └───────────┘ │ │
-│  │ │  [*] --> Idle                      │ │  │               │ │
-│  │ │  Idle --> Active : (START)         │ │  │ [Add][Delete] │ │
-│  │ │  Active --> Idle : (STOP)          │ │  │               │ │
-│  │ │  ...                               │ │  │ [Event        │ │
-│  │ │                                    │ │  │  definitions] │ │
-│  │ └────────────────────────────────────┘ │  │               │ │
-│  └────────────────────────────────────────┘  └───────────────┘ │
-└────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  ⚠  Unsaved Changes                             │
+│                                                 │
+│  The current project has unsaved changes.       │
+│  Do you want to save them before continuing?    │
+│                                                 │
+│       [ Save ]  [ Discard ]  [ Cancel ]         │
+└─────────────────────────────────────────────────┘
 ```
 
-**スプリッタサイズ**（`widgets.py` より）:
+---
+
+## 9. ウィンドウタイトル（v2.3）
+
+### 9.1 タイトル形式
+
+| 状態 | タイトル |
+|------|---------|
+| 起動時（v2.0 から変更なし） | `StaTable - State Transition Editor` |
+| `new_project` 実行後 | `Untitled[*] - StaTable` |
+| `open_project` 成功後 | `Untitled[*] - StaTable` |
+| `save_project` 成功後 | `Untitled[*] - StaTable` |
+| `windowModified == True` 時 | `Untitled* - StaTable`（`[*]` が `*` に置換） |
+| `windowModified == False` 時 | `Untitled - StaTable`（`[*]` が除去） |
+
+### 9.2 `[*]` プレースホルダ
+
+Qt の `QMainWindow.setWindowTitle("[*] ...")` と `setWindowModified(bool)` の組み合わせで動作：
 
 ```python
-table_height   = int(WINDOW_HEIGHT * TABLE_PREVIEW_RATIO)
-mermaid_height = WINDOW_HEIGHT - table_height
-left_split.setSizes([table_height, mermaid_height])
+def _update_window_title(self) -> None:
+    self.setWindowTitle("Untitled[*] - StaTable")
 ```
 
-**最小サイズ**:
-- `MatrixTableWidget`: `setMinimumHeight(300)`
-- `MermaidWidget`: `setMinimumHeight(MERMAID_PREVIEW_MIN_HEIGHT)`
+`setWindowModified(True)` → タイトルが `Untitled* - StaTable` に
+`setWindowModified(False)` → タイトルが `Untitled - StaTable` に
 
-### 2.3 生成規則（`mermaid_gen.py`）
+### 9.3 制約
 
-`generate_mermaid(sm)` の出力:
-
-```
-stateDiagram-v2
-    direction LR
-    [*] --> <initial_state>                         # sm.initial_state 設定時
-    <source> --> <target> : <label>                 # target を持つ各遷移
-    note right of <source> : internal: <label>      # 内部遷移（target なし）
-```
-
-**ラベル構成**（`label_parts`、スペースで連結）:
-
-| 順序 | 要素 | 条件 |
-|------|------|------|
-| 1 | `t.title` | `title` 設定済かつ `"(無題遷移)"` でない |
-| 1（代替） | `t.target` | title 空かつ target あり |
-| 1（代替） | `"(内部)"` | title 空かつ target なし |
-| 2 | `(<event>)` | `t.event` が非空 |
-| 3 | `[<condition>]` | `t.condition` が非空（§2.4 で短縮） |
-
-**注記**:
-- アクションは図に表示されない
-- title の既定値は `"(無題遷移)"`。これと一致する場合は空として扱われる
-
-### 2.4 条件式の短縮（`_truncate_condition`）
-
-```python
-def _truncate_condition(condition: str, max_chars: int = 50) -> str:
-    if not condition:
-        return ""
-    lines = condition.split('\n')
-    first_line = lines[0].strip() if lines else ""
-    if not first_line:
-        return ""
-    if len(first_line) > max_chars:
-        return first_line[:max_chars].rstrip() + "..."
-    if len(lines) > 1:
-        return first_line + " ..."
-    return first_line
-```
-
-| 入力 | 出力 |
-|------|------|
-| `""` | `""` |
-| `"a == 1"` | `"a == 1"` |
-| `"a == 1\nb == 2"` | `"a == 1 ..."` |
-| `"x" * 60` | `"x" * 50 + "..."` |
-
-### 2.5 描画パイプライン
-
-```mermaid
-sequenceDiagram
-    participant ST as StateMachineTab
-    participant MW as MermaidWidget
-    participant FS as FileSystem
-    participant Web as QWebEngineView
-
-    ST->>ST: update_mermaid()
-    ST->>ST: settings.apply_changes()
-    ST->>ST: table.populate()
-    ST->>ST: code = generate_mermaid(sm)
-    ST->>MW: set_mermaid_code(code)
-    alt _disabled (STATABLE_DISABLE_MERMAID=1)
-        MW-->>ST: return (no-op)
-    else web_view available
-        MW->>FS: check mermaidwin.js exists
-        alt not exists
-            MW-->>ST: log error, return
-        else exists
-            MW->>FS: write temp .html with inline <pre class="mermaid">
-            MW->>Web: load(QUrl.fromLocalFile(temp_html))
-            Web-->>MW: loadFinished(ok)
-            MW->>Web: page().runJavaScript("renderMermaid();")
-        end
-    else text_view fallback
-        MW->>MW: text_view.setPlainText(code)
-    end
-```
-
-### 2.6 環境変数 `STATABLE_DISABLE_MERMAID`
-
-`STATABLE_DISABLE_MERMAID=1` を設定すると、Mermaid 描画を完全に無効化する。
-
-| 環境 | 挙動 |
-|------|------|
-| 未設定 / `0` | 通常: `QWebEngineView` + `mermaidwin.js` |
-| `1` | `QLabel("Mermaid rendering disabled (test mode)")` — import は試行しない |
-
-**重要**: `STATABLE_DISABLE_MERMAID=1` 時、`QWebEngineView` の import は **モジュールロード時にスキップ** されるため、`PySide6-Addons` は不要。
-
-CI（`tests` ジョブ）で QtWebEngine を要求しないために使用される。
-
-### 2.7 フォールバック挙動
-
-| 条件 | ウィジェット | 内容 |
-|------|-------------|------|
-| 通常 | `QWebEngineView` | 描画済 Mermaid 図 |
-| `STATABLE_DISABLE_MERMAID=1` | `QLabel` | `"Mermaid rendering disabled (test mode)"` |
-| WebEngine import 失敗 | `QPlainTextEdit` | 生 Mermaid コード + `"pip install PySide6-Addons"` 案内 |
-| `mermaidwin.js` 不在 | `QWebEngineView`（変更なし） | エラーログのみ、直前の内容を保持 |
+- プロジェクトファイル名（`project_path`）の保持は v2.3 では未実装。常に `Untitled` 固定。
+- 将来の v2.4 以降で `project_path` を保持し、`<ファイル名>[*] - StaTable` に拡張する余地あり。
 
 ---
 
-## 3. 画面階層
+## 10. ステータスバー（v2.3）
 
-```mermaid
-flowchart TD
-    MW[MainWindow<br/>title: StaTable - State Transition Editor]
-    MW --> TB[Toolbar]
-    MW --> MN[Menu bar]
-    MW --> TW[QTabWidget]
-    MW --> TR[TraceBallWidget<br/>bottom dock, hidden]
+### 10.1 使用箇所
 
-    TW --> T1[StateMachineTab #1<br/>Application]
-    TW --> T2[StateMachineTab #2<br/>Driver]
-    TW --> TN[StateMachineTab #N]
+| トリガ | メッセージ | タイムアウト |
+|--------|-----------|-------------|
+| `new_project` 完了時 | `"New project created"` | 3000 ms |
+| `open_project` 完了時 | （未実装／将来追加） | – |
+| `save_project` 成功時 | （未実装／将来追加） | – |
 
-    T1 --> MT[MatrixTableWidget<br/>transition matrix]
-    T1 --> MR[MermaidWidget<br/>state transition diagram]
-    T1 --> SP[SettingsPanel]
+### 10.2 表示例
 
-    SP --> SP1[State list tab]
-    SP --> SP2[Role function tab]
+```
+┌─────────────────────────────────────────────────┐
+│ New project created                             │  ← 3秒表示
+└─────────────────────────────────────────────────┘
+```
 
-    MT --> AED[ActionEditorDialog]
-    AED --> PW[PaletteWidget]
-    AED --> FC[FlowCanvas]
-    AED --> CW[CodeWidget]
-    AED --> SGD[SystemGlobalDialog]
+### 10.3 `QMainWindow` 基底の確認
 
-    SP1 --> AED2[ActionEditDialog<br/>legacy]
-    SP2 --> RDF[RoleFunctionDialog]
-    SP2 --> EDD[EventDefinitionDialog]
+`MainWindow(QMainWindow)` を継承しているため、`statusBar()` が自動利用可能（B-5 確認済み）。
+
+---
+
+## 11. 改訂履歴
+
+| バージョン | 日付 | 内容 |
+|-----------|------|------|
+| 1.0 | 2026-09-20 | 初版 |
+| 2.0 | 2026-09-20 | 詳細版（ダイアログ一覧、タブ構造追加） |
+| 2.3 | 2026-09-21 | 新規プロジェクト機能（F-15）： |
+| | | - §1：画面一覧に「未保存確認ダイアログ」「タブ名入力」を追加 |
+| | | - §3：File メニューに `New Project...`（Ctrl+N）を追加、ショートカット一覧更新 |
+| | | - §4：ツールバーへの New Project 追加はなし（メニューのみ）を明記 |
+| | | - §5：`StateMachineTab.dataModified` シグナル追加 |
+| | | - §6：ダイアログの `windowModified` 反映状況を表に追加（C-36〜C-39） |
+| | | - §7：新規プロジェクト機能セクション追加（画面遷移、状態変化、決定#5 反映） |
+| | | - §8：未保存確認ダイアログ仕様追加 |
+| | | - §9：ウィンドウタイトル仕様追加（`Untitled[*] - StaTable`） |
+| | | - §10：ステータスバー仕様追加（v2.3 で使用開始） |
+| | | - §11：改訂履歴（本エントリ） |
+
+---
+
+以上、`SPEC_SCREENS_ja.md` v2.3（決定#5 反映済み）の完全版です。
 ```
 
 ---
 
-## 4. メインウィンドウ レイアウト
+**注意**：本ファイルは**再構成版**です。既存の `SPEC_SCREENS_ja.md` と内容が異なる場合、以下の対応を推奨します：
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  メニューバー: File / Edit / Validate(&V) /                 │
-│                Code generation(&G) / View                   │
-├─────────────────────────────────────────────────────────────┤
-│  ツールバー: Global definitions | Type definitions |        │
-│             Event definitions | Event delivery settings |   │
-│             Interrupt settings | Layer settings |           │
-│             Validation / AI diagnosis |                     │
-│             Code generation | Generation settings |         │
-│             Save generated code | Open | Save |             │
-│             New tab | Rename tab | Show log                 │
-├─────────────────────────────────────────────────────────────┤
-│  centralWidget = QTabWidget（閉じ可能）                     │
-│  cornerWidget（右上）: "+" ボタン                           │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ ┌───────┐┌───────┐┌───────┐                           │  │
-│  │ │ App   ││ Drv   ││ Mid   │                    [+]    │  │
-│  │ └───────┘└───────┘└───────┘                           │  │
-│  ├───────────────────────────────────────────────────────┤  │
-│  │  StateMachineTab（レイアウトは §2.2 参照）             │  │
-│  └───────────────────────────────────────────────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│  TraceBallWidget (BottomDockWidgetArea、既定で非表示)       │
-└─────────────────────────────────────────────────────────────┘
-```
+1. 既存ファイルの構成（章立て、粒度）を確認
+2. 本章立てに合わせて差分のみをマージ
+3. 特に §3（メニューバー）、§7（新規プロジェクト）、§8（未保存確認）の3セクションが本質的な追加
 
-**ウィンドウタイトル**: `StaTable - State Transition Editor`
-
----
-
-## 5. ツールバー / メニュー → ダイアログ遷移
-
-### 5.1 ツールバーボタン（ソース上の正確なラベル）
-
-| ボタン | アクション | 開くダイアログ |
-|--------|-----------|---------------|
-| `Global definitions` | `open_global_defs_dialog` | `GlobalDefinitionsDialog` |
-| `Type definitions` | `open_type_manager` | `TypeManagerDialog` |
-| `Event definitions` | `open_event_definition_dialog` | `EventDefinitionDialog` |
-| `Event delivery settings` | `open_event_delivery_settings` | `EventDeliverySettingsDialog` |
-| `Interrupt settings` | `open_interrupt_settings` | `InterruptHandlerEditDialog` |
-| `Layer settings` | `open_layer_settings` | `LayerSettingsDialog` |
-| `Validation / AI diagnosis` | `open_validation_dialog` | `ValidationDialog` |
-| `Code generation` | `open_code_generation_dialog` | `CodeGenerationDialog` |
-| `Generation settings` | `open_code_generation_settings` | `CodeGenerationSettingsDialog` |
-| `Save generated code` | `save_generated_code_direct` | （直接実行） |
-| `Open` | `open_project` | `QFileDialog` |
-| `Save` | `save_project` | `QFileDialog` |
-| `New tab` | `add_new_tab` | `QInputDialog` |
-| `Rename tab` | `rename_current_tab` | `QInputDialog` |
-| `Show log` | `toggle_traceball` | TraceBallWidget |
-
-### 5.2 メニュー項目（ソース上の正確なラベル）
-
-| メニュー | 項目 | ショートカット |
-|---------|------|---------------|
-| `File` | `Open Project...` | – |
-| `File` | `Save Project...` | – |
-| `File` | `Rename Tab...` | – |
-| `File` | `New State Machine` | – |
-| `Edit` | `Global Definitions...` | – |
-| `Edit` | `Type Definitions...` | – |
-| `Edit` | `Event Definitions...` | – |
-| `Edit` | `Event Delivery Settings...` | – |
-| `Edit` | `Interrupt Settings...` | – |
-| `Edit` | `Layer Settings...` | – |
-| `Validate(&V)` | `Validation / AI diagnosis...` | `Ctrl+Shift+V` |
-| `Code generation(&G)` | `Code generation...` | `Ctrl+G` |
-| `Code generation(&G)` | `Generation settings...` | `Ctrl+Shift+G` |
-| `Code generation(&G)` | `Save generated code...` | `Ctrl+Shift+S` |
-| `View` | `TraceBall` | – |
-
----
-
-## 6. タブレベル遷移
-
-### 6.1 タブ操作
-
-| 操作 | トリガー | ハンドラ |
-|------|---------|---------|
-| タブ追加 | `+` ボタン / `New tab` | `add_new_tab` |
-| タブ閉じ | タブ閉じボタン | `close_tab` |
-| タブ名変更 | タブバー ダブルクリック | `rename_tab_at` |
-| タブ切替 | タブクリック | （Qt 既定） |
-
-**注記**: `close_tab` は最後のタブを閉じるのを拒否する（`"At least one tab is required."`）。
-
-### 6.2 セル編集（`MatrixTableWidget` から）
-
-```mermaid
-flowchart LR
-    MT[MatrixTableWidget] -->|cellDoubleClicked| OTD[open_transition_dialog]
-    OTD -->|build draft| AED[ActionEditorDialog]
-    AED -->|OK| FTT[flow_item_to_transition]
-    FTT -->|update| MT
-    MT -->|transition_changed| UM[update_mermaid]
-    AED -->|Cancel| MT
-```
-
-### 6.3 設定パネル編集
-
-```mermaid
-flowchart TD
-    SP[SettingsPanel]
-    SP -->|entry/exit/do 列 ダブルクリック| AED2[ActionEditDialog<br/>legacy]
-    SP -->|Add role function| RDF[RoleFunctionDialog]
-    SP -->|Event definitions...| EDD[EventDefinitionDialog]
-    SP -->|settings_changed| UM[update_mermaid]
-```
-
-**SettingsPanel のタブと列（ソース上の正確な値）**:
-
-| タブ | 列 |
-|------|-----|
-| `State list` | Name, Description, entry function, exit function, do function, Type |
-| `Role function` | Title, Function name, Namespace, Description, Return type, Arg 1 type, Arg 1 name, Arg 2 type, Arg 2 name |
-
-**ボタン**:
-
-| タブ | ボタン |
-|------|--------|
-| `State list` | `Add`, `Delete` |
-| `Role function` | `Add`, `Delete`, `Event definitions...` |
-
-### 6.4 entry / exit の扱い（v2.2）
-
-`State.entry` と `State.exit` は `List[str]`。UI では `"; "` で連結した文字列として表示する。
-
-| 関数 | 用途 |
-|------|------|
-| `_list_to_display(items)` | `List[str]` → `"A; B; C"` |
-| `_display_to_list(text)` | `"A; B; C"` → `List[str]` |
-
-- 表示: `_list_to_display(state.entry)`
-- 反映: `_display_to_list(item.text())`
-- ツールチップ: `"Multiple functions: separate with '; '\nDouble-click to edit via action dialog"`
-
----
-
-## 7. ダイアログレベル遷移
-
-### 7.1 `CodeGenerationDialog`
-
-```mermaid
-flowchart TD
-    CGD[CodeGenerationDialog]
-    CGD -->|Advanced Settings...| CGSD[CodeGenerationSettingsDialog]
-    CGD -->|Browse...| FD[QFileDialog]
-    CGD -->|Generate| GEN[generate_all_layers]
-    CGD -->|Save| SAVE[save_generated_code*]
-    CGSD -->|OK| CGD
-    CGSD -->|Cancel| CGD
-```
-
-### 7.2 `ActionEditorDialog`
-
-```mermaid
-flowchart TD
-    AED[ActionEditorDialog]
-    AED -->|node_edit_requested<br/>function| RFED[RoleFunctionEditDialog]
-    AED -->|node_edit_requested<br/>transition| CBD[ConditionBuilderDialog]
-    AED -->|edit_function_requested| RFED
-    AED -->|edit_transition_requested| CBD
-    AED -->|System Globals...| SGD[SystemGlobalDialog]
-    RFED -->|OK| AED
-    CBD -->|OK| AED
-    SGD -->|close| AED
-```
-
-### 7.3 `ConditionBuilderDialog`
-
-```mermaid
-flowchart TD
-    CBD[ConditionBuilderDialog]
-    CBD -->|Literalize| LD[LiteralizationDialog]
-    LD -->|OK| CBD
-    LD -->|Cancel| CBD
-```
-
-### 7.4 `LiteralManagementDialog`
-
-```mermaid
-flowchart TD
-    LMD[LiteralManagementDialog]
-    LMD -->|Add| LED[LiteralEditDialog]
-    LMD -->|Edit| LED
-    LED -->|OK| LMD
-    LED -->|Cancel| LMD
-```
-
----
-
-## 8. モーダル / モードレス分類
-
-全ダイアログはモーダル（`exec()`）。
-
-| ダイアログ | 種別 |
-|-----------|------|
-| `GlobalDefinitionsDialog` | モーダル |
-| `TypeManagerDialog` | モーダル |
-| `EventDefinitionDialog` | モーダル |
-| `EventDeliverySettingsDialog` | モーダル |
-| `InterruptHandlerEditDialog` | モーダル |
-| `LayerSettingsDialog` | モーダル |
-| `ValidationDialog` | モーダル |
-| `CodeGenerationDialog` | モーダル |
-| `CodeGenerationSettingsDialog` | モーダル |
-| `ActionEditorDialog` | モーダル |
-| `RoleFunctionEditDialog` | モーダル |
-| `ConditionBuilderDialog` | モーダル |
-| `SystemGlobalDialog` | モーダル |
-| `LiteralizationDialog` | モーダル |
-| `LiteralManagementDialog` | モーダル |
-| `LiteralEditDialog` | モーダル |
-| `QFileDialog` | モーダル |
-| `QInputDialog` | モーダル |
-
----
-
-## 9. 遷移マトリクス
-
-### 9.1 MainWindow から
-
-| 起点 | → ダイアログ | メソッド |
-|------|-------------|---------|
-| ツールバー `Global definitions` | GlobalDefinitionsDialog | `open_global_defs_dialog` |
-| ツールバー `Type definitions` | TypeManagerDialog | `open_type_manager` |
-| ツールバー `Event definitions` | EventDefinitionDialog | `open_event_definition_dialog` |
-| ツールバー `Event delivery settings` | EventDeliverySettingsDialog | `open_event_delivery_settings` |
-| ツールバー `Interrupt settings` | InterruptHandlerEditDialog | `open_interrupt_settings` |
-| ツールバー `Layer settings` | LayerSettingsDialog | `open_layer_settings` |
-| ツールバー `Validation / AI diagnosis` | ValidationDialog | `open_validation_dialog` |
-| ツールバー `Code generation` | CodeGenerationDialog | `open_code_generation_dialog` |
-| ツールバー `Generation settings` | CodeGenerationSettingsDialog | `open_code_generation_settings` |
-| ツールバー `New tab` | QInputDialog | `add_new_tab` |
-| ツールバー `Rename tab` | QInputDialog | `rename_current_tab` |
-| メニュー `Open Project...` | QFileDialog | `open_project` |
-| メニュー `Save Project...` | QFileDialog | `save_project` |
-
-### 9.2 ダイアログ / ウィジェット間
-
-| 起点 | → 対象 | トリガー |
-|------|--------|---------|
-| CodeGenerationDialog | CodeGenerationSettingsDialog | `Advanced Settings...` |
-| CodeGenerationDialog | QFileDialog | `Browse...` |
-| ActionEditorDialog | RoleFunctionEditDialog | パレット / ノード ダブルクリック |
-| ActionEditorDialog | ConditionBuilderDialog | transition ノード ダブルクリック |
-| ActionEditorDialog | SystemGlobalDialog | `System Globals...` |
-| ConditionBuilderDialog | LiteralizationDialog | `Literalize` |
-| LiteralManagementDialog | LiteralEditDialog | `Add` / `Edit` |
-| SettingsPanel (State list) | ActionEditDialog | entry/exit/do 列 ダブルクリック |
-| SettingsPanel (Role function) | RoleFunctionDialog | `Add` |
-| SettingsPanel (Role function) | EventDefinitionDialog | `Event definitions...` |
-| MatrixTableWidget | ActionEditorDialog | `cellDoubleClicked` |
-
-### 9.3 シグナルフロー → Mermaid 更新
-
-| シグナル | 発信元 | → スロット |
-|---------|--------|-----------|
-| `transition_changed` | `MatrixTableWidget` | `StateMachineTab.update_mermaid` |
-| `settings_changed` | `SettingsPanel` | `StateMachineTab.update_mermaid` |
-
-`update_mermaid()` の実行順:
-1. `settings.apply_changes()`
-2. `table.populate()`
-3. `generate_mermaid(sm)`
-4. `mermaid.set_mermaid_code(code)`
-
----
-
-## 10. 改訂履歴
-
-| 版 | 日付 | 内容 |
-|----|------|------|
-| 1.0 | 2026-09-20 | 英語初版 |
-| 1.1 | 2026-09-20 | `main_window.py` v1.5 の UI ラベルに修正 |
-| 1.2 | 2026-09-20 | §2 状態遷移図（MermaidWidget）追加、SettingsPanel の列修正、v2.2 の entry/exit 対応を反映 |
+「次」で `docs/SPEC_SCREENS_en.md`（同内容の英語版）を出力します。

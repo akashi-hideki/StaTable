@@ -1,7 +1,9 @@
-```markdown
-# StaTable 全体仕様書 v2.2（日本語、詳細版）
+# `docs/SPEC_OVERVIEW_ja.md` v2.3（決定#5 反映済み完全版）
 
-Version: 2.2
+```markdown
+# StaTable 全体仕様書 v2.3（日本語、詳細版）
+
+Version: 2.3
 Date: 2026-09-21
 Scope: StaTable プロジェクト全体
 Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`、`codegen/`）
@@ -60,6 +62,7 @@ Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`�
 | F-12 | CI 検証 | GitHub Actions による自動チェック |
 | F-13 | MISRA C:2012 対応 | 生成 C コードを MISRA C:2012 で検証（情報提供目的） |
 | F-14 | セル単位 AI アクション | v2.2：17種の変更アクション（legacy 10 + cell-level 7） |
+| F-15 | 新規プロジェクト | v2.3：サンプルを消去し空の Application 層から開始（Ctrl+N） |
 
 ### 1.4 非機能要件
 
@@ -71,7 +74,7 @@ Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`�
 | I/O | XML（UTF-8）、C ソース（UTF-8） |
 | 依存関係 | PySide6、pycparser（テストのみ） |
 | 生成コード | C99 準拠、`static` 関数を多用 |
-| テスト | 12スイート（`tests/test_v2_2_p*.py`）、537 PASS / 2 SKIP |
+| テスト | 13スイート（`tests/test_v2_2_p*.py` + `tests/test_v2_3_p1.py`）、551 PASS / 2 SKIP |
 | CI | GitHub Actions、`ubuntu-latest` |
 | MISRA | cppcheck 2.x + MISRA addon（情報提供のみ） |
 
@@ -95,6 +98,9 @@ Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`�
 | セル関係 | v2.2：セル内遷移間の `TransitionRelation`（sequential/exclusive/group） |
 | `early_return` | v2.2：`True` = Commit（同セル内の後続遷移評価を停止） |
 | `label` | v2.2：セル内の安定識別子（例：`"T1"`、`"T2"`） |
+| `windowModified` | v2.3：Qt 標準の変更フラグ。`[*]` プレースホルダでタイトルに反映 |
+| `_maybe_save()` | v2.3：未保存確認ダイアログを一元化する MainWindow メソッド |
+| `dataModified` | v2.3：`StateMachineTab` の変更通知シグナル |
 
 ---
 
@@ -236,6 +242,26 @@ ValidationDialog / CodeGenerationDialog
   └── ChangeApplier(sm, gd).apply_all(changes)
 ```
 
+#### 2.4.5 新規プロジェクトフロー（v2.3）
+
+```
+MainWindow.new_project()
+  ├── _maybe_save()                      # 未保存確認（Save/Discard/Cancel）
+  │    └── False なら中断
+  ├── close_all_tabs()                   # タブ全削除（確認ダイアログなし）
+  ├── GlobalDefinitions() 再生成          # 空
+  ├── 共有ライブラリをクリア（決定#5）
+  │    ├── RoleFunctionLibrary() 再生成
+  │    ├── ConditionLibrary() 再生成
+  │    └── LiteralLibrary() 再生成
+  ├── config_manager.reset()             # CodeGenerationConfig() に戻す
+  ├── StateMachine(layer_name="Application") を生成
+  ├── add_state_machine_tab("Application", empty_sm)
+  ├── setWindowModified(False)
+  ├── _update_window_title()
+  └── statusBar().showMessage("New project created", 3000)
+```
+
 ### 2.5 起動シーケンス
 
 ```
@@ -254,6 +280,8 @@ ValidationDialog / CodeGenerationDialog
    └── add_state_machine_tab("Application", sample_sm)
 4. app.exec() でイベントループへ
 ```
+
+**v2.3 変更なし**：起動時は引き続きサンプルプロジェクトで開始（決定#1）。空起動が必要な場合は `File > New Project`（Ctrl+N）を使用。
 
 ---
 
@@ -654,11 +682,83 @@ stateDiagram-v2
 
 ### 4.2 `MainWindow`
 
-*（v2.0 から変更なし。ただし v2.2 で `codegen/validate/` 統合が追加。）*
+*（v2.0 から変更なし。v2.2 で `codegen/validate/` 統合、v2.3 で新規プロジェクト機能が追加。）*
+
+#### 4.2.1 v2.3 追加メソッド
+
+| メソッド | 用途 |
+|---------|------|
+| `new_project()` | 空の Application 層でプロジェクトを初期化 |
+| `_maybe_save() -> bool` | 未保存確認（Save/Discard/Cancel）。`new_project` / `open_project` / `closeEvent` から呼ぶ |
+| `closeEvent(event)` | 終了時の未保存確認 |
+| `_update_window_title()` | `Untitled[*] - StaTable` 形式でタイトル更新 |
+| `_on_tab_data_modified()` | `StateMachineTab.dataModified` を受けるスロット |
+
+#### 4.2.2 v2.3 変更メソッド
+
+| メソッド | 変更内容 |
+|---------|---------|
+| `save_project()` | 戻り値を `None` → `bool` に変更（成功時 `True`、キャンセル/失敗時 `False`）。成功パスで `setWindowModified(False)` + `_update_window_title()` |
+| `open_project()` | 冒頭に `_maybe_save()` を追加。成功パスで `setWindowModified(False)` + `_update_window_title()` |
+| `add_state_machine_tab()` | `tab.dataModified.connect(self._on_tab_data_modified)` を追加 |
+| `add_new_tab` / `rename_tab_at` / `close_tab` | 成功時に `setWindowModified(True)` + `_update_window_title()` を追加 |
+| `create_menus()` | `File > New Project...`（Ctrl+N）を `Open Project...` の直前に追加 |
+
+#### 4.2.3 保持 / リセット対象（v2.3 決定）
+
+| 対象 | New 時 |
+|------|--------|
+| Preferences | **保持** |
+| shared libraries (`libcntrl`) | **クリア**（`RoleFunctionLibrary()` / `ConditionLibrary()` / `LiteralLibrary()` を再生成）★変更 |
+| TraceBall ログ | **保持**（決定#8） |
+| GlobalDefinitions | **リセット**（`GlobalDefinitions()` 再生成） |
+| ConfigManager | **リセット**（`reset()` → `CodeGenerationConfig()` に戻す） |
+| タブ | 空の `Application` タブ1個 |
+| `windowModified` | `False` に |
+
+**決定#5 変更の背景**：`open_project` がライブラリを置換する挙動（line 691-697）との非対称を解消するため、`new_project` でもクリアする方針に変更。これにより、`New` / `Open` の両方が「前プロジェクトのライブラリを引き継がない」で対称となる。
+
+#### 4.2.4 `_maybe_save()` の仕様
+
+| 入力 | 出力 | 動作 |
+|------|------|------|
+| `windowModified == False` | `True` | 確認スキップ |
+| `windowModified == True` + Save 選択 | `save_project()` の戻り値 | 保存成功なら `True`、失敗なら `False` |
+| `windowModified == True` + Discard 選択 | `True` | 変更破棄 |
+| `windowModified == True` + Cancel 選択 | `False` | 中止 |
+
+#### 4.2.5 v2.3 ショートカット方針
+
+既存の `setShortcut` は文字列ベース（`"Ctrl+Shift+V"` 等）で統一。`QKeySequence` は未使用。これに合わせて `setShortcut("Ctrl+N")` を使用し、`QKeySequence` の import は追加しない。
 
 ### 4.3 `StateMachineTab`
 
-*（v2.0 から変更なし。）*
+*（v2.0 から変更なし。v2.3 で `dataModified` シグナル追加。）*
+
+#### 4.3.1 構造
+
+| 属性 | 型 | 説明 |
+|------|-----|------|
+| `sm` | `StateMachine` | 対象ステートマシン |
+| `global_defs` | `GlobalDefinitions` | 共有グローバル定義 |
+| `role_function_library` | `RoleFunctionLibrary` | 共有ロール関数 |
+| `condition_library` | `ConditionLibrary` | 共有条件 |
+| `literal_library` | `LiteralLibrary` | 共有リテラル |
+| `table` | `MatrixTableWidget` | 遷移マトリクス |
+| `mermaid` | `MermaidWidget` | 図プレビュー |
+| `settings` | `SettingsPanel` | 状態/ロール関数パネル |
+
+#### 4.3.2 v2.3 追加
+
+- `dataModified = Signal()`：子ウィジェットの編集を MainWindow に伝播
+- `__init__` 末尾（line 955-956 の直後）に以下の2行を追加：
+
+```python
+self.table.transition_changed.connect(self.dataModified)
+self.settings.settings_changed.connect(self.dataModified)
+```
+
+`Signal.connect(Signal)` による signal-to-signal 接続で、子の変更が直接 MainWindow に伝播する。
 
 ### 4.4 `MermaidWidget`
 
@@ -672,6 +772,9 @@ stateDiagram-v2
 - セルラベルに複数ターゲット、Commit/Tentative マーカーを表示
 - イベントヘッダに `[Q]` / `[D]` プレフィックス（`QUEUE` / `DOUBLE` 配送）
 
+**シグナル**：
+- `transition_changed = Signal()`：遷移編集確定時に発火（`open_transition_dialog` と `keyPressEvent` の2箇所）
+
 ### 4.6 `SettingsPanel`（v2.2）
 
 | タブ名 | 列 |
@@ -680,6 +783,9 @@ stateDiagram-v2
 | `Role function` | Title / Function name / **Namespace** / Description / Return type / Arg 1 type / Arg 1 name / Arg 2 type / Arg 2 name |
 
 `State.entry` と `State.exit` は `List[str]`。UI は `"; "` で結合・分割。
+
+**シグナル**：
+- `settings_changed = Signal()`：状態/ロール関数テーブルの編集確定時に発火（`_emit_settings_changed`、`on_state_table_cell_double_clicked`、`delete_state`、`add_role_function`、`delete_role_function` から emit）
 
 ### 4.7 `CodeGenerationDialog`
 
@@ -1017,7 +1123,7 @@ if (RoleFunc_Driver_PreCheck(transition, ctx) == 0) {   /* 戻り値保持 */
 |-------|--------|------|
 | `no-japanese` | – | 非 ASCII 検出 |
 | `syntax` | – | compileall |
-| `tests` | syntax | 12テストスイート |
+| `tests` | syntax | 13テストスイート（v2.3：+1） |
 | `generated-code` | syntax | C コード生成検証 |
 
 ### 8.3 環境変数
@@ -1080,6 +1186,7 @@ python -m statable_gui.main
 cd code
 python tests/test_v2_2_p1.py
 # ... 他11スイート
+python tests/test_v2_3_p1.py     # v2.3 追加
 ```
 
 ### 9.5 MISRA 検証
@@ -1123,7 +1230,7 @@ python tools/analyze_misra_impact.py \
 
 ## 11. テスト方針
 
-### 11.1 テストスイート（12）
+### 11.1 テストスイート（13）
 
 | ファイル | 対象 | 期待結果 |
 |---------|------|---------|
@@ -1139,8 +1246,9 @@ python tools/analyze_misra_impact.py \
 | `test_v2_2_p12_8.py` | Stage 8 機能（生成 C 構造体） | 25 PASS / 0 FAIL |
 | `test_v2_2_p12_9.py` | Stage 9 機能（XML ラウンドトリップ） | 41 PASS / 0 FAIL |
 | `test_v2_2_p12_10.py` | Stage 10 機能（構造） | 29 PASS / 2 SKIP / 0 FAIL |
+| `test_v2_3_p1.py` | 新規プロジェクト（v2.3） | 14 PASS / 0 FAIL |
 
-**合計**：**537 PASS / 0 FAIL / 2 SKIP**
+**合計**：**551 PASS / 0 FAIL / 2 SKIP**
 
 ### 11.2 `test_v2_2_p2.py` 更新履歴
 
@@ -1150,19 +1258,45 @@ python tools/analyze_misra_impact.py \
   - `_role_func_call_action()` がアクションコンテキストで `(void)` を出力
   - 2個以上の Commit 遷移 → `_handled` フラグを出力
 
-### 11.3 実行環境
+### 11.3 `test_v2_3_p1.py` 内容
+
+新規プロジェクト機能（v2.3）の 14 テスト：
+
+| テスト | 検証内容 |
+|--------|---------|
+| `test_new_project_creates_one_application_tab` | タブが1個（Application） |
+| `test_new_project_resets_state_machine` | 状態/イベント/遷移/ロール関数が空 |
+| `test_new_project_resets_global_defs` | GlobalDefinitions が空 |
+| `test_new_project_clears_shared_libraries` | 共有ライブラリがクリアされる（決定#5 変更） |
+| `test_new_project_resets_config_manager` | ConfigManager が `reset()` される |
+| `test_new_project_keeps_preferences` | Preferences 保持（決定#7） |
+| `test_new_project_clears_window_modified` | `windowModified` が `False` |
+| `test_new_project_cancelled_by_user` | Cancel で中断 |
+| `test_new_project_discard_proceeds` | Discard で続行 |
+| `test_new_project_save_calls_save_project` | Save で `save_project()` 呼出 |
+| `test_maybe_save_no_changes_returns_true` | 変更なしで `True` |
+| `test_save_project_returns_bool` | `save_project` が bool を返す |
+| `test_tab_data_modified_signal_exists` | `dataModified` シグナル存在 |
+| `test_tab_data_modified_sets_window_modified` | emit で `windowModified == True` |
+
+### 11.4 実行環境
 
 - ローカル：Windows でも動作
 - CI：`ubuntu-latest` + `QT_QPA_PLATFORM=offscreen`
 
-### 11.4 検証ツール
+### 11.5 検証ツール
 
 - `tools/find_all_japanese.py`：非 ASCII 検出
 - `tools/verify_generated_code.py`：生成 C コードの構文・構造検証
 - `tools/run_misra_check.py`：cppcheck + addon による MISRA C:2012 チェック
 - `tools/analyze_misra_impact.py`：MISRA 違反を責任 codegen ソースにマッピング
+- `tools/investigate_new_project.py`（v2.3）：新規プロジェクト機能の事前調査
+- `tools/investigate_new_project_step2.py`（v2.3）：第2段階調査
+- `tools/verify_new_project_remaining.py`（v2.3）：R-1/R-2/R-3 検証
+- `tools/verify_new_project_final.py`（v2.3）：実装前最終確認
+- `tools/verify_new_project_code_facts.py`（v2.3）：B-1〜B-6 コード事実確認
 
-### 11.5 テストギャップ
+### 11.6 テストギャップ
 
 | ギャップ | 影響 |
 |---------|------|
@@ -1172,6 +1306,7 @@ python tools/analyze_misra_impact.py \
 | 空イベント `transition_to_flow_item` テストなし | バグ残存 |
 | レガシー `flow_widget.py` / `edit_dialogs.py` 未テスト | デッドコードのドリフト |
 | `codegen/validate/` サブシステムのテストなし | 検証バグ未検出 |
+| v2.3：ダイアログ編集が `windowModified` に反映されない | C-36〜C-39 参照 |
 
 ---
 
@@ -1214,6 +1349,10 @@ python tools/analyze_misra_impact.py \
 | C-33 | `StateMachine.role_functions` キー | **純粋名のみ** | 名前空間間の衝突（C-11 参照） |
 | C-34 | `libcntrl.RoleFunctionLibrary` キー | **qualified_name** | 衝突なし（`StateMachine` と異なる） |
 | C-35 | `RoleFunction` の二重定義 | **2つの別クラス** | `statable.model`（C シグネチャ）vs `libcntrl`（GUI 追跡） |
+| C-36 | `GlobalDefinitionsDialog` / `EventDefinitionDialog` の編集が `windowModified` に反映されない | **未対応（v2.4）** | accept/reject 未使用のため |
+| C-37 | `InterruptSettingsDialog` / `TypeManagerDialog` の編集が `windowModified` に反映されない | **未対応（v2.4）** | exec() 戻り値未使用 |
+| C-38 | `SettingsPanel.add_state` が `settings_changed` を emit しない | **既存動作** | state 追加が windowModified に伝播しない |
+| C-39 | ダイアログ経由の編集が `dataModified` に伝播しない | **設計判断** | v2.3 スコープをタブ内編集に限定 |
 
 ---
 
@@ -1241,6 +1380,9 @@ python tools/analyze_misra_impact.py \
 | cppcheck | C/C++ 用静的解析ツール |
 | Commit | v2.2：`early_return=True`（後続遷移評価を停止） |
 | Tentative | v2.2：`early_return=False`（後続遷移が上書き可能） |
+| `windowModified` | v2.3：Qt 標準の変更フラグ。タイトルの `[*]` プレースホルダで `*` に置換される |
+| `_maybe_save()` | v2.3：未保存確認を一元化する `MainWindow` メソッド |
+| `dataModified` | v2.3：`StateMachineTab` の変更通知シグナル |
 
 ---
 
@@ -1354,11 +1496,29 @@ StaTable/
 │   │           ├── custom_type_validator.py
 │   │           └── cell_validator.py
 │   ├── tests/
+│   │   ├── test_v2_2_p1.py
+│   │   ├── test_v2_2_p2.py
+│   │   ├── test_v2_2_p3.py
+│   │   ├── test_v2_2_p4a.py
+│   │   ├── test_v2_2_p4b.py
+│   │   ├── test_v2_2_p12_2.py
+│   │   ├── test_v2_2_p12_5.py
+│   │   ├── test_v2_2_p12_6.py
+│   │   ├── test_v2_2_p12_7.py
+│   │   ├── test_v2_2_p12_8.py
+│   │   ├── test_v2_2_p12_9.py
+│   │   ├── test_v2_2_p12_10.py
+│   │   └── test_v2_3_p1.py       (v2.3)
 │   ├── tools/
 │   │   ├── run_misra_check.py
 │   │   ├── analyze_misra_impact.py
 │   │   ├── find_all_japanese.py
-│   │   └── verify_generated_code.py
+│   │   ├── verify_generated_code.py
+│   │   ├── investigate_new_project.py           (v2.3)
+│   │   ├── investigate_new_project_step2.py     (v2.3)
+│   │   ├── verify_new_project_remaining.py      (v2.3)
+│   │   ├── verify_new_project_final.py          (v2.3)
+│   │   └── verify_new_project_code_facts.py     (v2.3)
 │   ├── misra/
 │   │   ├── suppressions.txt
 │   │   └── baseline.md
@@ -1371,7 +1531,8 @@ StaTable/
 │   ├── SPEC_SCREENS_ja.md
 │   ├── SPEC_SCREENS_en.md
 │   ├── SPEC_AUDIT_ja.md
-│   └── SPEC_CODEGEN_v3.md
+│   ├── SPEC_CODEGEN_v3.md
+│   └── IMPLEMENTATION_PLAN_v2_3.md    (v2.3)
 └── README.md
 ```
 
@@ -1384,7 +1545,7 @@ StaTable/
 | `codegen/code_templates.py` | ~750 |
 | `codegen/transition_generator.py` | ~700 |
 | `statable/xml_io.py` | ~700 |
-| `statable_gui/main_window.py` | ~1,000 |
+| `statable_gui/main_window.py` | ~1,100（v2.3 で +100） |
 | `statable_gui/code_generation_dialog.py` | ~400 |
 | `transition_editor_direct/canvas_widget.py` | ~450 |
 
@@ -1434,8 +1595,44 @@ StaTable/
 | | | - §14.1：ファイルツリーに `validate/` サブシステム追加 |
 | | | - §14.2：ファイルサイズ調整 |
 | | | - §14.3：XML ファイル名修正 |
+| 2.3 | 2026-09-21 | 新規プロジェクト機能（F-15）： |
+| | | - §1.3：F-15 追加（新規プロジェクト、Ctrl+N） |
+| | | - §1.4：テストスイートを13、551 PASS / 2 SKIP に更新 |
+| | | - §1.5：`windowModified` / `_maybe_save` / `dataModified` 用語追加 |
+| | | - §2.4.5：新規プロジェクトフロー追加 |
+| | | - §2.5：起動時サンプル維持を明記 |
+| | | - §4.2：MainWindow の v2.3 追加メソッド・変更メソッド・保持/リセット対象・`_maybe_save()` 仕様を追加 |
+| | | - §4.2.3：**決定#5 変更**：shared libraries を「保持」→「**クリア**」に変更（`open_project` との対称性確保） |
+| | | - §4.2.5：v2.3 ショートカット方針（文字列ベース `"Ctrl+N"`、`QKeySequence` import 追加なし）を追加 |
+| | | - §4.3：StateMachineTab の `dataModified` シグナル追加と接続方法を記述 |
+| | | - §4.5：`transition_changed` シグナルの発火箇所を追記 |
+| | | - §4.6：`settings_changed` シグナルの emit 箇所を追記 |
+| | | - §8.2：テストジョブを13スイートに更新 |
+| | | - §9.4：`test_v2_3_p1.py` を追加 |
+| | | - §11.1：テストスイート表に v2.3 追加、合計を 551 PASS / 2 SKIP に更新 |
+| | | - §11.3：`test_v2_3_p1.py` の内容（14テスト）追加。`test_new_project_clears_shared_libraries` に更新 |
+| | | - §11.5：v2.3 検証ツール5種を追記 |
+| | | - §11.6：v2.3 テストギャップ（ダイアログ編集）追加 |
+| | | - §12：C-36〜C-39 追加（v2.3 スコープ限定事項） |
+| | | - §13：`windowModified` / `_maybe_save` / `dataModified` を追加 |
+| | | - §14.1：ファイルツリーに `test_v2_3_p1.py`、v2.3 検証ツール5種、`IMPLEMENTATION_PLAN_v2_3.md` を追加 |
+| | | - §14.2：`main_window.py` を ~1,100 LOC に更新 |
+| | | - §15：v2.3 改訂履歴（本エントリ） |
+
+---
+
+以上、`SPEC_OVERVIEW_ja.md` v2.3（決定#5 反映済み）の完全版です。
 ```
 
 ---
 
-以上、`SPEC_OVERVIEW_ja.md` v2.2 の完全版です。
+**決定#5 反映箇所**（v2.3 初版からの差分）：
+
+| セクション | 変更 |
+|-----------|------|
+| §2.4.5 | 共有ライブラリを「保持」→「クリア」に |
+| §4.2.3 | `shared libraries` を「保持」→「**クリア**」、背景説明を追記 |
+| §11.3 | `test_new_project_keeps_shared_libraries` → `test_new_project_clears_shared_libraries` |
+| §15 | v2.3 エントリに決定#5 変更を追記 |
+
+「次」で `docs/SPEC_OVERVIEW_en.md`（v2.3 決定#5 反映済み完全版）を出力します。
