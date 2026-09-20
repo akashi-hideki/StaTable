@@ -1,0 +1,13 @@
+codegen_source,rule_id,count
+codegen/transition_generator.py,redundantInitialization,4
+codegen/transition_generator.py,knownConditionTrueFalse,6
+codegen/transition_generator.py,variableScope,2
+codegen/transition_generator.py,unreadVariable,2
+codegen/code_templates.py,redundantInitialization,4
+codegen/code_templates.py,knownConditionTrueFalse,6
+codegen/code_templates.py,variableScope,2
+codegen/code_templates.py,unreadVariable,2
+codegen/code_templates.py,misra-c2012-11.5,4
+codegen/code_templates.py,misra-c2012-18.4,2
+codegen/osal_generator.py,misra-c2012-11.5,4
+codegen/osal_generator.py,misra-c2012-18.4,2

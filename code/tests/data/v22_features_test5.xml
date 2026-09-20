@@ -1,0 +1,366 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Project name="V22FeaturesTest3Layers">
+    <ProjectSettings>
+        <CodeGeneration project_name="V22FeaturesTest3Layers" table_type="array" generation_style="table_driven" os_type="non_rtos" folder_structure="by_layer" include_dir_name="include" source_dir_name="src" common_dir_name="common" project_dir_name="project" generate_super_include="true" super_include_file="statable_all.h" max_consecutive_pending_events="16" external_includes_in_super="true" external_includes_in_role="true" external_includes_in_transitions="false" external_includes_in_common="false" />
+    </ProjectSettings>
+    <GlobalDefinitions>
+        <SystemVariables>
+            <Variable name="counter" type="uint32_t" unit="" default_value="0" group="System" description="General counter" title="Counter" array_size="0" />
+            <Variable name="error_code" type="uint8_t" unit="" default_value="0" group="System" description="Error code" title="Error code" array_size="0" />
+            <Variable name="retry_count" type="uint8_t" unit="" default_value="0" group="System" description="Retry counter" title="Retry counter" array_size="0" />
+            <Variable name="running" type="bool" unit="" default_value="false" group="System" description="Running flag" title="Running" array_size="0" />
+            <Variable name="g_system_tick" type="volatile uint32_t" unit="1ms" default_value="0" group="Timer" description="Timer base" title="System tick" array_size="0" />
+            <Variable name="g_tick_10ms" type="uint8_t" unit="10ms" default_value="0" group="Timer" description="Derived timer" title="10ms tick" array_size="0" />
+        </SystemVariables>
+        <EventFlags>
+            <Flag name="EVT_INIT_DONE" min_value="0" max_value="1" group="System" description="Init done" title="Init done" />
+            <Flag name="EVT_ERROR" min_value="0" max_value="1" group="System" description="Error occurred" title="Error flag" />
+        </EventFlags>
+        <Interrupts>
+            <Interrupt name="TIMER0" description="1ms timer" event_names="" is_timer="true" title="Timer0">
+                <Action condition="" action="ctx-&gt;data.g_system_tick++" />
+                <UsedVariable name="g_system_tick" />
+            </Interrupt>
+        </Interrupts>
+        <TimerBase>
+            <Timer variable_name="g_system_tick" unit="1ms" data_type="volatile uint32_t" title="System tick" interrupt_name="TIMER0">
+                <Derived period_name="10ms" multiplier="10" variable_name="g_tick_10ms" data_type="uint8_t" title="10ms tick" />
+            </Timer>
+        </TimerBase>
+    </GlobalDefinitions>
+    <SharedLibraries>
+        <RoleFunctionLibrary>
+            <RoleFunction name="IdleEntry" namespace="Driver" title="Idle entry" description="Idle entry" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="IdleExit" namespace="Driver" title="Idle exit" description="Idle exit" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="InitEntry" namespace="Driver" title="Init entry" description="Initializing entry" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ReadyEntry" namespace="Driver" title="Ready entry" description="Ready entry" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ErrorEntry" namespace="Driver" title="Error entry" description="Error entry" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ErrorExit" namespace="Driver" title="Error exit" description="Error exit" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Init" namespace="Driver" title="Driver init" description="Driver init" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="LogError" namespace="Driver" title="Log error" description="Log error" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Reset" namespace="Driver" title="Reset" description="Reset" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="PreCheck" namespace="Driver" title="Pre-check" description="Pre-check" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Cleanup" namespace="Driver" title="Cleanup" description="Cleanup" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="IdleEntry" namespace="Middleware" title="Idle entry" description="Idle entry" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ConnEntry" namespace="Middleware" title="Connecting entry" description="Connecting entry" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ConnExit" namespace="Middleware" title="Connecting exit" description="Connecting exit" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ConnOkEntry" namespace="Middleware" title="Connected entry" description="Connected entry" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ErrorEntry" namespace="Middleware" title="Error entry" description="Error entry" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Connect" namespace="Middleware" title="Connect" description="Connect" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="HandleErr" namespace="Middleware" title="Handle error" description="Handle error" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Retry" namespace="Middleware" title="Retry" description="Retry" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="BeforeConnect" namespace="Middleware" title="Before connect" description="Before connect" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="BootEntry" namespace="App" title="Boot entry" description="Boot entry" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="BootExit" namespace="App" title="Boot exit" description="Boot exit" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="InitEntry" namespace="App" title="Init entry" description="Init entry" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="RunEntry1" namespace="App" title="Running entry 1" description="Running entry 1" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="RunEntry2" namespace="App" title="Running entry 2" description="Running entry 2" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="PauseEntry" namespace="App" title="Paused entry" description="Paused entry" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StopEntry" namespace="App" title="Stopped entry" description="Stopped entry" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Boot" namespace="App" title="App boot" description="App boot" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Start" namespace="App" title="App start" description="App start" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Pause" namespace="App" title="App pause" description="App pause" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Resume" namespace="App" title="App resume" description="App resume" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="HandleStop" namespace="App" title="Handle stop" description="Handle stop" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="PreCheck" namespace="App" title="Pre-check" description="Pre-check" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Cleanup" namespace="App" title="Cleanup" description="Cleanup" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Pre" namespace="App" title="Pre (before transitions)" description="Runs before evaluating transitions" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="Post" namespace="App" title="Post (after transitions)" description="Runs after evaluating transitions" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+        </RoleFunctionLibrary>
+        <ConditionLibrary>
+            <Condition name="error_code == 0" condition="error_code == 0" />
+            <Condition name="error_code != 0" condition="error_code != 0" />
+            <Condition name="retry_count &lt; 3" condition="retry_count &lt; 3" />
+            <Condition name="retry_count &gt;= 3" condition="retry_count &gt;= 3" />
+            <Condition name="counter &gt; 0" condition="counter &gt; 0" />
+            <Condition name="counter == 0" condition="counter == 0" />
+            <Condition name="g_system_tick &gt; 100" condition="g_system_tick &gt; 100" />
+            <Condition name="g_system_tick &lt;= 100" condition="g_system_tick &lt;= 100" />
+            <Condition name="Driver.PreCheck == 0" condition="RoleFunc_Driver_PreCheck(transition, ctx) == 0" />
+            <Condition name="Driver.PreCheck != 0" condition="RoleFunc_Driver_PreCheck(transition, ctx) != 0" />
+            <Condition name="Middleware.HandleErr == 0" condition="RoleFunc_Middleware_HandleErr(transition, ctx) == 0" />
+            <Condition name="Middleware.HandleErr != 0" condition="RoleFunc_Middleware_HandleErr(transition, ctx) != 0" />
+            <Condition name="App.PreCheck == 0" condition="RoleFunc_App_PreCheck(transition, ctx) == 0" />
+            <Condition name="App.PreCheck != 0" condition="RoleFunc_App_PreCheck(transition, ctx) != 0" />
+        </ConditionLibrary>
+        <LiteralLibrary />
+    </SharedLibraries>
+    <Tab name="Driver">
+        <StateMachine initial="Idle" layer_priority="1" layer_description="Driver layer" layer_name="Driver">
+            <States>
+                <State name="Idle" type="initial" parent="" do="" description="Idle">
+                    <Entry>
+                        <Action name="Driver.IdleEntry" />
+                    </Entry>
+                    <Exit>
+                        <Action name="Driver.IdleExit" />
+                    </Exit>
+                </State>
+                <State name="Initializing" type="normal" parent="" do="" description="Initializing">
+                    <Entry>
+                        <Action name="Driver.InitEntry" />
+                    </Entry>
+                </State>
+                <State name="Ready" type="normal" parent="" do="" description="Ready">
+                    <Entry>
+                        <Action name="Driver.ReadyEntry" />
+                    </Entry>
+                </State>
+                <State name="Error" type="normal" parent="" do="" description="Error">
+                    <Entry>
+                        <Action name="Driver.ErrorEntry" />
+                    </Entry>
+                    <Exit>
+                        <Action name="Driver.ErrorExit" />
+                    </Exit>
+                </State>
+            </States>
+            <Events>
+                <Event name="INIT" id="1" kind="signal" params="" priority="0" description="Init request" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Init" />
+                <Event name="READY" id="2" kind="signal" params="" priority="0" description="Ready" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Ready" />
+                <Event name="FAIL" id="3" kind="signal" params="" priority="1" description="Failure" delivery_type="queue" source_layer="driver" data_type="uint8_t" data_name="err_code" title="Failure" />
+                <Event name="RESET" id="4" kind="signal" params="" priority="0" description="Reset" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Reset" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="IdleEntry" namespace="Driver" description="Idle entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Idle entry" />
+                <RoleFunction name="IdleExit" namespace="Driver" description="Idle exit" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Idle exit" />
+                <RoleFunction name="InitEntry" namespace="Driver" description="Initializing entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Init entry" />
+                <RoleFunction name="ReadyEntry" namespace="Driver" description="Ready entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Ready entry" />
+                <RoleFunction name="ErrorEntry" namespace="Driver" description="Error entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Error entry" />
+                <RoleFunction name="ErrorExit" namespace="Driver" description="Error exit" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Error exit" />
+                <RoleFunction name="Init" namespace="Driver" description="Driver init" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Driver init" />
+                <RoleFunction name="LogError" namespace="Driver" description="Log error" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Log error" />
+                <RoleFunction name="Reset" namespace="Driver" description="Reset" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Reset" />
+                <RoleFunction name="PreCheck" namespace="Driver" description="Pre-check" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Pre-check" />
+                <RoleFunction name="Cleanup" namespace="Driver" description="Cleanup" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Cleanup" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="Idle" event="INIT" condition="" action="" target="Initializing" transition_type="external" title="Start initialization" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Driver.Init" />
+                </Transition>
+                <Transition source="Initializing" event="READY" condition="RoleFunc_Driver_PreCheck(transition, ctx) == 0" action="" target="Ready" transition_type="external" title="Ready OK" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Initializing" event="READY" condition="RoleFunc_Driver_PreCheck(transition, ctx) != 0" action="" target="Error" transition_type="external" title="Ready with error" has_else="false" else_target="" early_return="false" label="T2">
+                    <PreAction action="Driver.LogError" />
+                </Transition>
+                <Transition source="Initializing" event="FAIL" condition="" action="" target="Error" transition_type="external" title="Init failure" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Driver.LogError" />
+                </Transition>
+                <Transition source="Ready" event="FAIL" condition="" action="" target="Error" transition_type="external" title="Runtime error" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Driver.LogError" />
+                </Transition>
+                <Transition source="Error" event="RESET" condition="retry_count &lt; 3" action="" target="Idle" transition_type="external" title="Reset retry" has_else="true" else_target="Error" early_return="true" label="T1">
+                    <PreAction action="Driver.Reset" />
+                </Transition>
+                <Transition source="Error" event="RESET" condition="retry_count &gt;= 3" action="" target="Error" transition_type="external" title="Give up" has_else="false" else_target="" early_return="true" label="T2" />
+            </Transitions>
+            <Cells>
+                <Cell source="Error" event="RESET">
+                    <Relations>
+                        <Relation kind="group" members="T1,T2" shared_condition="running == false" note="Gate on running flag" />
+                    </Relations>
+                </Cell>
+                <Cell source="Idle" event="INIT">
+                    <Actions>
+                        <Action role_function="Driver.PreCheck" trigger="before_transitions" title="Pre-check" />
+                        <Action role_function="Driver.Cleanup" trigger="after_transitions" title="Cleanup" />
+                    </Actions>
+                </Cell>
+                <Cell source="Initializing" event="READY">
+                    <Relations>
+                        <Relation kind="sequential" members="T1,T2" shared_condition="" note="T1 then T2" />
+                    </Relations>
+                </Cell>
+            </Cells>
+        </StateMachine>
+    </Tab>
+    <Tab name="Middleware">
+        <StateMachine initial="Idle" layer_priority="3" layer_description="Middleware layer" layer_name="Middleware">
+            <States>
+                <State name="Idle" type="initial" parent="" do="" description="Idle">
+                    <Entry>
+                        <Action name="Middleware.IdleEntry" />
+                    </Entry>
+                </State>
+                <State name="Connecting" type="normal" parent="" do="" description="Connecting">
+                    <Entry>
+                        <Action name="Middleware.ConnEntry" />
+                    </Entry>
+                    <Exit>
+                        <Action name="Middleware.ConnExit" />
+                    </Exit>
+                </State>
+                <State name="Connected" type="normal" parent="" do="" description="Connected">
+                    <Entry>
+                        <Action name="Middleware.ConnOkEntry" />
+                    </Entry>
+                </State>
+                <State name="Error" type="normal" parent="" do="" description="Error">
+                    <Entry>
+                        <Action name="Middleware.ErrorEntry" />
+                    </Entry>
+                </State>
+            </States>
+            <Events>
+                <Event name="CONNECT" id="1" kind="signal" params="" priority="0" description="Connect request" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Connect" />
+                <Event name="CONNECTED" id="2" kind="signal" params="" priority="0" description="Connected" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Connected" />
+                <Event name="ERROR" id="3" kind="signal" params="" priority="2" description="Error" delivery_type="queue" source_layer="middleware" data_type="uint8_t" data_name="err_code" title="Error" />
+                <Event name="RETRY" id="4" kind="signal" params="" priority="0" description="Retry" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Retry" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="IdleEntry" namespace="Middleware" description="Idle entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Idle entry" />
+                <RoleFunction name="ConnEntry" namespace="Middleware" description="Connecting entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Connecting entry" />
+                <RoleFunction name="ConnExit" namespace="Middleware" description="Connecting exit" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Connecting exit" />
+                <RoleFunction name="ConnOkEntry" namespace="Middleware" description="Connected entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Connected entry" />
+                <RoleFunction name="ErrorEntry" namespace="Middleware" description="Error entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Error entry" />
+                <RoleFunction name="Connect" namespace="Middleware" description="Connect" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Connect" />
+                <RoleFunction name="HandleErr" namespace="Middleware" description="Handle error" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Handle error" />
+                <RoleFunction name="Retry" namespace="Middleware" description="Retry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Retry" />
+                <RoleFunction name="BeforeConnect" namespace="Middleware" description="Before connect" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Before connect" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="Idle" event="CONNECT" condition="" action="" target="Connecting" transition_type="external" title="Start connect" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Middleware.Connect" />
+                </Transition>
+                <Transition source="Connecting" event="CONNECTED" condition="RoleFunc_Middleware_HandleErr(transition, ctx) == 0" action="" target="Connected" transition_type="external" title="Connected OK" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Connecting" event="CONNECTED" condition="RoleFunc_Middleware_HandleErr(transition, ctx) != 0" action="" target="Error" transition_type="external" title="Retry exceeded" has_else="false" else_target="" early_return="true" label="T2">
+                    <PreAction action="Middleware.HandleErr" />
+                </Transition>
+                <Transition source="Connecting" event="ERROR" condition="" action="" target="Error" transition_type="external" title="Connect error" has_else="true" else_target="Idle" early_return="true" label="T1">
+                    <PreAction action="Middleware.HandleErr" />
+                    <ElseAction action="Middleware.Retry" />
+                </Transition>
+                <Transition source="Connected" event="ERROR" condition="" action="" target="Error" transition_type="external" title="Disconnect error" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Middleware.HandleErr" />
+                </Transition>
+                <Transition source="Error" event="RETRY" condition="retry_count &lt; 3" action="" target="Idle" transition_type="external" title="Retry" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Middleware.Retry" />
+                </Transition>
+                <Transition source="Error" event="RETRY" condition="retry_count &gt;= 3" action="" target="Error" transition_type="external" title="Stay error" has_else="false" else_target="" early_return="false" label="T2" />
+            </Transitions>
+            <Cells>
+                <Cell source="Connecting" event="CONNECTED">
+                    <Relations>
+                        <Relation kind="group" members="T1,T2" shared_condition="error_code == 0" note="Parent group">
+                            <Children>
+                                <Relation kind="exclusive" members="T1,T2" shared_condition="" note="Child: retry_count check" />
+                            </Children>
+                        </Relation>
+                    </Relations>
+                </Cell>
+                <Cell source="Error" event="RETRY">
+                    <Relations>
+                        <Relation kind="exclusive" members="T1,T2" shared_condition="" note="At most one fires" />
+                    </Relations>
+                </Cell>
+            </Cells>
+        </StateMachine>
+    </Tab>
+    <Tab name="Application">
+        <StateMachine initial="Boot" layer_priority="5" layer_description="Application layer" layer_name="Application">
+            <States>
+                <State name="Boot" type="initial" parent="" do="" description="Boot">
+                    <Entry>
+                        <Action name="App.BootEntry" />
+                    </Entry>
+                    <Exit>
+                        <Action name="App.BootExit" />
+                    </Exit>
+                </State>
+                <State name="Init" type="normal" parent="" do="" description="Init">
+                    <Entry>
+                        <Action name="App.InitEntry" />
+                    </Entry>
+                </State>
+                <State name="Running" type="normal" parent="" do="" description="Running">
+                    <Entry>
+                        <Action name="App.RunEntry1" />
+                        <Action name="App.RunEntry2" />
+                    </Entry>
+                </State>
+                <State name="Paused" type="normal" parent="" do="" description="Paused">
+                    <Entry>
+                        <Action name="App.PauseEntry" />
+                    </Entry>
+                </State>
+                <State name="Stopped" type="final" parent="" do="" description="Stopped">
+                    <Entry>
+                        <Action name="App.StopEntry" />
+                    </Entry>
+                </State>
+            </States>
+            <Events>
+                <Event name="BOOT" id="1" kind="signal" params="" priority="0" description="Boot" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Boot" />
+                <Event name="START" id="2" kind="signal" params="" priority="0" description="Start" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Start" />
+                <Event name="PAUSE" id="3" kind="signal" params="" priority="0" description="Pause" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Pause" />
+                <Event name="RESUME" id="4" kind="signal" params="" priority="0" description="Resume" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Resume" />
+                <Event name="STOP" id="5" kind="signal" params="" priority="1" description="Stop" delivery_type="queue" source_layer="middleware" data_type="" data_name="" title="Stop" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="BootEntry" namespace="App" description="Boot entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Boot entry" />
+                <RoleFunction name="BootExit" namespace="App" description="Boot exit" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Boot exit" />
+                <RoleFunction name="InitEntry" namespace="App" description="Init entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Init entry" />
+                <RoleFunction name="RunEntry1" namespace="App" description="Running entry 1" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Running entry 1" />
+                <RoleFunction name="RunEntry2" namespace="App" description="Running entry 2" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Running entry 2" />
+                <RoleFunction name="PauseEntry" namespace="App" description="Paused entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Paused entry" />
+                <RoleFunction name="StopEntry" namespace="App" description="Stopped entry" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Stopped entry" />
+                <RoleFunction name="Boot" namespace="App" description="App boot" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="App boot" />
+                <RoleFunction name="Start" namespace="App" description="App start" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="App start" />
+                <RoleFunction name="Pause" namespace="App" description="App pause" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="App pause" />
+                <RoleFunction name="Resume" namespace="App" description="App resume" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="App resume" />
+                <RoleFunction name="HandleStop" namespace="App" description="Handle stop" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Handle stop" />
+                <RoleFunction name="PreCheck" namespace="App" description="Pre-check" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Pre-check" />
+                <RoleFunction name="Cleanup" namespace="App" description="Cleanup" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Cleanup" />
+                <RoleFunction name="Pre" namespace="App" description="Runs before evaluating transitions" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Pre (before transitions)" />
+                <RoleFunction name="Post" namespace="App" description="Runs after evaluating transitions" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Post (after transitions)" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="Boot" event="BOOT" condition="" action="" target="Init" transition_type="external" title="Boot" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="App.Boot" />
+                </Transition>
+                <Transition source="Init" event="START" condition="" action="" target="Running" transition_type="external" title="Start" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="App.Start" />
+                </Transition>
+                <Transition source="Running" event="PAUSE" condition="RoleFunc_App_PreCheck(transition, ctx) != 0" action="" target="Paused" transition_type="external" title="Pause (counter &gt; 0)" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="App.Pause" />
+                </Transition>
+                <Transition source="Running" event="PAUSE" condition="RoleFunc_App_PreCheck(transition, ctx) == 0" action="" target="Running" transition_type="external" title="Pause ignored" has_else="false" else_target="" early_return="false" label="T2" />
+                <Transition source="Paused" event="RESUME" condition="" action="" target="Running" transition_type="external" title="Resume" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="App.Resume" />
+                </Transition>
+                <Transition source="Running" event="STOP" condition="g_system_tick &gt; 100" action="" target="Stopped" transition_type="external" title="Stop (tick &gt; 100)" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="App.HandleStop" />
+                </Transition>
+                <Transition source="Running" event="STOP" condition="g_system_tick &lt;= 100" action="" target="Paused" transition_type="external" title="Stop deferred" has_else="false" else_target="" early_return="false" label="T2" />
+                <Transition source="Paused" event="STOP" condition="" action="" target="Stopped" transition_type="external" title="Force stop" has_else="true" else_target="Paused" early_return="true" label="T1" />
+            </Transitions>
+            <Cells>
+                <Cell source="Boot" event="BOOT">
+                    <Actions>
+                        <Action role_function="App.PreCheck" trigger="before_transitions" title="Pre-check" />
+                        <Action role_function="App.Cleanup" trigger="after_transitions" title="Cleanup" />
+                    </Actions>
+                </Cell>
+                <Cell source="Init" event="START">
+                    <Actions>
+                        <Action role_function="App.Pre" trigger="before_transitions" title="Pre (before transitions)" />
+                        <Action role_function="App.Post" trigger="after_transitions" title="Post (after transitions)" />
+                    </Actions>
+                </Cell>
+                <Cell source="Running" event="PAUSE">
+                    <Relations>
+                        <Relation kind="sequential" members="T1,T2" shared_condition="" note="T1 then T2" />
+                    </Relations>
+                </Cell>
+                <Cell source="Running" event="STOP">
+                    <Relations>
+                        <Relation kind="group" members="T1" shared_condition="running == true" note="Parent: gate on running flag">
+                            <Children>
+                                <Relation kind="group" members="T2" shared_condition="g_system_tick &gt; 0" note="Child: gate on tick" />
+                            </Children>
+                        </Relation>
+                    </Relations>
+                </Cell>
+            </Cells>
+        </StateMachine>
+    </Tab>
+</Project>

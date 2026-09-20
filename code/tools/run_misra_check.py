@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""
+MISRA C check for StaTable-generated code (v2).
+
+Parses cppcheck XML output (from either stdout or stderr) and
+produces a Markdown summary.
+
+Informational only. Never fails the build.
+"""
+import argparse
+import subprocess
+import sys
+import xml.etree.ElementTree as ET
+from collections import Counter, defaultdict
+from pathlib import Path
+
+
+def collect_c_files(root: Path):
+    return sorted(root.rglob('*.c'))
+
+
+def build_cppcheck_command(c_files, include_dirs, suppressions_file):
+    cmd = [
+        'cppcheck',
+        '--addon=misra',
+        '--enable=warning,style,performance,portability',
+        '--inline-suppr',
+        '--error-exitcode=0',
+        '--xml',
+        '--xml-version=2',
+        '--quiet',
+    ]
+    if suppressions_file and suppressions_file.exists():
+        cmd.append(f'--suppressions-list={suppressions_file}')
+    for inc in include_dirs:
+        cmd += ['-I', str(inc)]
+    cmd += [str(f) for f in c_files]
+    return cmd
+
+
+def find_xml(stdout: str, stderr: str) -> str:
+    """Return whichever stream contains valid XML."""
+    for candidate in (stderr, stdout):
+        if candidate and candidate.lstrip().startswith('<?xml'):
+            return candidate
+    return ''
+
+
+def parse_xml(xml_text: str):
+    """Return (misra_counter, non_misra_counter, error_samples)."""
+    misra = Counter()
+    non_misra = Counter()
+    samples = defaultdict(list)
+
+    if not xml_text.strip():
+        return misra, non_misra, samples
+
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError as e:
+        print(f'WARN: XML parse error: {e}', file=sys.stderr)
+        return misra, non_misra, samples
+
+    for err in root.iter('error'):
+        err_id = err.get('id', '')
+        severity = err.get('severity', '')
+        msg = err.get('msg', '')
+        if err_id.startswith('misra-c2012-'):
+            rule = err_id.replace('misra-c2012-', '')
+            misra[rule] += 1
+        elif err_id == 'misra-config':
+            # informational; skip
+            continue
+        else:
+            non_misra[err_id] += 1
+            if len(samples[err_id]) < 3:
+                samples[err_id].append(msg)
+
+    return misra, non_misra, samples
+
+
+def write_summary(out_dir, c_files, misra, non_misra, samples):
+    total_misra = sum(misra.values())
+    lines = [
+        '# MISRA C Check Summary',
+        '',
+        '> **Informational only.** This report does not fail the build.',
+        '> cppcheck + MISRA addon is not a certified MISRA checker.',
+        '',
+        '## Overview',
+        '',
+        f'- Files analyzed: {len(c_files)}',
+        f'- Total MISRA rule hits: {total_misra}',
+        f'- Distinct MISRA rules hit: {len(misra)}',
+        f'- Non-MISRA warnings: {sum(non_misra.values())}',
+        '',
+    ]
+
+    if misra:
+        lines += [
+            '## MISRA rules (by frequency)',
+            '',
+            '| Rule | Count |',
+            '|------|------:|',
+        ]
+        for rule, count in misra.most_common():
+            lines.append(f'| misra-c2012-{rule} | {count} |')
+        lines.append('')
+
+    if non_misra:
+        lines += [
+            '## Non-MISRA warnings (by frequency)',
+            '',
+            '| ID | Count | Sample message |',
+            '|----|------:|----------------|',
+        ]
+        for warn_id, count in non_misra.most_common():
+            sample = samples[warn_id][0] if samples[warn_id] else ''
+            sample = sample.replace('|', '\\|')[:80]
+            lines.append(f'| {warn_id} | {count} | {sample} |')
+        lines.append('')
+
+    lines += [
+        '## Artifacts',
+        '',
+        '- `cppcheck_raw.xml` — XML from stdout',
+        '- `cppcheck_stderr.txt` — XML from stderr (may be empty)',
+        '',
+        '## Next Steps',
+        '',
+        '1. Review top rules above.',
+        '2. Add justified suppressions to `misra/suppressions.txt`.',
+        '3. Record progress in `misra/baseline.md`.',
+        '',
+    ]
+    (out_dir / 'summary.md').write_text('\n'.join(lines), encoding='utf-8')
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--root', required=True)
+    parser.add_argument('--out', required=True)
+    parser.add_argument('--suppressions', default='misra/suppressions.txt')
+    args = parser.parse_args()
+
+    root = Path(args.root)
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if not root.exists():
+        print(f'ERROR: root not found: {root}', file=sys.stderr)
+        return 1
+
+    c_files = collect_c_files(root)
+    if not c_files:
+        print('No .c files found.')
+        write_summary(out_dir, [], Counter(), Counter(), {})
+        return 0
+
+    print(f'Found {len(c_files)} C file(s)')
+
+    include_dirs = [root / 'include', root / 'common', root / 'src']
+    include_dirs = [d for d in include_dirs if d.exists()]
+    suppressions = Path(args.suppressions)
+
+    cmd = build_cppcheck_command(c_files, include_dirs, suppressions)
+    print('Running cppcheck...')
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    except FileNotFoundError:
+        print('ERROR: cppcheck is not installed.', file=sys.stderr)
+        return 1
+    except subprocess.TimeoutExpired:
+        print('ERROR: cppcheck timed out.', file=sys.stderr)
+        return 1
+
+    (out_dir / 'cppcheck_raw.xml').write_text(result.stdout or '', encoding='utf-8')
+    (out_dir / 'cppcheck_stderr.txt').write_text(result.stderr or '', encoding='utf-8')
+
+    xml_text = find_xml(result.stdout or '', result.stderr or '')
+    misra, non_misra, samples = parse_xml(xml_text)
+
+    write_summary(out_dir, c_files, misra, non_misra, samples)
+
+    print(f'MISRA rule hits: {sum(misra.values())} '
+          f'across {len(misra)} distinct rules')
+    print(f'Non-MISRA warnings: {sum(non_misra.values())}')
+    print(f'Report: {out_dir / "summary.md"}')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
