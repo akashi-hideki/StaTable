@@ -97,6 +97,10 @@ jobs:
           python tests/test_v2_2_p12_9.py
           python tests/test_v2_2_p12_10.py
 
+      - name: Run v2.3 test suites
+        run: |
+          python tests/test_v2_3_p1.py
+
   # ==============================================================
   # Job 4: Generated C code verification
   # ==============================================================
