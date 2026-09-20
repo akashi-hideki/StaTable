@@ -7,18 +7,6 @@
             <location file="output/Application/statable_transitions_Application.c" line="217" column="36" info="next_state is initialized"/>
             <symbol>next_state</symbol>
         </error>
-        <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;running&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;running&apos; is unknown" file0="output/Application/statable_transitions_Application.c">
-            <location file="output/Application/statable_transitions_Application.c" line="163" column="9"/>
-        </error>
-        <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;g_system_tick&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;g_system_tick&apos; is unknown" file0="output/Application/statable_transitions_Application.c">
-            <location file="output/Application/statable_transitions_Application.c" line="166" column="13"/>
-        </error>
-        <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;g_system_tick&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;g_system_tick&apos; is unknown" file0="output/Application/statable_transitions_Application.c">
-            <location file="output/Application/statable_transitions_Application.c" line="173" column="13"/>
-        </error>
-        <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;g_system_tick&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;g_system_tick&apos; is unknown" file0="output/Application/statable_transitions_Application.c">
-            <location file="output/Application/statable_transitions_Application.c" line="176" column="17"/>
-        </error>
         <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;MAX_CONSECUTIVE_PENDING_EVENTS&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;MAX_CONSECUTIVE_PENDING_EVENTS&apos; is unknown" file0="output/Application/statable_transitions_Application.c">
             <location file="output/Application/statable_transitions_Application.c" line="276" column="33"/>
         </error>
@@ -37,18 +25,6 @@
         <error id="unreadVariable" severity="style" msg="Variable &apos;_handled&apos; is assigned a value that is never used." verbose="Variable &apos;_handled&apos; is assigned a value that is never used." cwe="563" file0="output/Driver/statable_transitions_Driver.c">
             <location file="output/Driver/statable_transitions_Driver.c" line="194" column="22"/>
             <symbol>_handled</symbol>
-        </error>
-        <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;running&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;running&apos; is unknown" file0="output/Driver/statable_transitions_Driver.c">
-            <location file="output/Driver/statable_transitions_Driver.c" line="173" column="9"/>
-        </error>
-        <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;retry_count&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;retry_count&apos; is unknown" file0="output/Driver/statable_transitions_Driver.c">
-            <location file="output/Driver/statable_transitions_Driver.c" line="176" column="29"/>
-        </error>
-        <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;retry_count&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;retry_count&apos; is unknown" file0="output/Driver/statable_transitions_Driver.c">
-            <location file="output/Driver/statable_transitions_Driver.c" line="182" column="38"/>
-        </error>
-        <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;retry_count&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;retry_count&apos; is unknown" file0="output/Driver/statable_transitions_Driver.c">
-            <location file="output/Driver/statable_transitions_Driver.c" line="190" column="29"/>
         </error>
         <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;MAX_CONSECUTIVE_PENDING_EVENTS&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;MAX_CONSECUTIVE_PENDING_EVENTS&apos; is unknown" file0="output/Driver/statable_transitions_Driver.c">
             <location file="output/Driver/statable_transitions_Driver.c" line="246" column="33"/>
@@ -69,15 +45,6 @@
         <error id="unreadVariable" severity="style" msg="Variable &apos;_handled&apos; is assigned a value that is never used." verbose="Variable &apos;_handled&apos; is assigned a value that is never used." cwe="563" file0="output/Middleware/statable_transitions_Middleware.c">
             <location file="output/Middleware/statable_transitions_Middleware.c" line="113" column="22"/>
             <symbol>_handled</symbol>
-        </error>
-        <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;error_code&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;error_code&apos; is unknown" file0="output/Middleware/statable_transitions_Middleware.c">
-            <location file="output/Middleware/statable_transitions_Middleware.c" line="97" column="9"/>
-        </error>
-        <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;retry_count&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;retry_count&apos; is unknown" file0="output/Middleware/statable_transitions_Middleware.c">
-            <location file="output/Middleware/statable_transitions_Middleware.c" line="180" column="9"/>
-        </error>
-        <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;retry_count&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;retry_count&apos; is unknown" file0="output/Middleware/statable_transitions_Middleware.c">
-            <location file="output/Middleware/statable_transitions_Middleware.c" line="187" column="9"/>
         </error>
         <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;MAX_CONSECUTIVE_PENDING_EVENTS&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;MAX_CONSECUTIVE_PENDING_EVENTS&apos; is unknown" file0="output/Middleware/statable_transitions_Middleware.c">
             <location file="output/Middleware/statable_transitions_Middleware.c" line="240" column="33"/>

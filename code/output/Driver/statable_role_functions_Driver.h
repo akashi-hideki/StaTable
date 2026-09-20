@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 11:36:09
+ * @date    2026-09-20 15:22:57
  */
 
 #ifndef STATABLE_ROLE_FUNCTIONS_H_DRIVER

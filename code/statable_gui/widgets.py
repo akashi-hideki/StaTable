@@ -1,18 +1,21 @@
 # statable_gui/widgets.py
 """StaTable main widget (shared library support / v2.2 entry-exit list)
 
-Version: 3.4 (2026-09-20)
-  - MermaidWidget: fix PySide6 runJavaScript array-loss by returning
-    JSON strings from JS.
+Version: 3.5 (2026-09-20)
+  - MermaidWidget: vertically center the diagram in the viewport.
 
-    [v3.4 changes]
-      * `getSvgSize()` in JS now returns `JSON.stringify([w, h])`
-        instead of a bare array. PySide6's runJavaScript callback
-        sometimes converts JS arrays to '' (empty string) at the
-        Qt boundary; a string return value is 100% reliable.
-        `_apply_svg_size` already parses JSON strings, so no
-        Python-side change was needed beyond the existing
-        json.loads() handling.
+    [v3.5 change]
+      * QScrollArea alignment changed from
+          Qt.AlignLeft | Qt.AlignTop
+        to
+          Qt.AlignLeft | Qt.AlignVCenter
+        so that a small (short) diagram appears in the vertical
+        middle of the widget. When the diagram is taller than the
+        viewport, scrolling takes over and alignment is ignored.
+
+    [v3.4 behavior retained]
+      * getSvgSize() returns a JSON string, avoiding PySide6's
+        runJavaScript array-to-'' conversion.
 
     [v3.3 behavior retained]
       * QScrollArea viewport background set to #fafafa (dark-mode fix).
@@ -143,6 +146,9 @@ if WEBENGINE_AVAILABLE:
 class MermaidWidget(QWidget):
     """Mermaid diagram preview widget.
 
+    [v3.5] Diagram vertically centered in the viewport.
+      QScrollArea alignment = Qt.AlignLeft | Qt.AlignVCenter.
+
     [v3.4] getSvgSize() returns a JSON string (reliable across
       PySide6 runJavaScript array-conversion quirks).
 
@@ -193,7 +199,11 @@ class MermaidWidget(QWidget):
         if WEBENGINE_AVAILABLE:
             self.scroll_area = QScrollArea()
             self.scroll_area.setWidgetResizable(False)
-            self.scroll_area.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+            # [v3.5] Vertically center the (small) diagram; horizontal
+            # stays left-aligned. When the diagram is larger than the
+            # viewport on either axis, scrolling takes over and
+            # alignment is ignored on that axis.
+            self.scroll_area.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             self.scroll_area.setHorizontalScrollBarPolicy(
                 Qt.ScrollBarAsNeeded)
             self.scroll_area.setVerticalScrollBarPolicy(
@@ -238,7 +248,7 @@ class MermaidWidget(QWidget):
             layout.addWidget(self.scroll_area)
             StaTableLogger.debug(
                 "MermaidWidget: WebEngine available + file access enabled "
-                "(wrapped in QScrollArea)")
+                "(wrapped in QScrollArea, VCenter alignment)")
         else:
             self.text_view = QPlainTextEdit()
             self.text_view.setReadOnly(True)
@@ -314,14 +324,14 @@ class MermaidWidget(QWidget):
                 }},
                 'stateDiagram-v2': {{
                     nodeSpacing: 50,
-                    rankSpacing: 60,
-                    padding: 15,
+                    rankSpacing: 25,
+                    padding: 8,
                     useMaxWidth: false,
                 }},
                 stateDiagram: {{
                     nodeSpacing: 50,
-                    rankSpacing: 60,
-                    padding: 15,
+                    rankSpacing: 25,
+                    padding: 8,
                     useMaxWidth: false,
                 }},
             }});

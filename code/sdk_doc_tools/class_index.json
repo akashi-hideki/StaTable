@@ -1,0 +1,2585 @@
+{
+  "statable\\global_defs.py": [
+    {
+      "class": "StructMemberDef",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 8
+    },
+    {
+      "class": "CustomTypeDef",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 28
+    },
+    {
+      "class": "SystemVariable",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 41
+    },
+    {
+      "class": "EventFlag",
+      "bases": [],
+      "methods": [
+        "__post_init__",
+        "bit_width"
+      ],
+      "lineno": 61
+    },
+    {
+      "class": "InterruptAction",
+      "bases": [],
+      "methods": [],
+      "lineno": 82
+    },
+    {
+      "class": "InterruptHandlerDef",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 89
+    },
+    {
+      "class": "DevicePlaceholderDef",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 116
+    },
+    {
+      "class": "TimerDerivedDef",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 128
+    },
+    {
+      "class": "TimerBaseDef",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 142
+    },
+    {
+      "class": "EventQueueDef",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 157
+    },
+    {
+      "class": "GlobalDefinitions",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "add_timer_variables",
+        "variable_groups",
+        "flag_groups",
+        "custom_type_names"
+      ],
+      "lineno": 174
+    }
+  ],
+  "statable\\mermaid_gen.py": [],
+  "statable\\model.py": [
+    {
+      "class": "StateType",
+      "bases": [
+        "Enum"
+      ],
+      "methods": [],
+      "lineno": 6
+    },
+    {
+      "class": "EventKind",
+      "bases": [
+        "Enum"
+      ],
+      "methods": [],
+      "lineno": 16
+    },
+    {
+      "class": "EventDeliveryType",
+      "bases": [
+        "Enum"
+      ],
+      "methods": [],
+      "lineno": 23
+    },
+    {
+      "class": "EventSourceLayer",
+      "bases": [
+        "Enum"
+      ],
+      "methods": [],
+      "lineno": 30
+    },
+    {
+      "class": "State",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 37
+    },
+    {
+      "class": "Event",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 68
+    },
+    {
+      "class": "Transition",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 88
+    },
+    {
+      "class": "ActionStep",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 125
+    },
+    {
+      "class": "TransitionRelation",
+      "bases": [],
+      "methods": [],
+      "lineno": 149
+    },
+    {
+      "class": "RoleFunction",
+      "bases": [],
+      "methods": [
+        "__post_init__",
+        "qualified_name",
+        "from_legacy_name"
+      ],
+      "lineno": 175
+    }
+  ],
+  "statable\\parser.py": [
+    {
+      "class": "ParserNotImplementedError",
+      "bases": [
+        "NotImplementedError"
+      ],
+      "methods": [],
+      "lineno": 38
+    }
+  ],
+  "statable\\sample_data.py": [],
+  "statable\\state_machine.py": [
+    {
+      "class": "StateMachine",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "add_state",
+        "add_event",
+        "remove_event",
+        "add_transition",
+        "remove_transition",
+        "set_initial",
+        "add_role_function",
+        "remove_role_function",
+        "get_transitions_for_cell",
+        "get_transitions_for_event",
+        "get_actions_for_cell",
+        "set_actions_for_cell",
+        "get_relations_for_cell",
+        "set_relations_for_cell",
+        "get_cell_keys",
+        "remove_cell_metadata"
+      ],
+      "lineno": 10
+    }
+  ],
+  "statable\\xml_io.py": [],
+  "statable\\__init__.py": [],
+  "statable_gui\\action_edit_dialog.py": [
+    {
+      "class": "ActionEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "refresh_role_combo",
+        "update_signature_label",
+        "insert_role_function",
+        "add_new_role_function",
+        "insert_symbol",
+        "show_action_context_menu",
+        "register_selected_as_variable",
+        "register_selected_as_flag",
+        "_on_accept",
+        "get_action_text",
+        "get_title"
+      ],
+      "lineno": 17
+    }
+  ],
+  "statable_gui\\code_generation_dialog.py": [
+    {
+      "class": "WarningCollector",
+      "bases": [
+        "logging.Handler"
+      ],
+      "methods": [
+        "__init__",
+        "emit"
+      ],
+      "lineno": 67
+    },
+    {
+      "class": "CodeGenerationDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_load_saved_settings",
+        "_save_settings",
+        "_setup_ui",
+        "_load_sample_data_if_needed",
+        "_load_config_to_ui",
+        "_update_info_labels",
+        "_on_output_dir_changed",
+        "_select_output_dir",
+        "_on_style_changed",
+        "_open_settings_dialog",
+        "_show_warnings",
+        "_generate_code",
+        "_update_preview",
+        "_save_code",
+        "_on_close",
+        "get_generated_files",
+        "get_config"
+      ],
+      "lineno": 86
+    }
+  ],
+  "statable_gui\\code_generation_settings_dialog.py": [
+    {
+      "class": "CodeGenerationSettingsDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_setup_ui",
+        "_setup_basic_tab",
+        "_setup_log_tab",
+        "_setup_include_tab",
+        "_setup_output_tab",
+        "_load_config",
+        "_save_config",
+        "_on_ok",
+        "_on_reset",
+        "_select_output_dir",
+        "_on_add_include",
+        "_on_remove_include",
+        "_on_move_include_up",
+        "_on_move_include_down",
+        "get_config"
+      ],
+      "lineno": 30
+    }
+  ],
+  "statable_gui\\common_widgets.py": [
+    {
+      "class": "TitleEditWidget",
+      "bases": [
+        "QWidget"
+      ],
+      "methods": [
+        "__init__",
+        "get_title",
+        "set_title",
+        "ensure_title"
+      ],
+      "lineno": 18
+    },
+    {
+      "class": "TypeComboBox",
+      "bases": [
+        "QWidget"
+      ],
+      "methods": [
+        "__init__",
+        "_refresh_types",
+        "_open_type_manager",
+        "current_text",
+        "set_current_text"
+      ],
+      "lineno": 48
+    },
+    {
+      "class": "GroupComboBox",
+      "bases": [
+        "QWidget"
+      ],
+      "methods": [
+        "__init__",
+        "_refresh_groups",
+        "_add_group",
+        "current_text",
+        "set_current_text"
+      ],
+      "lineno": 102
+    },
+    {
+      "class": "EventComboBox",
+      "bases": [
+        "QComboBox"
+      ],
+      "methods": [
+        "__init__"
+      ],
+      "lineno": 152
+    },
+    {
+      "class": "StateComboBox",
+      "bases": [
+        "QComboBox"
+      ],
+      "methods": [
+        "__init__"
+      ],
+      "lineno": 164
+    },
+    {
+      "class": "GroupAddDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_on_accept",
+        "get_group_name"
+      ],
+      "lineno": 175
+    },
+    {
+      "class": "TypeManagerDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_refresh_table",
+        "_get_selected_type",
+        "_on_double_clicked",
+        "_add_type",
+        "_edit_type",
+        "_delete_type"
+      ],
+      "lineno": 206
+    },
+    {
+      "class": "TypeEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_refresh_member_table",
+        "_get_selected_member",
+        "_add_member",
+        "_edit_member",
+        "_delete_member",
+        "_on_accept",
+        "get_custom_type"
+      ],
+      "lineno": 309
+    },
+    {
+      "class": "StructMemberEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_on_bitfield_toggled",
+        "_on_array_toggled",
+        "_on_accept",
+        "get_member"
+      ],
+      "lineno": 438
+    }
+  ],
+  "statable_gui\\condition_builder_dialog.py": [
+    {
+      "class": "ConditionBuilderDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_get_states_from_state_machine",
+        "_setup_ui",
+        "set_current_targets",
+        "_populate_tree",
+        "_insert_symbol",
+        "_insert_text",
+        "_insert_number",
+        "_clear_condition",
+        "_update_c_code_view",
+        "_convert_to_c_code",
+        "_add_parentheses_to_comparisons",
+        "_is_fully_parenthesized",
+        "_open_literalization",
+        "get_condition_text",
+        "get_event_name",
+        "get_target_state",
+        "get_else_target_state",
+        "get_c_code_text"
+      ],
+      "lineno": 28
+    },
+    {
+      "class": "LiteralizationDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_setup_ui",
+        "_scan_numbers",
+        "_on_accept",
+        "get_updated_condition_text"
+      ],
+      "lineno": 373
+    }
+  ],
+  "statable_gui\\condition_edit_dialog.py": [
+    {
+      "class": "ConditionEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "refresh_role_combo",
+        "insert_role_function",
+        "insert_symbol",
+        "_on_accept",
+        "get_condition_text",
+        "get_title"
+      ],
+      "lineno": 15
+    }
+  ],
+  "statable_gui\\config.py": [],
+  "statable_gui\\dialogs.py": [
+    {
+      "class": "TransitionTable",
+      "bases": [
+        "QTableWidget"
+      ],
+      "methods": [
+        "__init__",
+        "mouseDoubleClickEvent"
+      ],
+      "lineno": 36
+    },
+    {
+      "class": "TransitionListDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "on_cell_double_clicked",
+        "open_condition_builder",
+        "open_dnd_editor_for_row",
+        "open_dnd_editor",
+        "_transition_to_draft",
+        "_draft_to_transition",
+        "_row_to_transition",
+        "_update_row_from_transition",
+        "on_item_changed",
+        "_update_display_title",
+        "add_row",
+        "delete_row",
+        "move_row_up",
+        "move_row_down",
+        "_swap_rows",
+        "_generate_display_title",
+        "_on_accept",
+        "get_transitions"
+      ],
+      "lineno": 57
+    }
+  ],
+  "statable_gui\\event_definition_dialog.py": [
+    {
+      "class": "DoubleClickTable",
+      "bases": [
+        "QTableWidget"
+      ],
+      "methods": [
+        "__init__",
+        "mouseDoubleClickEvent"
+      ],
+      "lineno": 21
+    },
+    {
+      "class": "EventEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_on_data_check_toggled",
+        "_on_accept",
+        "get_event"
+      ],
+      "lineno": 37
+    },
+    {
+      "class": "EventDefinitionDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "refresh_table",
+        "on_item_changed",
+        "_find_event_by_row",
+        "on_double_clicked",
+        "add_event",
+        "delete_event"
+      ],
+      "lineno": 157
+    }
+  ],
+  "statable_gui\\event_delivery_settings_dialog.py": [
+    {
+      "class": "DoubleClickTable",
+      "bases": [
+        "QTableWidget"
+      ],
+      "methods": [
+        "__init__",
+        "mouseDoubleClickEvent"
+      ],
+      "lineno": 17
+    },
+    {
+      "class": "EventDeliverySettingsDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_build_table",
+        "_check_isr_usage",
+        "_find_row_by_event_name",
+        "_on_delivery_changed",
+        "_update_converted_column",
+        "_on_accept",
+        "get_auto_convert"
+      ],
+      "lineno": 32
+    }
+  ],
+  "statable_gui\\event_queue_dialog.py": [
+    {
+      "class": "DoubleClickTable",
+      "bases": [
+        "QTableWidget"
+      ],
+      "methods": [
+        "__init__",
+        "mouseDoubleClickEvent"
+      ],
+      "lineno": 19
+    },
+    {
+      "class": "EventQueueEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_on_accept",
+        "get_queue_def"
+      ],
+      "lineno": 33
+    },
+    {
+      "class": "EventQueueDefsDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "refresh_table",
+        "_matches",
+        "on_item_changed",
+        "on_double_clicked",
+        "add_queue",
+        "delete_queue"
+      ],
+      "lineno": 126
+    }
+  ],
+  "statable_gui\\global_defs.py": [
+    {
+      "class": "SystemVariable",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 8
+    },
+    {
+      "class": "EventFlag",
+      "bases": [],
+      "methods": [
+        "__post_init__",
+        "bit_width"
+      ],
+      "lineno": 24
+    },
+    {
+      "class": "InterruptAction",
+      "bases": [],
+      "methods": [],
+      "lineno": 45
+    },
+    {
+      "class": "InterruptHandlerDef",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 52
+    },
+    {
+      "class": "DevicePlaceholderDef",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 67
+    },
+    {
+      "class": "TimerDerivedDef",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 79
+    },
+    {
+      "class": "TimerBaseDef",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 93
+    },
+    {
+      "class": "EventQueueDef",
+      "bases": [],
+      "methods": [
+        "__post_init__"
+      ],
+      "lineno": 108
+    },
+    {
+      "class": "GlobalDefinitions",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "add_timer_variables",
+        "variable_groups",
+        "flag_groups"
+      ],
+      "lineno": 125
+    }
+  ],
+  "statable_gui\\global_defs_dialog.py": [
+    {
+      "class": "ComboBoxDelegate",
+      "bases": [
+        "QStyledItemDelegate"
+      ],
+      "methods": [
+        "__init__",
+        "set_items",
+        "createEditor",
+        "setEditorData",
+        "setModelData"
+      ],
+      "lineno": 20
+    },
+    {
+      "class": "InsertableTable",
+      "bases": [
+        "QTableWidget"
+      ],
+      "methods": [
+        "__init__",
+        "keyPressEvent",
+        "_show_context_menu"
+      ],
+      "lineno": 44
+    },
+    {
+      "class": "ReadOnlyDelegate",
+      "bases": [
+        "QStyledItemDelegate"
+      ],
+      "methods": [
+        "createEditor"
+      ],
+      "lineno": 65
+    },
+    {
+      "class": "VariableEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_on_array_toggled",
+        "_on_accept",
+        "get_variable"
+      ],
+      "lineno": 70
+    },
+    {
+      "class": "FlagEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "update_bit_width_label",
+        "_on_accept",
+        "get_flag"
+      ],
+      "lineno": 146
+    },
+    {
+      "class": "BulkVariableDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_type_list",
+        "set_variables",
+        "add_row",
+        "add_empty_row",
+        "delete_row",
+        "_on_accept",
+        "get_variables"
+      ],
+      "lineno": 217
+    },
+    {
+      "class": "BulkFlagDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "set_flags",
+        "add_row",
+        "add_empty_row",
+        "delete_row",
+        "on_item_changed",
+        "update_bit_width",
+        "_on_accept",
+        "get_flags"
+      ],
+      "lineno": 337
+    },
+    {
+      "class": "GlobalDefinitionsDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_create_variable_tab",
+        "_create_flag_tab",
+        "_type_list",
+        "on_search_changed",
+        "_matches",
+        "refresh_variables",
+        "on_variable_item_changed",
+        "_read_variable_row",
+        "add_empty_variable_row",
+        "delete_variable",
+        "bulk_variables",
+        "refresh_flags",
+        "on_flag_item_changed",
+        "_read_flag_row",
+        "add_empty_flag_row",
+        "delete_flag",
+        "bulk_flags"
+      ],
+      "lineno": 469
+    }
+  ],
+  "statable_gui\\interrupt_handler_edit_dialog.py": [
+    {
+      "class": "DoubleClickTable",
+      "bases": [
+        "QTableWidget"
+      ],
+      "methods": [
+        "__init__",
+        "mouseDoubleClickEvent"
+      ],
+      "lineno": 29
+    },
+    {
+      "class": "InterruptEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "add_action_row",
+        "delete_action_row",
+        "on_action_double_clicked",
+        "_on_accept",
+        "get_interrupt"
+      ],
+      "lineno": 47
+    },
+    {
+      "class": "DevicePlaceholderEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_on_accept",
+        "get_placeholder"
+      ],
+      "lineno": 255
+    },
+    {
+      "class": "TimerBaseEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_on_accept",
+        "get_timer_base"
+      ],
+      "lineno": 298
+    },
+    {
+      "class": "TimerDerivedEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_on_accept",
+        "get_derived"
+      ],
+      "lineno": 354
+    },
+    {
+      "class": "InterruptHandlerEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_create_interrupt_tab",
+        "refresh_interrupt_table",
+        "on_interrupt_double_clicked",
+        "add_interrupt",
+        "delete_interrupt",
+        "_create_placeholder_tab",
+        "refresh_placeholder_table",
+        "on_placeholder_double_clicked",
+        "add_placeholder",
+        "delete_placeholder",
+        "_create_timer_tab",
+        "refresh_timer_tabs",
+        "_create_timer_base_tab",
+        "_refresh_derived_table",
+        "_on_timer_title_changed",
+        "_on_timer_var_changed",
+        "_on_timer_unit_changed",
+        "_on_timer_type_changed",
+        "_on_timer_interrupt_changed",
+        "add_timer_base",
+        "edit_timer_base",
+        "close_timer_tab",
+        "rename_timer_tab",
+        "on_derived_double_clicked",
+        "add_derived",
+        "delete_derived"
+      ],
+      "lineno": 410
+    }
+  ],
+  "statable_gui\\layer_settings_dialog.py": [
+    {
+      "class": "LayerSettingsDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_setup_ui",
+        "_load_layers",
+        "_on_ok",
+        "apply_settings"
+      ],
+      "lineno": 19
+    }
+  ],
+  "statable_gui\\logger.py": [
+    {
+      "class": "StaTableLogger",
+      "bases": [],
+      "methods": [
+        "__new__",
+        "_init_logger",
+        "set_log_callback",
+        "get_logger",
+        "debug",
+        "info",
+        "warning",
+        "error"
+      ],
+      "lineno": 6
+    },
+    {
+      "class": "_TraceBallHandler",
+      "bases": [
+        "logging.Handler"
+      ],
+      "methods": [
+        "__init__",
+        "set_callback",
+        "emit"
+      ],
+      "lineno": 59
+    }
+  ],
+  "statable_gui\\main_window.py": [
+    {
+      "class": "MainWindow",
+      "bases": [
+        "QMainWindow"
+      ],
+      "methods": [
+        "__init__",
+        "create_toolbar",
+        "create_menus",
+        "open_layer_settings",
+        "open_type_manager",
+        "open_global_defs_dialog",
+        "open_event_definition_dialog",
+        "open_event_delivery_settings",
+        "open_interrupt_settings",
+        "save_project",
+        "open_project",
+        "close_all_tabs",
+        "rename_current_tab",
+        "rename_tab_at",
+        "add_new_tab",
+        "add_state_machine_tab",
+        "close_tab",
+        "toggle_traceball",
+        "_get_current_state_machine",
+        "_get_current_data",
+        "_get_all_layers",
+        "open_validation_dialog",
+        "open_code_generation_dialog",
+        "open_code_generation_settings",
+        "save_generated_code_direct"
+      ],
+      "lineno": 75
+    }
+  ],
+  "statable_gui\\matrix_table.py": [
+    {
+      "class": "MatrixTableWidget",
+      "bases": [
+        "QTableWidget"
+      ],
+      "methods": [
+        "__init__",
+        "populate",
+        "_find_transitions",
+        "_generate_cell_label",
+        "_generate_title",
+        "open_transition_dialog",
+        "keyPressEvent"
+      ],
+      "lineno": 101
+    }
+  ],
+  "statable_gui\\preferences.py": [
+    {
+      "class": "Preferences",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "_apply_defaults",
+        "load",
+        "save",
+        "get",
+        "set",
+        "__getattr__",
+        "__setattr__"
+      ],
+      "lineno": 8
+    }
+  ],
+  "statable_gui\\preference_keys.py": [],
+  "statable_gui\\role_function_dialog.py": [
+    {
+      "class": "RoleFunctionDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_on_accept",
+        "get_role_function"
+      ],
+      "lineno": 9
+    }
+  ],
+  "statable_gui\\sample_data.py": [],
+  "statable_gui\\symbol_picker.py": [
+    {
+      "class": "SymbolPickerWidget",
+      "bases": [
+        "QWidget"
+      ],
+      "methods": [
+        "__init__",
+        "refresh_list",
+        "_matches",
+        "_on_item_double_clicked",
+        "register_variable",
+        "register_flag",
+        "open_global_definitions"
+      ],
+      "lineno": 13
+    }
+  ],
+  "statable_gui\\traceball.py": [
+    {
+      "class": "TraceBallWidget",
+      "bases": [
+        "QDockWidget"
+      ],
+      "methods": [
+        "__init__",
+        "append_log",
+        "clear"
+      ],
+      "lineno": 7
+    }
+  ],
+  "statable_gui\\validation_dialog.py": [
+    {
+      "class": "ValidationDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_setup_ui",
+        "_setup_validation_tab",
+        "_setup_prompt_tab",
+        "_setup_response_tab",
+        "_setup_changes_tab",
+        "_run_validation",
+        "_copy_prompt",
+        "_paste_response",
+        "_parse_response",
+        "_apply_changes"
+      ],
+      "lineno": 31
+    }
+  ],
+  "statable_gui\\widgets.py": [
+    {
+      "class": "MermaidWidget",
+      "bases": [
+        "QWidget"
+      ],
+      "methods": [
+        "__init__",
+        "set_mermaid_code",
+        "_on_load_finished",
+        "_request_svg_size",
+        "_apply_svg_size"
+      ],
+      "lineno": 146
+    },
+    {
+      "class": "SettingsPanel",
+      "bases": [
+        "QWidget"
+      ],
+      "methods": [
+        "__init__",
+        "_emit_settings_changed",
+        "populate",
+        "populate_role_table",
+        "on_state_table_cell_double_clicked",
+        "add_state",
+        "delete_state",
+        "open_event_definition",
+        "add_role_function",
+        "delete_role_function",
+        "on_state_table_item_changed",
+        "on_role_table_item_changed",
+        "apply_changes"
+      ],
+      "lineno": 602
+    },
+    {
+      "class": "StateMachineTab",
+      "bases": [
+        "QWidget"
+      ],
+      "methods": [
+        "__init__",
+        "update_mermaid"
+      ],
+      "lineno": 903
+    }
+  ],
+  "statable_gui\\__init__.py": [],
+  "statable_gui\\libcntrl\\condition_library.py": [
+    {
+      "class": "ConditionTemplate",
+      "bases": [],
+      "methods": [
+        "to_dict",
+        "from_dict"
+      ],
+      "lineno": 9
+    },
+    {
+      "class": "ConditionLibrary",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "add",
+        "remove",
+        "get",
+        "list_all",
+        "to_dict",
+        "from_dict"
+      ],
+      "lineno": 31
+    }
+  ],
+  "statable_gui\\libcntrl\\literal_library.py": [
+    {
+      "class": "LiteralDefinition",
+      "bases": [],
+      "methods": [
+        "to_dict",
+        "from_dict"
+      ],
+      "lineno": 9
+    },
+    {
+      "class": "LiteralLibrary",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "add",
+        "remove",
+        "get",
+        "list_all",
+        "to_dict",
+        "from_dict"
+      ],
+      "lineno": 34
+    }
+  ],
+  "statable_gui\\libcntrl\\literal_management_dialog.py": [
+    {
+      "class": "LiteralManagementDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_setup_ui",
+        "_load_table",
+        "_get_selected_literal_name",
+        "_add_literal",
+        "_edit_literal",
+        "_delete_literal"
+      ],
+      "lineno": 16
+    },
+    {
+      "class": "LiteralEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_on_accept",
+        "get_literal"
+      ],
+      "lineno": 132
+    }
+  ],
+  "statable_gui\\libcntrl\\role_function_edit_dialog.py": [
+    {
+      "class": "RoleFunctionEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_setup_ui",
+        "_load_data",
+        "_on_accept",
+        "get_role_function"
+      ],
+      "lineno": 17
+    }
+  ],
+  "statable_gui\\libcntrl\\role_function_library.py": [
+    {
+      "class": "RoleFunction",
+      "bases": [],
+      "methods": [
+        "__post_init__",
+        "qualified_name",
+        "to_dict",
+        "from_dict"
+      ],
+      "lineno": 11
+    },
+    {
+      "class": "RoleFunctionLibrary",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "_key",
+        "add",
+        "remove",
+        "get",
+        "list_all",
+        "to_dict",
+        "from_dict"
+      ],
+      "lineno": 56
+    }
+  ],
+  "statable_gui\\libcntrl\\__init__.py": [],
+  "statable_gui\\transition_editor_direct\\actions_tab.py": [
+    {
+      "class": "_ActionGroup",
+      "bases": [
+        "QGroupBox"
+      ],
+      "methods": [
+        "__init__",
+        "set_role_functions",
+        "set_actions",
+        "get_actions",
+        "row_count",
+        "_append_row",
+        "_on_add",
+        "_on_delete",
+        "_on_move_up",
+        "_on_move_down",
+        "_swap"
+      ],
+      "lineno": 49
+    },
+    {
+      "class": "ActionsTab",
+      "bases": [
+        "QWidget"
+      ],
+      "methods": [
+        "__init__",
+        "set_role_functions",
+        "_build_ui",
+        "row_count",
+        "add_action",
+        "get_actions",
+        "set_actions",
+        "delete_action",
+        "move_up",
+        "_on_changed"
+      ],
+      "lineno": 169
+    }
+  ],
+  "statable_gui\\transition_editor_direct\\code_widget.py": [
+    {
+      "class": "CodeWidget",
+      "bases": [
+        "QPlainTextEdit"
+      ],
+      "methods": [
+        "__init__",
+        "update_code",
+        "_get_layer_name",
+        "_context_type",
+        "_role_func_name",
+        "_call_stmt",
+        "_generate_code",
+        "_collect_child_labels_inline",
+        "_emit_relation_inline",
+        "_emit_transition_item"
+      ],
+      "lineno": 42
+    }
+  ],
+  "statable_gui\\transition_editor_direct\\coverage_analyzer.py": [
+    {
+      "class": "DuplicateTargetMap",
+      "bases": [
+        "dict"
+      ],
+      "methods": [
+        "__eq__",
+        "__ne__"
+      ],
+      "lineno": 19
+    },
+    {
+      "class": "CellReport",
+      "bases": [],
+      "methods": [],
+      "lineno": 34
+    },
+    {
+      "class": "StateGraphReport",
+      "bases": [],
+      "methods": [],
+      "lineno": 44
+    },
+    {
+      "class": "CoverageAnalyzer",
+      "bases": [],
+      "methods": [
+        "analyze_cell",
+        "analyze_state_graph"
+      ],
+      "lineno": 50
+    }
+  ],
+  "statable_gui\\transition_editor_direct\\dialog.py": [
+    {
+      "class": "ActionEditorDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_setup_ui",
+        "_load_draft",
+        "_save_draft",
+        "_sync_member_details",
+        "_on_content_changed",
+        "_on_refresh_preview",
+        "_on_accept",
+        "get_tab_names"
+      ],
+      "lineno": 56
+    }
+  ],
+  "statable_gui\\transition_editor_direct\\draft.py": [
+    {
+      "class": "SystemGlobal",
+      "bases": [],
+      "methods": [
+        "to_dict",
+        "from_dict"
+      ],
+      "lineno": 36
+    },
+    {
+      "class": "TransitionParams",
+      "bases": [],
+      "methods": [],
+      "lineno": 61
+    },
+    {
+      "class": "FlowItem",
+      "bases": [],
+      "methods": [
+        "display_text",
+        "to_dict",
+        "from_dict"
+      ],
+      "lineno": 74
+    },
+    {
+      "class": "ActionDraft",
+      "bases": [],
+      "methods": [
+        "clear",
+        "get_role_func_name",
+        "to_dict",
+        "from_dict"
+      ],
+      "lineno": 108
+    }
+  ],
+  "statable_gui\\transition_editor_direct\\edit_dialogs.py": [
+    {
+      "class": "BaseEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_add_buttons"
+      ],
+      "lineno": 11
+    },
+    {
+      "class": "FunctionEditDialog",
+      "bases": [
+        "BaseEditDialog"
+      ],
+      "methods": [
+        "__init__",
+        "get_result"
+      ],
+      "lineno": 29
+    },
+    {
+      "class": "TransitionEditDialog",
+      "bases": [
+        "BaseEditDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_add_pre",
+        "_del_pre",
+        "_open_condition_builder",
+        "get_result"
+      ],
+      "lineno": 50
+    }
+  ],
+  "statable_gui\\transition_editor_direct\\overview_tab.py": [
+    {
+      "class": "OverviewTab",
+      "bases": [
+        "QWidget"
+      ],
+      "methods": [
+        "__init__",
+        "_build_ui",
+        "refresh",
+        "get_summary_text",
+        "_refresh_cell_view",
+        "_refresh_graph_view"
+      ],
+      "lineno": 23
+    }
+  ],
+  "statable_gui\\transition_editor_direct\\palette_widget.py": [
+    {
+      "class": "PaletteListWidget",
+      "bases": [
+        "QListWidget"
+      ],
+      "methods": [
+        "__init__",
+        "mimeData",
+        "startDrag",
+        "mouseDoubleClickEvent"
+      ],
+      "lineno": 17
+    },
+    {
+      "class": "PaletteWidget",
+      "bases": [
+        "QWidget"
+      ],
+      "methods": [
+        "__init__",
+        "_setup_ui",
+        "_generate_unique_name",
+        "_add_function",
+        "_add_transition",
+        "_on_function_item_edit_requested",
+        "_on_transition_item_edit_requested",
+        "refresh_lists"
+      ],
+      "lineno": 85
+    }
+  ],
+  "statable_gui\\transition_editor_direct\\relations_edit_dialog.py": [
+    {
+      "class": "RelationsEditDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_load",
+        "_on_accept",
+        "get_members",
+        "get_relation"
+      ],
+      "lineno": 33
+    }
+  ],
+  "statable_gui\\transition_editor_direct\\relations_tab.py": [
+    {
+      "class": "RelationsTab",
+      "bases": [
+        "QWidget"
+      ],
+      "methods": [
+        "__init__",
+        "_build_ui",
+        "set_member_details",
+        "_get_available_labels",
+        "row_count",
+        "add_relation",
+        "delete_relation",
+        "get_relations",
+        "set_relations",
+        "_on_double_click",
+        "_add",
+        "_edit"
+      ],
+      "lineno": 34
+    }
+  ],
+  "statable_gui\\transition_editor_direct\\system_global_dialog.py": [
+    {
+      "class": "SystemGlobalDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_load",
+        "_add",
+        "_delete"
+      ],
+      "lineno": 11
+    }
+  ],
+  "statable_gui\\transition_editor_direct\\transitions_tab.py": [
+    {
+      "class": "TransitionsTab",
+      "bases": [
+        "QWidget"
+      ],
+      "methods": [
+        "__init__",
+        "set_role_functions",
+        "set_states",
+        "_build_ui",
+        "_make_state_combo",
+        "_make_has_else_combo",
+        "_refresh_state_combo",
+        "_wire_else_link",
+        "_on_has_else_changed",
+        "row_count",
+        "_refresh_priority_column",
+        "_emit_changed",
+        "_on_cell_double_clicked",
+        "_edit_condition",
+        "_edit_actions",
+        "_edit_actions_current_row",
+        "_parse_csv",
+        "_csv",
+        "_set_cell_csv",
+        "add_transition",
+        "delete_transition",
+        "move_up",
+        "move_down",
+        "_swap_rows",
+        "_item_text",
+        "_widget_text",
+        "get_transitions",
+        "set_transitions"
+      ],
+      "lineno": 44
+    }
+  ],
+  "statable_gui\\transition_editor_direct\\transition_actions_dialog.py": [
+    {
+      "class": "TransitionActionsDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_add",
+        "_del",
+        "get_pre_actions",
+        "get_else_actions"
+      ],
+      "lineno": 16
+    }
+  ],
+  "statable_gui\\transition_editor_direct\\__init__.py": [],
+  "codegen\\code_merger.py": [
+    {
+      "class": "CodeMerger",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "_log_debug",
+        "extract_file_user_code",
+        "extract_func_user_code",
+        "extract_all_func_user_codes",
+        "extract_file_tail_user_code",
+        "inject_file_user_code",
+        "inject_func_user_code",
+        "inject_file_tail_user_code",
+        "merge_file",
+        "merge_all_files",
+        "has_user_code",
+        "has_func_user_code",
+        "get_user_code_summary"
+      ],
+      "lineno": 28
+    }
+  ],
+  "codegen\\code_templates.py": [
+    {
+      "class": "CodeTemplates",
+      "bases": [],
+      "methods": [],
+      "lineno": 21
+    }
+  ],
+  "codegen\\config.py": [
+    {
+      "class": "CodeGenerationConfig",
+      "bases": [],
+      "methods": [
+        "to_dict",
+        "from_dict"
+      ],
+      "lineno": 12
+    },
+    {
+      "class": "ConfigManager",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "get_config",
+        "set_config",
+        "update",
+        "reset",
+        "get_available_styles",
+        "get_available_table_types",
+        "get_available_os_types",
+        "get_available_folder_structures"
+      ],
+      "lineno": 115
+    }
+  ],
+  "codegen\\c_code_generator.py": [
+    {
+      "class": "CCodeGenerator",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "_log_debug",
+        "get_config",
+        "set_config",
+        "update_config",
+        "reset_config",
+        "_get_states_list",
+        "_get_events_list",
+        "_get_role_functions_list",
+        "_get_layer_name",
+        "_get_initial_state",
+        "_generate_section_header",
+        "_generate_file_header",
+        "_generate_include_guard_start",
+        "_generate_include_guard_end",
+        "_generate_include_section",
+        "_layer_filename",
+        "_layer_suffix",
+        "_normalize_layers",
+        "_setup_layer_generators",
+        "_resolve_output_path",
+        "_resolve_super_include_path",
+        "_resolve_path_flat",
+        "_resolve_path_by_type",
+        "_resolve_path_by_layer",
+        "_run_steps",
+        "_run_steps_multi",
+        "_step_file_header",
+        "_step_blank",
+        "_step_guard_start",
+        "_step_guard_end",
+        "_step_include_section",
+        "_step_section_header",
+        "_step_enums",
+        "_step_enums_common",
+        "_step_layer_transition_context",
+        "_step_common_function_decls",
+        "_step_custom_types",
+        "_step_struct",
+        "_step_var_macros",
+        "_step_state_machine_decl",
+        "_step_cell_prototypes",
+        "_step_transition_table",
+        "_step_cell_functions",
+        "_step_process_func",
+        "_step_get_next_event",
+        "_step_role_decls",
+        "_step_role_impls",
+        "_step_init_func",
+        "_step_event_queues",
+        "_step_interrupts",
+        "_step_timer_struct",
+        "_step_timer_init",
+        "_step_timer_update",
+        "_step_osal_header",
+        "_step_osal_source",
+        "_step_super_include_header",
+        "_step_super_include_guard_start",
+        "_step_super_include_guard_end",
+        "_step_super_include_common",
+        "_step_super_include_layer",
+        "_step_super_include_project",
+        "_step_super_include_extern_vars",
+        "_step_super_include_extern_funcs",
+        "_step_super_include_external",
+        "_step_super_include_user",
+        "_step_super_loop_header",
+        "_step_super_loop_include",
+        "_step_super_loop_context_var",
+        "_step_super_loop_state_var",
+        "_step_super_loop_init_func",
+        "_step_super_loop_run_func",
+        "_generate_types_common_header",
+        "_generate_types_header",
+        "_generate_transitions_header",
+        "_generate_transitions_source",
+        "_generate_role_functions_header",
+        "_generate_role_functions_source",
+        "_generate_init_source",
+        "_generate_event_queue_source",
+        "_generate_interrupt_source",
+        "_generate_timer_source",
+        "_generate_osal_header",
+        "_generate_osal_source",
+        "_generate_super_include",
+        "_generate_super_loop",
+        "generate_all",
+        "generate_file",
+        "generate_all_layers",
+        "_generate_all_by_layer",
+        "save_generated_code",
+        "save_generated_code_with_merge",
+        "get_merge_summary",
+        "get_generated_file_list"
+      ],
+      "lineno": 70
+    }
+  ],
+  "codegen\\enum_generator.py": [
+    {
+      "class": "CEnumGenerator",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "set_layer",
+        "_log_debug",
+        "_state_value_name",
+        "_event_value_name",
+        "_flag_value_name",
+        "_state_type_name",
+        "_event_type_name",
+        "_flag_type_name",
+        "_state_max_name",
+        "_event_max_name",
+        "_flag_max_name",
+        "_generate_state_comment",
+        "_generate_event_comment",
+        "_generate_flag_comment",
+        "_generate_enum_values",
+        "generate_state_enum",
+        "generate_event_enum",
+        "generate_flag_enum",
+        "generate_all_enums",
+        "generate_bit_mask_enum",
+        "generate_enum"
+      ],
+      "lineno": 31
+    }
+  ],
+  "codegen\\event_queue_generator.py": [
+    {
+      "class": "EventQueueGenerator",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "_log_debug",
+        "_generate_struct_name",
+        "_generate_func_prefix",
+        "_execute_struct_comment",
+        "_execute_struct_start",
+        "_execute_members",
+        "_execute_struct_end",
+        "_execute_enqueue_comment",
+        "_execute_enqueue_signature",
+        "_execute_dequeue_comment",
+        "_execute_dequeue_signature",
+        "_execute_open",
+        "_execute_close",
+        "_execute_null_check",
+        "_execute_full_check",
+        "_execute_empty_check",
+        "_execute_enqueue_body",
+        "_execute_dequeue_body",
+        "generate_struct",
+        "generate_enqueue_function",
+        "generate_dequeue_function",
+        "generate_all_code",
+        "generate_all_structs",
+        "generate_all_functions",
+        "generate_all"
+      ],
+      "lineno": 25
+    }
+  ],
+  "codegen\\interrupt_generator.py": [
+    {
+      "class": "InterruptGenerator",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "set_layer",
+        "_log_debug",
+        "_get_isr_function_name",
+        "_get_marker_name",
+        "_get_handler_display_name",
+        "_parse_action",
+        "_parse_action_with_semicolon",
+        "extract_used_symbols",
+        "update_handler_symbols",
+        "_execute_comment_step",
+        "_execute_signature_step",
+        "_execute_open_step",
+        "_execute_context_step",
+        "_execute_enter_log_step",
+        "_execute_actions_step",
+        "_execute_user_section_step",
+        "_execute_exit_log_step",
+        "_execute_close_step",
+        "generate_isr",
+        "generate_all_isrs"
+      ],
+      "lineno": 37
+    }
+  ],
+  "codegen\\naming_convention.py": [
+    {
+      "class": "CNamingConvention",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "to_snake_case",
+        "to_upper_snake",
+        "to_lower_snake",
+        "to_camel_case",
+        "to_pascal_case",
+        "sanitize_identifier",
+        "create_identifier",
+        "create_type_name",
+        "create_enum_value",
+        "create_function_name",
+        "create_variable_name",
+        "create_macro_name"
+      ],
+      "lineno": 23
+    }
+  ],
+  "codegen\\osal_generator.py": [
+    {
+      "class": "OSALGenerator",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "_log_debug",
+        "_execute_file_comment",
+        "_execute_include_guard_start",
+        "_execute_includes",
+        "_execute_type_defs",
+        "_execute_mutex_decls",
+        "_execute_semaphore_decls",
+        "_execute_queue_decls",
+        "_execute_critical_decls",
+        "_execute_include_guard_end",
+        "_execute_mutex_impl",
+        "_execute_semaphore_impl",
+        "_execute_queue_impl",
+        "_execute_critical_impl",
+        "generate_header",
+        "generate_source",
+        "generate_all",
+        "get_available_os_types"
+      ],
+      "lineno": 29
+    }
+  ],
+  "codegen\\role_function_generator.py": [
+    {
+      "class": "RoleFuncCallSite",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "key",
+        "__repr__"
+      ],
+      "lineno": 80
+    },
+    {
+      "class": "RoleFunctionGenerator",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "set_layer",
+        "_log_debug",
+        "_resolve_name_and_namespace",
+        "_generate_function_name",
+        "_get_marker_name",
+        "_get_short_name",
+        "_context_type",
+        "_state_type",
+        "_event_type",
+        "_state_enum",
+        "_event_enum",
+        "_state_max",
+        "_event_none",
+        "_entry_struct_type",
+        "_dedupe_by_name",
+        "_resolve_comment_title",
+        "_normalize_func_ref",
+        "_extract_func_names_from_condition",
+        "_collect_call_sites",
+        "_get_call_sites_for_func",
+        "_format_call_sites_comment",
+        "_should_emit_implementation",
+        "_should_declare_here",
+        "generate_none_define",
+        "generate_entry_struct",
+        "generate_transition_id_prototype",
+        "generate_transition_id_function",
+        "generate_call_sites_table",
+        "generate_tail_user_section",
+        "_format_var_comment",
+        "_generate_local_transition_members",
+        "_generate_local_transition_id",
+        "_generate_local_data_pointers",
+        "_has_local_data_pointers",
+        "_generate_local_retvar",
+        "generate_declaration",
+        "generate_implementation",
+        "generate_call",
+        "generate_all_declarations",
+        "generate_all_implementations",
+        "_collect_args"
+      ],
+      "lineno": 99
+    }
+  ],
+  "codegen\\sample_data.py": [
+    {
+      "class": "SampleDataGenerator",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "create_sample_state_machine",
+        "create_sample_global_defs",
+        "get_sample_data"
+      ],
+      "lineno": 28
+    }
+  ],
+  "codegen\\struct_generator.py": [
+    {
+      "class": "CStructGenerator",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "set_layer",
+        "_log_debug",
+        "_detect_member_type",
+        "_generate_member",
+        "_generate_custom_type",
+        "_generate_system_data",
+        "_generate_event_flags",
+        "_generate_system_context",
+        "generate_common_transition_context",
+        "generate_layer_transition_context",
+        "generate_pending_event_macros",
+        "generate_all_structs",
+        "generate_all",
+        "generate_struct"
+      ],
+      "lineno": 43
+    }
+  ],
+  "codegen\\timer_generator.py": [
+    {
+      "class": "TimerGenerator",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "_log_debug",
+        "_get_all_timers",
+        "_get_all_derived_timers",
+        "_execute_struct_comment",
+        "_execute_struct_start",
+        "_execute_members",
+        "_execute_struct_end",
+        "_execute_init_comment",
+        "_execute_init_signature",
+        "_execute_open",
+        "_execute_close",
+        "_execute_null_check",
+        "_execute_entry_log",
+        "_execute_init_base_timers",
+        "_execute_init_derived_timers",
+        "_execute_exit_log",
+        "_execute_update_comment",
+        "_execute_update_signature",
+        "_execute_update_derived_timers",
+        "generate_struct",
+        "generate_init_function",
+        "generate_update_function",
+        "generate_all"
+      ],
+      "lineno": 40
+    }
+  ],
+  "codegen\\transition_generator.py": [
+    {
+      "class": "TransitionGenerator",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "set_layer",
+        "_log_debug",
+        "_state_enum",
+        "_event_enum",
+        "_state_type",
+        "_event_type",
+        "_context_type",
+        "_func_type",
+        "_table_name",
+        "_state_max",
+        "_event_max",
+        "_cell_func_name",
+        "_resolve_role_func_name",
+        "_role_func_call_expr",
+        "_role_func_call_action",
+        "_role_func_call_bare",
+        "_role_func_call",
+        "_build_exit_call",
+        "_build_entry_call",
+        "_build_transition_block",
+        "_build_transitions_block",
+        "_collect_child_labels",
+        "_emit_relation",
+        "_indent_block",
+        "generate_transition_cell_functions",
+        "_build_cell_function",
+        "generate_transition_cell_prototypes",
+        "generate_transition_table",
+        "_generate_table_array",
+        "_generate_table_switch",
+        "_generate_table_dictionary",
+        "generate_transition_table_header",
+        "generate_function_dictionary",
+        "generate_process_function",
+        "_generate_process_table_driven",
+        "_generate_process_switch_case",
+        "generate_get_next_event_function",
+        "generate_all",
+        "generate_all_transitions"
+      ],
+      "lineno": 56
+    }
+  ],
+  "codegen\\type_mapper.py": [
+    {
+      "class": "CTypeMapper",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "map_type",
+        "get_type_category",
+        "get_required_headers"
+      ],
+      "lineno": 18
+    }
+  ],
+  "codegen\\variable_generator.py": [
+    {
+      "class": "VariableGenerator",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "_log_debug",
+        "_detect_variable_type",
+        "_build_context",
+        "_replace_placeholders",
+        "_resolve_value",
+        "_execute_template_step",
+        "_execute_blank_step",
+        "_execute_loop_step",
+        "_generate_data_macro",
+        "_generate_flag_macro",
+        "_generate_access_macro",
+        "_normalize_type_for_init",
+        "_generate_array_init",
+        "_generate_normal_init",
+        "_generate_flag_init",
+        "_generate_init_code",
+        "generate_init_function",
+        "generate_all_macros",
+        "generate_variable",
+        "generate_all"
+      ],
+      "lineno": 49
+    }
+  ],
+  "codegen\\__init__.py": [],
+  "codegen\\validate\\change_actions.py": [
+    {
+      "class": "ChangeActionType",
+      "bases": [
+        "Enum"
+      ],
+      "methods": [],
+      "lineno": 18
+    },
+    {
+      "class": "ChangeRequest",
+      "bases": [],
+      "methods": [
+        "to_dict",
+        "from_dict",
+        "__str__"
+      ],
+      "lineno": 47
+    }
+  ],
+  "codegen\\validate\\change_applier.py": [
+    {
+      "class": "ChangeApplier",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "apply",
+        "apply_all",
+        "_set_initial",
+        "_add_transition",
+        "_add_state",
+        "_add_event",
+        "_remove_transition",
+        "_update_transition",
+        "_add_role_function",
+        "_remove_role_function",
+        "_add_variable",
+        "_add_flag",
+        "_add_cell",
+        "_remove_cell",
+        "_add_action_step",
+        "_remove_action_step",
+        "_add_transition_relation",
+        "_remove_transition_relation",
+        "_set_early_return"
+      ],
+      "lineno": 26
+    }
+  ],
+  "codegen\\validate\\clipboard_manager.py": [
+    {
+      "class": "ClipboardManager",
+      "bases": [],
+      "methods": [
+        "copy_to_clipboard",
+        "get_from_clipboard"
+      ],
+      "lineno": 12
+    }
+  ],
+  "codegen\\validate\\logger.py": [],
+  "codegen\\validate\\models.py": [
+    {
+      "class": "ValidationSeverity",
+      "bases": [
+        "Enum"
+      ],
+      "methods": [
+        "from_string"
+      ],
+      "lineno": 9
+    },
+    {
+      "class": "ValidationIssue",
+      "bases": [],
+      "methods": [
+        "to_dict",
+        "from_dict",
+        "__str__"
+      ],
+      "lineno": 33
+    },
+    {
+      "class": "ValidationResult",
+      "bases": [],
+      "methods": [
+        "passed",
+        "error_count",
+        "warning_count",
+        "info_count",
+        "get_errors",
+        "get_warnings",
+        "get_infos",
+        "get_by_category",
+        "to_dict",
+        "from_dict",
+        "__str__"
+      ],
+      "lineno": 73
+    },
+    {
+      "class": "ValidationContext",
+      "bases": [],
+      "methods": [
+        "states",
+        "events",
+        "transitions",
+        "role_functions",
+        "initial_state",
+        "variables",
+        "flags",
+        "event_queues",
+        "interrupts",
+        "custom_types",
+        "timer_base",
+        "extra_timers"
+      ],
+      "lineno": 126
+    }
+  ],
+  "codegen\\validate\\prompt_generator.py": [
+    {
+      "class": "AIPromptGenerator",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "_format_data",
+        "_format_validation",
+        "generate_diagnosis_prompt"
+      ],
+      "lineno": 22
+    }
+  ],
+  "codegen\\validate\\response_parser.py": [
+    {
+      "class": "AIResponseParser",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "parse",
+        "parse_json_response",
+        "parse_text_response",
+        "_extract_json",
+        "_extract_with_markers",
+        "_parse_change",
+        "_parse_line"
+      ],
+      "lineno": 17
+    }
+  ],
+  "codegen\\validate\\validation_dialog.py": [
+    {
+      "class": "ValidationDialog",
+      "bases": [
+        "QDialog"
+      ],
+      "methods": [
+        "__init__",
+        "_setup_ui",
+        "_setup_validation_tab",
+        "_setup_prompt_tab",
+        "_setup_response_tab",
+        "_setup_changes_tab",
+        "_run_validation",
+        "_copy_prompt",
+        "_paste_response",
+        "_parse_response",
+        "_apply_changes"
+      ],
+      "lineno": 31
+    }
+  ],
+  "codegen\\validate\\validator.py": [
+    {
+      "class": "CodeGenerationValidator",
+      "bases": [],
+      "methods": [
+        "__init__",
+        "validate",
+        "validate_category",
+        "get_categories"
+      ],
+      "lineno": 30
+    }
+  ],
+  "codegen\\validate\\__init__.py": [],
+  "codegen\\validate\\data\\action_definitions.py": [],
+  "codegen\\validate\\data\\keywords.py": [],
+  "codegen\\validate\\data\\prompt_templates.py": [],
+  "codegen\\validate\\data\\validation_rules.py": [],
+  "codegen\\validate\\data\\__init__.py": [],
+  "codegen\\validate\\items\\base_validator.py": [
+    {
+      "class": "BaseValidator",
+      "bases": [],
+      "methods": [
+        "validate"
+      ],
+      "lineno": 13
+    }
+  ],
+  "codegen\\validate\\items\\cell_validator.py": [
+    {
+      "class": "CellValidator",
+      "bases": [
+        "BaseValidator"
+      ],
+      "methods": [
+        "__init__",
+        "_severity",
+        "_make_issue",
+        "_iter_cells",
+        "_loc",
+        "_rule_empty_condition",
+        "_rule_duplicate_label",
+        "_rule_dangling_relation",
+        "_rule_unreachable",
+        "_rule_overlap",
+        "_rule_duplicate_target",
+        "_rule_exclusive_no_return",
+        "_rule_empty_target"
+      ],
+      "lineno": 27
+    }
+  ],
+  "codegen\\validate\\items\\custom_type_validator.py": [
+    {
+      "class": "CustomTypeValidator",
+      "bases": [
+        "BaseValidator"
+      ],
+      "methods": [
+        "__init__",
+        "validate",
+        "_create_issue",
+        "_check_duplicate_names",
+        "_check_no_members"
+      ],
+      "lineno": 18
+    }
+  ],
+  "codegen\\validate\\items\\event_validator.py": [
+    {
+      "class": "EventValidator",
+      "bases": [
+        "BaseValidator"
+      ],
+      "methods": [
+        "__init__",
+        "validate",
+        "_create_issue",
+        "_check_unused_events",
+        "_check_events_without_transitions"
+      ],
+      "lineno": 23
+    }
+  ],
+  "codegen\\validate\\items\\flag_validator.py": [
+    {
+      "class": "FlagValidator",
+      "bases": [
+        "BaseValidator"
+      ],
+      "methods": [
+        "__init__",
+        "validate",
+        "_create_issue",
+        "_check_duplicate_names",
+        "_check_invalid_range"
+      ],
+      "lineno": 16
+    }
+  ],
+  "codegen\\validate\\items\\interrupt_validator.py": [
+    {
+      "class": "InterruptValidator",
+      "bases": [
+        "BaseValidator"
+      ],
+      "methods": [
+        "__init__",
+        "validate",
+        "_create_issue",
+        "_check_duplicate_names",
+        "_check_undefined_event"
+      ],
+      "lineno": 16
+    }
+  ],
+  "codegen\\validate\\items\\queue_validator.py": [
+    {
+      "class": "QueueValidator",
+      "bases": [
+        "BaseValidator"
+      ],
+      "methods": [
+        "__init__",
+        "validate",
+        "_create_issue",
+        "_check_invalid_size",
+        "_check_undefined_event"
+      ],
+      "lineno": 16
+    }
+  ],
+  "codegen\\validate\\items\\role_function_validator.py": [
+    {
+      "class": "RoleFunctionValidator",
+      "bases": [
+        "BaseValidator"
+      ],
+      "methods": [
+        "__init__",
+        "validate",
+        "_create_issue",
+        "_check_no_return_type",
+        "_check_arg_mismatch",
+        "_check_unused_functions"
+      ],
+      "lineno": 18
+    }
+  ],
+  "codegen\\validate\\items\\state_validator.py": [
+    {
+      "class": "StateValidator",
+      "bases": [
+        "BaseValidator"
+      ],
+      "methods": [
+        "__init__",
+        "validate",
+        "_create_issue",
+        "_check_initial_state",
+        "_check_unreachable_states",
+        "_check_no_transition_states",
+        "_check_duplicate_states"
+      ],
+      "lineno": 16
+    }
+  ],
+  "codegen\\validate\\items\\timer_validator.py": [
+    {
+      "class": "TimerValidator",
+      "bases": [
+        "BaseValidator"
+      ],
+      "methods": [
+        "__init__",
+        "validate",
+        "_create_issue",
+        "_get_all_timer_variables",
+        "_check_duplicate_variables",
+        "_check_invalid_multiplier"
+      ],
+      "lineno": 18
+    }
+  ],
+  "codegen\\validate\\items\\transition_validator.py": [
+    {
+      "class": "TransitionValidator",
+      "bases": [
+        "BaseValidator"
+      ],
+      "methods": [
+        "__init__",
+        "validate",
+        "_create_issue",
+        "_check_target_undefined",
+        "_check_event_undefined",
+        "_check_source_undefined",
+        "_check_duplicate_transitions",
+        "_check_self_loops"
+      ],
+      "lineno": 23
+    }
+  ],
+  "codegen\\validate\\items\\variable_validator.py": [
+    {
+      "class": "VariableValidator",
+      "bases": [
+        "BaseValidator"
+      ],
+      "methods": [
+        "__init__",
+        "validate",
+        "_create_issue",
+        "_check_duplicate_names",
+        "_check_invalid_type",
+        "_check_invalid_array_size"
+      ],
+      "lineno": 16
+    }
+  ],
+  "codegen\\validate\\items\\__init__.py": []
+}

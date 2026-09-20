@@ -1,0 +1,16 @@
+# クラスサーチ
+python sdk_doc_tools/class_index.py
+
+# 出力
+#   sdk_doc_tools/class_index.md
+#   sdk_doc_tools/class_index.json
+
+# MISRAチェック（既存・変更なし）
+python tools/run_misra_check.py --root output --out misra_report
+python tools/analyze_misra_impact.py \
+  --xml misra_report/cppcheck_stderr.txt \
+  --out misra_report/impact.md \
+  --csv misra_report/impact.csv
+
+# テスト（既存・変更なし）
+python tests/test_v2_2_p1.py
