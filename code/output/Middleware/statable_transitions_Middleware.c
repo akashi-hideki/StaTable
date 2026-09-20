@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 10:25:08
+ * @date    2026-09-20 11:36:09
  */
 
 /*==============================================================
@@ -94,7 +94,7 @@ static STATE_Middleware_t t_Connecting_CONNECTED(
     bool _handled = false;
 
     /* ===== Group (shared_condition) ===== */
-    if (error_code == 0) {
+    if (ctx->data.error_code == 0) {
 
         /* ===== Transition[T1] (Commit) ===== */
         if ((!_handled) && (RoleFunc_Middleware_HandleErr(transition, ctx) == 0)) {
@@ -177,14 +177,14 @@ static STATE_Middleware_t t_Error_RETRY(
     STATE_Middleware_t next_state = transition->from_state;
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (retry_count < 3) {
+    if (ctx->data.retry_count < 3) {
         (void)RoleFunc_Middleware_Retry(transition, ctx);
         next_state = STATE_Middleware_Idle;
         (void)RoleFunc_Middleware_IdleEntry(transition, ctx);  /* state entry */
     }
 
     /* ===== Transition[T2] (Tentative) ===== */
-    if (retry_count >= 3) {
+    if (ctx->data.retry_count >= 3) {
         next_state = STATE_Middleware_Error;
         (void)RoleFunc_Middleware_ErrorEntry(transition, ctx);  /* state entry */
     }

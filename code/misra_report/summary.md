@@ -6,18 +6,9 @@
 ## Overview
 
 - Files analyzed: 12
-- Total MISRA rule hits: 10
-- Distinct MISRA rules hit: 4
-- Non-MISRA warnings: 9
-
-## MISRA rules (by frequency)
-
-| Rule | Count |
-|------|------:|
-| misra-c2012-11.5 | 4 |
-| misra-c2012-8.4 | 3 |
-| misra-c2012-18.4 | 2 |
-| misra-c2012-15.7 | 1 |
+- Total MISRA rule hits: 0
+- Distinct MISRA rules hit: 0
+- Non-MISRA warnings: 10
 
 ## Non-MISRA warnings (by frequency)
 
@@ -27,6 +18,7 @@
 | redundantInitialization | 2 | Redundant initialization for 'next_state'. The initialized value is overwritten  |
 | variableScope | 2 | The scope of the variable '_handled' can be reduced. |
 | unreadVariable | 2 | Variable '_handled' is assigned a value that is never used. |
+| constVariablePointer | 1 | Variable 'src' can be declared as pointer to const |
 
 ## Artifacts
 

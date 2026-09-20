@@ -2,20 +2,17 @@
 """
 Code generation template definitions (multi-layer state machine / ISR support)
 
+Version: 2.2.5 (2026-09-20 / gcc compile fix)
+  - Fix: SUPER_LOOP_TEMPLATES['run_block'] now wraps each layer's
+    event processing in its own `{ ... }` scope. Previously all layers
+    emitted `EVENT_<Layer>_t evt = ...` at the same function scope,
+    causing "conflicting types for 'evt'" errors under gcc when the
+    per-layer EVENT types differ.
+    The scoped block keeps the variable name `evt` unchanged, so the
+    generated code remains readable and the diff is minimal.
+
 Version: 2.2.4 (2026-09-20 / MISRA 12.1 + 10.4 fixes)
-  - Fix (MISRA 12.1): OSAL NULL checks now use explicit parentheses
-    around each operand of `||`.
-      Before: if (queue == NULL || buffer == NULL)
-      After:  if ((queue == NULL) || (buffer == NULL))
-  - Fix (MISRA 10.4): OSAL unsigned comparisons / arithmetic now use
-    unsigned literals (0U, 1U) to avoid mixed signed/unsigned.
-      Before: if (sem->count == 0)     / (queue->tail + 1)
-      After:  if (sem->count == 0U)    / (queue->tail + 1U)
-
 Version: 2.2.3 (2026-09-20 / MISRA 17.3 fix)
-  - Fix: OSAL NonRTOS critical section now declares the ARM CMSIS
-    intrinsics __disable_irq / __enable_irq before use.
-
 Version: 2.2.2 (2026-09-19)
 Version: 2.2.1
 """
@@ -63,7 +60,6 @@ class CodeTemplates:
         'log_error': 'LOG_ERROR',
     }
 
-    # ===== Section header definitions =====
     SECTION_HEADERS = {
         'include': 'Include files',
         'type_defs': 'Type definitions',
@@ -92,7 +88,6 @@ class CodeTemplates:
         'common_function_decls': 'Common function declarations',
     }
 
-    # ===== Struct comment definitions =====
     STRUCT_COMMENTS = {
         'system_data': {'title': 'Global variable struct', 'description': 'Manages variables shared across the system'},
         'event_flags': {'title': 'Event flag struct', 'description': 'Manages flags indicating event occurrences'},
@@ -101,14 +96,12 @@ class CodeTemplates:
         'transition_context': {'title': 'Transition context struct', 'description': 'Holds source state and event'},
     }
 
-    # ===== Enum comment definitions =====
     ENUM_COMMENTS = {
         'state': {'title': 'State definitions', 'description': 'Enum representing states of the state machine'},
         'event': {'title': 'Event definitions', 'description': 'Enum of events that trigger state transitions'},
         'flag': {'title': 'Event flag definitions', 'description': 'Enum representing event flag identifiers'},
     }
 
-    # ===== Type name definitions =====
     TYPE_NAMES = {
         'state': 'STATE_t',
         'event': 'EVENT_t',
@@ -127,7 +120,6 @@ class CodeTemplates:
         'layer_transition_func_prefix': 'transition_',
     }
 
-    # ===== Function name definitions =====
     FUNCTION_NAMES = {
         'state_machine_process': 'StateMachine_Process',
         'system_context_init': 'SystemContext_Init',
@@ -138,7 +130,6 @@ class CodeTemplates:
         'layer_process_prefix': 'StateMachine_Process_',
     }
 
-    # ===== Macro name definitions =====
     MACRO_NAMES = {
         'data_prefix': 'DATA_',
         'flag_prefix': 'FLAG_',
@@ -147,9 +138,7 @@ class CodeTemplates:
         'max_consecutive_pending_events': 'MAX_CONSECUTIVE_PENDING_EVENTS',
     }
 
-    # ===== Format templates =====
     FORMATS = {
-        # --- Valid C section header (2-line open + close) ---
         'section_header': '{start}\n *  {title}\n{end}',
         'file_header': '''/**
  * @file    {filename}
@@ -180,7 +169,6 @@ class CodeTemplates:
         'title_comment': '{indent}/* Title: {title} */',
     }
 
-    # ===== Multi-layer state machine templates =====
     LAYER_TEMPLATES = {
         'types_header_comment': '''/**
  * @file    statable_types_{layer}.h
@@ -337,7 +325,6 @@ void OSAL_Critical_Exit(void);''',
     sem->count = initial_count;
     return OSAL_OK;
 }''',
-            # [v2.2.4 / MISRA 10.4] 0 -> 0U
             'semaphore_take_nonrtos': '''OSAL_Status_t OSAL_Semaphore_Take(OSAL_Semaphore_t *sem, uint32_t timeout_ms)
 {
     (void)timeout_ms;
@@ -361,7 +348,6 @@ void OSAL_Critical_Exit(void);''',
     sem->count++;
     return OSAL_OK;
 }''',
-            # [v2.2.4 / MISRA 12.1] (a == NULL) || (b == NULL)
             'queue_create_nonrtos': '''OSAL_Status_t OSAL_Queue_Create(OSAL_Queue_t *queue, void *buffer, uint32_t size, uint32_t item_size)
 {
     if ((queue == NULL) || (buffer == NULL)) {
@@ -375,7 +361,6 @@ void OSAL_Critical_Exit(void);''',
     queue->count = 0U;
     return OSAL_OK;
 }''',
-            # [v2.2.4 / MISRA 12.1] + [10.4] 1 -> 1U
             'queue_send_nonrtos': '''OSAL_Status_t OSAL_Queue_Send(OSAL_Queue_t *queue, const void *item, uint32_t timeout_ms)
 {
     (void)timeout_ms;
@@ -394,7 +379,6 @@ void OSAL_Critical_Exit(void);''',
     queue->count++;
     return OSAL_OK;
 }''',
-            # [v2.2.4 / MISRA 12.1] + [10.4] 0 -> 0U / 1 -> 1U
             'queue_receive_nonrtos': '''OSAL_Status_t OSAL_Queue_Receive(OSAL_Queue_t *queue, void *item, uint32_t timeout_ms)
 {
     (void)timeout_ms;
@@ -413,14 +397,6 @@ void OSAL_Critical_Exit(void);''',
     queue->count--;
     return OSAL_OK;
 }''',
-            # [v2.2.3 / MISRA 17.3 fix]
-            # Prototypes for the ARM CMSIS intrinsics are declared
-            # before the critical section functions. cppcheck + the
-            # MISRA addon do not know these compiler built-ins and
-            # would otherwise flag them as implicit declarations
-            # (MISRA C:2012 Rule 17.3).
-            # On real toolchains (GCC/ARMCC/IAR) the declarations are
-            # redundant but harmless.
             'critical_enter_nonrtos': '''/* ARM Cortex-M interrupt intrinsics (declared for static analyzers; */
 /* the toolchain also provides them as builtins).                   */
 extern void __disable_irq(void);
@@ -460,6 +436,10 @@ void OSAL_Critical_Enter(void)
         'extern_run': 'void {project_name}_Run(void);',
     }
 
+    # [v2.2.5 / gcc compile fix]
+    # Each layer's event processing is now wrapped in its own `{ ... }`
+    # scope, so `evt` (of type EVENT_<Layer>_t) does not conflict across
+    # layers. The variable name is kept as `evt` for readability.
     SUPER_LOOP_TEMPLATES = {
         'file_comment': '''/**
  * @file    {project_name}_run.c
@@ -484,13 +464,17 @@ void OSAL_Critical_Enter(void)
         'run_func_signature': 'void {project_name}_Run(void)',
         'run_func_open': '{',
         'run_while': '    while (1) {',
-        'run_block': '''        EVENT_{layer}_t evt = StateMachine_GetNextEvent_{layer}(&g_ctx);
-        if (evt != EVENT_{layer}_NONE) {{
-            g_{layer}_state = StateMachine_Process_{layer}(g_{layer}_state, evt, &g_ctx);
+        'run_block': '''        {{
+            EVENT_{layer}_t evt = StateMachine_GetNextEvent_{layer}(&g_ctx);
+            if (evt != EVENT_{layer}_NONE) {{
+                g_{layer}_state = StateMachine_Process_{layer}(g_{layer}_state, evt, &g_ctx);
+            }}
         }}''',
-        'run_block_nolayer': '''        EVENT_t evt = StateMachine_GetNextEvent(&g_ctx);
-        if (evt != EVENT_NONE) {
-            g_state = StateMachine_Process(g_state, evt, &g_ctx);
+        'run_block_nolayer': '''        {
+            EVENT_t evt = StateMachine_GetNextEvent(&g_ctx);
+            if (evt != EVENT_NONE) {
+                g_state = StateMachine_Process(g_state, evt, &g_ctx);
+            }
         }''',
         'run_while_close': '    }',
         'run_func_close': '}',

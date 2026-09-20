@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 10:25:08
+ * @date    2026-09-20 11:36:09
  */
 
 /*==============================================================
@@ -160,20 +160,20 @@ static STATE_Application_t t_Running_STOP(
     STATE_Application_t next_state = transition->from_state;
 
     /* ===== Group (shared_condition) ===== */
-    if (running == true) {
+    if (ctx->data.running == true) {
 
         /* ===== Transition[T1] (Commit) ===== */
-        if (g_system_tick > 100) {
+        if (ctx->data.g_system_tick > 100) {
             (void)RoleFunc_App_HandleStop(transition, ctx);
             next_state = STATE_Application_Stopped;
             (void)RoleFunc_App_StopEntry(transition, ctx);  /* state entry */
         }
 
         /* ===== Group (shared_condition) ===== */
-        if (g_system_tick > 0) {
+        if (ctx->data.g_system_tick > 0) {
 
             /* ===== Transition[T2] (Tentative) ===== */
-            if (g_system_tick <= 100) {
+            if (ctx->data.g_system_tick <= 100) {
                 next_state = STATE_Application_Paused;
                 (void)RoleFunc_App_PauseEntry(transition, ctx);  /* state entry */
             }

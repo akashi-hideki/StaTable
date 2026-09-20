@@ -7,9 +7,6 @@
             <location file="output/Application/statable_transitions_Application.c" line="217" column="36" info="next_state is initialized"/>
             <symbol>next_state</symbol>
         </error>
-        <error id="misra-c2012-8.4" severity="style" msg="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" verbose="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" file0="output/Application/statable_transitions_Application.c">
-            <location file="output/Application/statable_transitions_Application.c" line="55" column="36"/>
-        </error>
         <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;running&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;running&apos; is unknown" file0="output/Application/statable_transitions_Application.c">
             <location file="output/Application/statable_transitions_Application.c" line="163" column="9"/>
         </error>
@@ -40,12 +37,6 @@
         <error id="unreadVariable" severity="style" msg="Variable &apos;_handled&apos; is assigned a value that is never used." verbose="Variable &apos;_handled&apos; is assigned a value that is never used." cwe="563" file0="output/Driver/statable_transitions_Driver.c">
             <location file="output/Driver/statable_transitions_Driver.c" line="194" column="22"/>
             <symbol>_handled</symbol>
-        </error>
-        <error id="misra-c2012-8.4" severity="style" msg="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" verbose="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" file0="output/Driver/statable_transitions_Driver.c">
-            <location file="output/Driver/statable_transitions_Driver.c" line="52" column="31"/>
-        </error>
-        <error id="misra-c2012-15.7" severity="style" msg="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" verbose="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" file0="output/Driver/statable_transitions_Driver.c">
-            <location file="output/Driver/statable_transitions_Driver.c" line="187" column="9"/>
         </error>
         <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;running&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;running&apos; is unknown" file0="output/Driver/statable_transitions_Driver.c">
             <location file="output/Driver/statable_transitions_Driver.c" line="173" column="9"/>
@@ -79,9 +70,6 @@
             <location file="output/Middleware/statable_transitions_Middleware.c" line="113" column="22"/>
             <symbol>_handled</symbol>
         </error>
-        <error id="misra-c2012-8.4" severity="style" msg="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" verbose="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" file0="output/Middleware/statable_transitions_Middleware.c">
-            <location file="output/Middleware/statable_transitions_Middleware.c" line="52" column="35"/>
-        </error>
         <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;error_code&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;error_code&apos; is unknown" file0="output/Middleware/statable_transitions_Middleware.c">
             <location file="output/Middleware/statable_transitions_Middleware.c" line="97" column="9"/>
         </error>
@@ -94,23 +82,9 @@
         <error id="misra-config" severity="error" msg="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;MAX_CONSECUTIVE_PENDING_EVENTS&apos; is unknown" verbose="Because of missing configuration, misra checking is incomplete. There can be false negatives! Variable &apos;MAX_CONSECUTIVE_PENDING_EVENTS&apos; is unknown" file0="output/Middleware/statable_transitions_Middleware.c">
             <location file="output/Middleware/statable_transitions_Middleware.c" line="240" column="33"/>
         </error>
-        <error id="misra-c2012-11.5" severity="style" msg="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" verbose="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" file0="output/osal.c">
-            <location file="output/osal.c" line="99" column="21"/>
-        </error>
-        <error id="misra-c2012-11.5" severity="style" msg="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" verbose="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" file0="output/osal.c">
-            <location file="output/osal.c" line="100" column="26"/>
-        </error>
-        <error id="misra-c2012-11.5" severity="style" msg="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" verbose="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" file0="output/osal.c">
-            <location file="output/osal.c" line="118" column="20"/>
-        </error>
-        <error id="misra-c2012-11.5" severity="style" msg="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" verbose="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" file0="output/osal.c">
-            <location file="output/osal.c" line="119" column="21"/>
-        </error>
-        <error id="misra-c2012-18.4" severity="style" msg="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" verbose="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" file0="output/osal.c">
-            <location file="output/osal.c" line="99" column="46"/>
-        </error>
-        <error id="misra-c2012-18.4" severity="style" msg="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" verbose="misra violation (use --rule-texts=&lt;file&gt; to get proper output)" file0="output/osal.c">
-            <location file="output/osal.c" line="118" column="45"/>
+        <error id="constVariablePointer" severity="style" msg="Variable &apos;src&apos; can be declared as pointer to const" verbose="Variable &apos;src&apos; can be declared as pointer to const" cwe="398" file0="output/osal.c">
+            <location file="output/osal.c" line="118" column="14" info="Variable &apos;src&apos; can be declared as pointer to const"/>
+            <symbol>src</symbol>
         </error>
     </errors>
 </results>

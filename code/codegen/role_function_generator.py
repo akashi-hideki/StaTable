@@ -177,8 +177,9 @@ class RoleFunctionGenerator:
         'local_transition_id_header': (
             '    /* ===== transition ID (index within call_sites) ===== */\n'
         ),
-        # [v3.2 / MISRA 17.7] 宣言直後に (void) で参照を明示。
-        # ユーザーコードマーカー内では自由に使用可能。
+        # [v3.2 / MISRA 17.7] Explicitly discard `transition_id`
+        # immediately after declaration. User code markers may still
+        # freely reference it.
         'local_transition_id_decl': Template(
             '    const uint16_t transition_id = Transition_GetId(\n'
             '        transition, $table_arg, $count_arg);\n'

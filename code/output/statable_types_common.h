@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 10:25:08
+ * @date    2026-09-20 11:36:09
  */
 
 #ifndef STATABLE_TYPES_COMMON_H

@@ -8,18 +8,16 @@
 
 | Category | Count |
 |----------|------:|
-| misra-active | 6 |
-| non-misra | 10 |
-| suppressed | 4 |
+| non-misra | 11 |
 | other | 4 |
 
 ## Codegen sources to modify (ranked)
 
 | Codegen source | Total hits | Top rules |
 |----------------|-----------:|-----------|
-| `codegen/code_templates.py` | 20 | knownConditionTrueFalse(6), redundantInitialization(4), misra-c2012-11.5(4) |
+| `codegen/code_templates.py` | 15 | knownConditionTrueFalse(6), redundantInitialization(4), variableScope(2) |
 | `codegen/transition_generator.py` | 14 | knownConditionTrueFalse(6), redundantInitialization(4), variableScope(2) |
-| `codegen/osal_generator.py` | 6 | misra-c2012-11.5(4), misra-c2012-18.4(2) |
+| `codegen/osal_generator.py` | 1 | constVariablePointer(1) |
 
 ## Rules to address (ranked)
 
@@ -27,10 +25,9 @@
 |------|------:|---------------------|
 | knownConditionTrueFalse | 12 | `codegen/transition_generator.py`, `codegen/code_templates.py` |
 | redundantInitialization | 8 | `codegen/transition_generator.py`, `codegen/code_templates.py` |
-| misra-c2012-11.5 | 8 | `codegen/osal_generator.py`, `codegen/code_templates.py` |
 | variableScope | 4 | `codegen/transition_generator.py`, `codegen/code_templates.py` |
 | unreadVariable | 4 | `codegen/transition_generator.py`, `codegen/code_templates.py` |
-| misra-c2012-18.4 | 4 | `codegen/osal_generator.py`, `codegen/code_templates.py` |
+| constVariablePointer | 2 | `codegen/osal_generator.py`, `codegen/code_templates.py` |
 
 ## Suggested action order
 
@@ -44,12 +41,11 @@ Based on frequency and estimated fix effort:
 | 4 | knownConditionTrueFalse | Review _handled logic in cell functions | 12 |
 | 5 | misra-c2012-12.1 | Add parentheses around operator expressions | 0 |
 | 6 | variableScope | Reduce _handled variable scope | 4 |
-| 7 | misra-c2012-11.5 | Add explicit casts in osal.c | 8 |
-| 8 | misra-c2012-18.4 | Review pointer arithmetic in osal.c | 4 |
+| 7 | misra-c2012-11.5 | Add explicit casts in osal.c | 0 |
+| 8 | misra-c2012-18.4 | Review pointer arithmetic in osal.c | 0 |
 | 9 | misra-c2012-10.4 | Check type mismatch in statable_timer.c | 0 |
 
 ## Suppressed by design
 
 The following rules are suppressed in `misra/suppressions.txt`.
 
-- Suppressed hits: 4

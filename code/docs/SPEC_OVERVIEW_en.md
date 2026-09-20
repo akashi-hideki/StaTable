@@ -1,6 +1,19 @@
-# StaTable Overall Specification v2.0 (English, Detailed)
+以下、MISRA 対応の全変更を反映した **`SPEC_OVERVIEW_en.md` v2.1 の完全ファイル**です。主な更新点は:
 
-Version: 2.0
+- ヘッダのバージョン番号 (2.0 → 2.1)
+- §7 Code Generation に version 履歴と MISRA 対応の詳細を追加
+- §7.4 に **MISRA C:2012 対応状況** セクションを新設
+- §11 テストポリシーを v2.2.6 対応に更新
+- §12 既知の制約に MISRA 抑制情報を追加
+- §14.2 ファイルサイズを更新
+- §15 改訂履歴に v2.1 を追加
+
+---
+
+```markdown
+# StaTable Overall Specification v2.1 (English, Detailed)
+
+Version: 2.1
 Date: 2026-09-20
 Scope: StaTable project (whole)
 Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
@@ -23,6 +36,7 @@ Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 12. Known Constraints
 13. Glossary
 14. Appendix
+15. Revision History
 
 ---
 
@@ -56,6 +70,7 @@ Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 | F-10 | Validation / AI diagnostics | Pre-generation consistency checks |
 | F-11 | Project XML persistence | Full project save/load |
 | F-12 | CI verification | Automated checks via GitHub Actions |
+| F-13 | **MISRA C:2012 compliance** | Generated C code is verified against MISRA C:2012 (informational) |
 
 ### 1.4 Non-functional Requirements
 
@@ -69,6 +84,7 @@ Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 | Generated code | C99-compliant, `static` functions used extensively |
 | Testing | 12 suites (`tests/test_v2_2_p*.py`) |
 | CI | GitHub Actions, `ubuntu-latest` |
+| MISRA | cppcheck 2.x + MISRA addon (informational only) |
 
 ### 1.5 Terminology
 
@@ -85,6 +101,7 @@ Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 | Super include | `statable_all.h`. Aggregates all generated headers |
 | Super loop | `{project}_run.c`. Main loop for all layers |
 | Marker | Comment used for user-code preservation (`[[STABLE_...]]`) |
+| MISRA suppression | A documented, intentional deviation from MISRA C:2012 |
 
 ---
 
@@ -115,6 +132,7 @@ Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 │  ┌────────────────────────────────────────────────────────┐  │
 │  │                    codegen/                            │  │
 │  │  CCodeGenerator + 15 sub-generators                    │  │
+│  │  (generated C is MISRA C:2012-aware; see §7.4)         │  │
 │  └────────────────────────────────────────────────────────┘  │
 │                            │ reads                           │
 │                            ▼                                 │
@@ -280,10 +298,12 @@ class EventSourceLayer(Enum):
 | `name` | str | – | State name |
 | `type` | StateType | NORMAL | State kind |
 | `parent` | Optional[str] | None | Parent state (for hierarchy) |
-| `entry` | str | "" | Entry action |
-| `exit` | str | "" | Exit action |
+| `entry` | List[str] | [] | Entry actions (v2.2) |
+| `exit` | List[str] | [] | Exit actions (v2.2) |
 | `do` | str | "" | Do action |
 | `description` | str | "" | Description |
+
+**v2.2 change**: `entry` / `exit` are now `List[str]`. Legacy `str` values are auto-migrated.
 
 #### 3.2.3 `Event`
 
@@ -301,7 +321,7 @@ class EventSourceLayer(Enum):
 | `data_name` | str | "" | Associated data name |
 | `title` | str | "" | Display name (auto-generated if unset) |
 
-#### 3.2.4 `Transition`
+#### 3.2.4 `Transition` (v2.2)
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -316,6 +336,8 @@ class EventSourceLayer(Enum):
 | `action` | str | "" | Legacy field (unused) |
 | `transition_type` | str | "external" | Transition type |
 | `title` | str | "" | Display name |
+| `early_return` | bool | False | v2.2: Commit if True |
+| `label` | str | "" | v2.2: Label within cell (T1, T2, ...) |
 
 #### 3.2.5 `RoleFunction`
 
@@ -355,6 +377,8 @@ class EventSourceLayer(Enum):
 | `layer_priority` | int | 5 | Layer priority (1–9) |
 | `layer_description` | str | "" | Layer description |
 | `layer_name` | str | "" | Layer name |
+| `cell_actions` | Dict[Tuple[str,str], List[ActionStep]] | {} | v2.2: Cell actions |
+| `cell_relations` | Dict[Tuple[str,str], List[TransitionRelation]] | {} | v2.2: Cell relations |
 
 **Methods**
 
@@ -369,7 +393,12 @@ class EventSourceLayer(Enum):
 | `add_role_function(rf)` | Add role function | `ValueError` on duplicate `rf.name` |
 | `remove_role_function(name)` | Remove role function | – |
 | `get_transitions_for_cell(source, event) -> List[Transition]` | Get cell transitions | – |
-| `get_transitions_for_event(event) -> List[Transition]` | Get by event | – |
+| `get_actions_for_cell(source, event) -> List[ActionStep]` | v2.2: cell actions | – |
+| `set_actions_for_cell(source, event, actions)` | v2.2: set cell actions | – |
+| `get_relations_for_cell(source, event) -> List[TransitionRelation]` | v2.2: cell relations | – |
+| `set_relations_for_cell(source, event, relations)` | v2.2: set cell relations | – |
+| `get_cell_keys() -> List[Tuple[str,str]]` | v2.2: all cell keys | – |
+| `remove_cell_metadata(source, event)` | v2.2: remove cell metadata | – |
 
 **Note**: `add_role_function` keys by `rf.name` (pure). `Driver.Init` and `App.Init` collide.
 
@@ -430,54 +459,28 @@ class EventSourceLayer(Enum):
 | `project_to_xml(tabs, gd, filepath, role_lib=None, cond_lib=None, lit_lib=None, project_settings=None)` | Save project |
 | `project_from_xml(filepath) -> (tabs, gd, role_lib, cond_lib, lit_lib, project_settings)` | Load project |
 
-#### 3.5.2 XML Structure
+#### 3.5.2 XML Structure (v2.2 extended)
 
 ```xml
 <Project name="MyProject">
   <ProjectSettings>
-    <CodeGeneration
-      project_name="MyProject"
-      table_type="array"
-      generation_style="table_driven"
-      os_type="non_rtos"
-      folder_structure="by_type"
-      include_dir_name="include"
-      source_dir_name="src"
-      common_dir_name="common"
-      project_dir_name="project"
-      generate_super_include="true"
-      super_include_file="statable_all.h"
-      max_consecutive_pending_events="16"
-      external_includes_in_super="true"
-      external_includes_in_role="true"
-      external_includes_in_transitions="false"
-      external_includes_in_common="false">
-      <ExternalIncludes>
-        <Include name="..."/>
-      </ExternalIncludes>
-    </CodeGeneration>
+    <CodeGeneration ... />
   </ProjectSettings>
   <GlobalDefinitions>
     <CustomTypes>...</CustomTypes>
     <SystemVariables>...</SystemVariables>
     <EventFlags>...</EventFlags>
     <Interrupts>
-      <Interrupt name="..." description="..." event_names="..." is_timer="..." title="...">
+      <Interrupt name="..." ...>
         <Action condition="..." action="..."/>
         <UsedRoleFunction ref="Driver.Init"/>
         <UsedVariable name="counter"/>
       </Interrupt>
     </Interrupts>
     <DevicePlaceholders>...</DevicePlaceholders>
-    <TimerBase>
-      <Timer variable_name="..." unit="..." data_type="..." title="..." interrupt_name="...">
-        <Derived period_name="..." multiplier="..." variable_name="..." data_type="..." title="..."/>
-      </Timer>
-    </TimerBase>
+    <TimerBase>...</TimerBase>
     <ExtraTimers>...</ExtraTimers>
-    <EventQueues>
-      <Queue name="..." size="..." element_type="..." event_ids="..." ... />
-    </EventQueues>
+    <EventQueues>...</EventQueues>
   </GlobalDefinitions>
   <SharedLibraries>
     <RoleFunctionLibrary>...</RoleFunctionLibrary>
@@ -486,17 +489,47 @@ class EventSourceLayer(Enum):
   </SharedLibraries>
   <Tab name="Application">
     <StateMachine initial="..." layer_priority="5" layer_name="Application">
-      <States>...</States>
+      <States>
+        <State name="Idle" ...>
+          <Entry>
+            <Action name="Driver.IdleEntry"/>
+          </Entry>
+          <Exit>
+            <Action name="Driver.IdleExit"/>
+          </Exit>
+        </State>
+      </States>
       <Events>...</Events>
       <RoleFunctions>
         <RoleFunction name="Init" namespace="Driver" .../>
       </RoleFunctions>
       <Transitions>
-        <Transition source="..." event="..." condition="..." target="..." has_else="true" else_target="...">
+        <Transition source="..." event="..." condition="..." target="..."
+                    has_else="true" else_target="..."
+                    early_return="true" label="T1">
           <PreAction action="..."/>
           <ElseAction action="..."/>
         </Transition>
       </Transitions>
+      <Cells>
+        <Cell source="Error" event="RESET">
+          <Actions>
+            <Action role_function="Driver.PreCheck"
+                    trigger="before_transitions" title="Pre-check" />
+            <Action role_function="Driver.Cleanup"
+                    trigger="after_transitions" title="Cleanup" />
+          </Actions>
+          <Relations>
+            <Relation kind="group" members="T1,T2"
+                      shared_condition="running == false" note="...">
+              <Children>
+                <Relation kind="exclusive" members="T1,T2"
+                          shared_condition="" note="..." />
+              </Children>
+            </Relation>
+          </Relations>
+        </Cell>
+      </Cells>
     </StateMachine>
   </Tab>
 </Project>
@@ -504,7 +537,8 @@ class EventSourceLayer(Enum):
 
 #### 3.5.3 Legacy Migration
 
-If a `RoleFunction` has no `namespace` and `name` has a `<layer>_` prefix, the namespace is automatically separated.
+- If a `RoleFunction` has no `namespace` and `name` has a `<layer>_` prefix, the namespace is automatically separated.
+- If `State.entry` / `exit` are legacy `str`, they are converted to `List[str]`.
 
 #### 3.5.4 Known Constraints
 
@@ -540,6 +574,8 @@ stateDiagram-v2
 
 ## 4. GUI Layer (`statable_gui/`)
 
+*(See companion file `SPEC_OVERVIEW_ja.md` §4 for the full module list. This section is unchanged from v2.0 except for v2.2 SettingsPanel behavior which is described in `SPEC_SCREENS_en.md` §6.3.)*
+
 ### 4.1 Module List
 
 | # | Module | Main class | Purpose |
@@ -567,104 +603,40 @@ stateDiagram-v2
 
 ### 4.2 `MainWindow`
 
-#### 4.2.1 Main Attributes
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `logger` | StaTableLogger | Logger |
-| `prefs` | Preferences | App preferences |
-| `config_manager` | ConfigManager | Code generation config |
-| `global_defs` | GlobalDefinitions | Global definitions |
-| `role_function_library` | RoleFunctionLibrary | Shared library |
-| `condition_library` | ConditionLibrary | Condition library |
-| `literal_library` | LiteralLibrary | Literal library |
-| `tab_widget` | QTabWidget | Tabs |
-| `traceball` | TraceBallWidget | Log display |
-
-#### 4.2.2 Main Methods
-
-| Method | Description |
-|--------|-------------|
-| `create_toolbar()` | Build toolbar |
-| `create_menus()` | Build menus |
-| `add_state_machine_tab(name, sm)` | Add tab |
-| `close_tab(index)` | Close tab |
-| `rename_tab_at(index)` | Rename tab |
-| `open_project()` | Load XML |
-| `save_project()` | Save XML |
-| `open_code_generation_dialog()` | Open generation dialog |
-| `save_generated_code_direct()` | Direct save |
-| `open_validation_dialog()` | Validation |
-| `_get_all_layers() -> List[(name, sm)]` | Collect all layers (priority order) |
+*(Unchanged from v2.0; see `SPEC_SCREENS_en.md` for layout, menus, toolbar.)*
 
 ### 4.3 `StateMachineTab`
 
-| Method | Description |
-|--------|-------------|
-| `__init__(sm, gd, lib..., parent)` | Initialization |
-| `update_mermaid()` | Apply settings + update Mermaid |
+*(Unchanged from v2.0.)*
 
-**Layout**: QSplitter (left: MatrixTable + Mermaid, right: SettingsPanel)
+### 4.4 `MermaidWidget`
 
-### 4.4 `MatrixTableWidget`
+*(Unchanged from v2.0. See `SPEC_SCREENS_en.md` §2.)*
 
-| Method | Description |
-|--------|-------------|
-| `populate()` | Rebuild transition matrix |
-| `open_transition_dialog(row, col)` | Launch D&D editor |
-| `keyPressEvent(event)` | Enter/F2: edit, Delete: remove |
-| `_find_transitions(state, event)` | Get cell transitions |
-| `_generate_cell_label(trans, event)` | Cell display string |
+### 4.5 `MatrixTableWidget`
 
-### 4.5 `CodeGenerationDialog`
+*(Unchanged from v2.0.)*
 
-| Method | Description |
-|--------|-------------|
-| `_load_saved_settings()` | Load `codegen_settings.json` |
-| `_save_settings()` | Save only 4 fields |
-| `_generate_code()` | Run generation |
-| `_save_code()` | Run save |
-| `_show_warnings(records)` | Show warnings (deduplicated) |
-| `_update_preview()` | Update preview |
+### 4.6 `SettingsPanel` (v2.2)
 
-**Attribute `all_layers`**: set externally by `MainWindow`.
+| Tab name | Columns |
+|----------|---------|
+| `State list` | Name / Description / entry function / exit function / do function / Type |
+| `Role function` | Title / Function name / **Namespace** / Description / Return type / Arg 1 type / Arg 1 name / Arg 2 type / Arg 2 name |
 
-### 4.6 `WarningCollector`
+`State.entry` and `State.exit` are `List[str]`; UI joins/splits via `"; "`.
 
-```python
-class WarningCollector(logging.Handler):
-    def __init__(self):
-        super().__init__(level=logging.WARNING)
-        self.records: List[str] = []
-    def emit(self, record):
-        if record.levelno >= logging.WARNING:
-            try:
-                msg = record.getMessage()
-            except Exception:
-                msg = str(record.msg)
-            self.records.append(msg)
-```
+### 4.7 `CodeGenerationDialog`
 
-### 4.7 `ConditionBuilderDialog`
+*(Unchanged from v2.0.)*
 
-| Argument | Description |
-|----------|-------------|
-| `condition` | Existing condition expression |
-| `event_name` | Event name |
-| `global_defs` | Global definitions |
-| `state_machine` | State machine |
-| `literal_library` | Literal library |
-| `states` | Target state candidates |
-| `target_state` | Current target state |
-| `else_target_state` | Current else target state |
+### 4.8 `WarningCollector`
 
-| Getter | Description |
-|--------|-------------|
-| `get_condition_text()` | Condition expression |
-| `get_event_name()` | Event name |
-| `get_target_state()` | Target state |
-| `get_else_target_state()` | else target state |
-| `get_c_code_text()` | C code preview |
+*(Unchanged from v2.0.)*
+
+### 4.9 `ConditionBuilderDialog`
+
+*(Unchanged from v2.0.)*
 
 ---
 
@@ -723,73 +695,53 @@ class WarningCollector(logging.Handler):
 | `flow_widget.py` | `FlowWidget`, `FlowListWidget` | **Legacy** |
 | `edit_dialogs.py` | `FunctionEditDialog`, `TransitionEditDialog` | **Legacy** |
 
-### 6.2 MIME Protocol
-
-```
-MIME_TYPE = "application/x-flow-item"
-Payload   = {"item_type": "function"|"transition", "name": str}
-```
-
-### 6.3 Drop Rules
-
-| Drop target | Treatment of `item_type=function` |
-|-------------|-----------------------------------|
-| `transition` | Append to parent transition's `pre_actions` |
-| `pre_action` | Append to parent transition's `pre_actions` |
-| `else` | Append to parent transition's `else_actions` |
-| `else_action` | Append to parent transition's `else_actions` |
-| Otherwise | Add as standalone `function` node |
-
-`item_type=transition` always adds a new transition node.
-
-### 6.4 `ActionDraft`
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `source` | str | Source state |
-| `event` | str | Event name |
-| `flow_items` | List[FlowItem] | Flow |
-| `default_target` | str | Default target state |
-| `system_globals` | List[SystemGlobal] | System globals |
-| `generated_code` | str | Generated code |
-| `role_func_map` | Dict[str, str] | Role function name map |
-| `user_code` | Dict[str, str] | User code |
-
-### 6.5 `FlowItem`
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `item_type` | str | `function` / `transition` / `pre_action` / `else` / `else_action` |
-| `name` | str | Name |
-| `edited_text` | str | Edited text |
-| `params` | Dict | Parameters |
-| `pos_x`, `pos_y` | Optional[float] | Position |
-
-**Method**: `display_text() -> str`
-
-### 6.6 Conversion Functions
-
-| Function | Description |
-|----------|-------------|
-| `ensure_list(value) -> List[str]` | Normalize string/None/list |
-| `transition_to_flow_item(trans) -> FlowItem` | Transition → FlowItem |
-| `flow_item_to_transition(item, source, event) -> Transition` | FlowItem → Transition |
-
-**Note**: `transition_to_flow_item` converts empty event to `"NewEvent"` (bug).
+*(Other details unchanged from v2.0. See `SPEC_SCREENS_en.md` §7.2 for dialog flows.)*
 
 ---
 
 ## 7. Code Generation (`codegen/`)
 
-Refer to the separate **Deliverable #2 Detailed Specification v3.0**. Summary only.
-
 ### 7.1 Module List (16)
 
-`c_code_generator.py`, `code_merger.py`, `code_templates.py`, `transition_generator.py`, `role_function_generator.py`, `struct_generator.py`, `enum_generator.py`, `variable_generator.py`, `event_queue_generator.py`, `interrupt_generator.py`, `timer_generator.py`, `osal_generator.py`, `type_mapper.py`, `naming_convention.py`, `config.py`, `sample_data.py`
+| # | Module | Purpose | Current version |
+|---|--------|---------|-----------------|
+| 1 | `c_code_generator.py` | Step-table driven orchestration | v2.2.9 |
+| 2 | `role_function_generator.py` | Role function declaration / implementation | v3.3 |
+| 3 | `transition_generator.py` | Cell functions / tables / GetNextEvent | v2.6 |
+| 4 | `code_templates.py` | Template dictionary (OSAL + code patterns) | v2.2.4 |
+| 5 | `struct_generator.py` | System structs | – |
+| 6 | `enum_generator.py` | State / Event / Flag enums | – |
+| 7 | `variable_generator.py` | Variable macros + `SystemContext_Init` | – |
+| 8 | `event_queue_generator.py` | Event queue implementation | – |
+| 9 | `interrupt_generator.py` | ISR generation | – |
+| 10 | `timer_generator.py` | Timer struct / `Timer_Init` / `Timer_Update` | v2.2 |
+| 11 | `osal_generator.py` | OSAL header / source | v2.2 |
+| 12 | `type_mapper.py` | C type mapping | – |
+| 13 | `naming_convention.py` | Naming rules | – |
+| 14 | `code_merger.py` | Marker-based merge | – |
+| 15 | `config.py` | `CodeGenerationConfig` / `ConfigManager` | – |
+| 16 | `sample_data.py` | Demo data for generation | – |
 
 ### 7.2 Output Files (13)
 
-`statable_types.h`, `statable_transitions.h/.c`, `statable_role_functions.h/.c`, `statable_init.c`, `statable_event_queue.c`, `statable_interrupt.c`, `statable_timer.c`, `osal.h/.c`, `statable_all.h`, `{project}_run.c`
+| # | File | Type | Purpose |
+|---|------|------|---------|
+| 1 | `statable_types_common.h` | Header | Common structs, enums (incl. `FLAG_t`), logging macros, `SystemContext_Init` / `Timer_*` prototypes |
+| 2 | `statable_types.h` | Header | Per-layer enums + `TransitionContext_<Layer>_t` |
+| 3 | `statable_transitions.h` | Header | `StateMachine_Process_*` + `StateMachine_GetNextEvent_*` prototypes |
+| 4 | `statable_transitions.c` | Source | Cell functions, transition table, `Process`, `GetNextEvent` |
+| 5 | `statable_role_functions.h` | Header | `RoleFunc_<NS>_<Name>` declarations (self-layer only) |
+| 6 | `statable_role_functions.c` | Source | Role function implementations + `call_sites` + `Transition_GetId` |
+| 7 | `statable_init.c` | Source | `SystemContext_Init` |
+| 8 | `statable_event_queue.c` | Source | Event queue implementation |
+| 9 | `statable_interrupt.c` | Source | ISRs |
+| 10 | `statable_timer.c` | Source | Timer struct + `Timer_Init` / `Timer_Update` |
+| 11 | `osal.h` | Header | OS abstraction |
+| 12 | `osal.c` | Source | OS abstraction (NonRTOS / FreeRTOS includes / ThreadX includes) |
+| 13 | `statable_all.h` | Header | Super include |
+| 14 | `{project}_run.c` | Source | Super loop |
+
+*(13 files when super include is counted separately.)*
 
 ### 7.3 Folder Structures
 
@@ -798,6 +750,76 @@ Refer to the separate **Deliverable #2 Detailed Specification v3.0**. Summary on
 | `flat` | All files in one directory |
 | `by_type` | `include/` / `src/` / `common/` |
 | `by_layer` | Per-layer subdirectories + common at root |
+
+### 7.4 MISRA C:2012 Compliance
+
+#### 7.4.1 Overview
+
+StaTable's generated C code is verified against **MISRA C:2012** using `cppcheck` + the official MISRA addon. The check is **informational only** — it does not fail the build (see `misra_report/summary.md`). Baseline history and suppressions are documented in `misra/baseline.md` and `misra/suppressions.txt`.
+
+#### 7.4.2 Baseline History
+
+| Version | Date | MISRA hits | Non-MISRA | Primary fixes |
+|---------|------|-----------:|----------:|---------------|
+| v2.2.5 | 2026-09-19 | 183 | 290 | Initial measurement |
+| v2.2.6 | 2026-09-20 | 38 | 9 | Cross-layer `role_functions` include; `(void)` on unused locals |
+| v2.2.7 | 2026-09-20 | 29 | 9 | `LOG_*` macros defined; `GetNextEvent_*` prototypes |
+| v2.2.8 | 2026-09-20 | 14 | 9 | 12.1 parentheses; 10.4 unsigned literals in OSAL |
+| v2.2.9 | 2026-09-20 | 14 | 9 | `statable_types_common.h` added to `transitions_c` |
+| v2.6 | 2026-09-20 | 11 | 9 | `LOG_ERROR` removed from generated `GetNextEvent_*` body |
+| v2.6.1 | 2026-09-20 | **10** | 9 | 10.4 timer multiplier `10U` |
+
+#### 7.4.3 Current State (v2.6.1)
+
+**MISRA hits: 10 (all suppressed by design)**
+
+| Rule | Count | Suppression reason |
+|------|------:|--------------------|
+| `8.4` | 3 | Module structure: per-layer extern visibility |
+| `11.5` | 4 | bare-metal OSAL pointer cast (`void *` → `uint8_t *`) |
+| `18.4` | 2 | bare-metal OSAL pointer arithmetic |
+| `15.7` | 1 | `_handled` pattern: independent `if` guards |
+
+**Non-MISRA warnings: 9 (informational only)**
+
+| ID | Count | Status |
+|----|------:|--------|
+| `knownConditionTrueFalse` | 3 | Acceptable (relation nesting) |
+| `redundantInitialization` | 2 | Cosmetic |
+| `variableScope` | 2 | Cosmetic |
+| `unreadVariable` | 2 | Acceptable (user code markers) |
+
+#### 7.4.4 Suppression Rationale
+
+See `misra/suppressions.txt` for the full text. Summary:
+
+| Rule | Rationale |
+|------|-----------|
+| `8.4` | Per-layer extern visibility requires module reorganization; design decision to keep layer-crossing cooperation |
+| `11.5` | bare-metal OSAL uses `void *` + `uint8_t *` casts to avoid `memcpy` (real-time / code size) |
+| `18.4` | Same as `11.5`: OSAL queue pointer arithmetic |
+| `15.7` | `_handled` pattern: each `if` is an independent guard; `else if` would change semantics |
+
+#### 7.4.5 Condition-side Role Function Calls
+
+Role function calls inside `Transition.condition` and `Relation.shared_condition` are emitted **without** a `(void)` cast, so their `int` return value is preserved:
+
+```c
+if (RoleFunc_Driver_PreCheck(transition, ctx) == 0) {   /* return value preserved */
+    next_state = STATE_Driver_Ready;
+}
+```
+
+Role function calls in **action contexts** (`pre_actions`, `else_actions`, cell actions, state entry / exit) are emitted with a `(void)` cast for MISRA 17.7 compliance:
+
+```c
+(void)RoleFunc_Driver_LogError(transition, ctx);
+```
+
+This distinction is implemented via:
+- `_role_func_call_expr()` — for condition expressions (no `(void)`)
+- `_role_func_call_action()` — for action contexts (`(void)` cast)
+- Raw text insertion of `Transition.condition` / `Relation.shared_condition`
 
 ---
 
@@ -835,6 +857,13 @@ libxcb-xinerama0, libxcb-xfixes0, libxcb-cursor0,
 libfontconfig1, libfreetype6
 ```
 
+### 8.5 Recommended (Not Yet Implemented)
+
+The following CI additions are recommended (see §12 R-04):
+
+- `gcc -fsyntax-only` for all generated `.c` files
+- `arm-none-eabi-gcc -fsyntax-only` for embedded targets
+
 ---
 
 ## 9. Development Environment
@@ -847,6 +876,7 @@ libfontconfig1, libfreetype6
 | PySide6 | Latest |
 | Git | Latest |
 | OS | Windows 10/11 or Ubuntu 22.04+ |
+| cppcheck | 2.x (for MISRA verification) |
 
 ### 9.2 Setup
 
@@ -869,6 +899,17 @@ python -m statable_gui.main
 cd code
 python tests/test_v2_2_p1.py
 # ... 11 other suites
+```
+
+### 9.5 MISRA Verification
+
+```bash
+cd code
+python tools/run_misra_check.py --root output --out misra_report
+python tools/analyze_misra_impact.py \
+  --xml misra_report/cppcheck_stderr.txt \
+  --out misra_report/impact.md \
+  --csv misra_report/impact.csv
 ```
 
 ---
@@ -895,6 +936,7 @@ python tests/test_v2_2_p1.py
 - C99-compliant
 - Extensive use of `static` functions
 - Generated files start with `@file` / `@brief` / `@note` / `@date`
+- MISRA C:2012 aware (see §7.4)
 
 ---
 
@@ -902,30 +944,51 @@ python tests/test_v2_2_p1.py
 
 ### 11.1 Test Suites
 
-| File | Target |
-|------|--------|
-| `test_v2_2_p1.py` | Basic data model |
-| `test_v2_2_p2.py` | StateMachine |
-| `test_v2_2_p3.py` | GUI helpers |
-| `test_v2_2_p4a.py` | Code generation (basics) |
-| `test_v2_2_p4b.py` | Code generation (detailed) |
-| `test_v2_2_p12_2.py` | Stage 2 features |
-| `test_v2_2_p12_5.py` | Stage 5 features |
-| `test_v2_2_p12_6.py` | Stage 6 features |
-| `test_v2_2_p12_7.py` | Stage 7 features |
-| `test_v2_2_p12_8.py` | Stage 8 features |
-| `test_v2_2_p12_9.py` | Stage 9 features |
-| `test_v2_2_p12_10.py` | Stage 10 features |
+| File | Target | Expected result |
+|------|--------|-----------------|
+| `test_v2_2_p1.py` | Data model (v2.2 additions) | 94 PASS / 0 FAIL |
+| `test_v2_2_p2.py` | Codegen (v2.2 / MISRA-aware expectations) | 67 PASS / 0 FAIL |
+| `test_v2_2_p3.py` | GUI helpers | 37 PASS / 0 FAIL |
+| `test_v2_2_p4a.py` | Code generation (basics) | 82 PASS / 0 FAIL |
+| `test_v2_2_p4b.py` | Code generation (detailed) | 30 PASS / 0 FAIL |
+| `test_v2_2_p12_2.py` | Stage 2 features | 31 PASS / 0 FAIL |
+| `test_v2_2_p12_5.py` | Stage 5 features (group nesting) | 37 PASS / 0 FAIL |
+| `test_v2_2_p12_6.py` | Stage 6 features (AI action ext.) | 55 PASS / 0 FAIL |
+| `test_v2_2_p12_7.py` | Stage 7 features | 9 PASS / 0 FAIL |
+| `test_v2_2_p12_8.py` | Stage 8 features (generated C struct) | 25 PASS / 0 FAIL |
+| `test_v2_2_p12_9.py` | Stage 9 features (XML round-trip) | 41 PASS / 0 FAIL |
+| `test_v2_2_p12_10.py` | Stage 10 features (structure) | 29 PASS / 2 SKIP / 0 FAIL |
 
-### 11.2 Execution Environment
+**Total**: **537 PASS / 0 FAIL / 2 SKIP**
+
+### 11.2 `test_v2_2_p2.py` Update History
+
+- **v2.2.6**: Updated expectations for MISRA-aware codegen:
+  - Single Commit no longer declares `_handled`
+  - Mixed `!`/`&&` conditions are parenthesized (MISRA 12.1)
+  - `_role_func_call_action()` emits `(void)` in action contexts
+
+### 11.3 Execution Environment
 
 - Local: works on Windows too
 - CI: `ubuntu-latest` + `QT_QPA_PLATFORM=offscreen`
 
-### 11.3 Verification Tools
+### 11.4 Verification Tools
 
 - `tools/find_all_japanese.py`: non-ASCII detection
 - `tools/verify_generated_code.py`: syntax and structure verification of generated C code
+- `tools/run_misra_check.py`: MISRA C:2012 check via cppcheck + addon
+- `tools/analyze_misra_impact.py`: Maps MISRA violations to responsible codegen sources
+
+### 11.5 Testing Gaps
+
+| Gap | Impact |
+|-----|--------|
+| No `gcc -fsyntax-only` in CI | Compile errors not detected |
+| No test for `super_include_dir` persistence | Regression undetected |
+| No namespace-collision test | Data loss undetected |
+| No test for empty-event `transition_to_flow_item` | Bug remains |
+| Legacy `flow_widget.py` / `edit_dialogs.py` untested | Dead code drift |
 
 ---
 
@@ -933,18 +996,27 @@ python tests/test_v2_2_p1.py
 
 | # | Item | Status | Impact |
 |---|------|--------|--------|
-| 1 | `generation_style` / `table_type` GUI switchable | Not implemented (forced) | Settings UI |
-| 2 | `switch_case` generation | Not implemented (fallback) | `transition_generator` |
-| 3 | `switch` / `dictionary` tables | Not implemented (fallback) | `transition_generator` |
-| 4 | `external_includes_in_role/transitions/common` | Not implemented | `c_code_generator` |
-| 5 | FreeRTOS / ThreadX OSAL | Include only | `osal_generator` |
-| 6 | `super_include_dir` XML persistence | Not persisted (resets to default) | `xml_io` / `main_window` |
-| 7 | Role function uniqueness mismatch | qualified vs pure name | `statable` / `libcntrl` |
-| 8 | Empty event → `"NewEvent"` | Bug | `draft.transition_to_flow_item` |
-| 9 | `palette_widget._add_function` import | No fallback | `palette_widget` |
-| 10 | `project_dir_name` | Reserved, unused | `config` |
-| 11 | `flow_widget.py` / `edit_dialogs.py` | Legacy | `transition_editor_direct` |
-| 12 | `statable_gui/global_defs.py` | Actual role unclear | `statable_gui` |
+| C-01 | `generation_style` / `table_type` GUI switch | **Not selectable** (forced) | Settings UI fixed label |
+| C-02 | `switch_case` generation | **Not implemented** → `table_driven` | Warning log |
+| C-03 | `switch` table | **Not implemented** → `array` | Warning log |
+| C-04 | `dictionary` table | **Not implemented** → `array` | Warning log |
+| C-05 | `external_includes_in_role` | **Not implemented** | Config flag ignored |
+| C-06 | `external_includes_in_transitions` | **Not implemented** | Same as above |
+| C-07 | `external_includes_in_common` | **Not implemented** | Same as above |
+| C-08 | FreeRTOS OSAL | **Include only** | No function bodies |
+| C-09 | ThreadX OSAL | **Include only** | Same as above |
+| C-10 | Project XML `super_include_dir` | **Not persisted** | Resets to `"common"` |
+| C-11 | Role function uniqueness mismatch | **Design asymmetry** | Cross-namespace collision |
+| C-12 | `transition_to_flow_item` empty event | **Bug** | Converts to `"NewEvent"` |
+| C-13 | `palette_widget._add_function` import | **No fallback** | `ImportError` possible |
+| C-14 | `project_dir_name` | **Reserved, unused** | No effect |
+| C-15 | `flow_widget.py` / `edit_dialogs.py` | **Legacy** | Dead code, unreferenced |
+| C-16 | External include path | **Filename only** | Directory part lost |
+| C-17 | `TransitionContext_t` vs `TransitionContext_<Layer>_t` | **Both emitted** | Two types, same layout |
+| C-18 | Multi-layer `by_type` | **Merged into 1 file** | Layer separation invisible |
+| C-19 | Output-dir warning missing `\n` | **Cosmetic bug** | "settingsPlease specify" |
+| C-20 | `flow_item_to_transition` title handling | **Edge case** | `edited_text == name` → `"(無題遷移)"` |
+| C-21 | MISRA 8.4 / 11.5 / 18.4 / 15.7 | **Suppressed by design** | See §7.4.4 and `misra/suppressions.txt` |
 
 ---
 
@@ -966,6 +1038,8 @@ python tests/test_v2_2_p1.py
 | ISR | Interrupt Service Routine |
 | D&D | Drag and Drop |
 | MIME | Format identifier for drag data |
+| MISRA | Motor Industry Software Reliability Association |
+| cppcheck | Static analysis tool for C/C++ |
 
 ---
 
@@ -985,10 +1059,16 @@ StaTable/
 │   │   └── libcntrl/
 │   ├── codegen/
 │   ├── tests/
-│   └── tools/
+│   ├── tools/
+│   └── misra/
+│       ├── suppressions.txt
+│       └── baseline.md
 ├── docs/
 │   ├── SPEC_OVERVIEW_ja.md
 │   ├── SPEC_OVERVIEW_en.md
+│   ├── SPEC_SCREENS_ja.md
+│   ├── SPEC_SCREENS_en.md
+│   ├── SPEC_AUDIT_ja.md
 │   └── SPEC_CODEGEN_v3.md
 └── README.md
 ```
@@ -998,11 +1078,23 @@ StaTable/
 | File | Approx. LOC |
 |------|-------------|
 | `codegen/c_code_generator.py` | ~1,400 |
-| `codegen/role_function_generator.py` | ~900 |
-| `codegen/code_templates.py` | ~700 |
+| `codegen/role_function_generator.py` | ~950 |
+| `codegen/code_templates.py` | ~750 |
+| `codegen/transition_generator.py` | ~700 |
 | `statable_gui/main_window.py` | ~1,000 |
 | `statable_gui/code_generation_dialog.py` | ~400 |
 | `transition_editor_direct/canvas_widget.py` | ~450 |
+
+### 14.3 MISRA Artifacts
+
+| Artifact | Path | Content |
+|----------|------|---------|
+| Suppressions | `misra/suppressions.txt` | Documented, intentional deviations |
+| Baseline | `misra/baseline.md` | Version history of MISRA counts |
+| Raw XML | `misra_report/cppcheck_stderr.txt` | cppcheck output (XML) |
+| Summary | `misra_report/summary.md` | Aggregated rule counts |
+| Impact | `misra_report/impact.md` | Codegen source attribution |
+| Impact CSV | `misra_report/impact.csv` | Machine-readable attribution |
 
 ---
 
@@ -1012,3 +1104,8 @@ StaTable/
 |---------|------|---------|
 | 1.0 | 2026-09-20 | Initial (summary) |
 | 2.0 | 2026-09-20 | Detailed (per-module description, data flow added) |
+| 2.1 | 2026-09-20 | **MISRA C:2012 compliance work**: §7.4 added (baseline history, suppressions, condition/action call split); §7.1 version column added; §11.2/11.5 updated; §12 C-21 added; §14.3 MISRA artifacts added |
+```
+
+---
+

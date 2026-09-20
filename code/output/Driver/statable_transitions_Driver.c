@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 10:25:08
+ * @date    2026-09-20 11:36:09
  */
 
 /*==============================================================
@@ -170,16 +170,16 @@ static STATE_Driver_t t_Error_RESET(
     bool _handled = false;
 
     /* ===== Group (shared_condition) ===== */
-    if (running == false) {
+    if (ctx->data.running == false) {
 
         /* ===== Transition[T1] (Commit) ===== */
-        if ((!_handled) && (retry_count < 3)) {
+        if ((!_handled) && (ctx->data.retry_count < 3)) {
             (void)RoleFunc_Driver_ErrorExit(transition, ctx);  /* state exit */
             (void)RoleFunc_Driver_Reset(transition, ctx);
             next_state = STATE_Driver_Idle;
             (void)RoleFunc_Driver_IdleEntry(transition, ctx);  /* state entry */
             _handled = true;
-        } else if ((!_handled) && (!(retry_count < 3))) {
+        } else if ((!_handled) && (!(ctx->data.retry_count < 3))) {
             (void)RoleFunc_Driver_ErrorExit(transition, ctx);  /* state exit */
             next_state = STATE_Driver_Error;
             (void)RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */
@@ -187,7 +187,7 @@ static STATE_Driver_t t_Error_RESET(
         }
 
         /* ===== Transition[T2] (Commit) ===== */
-        if ((!_handled) && (retry_count >= 3)) {
+        if ((!_handled) && (ctx->data.retry_count >= 3)) {
             (void)RoleFunc_Driver_ErrorExit(transition, ctx);  /* state exit */
             next_state = STATE_Driver_Error;
             (void)RoleFunc_Driver_ErrorEntry(transition, ctx);  /* state entry */

@@ -68,14 +68,20 @@
             <RoleFunction name="Post" namespace="App" title="Post (after transitions)" description="Runs after evaluating transitions" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
         </RoleFunctionLibrary>
         <ConditionLibrary>
-            <Condition name="error_code == 0" condition="error_code == 0" />
-            <Condition name="error_code != 0" condition="error_code != 0" />
-            <Condition name="retry_count &lt; 3" condition="retry_count &lt; 3" />
-            <Condition name="retry_count &gt;= 3" condition="retry_count &gt;= 3" />
-            <Condition name="counter &gt; 0" condition="counter &gt; 0" />
-            <Condition name="counter == 0" condition="counter == 0" />
-            <Condition name="g_system_tick &gt; 100" condition="g_system_tick &gt; 100" />
-            <Condition name="g_system_tick &lt;= 100" condition="g_system_tick &lt;= 100" />
+            <Condition name="error_code == 0" condition="ctx-&gt;data.error_code == 0" />
+            <Condition name="error_code != 0" condition="ctx-&gt;data.error_code != 0" />
+            <Condition name="retry_count &lt; 3" condition="ctx-&gt;data.retry_count &lt; 3" />
+            <Condition name="retry_count &gt;= 3" condition="ctx-&gt;data.retry_count &gt;= 3" />
+            <Condition name="counter &gt; 0" condition="ctx-&gt;data.counter &gt; 0" />
+            <Condition name="counter == 0" condition="ctx-&gt;data.counter == 0" />
+            <Condition name="g_system_tick &gt; 100" condition="ctx-&gt;data.g_system_tick &gt; 100" />
+            <Condition name="g_system_tick &lt;= 100" condition="ctx-&gt;data.g_system_tick &lt;= 100" />
+            <Condition name="Driver.PreCheck == 0" condition="RoleFunc_Driver_PreCheck(transition, ctx) == 0" />
+            <Condition name="Driver.PreCheck != 0" condition="RoleFunc_Driver_PreCheck(transition, ctx) != 0" />
+            <Condition name="Middleware.HandleErr == 0" condition="RoleFunc_Middleware_HandleErr(transition, ctx) == 0" />
+            <Condition name="Middleware.HandleErr != 0" condition="RoleFunc_Middleware_HandleErr(transition, ctx) != 0" />
+            <Condition name="App.PreCheck == 0" condition="RoleFunc_App_PreCheck(transition, ctx) == 0" />
+            <Condition name="App.PreCheck != 0" condition="RoleFunc_App_PreCheck(transition, ctx) != 0" />
         </ConditionLibrary>
         <LiteralLibrary />
     </SharedLibraries>
@@ -132,8 +138,8 @@
                 <Transition source="Idle" event="INIT" condition="" action="" target="Initializing" transition_type="external" title="Start initialization" has_else="false" else_target="" early_return="true" label="T1">
                     <PreAction action="Driver.Init" />
                 </Transition>
-                <Transition source="Initializing" event="READY" condition="error_code == 0" action="" target="Ready" transition_type="external" title="Ready OK" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="Initializing" event="READY" condition="error_code != 0" action="" target="Error" transition_type="external" title="Ready with error" has_else="false" else_target="" early_return="false" label="T2">
+                <Transition source="Initializing" event="READY" condition="RoleFunc_Driver_PreCheck(transition, ctx) == 0" action="" target="Ready" transition_type="external" title="Ready OK" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Initializing" event="READY" condition="RoleFunc_Driver_PreCheck(transition, ctx) != 0" action="" target="Error" transition_type="external" title="Ready with error" has_else="false" else_target="" early_return="false" label="T2">
                     <PreAction action="Driver.LogError" />
                 </Transition>
                 <Transition source="Initializing" event="FAIL" condition="" action="" target="Error" transition_type="external" title="Init failure" has_else="false" else_target="" early_return="true" label="T1">
@@ -142,15 +148,15 @@
                 <Transition source="Ready" event="FAIL" condition="" action="" target="Error" transition_type="external" title="Runtime error" has_else="false" else_target="" early_return="true" label="T1">
                     <PreAction action="Driver.LogError" />
                 </Transition>
-                <Transition source="Error" event="RESET" condition="retry_count &lt; 3" action="" target="Idle" transition_type="external" title="Reset retry" has_else="true" else_target="Error" early_return="true" label="T1">
+                <Transition source="Error" event="RESET" condition="ctx-&gt;data.retry_count &lt; 3" action="" target="Idle" transition_type="external" title="Reset retry" has_else="true" else_target="Error" early_return="true" label="T1">
                     <PreAction action="Driver.Reset" />
                 </Transition>
-                <Transition source="Error" event="RESET" condition="retry_count &gt;= 3" action="" target="Error" transition_type="external" title="Give up" has_else="false" else_target="" early_return="true" label="T2" />
+                <Transition source="Error" event="RESET" condition="ctx-&gt;data.retry_count &gt;= 3" action="" target="Error" transition_type="external" title="Give up" has_else="false" else_target="" early_return="true" label="T2" />
             </Transitions>
             <Cells>
                 <Cell source="Error" event="RESET">
                     <Relations>
-                        <Relation kind="group" members="T1,T2" shared_condition="running == false" note="Gate on running flag" />
+                        <Relation kind="group" members="T1,T2" shared_condition="ctx-&gt;data.running == false" note="Gate on running flag" />
                     </Relations>
                 </Cell>
                 <Cell source="Idle" event="INIT">
@@ -215,8 +221,8 @@
                 <Transition source="Idle" event="CONNECT" condition="" action="" target="Connecting" transition_type="external" title="Start connect" has_else="false" else_target="" early_return="true" label="T1">
                     <PreAction action="Middleware.Connect" />
                 </Transition>
-                <Transition source="Connecting" event="CONNECTED" condition="retry_count &lt; 3" action="" target="Connected" transition_type="external" title="Connected OK" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="Connecting" event="CONNECTED" condition="retry_count &gt;= 3" action="" target="Error" transition_type="external" title="Retry exceeded" has_else="false" else_target="" early_return="true" label="T2">
+                <Transition source="Connecting" event="CONNECTED" condition="RoleFunc_Middleware_HandleErr(transition, ctx) == 0" action="" target="Connected" transition_type="external" title="Connected OK" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Connecting" event="CONNECTED" condition="RoleFunc_Middleware_HandleErr(transition, ctx) != 0" action="" target="Error" transition_type="external" title="Retry exceeded" has_else="false" else_target="" early_return="true" label="T2">
                     <PreAction action="Middleware.HandleErr" />
                 </Transition>
                 <Transition source="Connecting" event="ERROR" condition="" action="" target="Error" transition_type="external" title="Connect error" has_else="true" else_target="Idle" early_return="true" label="T1">
@@ -226,15 +232,15 @@
                 <Transition source="Connected" event="ERROR" condition="" action="" target="Error" transition_type="external" title="Disconnect error" has_else="false" else_target="" early_return="true" label="T1">
                     <PreAction action="Middleware.HandleErr" />
                 </Transition>
-                <Transition source="Error" event="RETRY" condition="retry_count &lt; 3" action="" target="Idle" transition_type="external" title="Retry" has_else="false" else_target="" early_return="true" label="T1">
+                <Transition source="Error" event="RETRY" condition="ctx-&gt;data.retry_count &lt; 3" action="" target="Idle" transition_type="external" title="Retry" has_else="false" else_target="" early_return="true" label="T1">
                     <PreAction action="Middleware.Retry" />
                 </Transition>
-                <Transition source="Error" event="RETRY" condition="retry_count &gt;= 3" action="" target="Error" transition_type="external" title="Stay error" has_else="false" else_target="" early_return="false" label="T2" />
+                <Transition source="Error" event="RETRY" condition="ctx-&gt;data.retry_count &gt;= 3" action="" target="Error" transition_type="external" title="Stay error" has_else="false" else_target="" early_return="false" label="T2" />
             </Transitions>
             <Cells>
                 <Cell source="Connecting" event="CONNECTED">
                     <Relations>
-                        <Relation kind="group" members="T1,T2" shared_condition="error_code == 0" note="Parent group">
+                        <Relation kind="group" members="T1,T2" shared_condition="ctx-&gt;data.error_code == 0" note="Parent group">
                             <Children>
                                 <Relation kind="exclusive" members="T1,T2" shared_condition="" note="Child: retry_count check" />
                             </Children>
@@ -314,17 +320,17 @@
                 <Transition source="Init" event="START" condition="" action="" target="Running" transition_type="external" title="Start" has_else="false" else_target="" early_return="true" label="T1">
                     <PreAction action="App.Start" />
                 </Transition>
-                <Transition source="Running" event="PAUSE" condition="counter &gt; 0" action="" target="Paused" transition_type="external" title="Pause (counter &gt; 0)" has_else="false" else_target="" early_return="true" label="T1">
+                <Transition source="Running" event="PAUSE" condition="RoleFunc_App_PreCheck(transition, ctx) != 0" action="" target="Paused" transition_type="external" title="Pause (counter &gt; 0)" has_else="false" else_target="" early_return="true" label="T1">
                     <PreAction action="App.Pause" />
                 </Transition>
-                <Transition source="Running" event="PAUSE" condition="counter == 0" action="" target="Running" transition_type="external" title="Pause ignored" has_else="false" else_target="" early_return="false" label="T2" />
+                <Transition source="Running" event="PAUSE" condition="RoleFunc_App_PreCheck(transition, ctx) == 0" action="" target="Running" transition_type="external" title="Pause ignored" has_else="false" else_target="" early_return="false" label="T2" />
                 <Transition source="Paused" event="RESUME" condition="" action="" target="Running" transition_type="external" title="Resume" has_else="false" else_target="" early_return="true" label="T1">
                     <PreAction action="App.Resume" />
                 </Transition>
-                <Transition source="Running" event="STOP" condition="g_system_tick &gt; 100" action="" target="Stopped" transition_type="external" title="Stop (tick &gt; 100)" has_else="false" else_target="" early_return="true" label="T1">
+                <Transition source="Running" event="STOP" condition="ctx-&gt;data.g_system_tick &gt; 100" action="" target="Stopped" transition_type="external" title="Stop (tick &gt; 100)" has_else="false" else_target="" early_return="true" label="T1">
                     <PreAction action="App.HandleStop" />
                 </Transition>
-                <Transition source="Running" event="STOP" condition="g_system_tick &lt;= 100" action="" target="Paused" transition_type="external" title="Stop deferred" has_else="false" else_target="" early_return="false" label="T2" />
+                <Transition source="Running" event="STOP" condition="ctx-&gt;data.g_system_tick &lt;= 100" action="" target="Paused" transition_type="external" title="Stop deferred" has_else="false" else_target="" early_return="false" label="T2" />
                 <Transition source="Paused" event="STOP" condition="" action="" target="Stopped" transition_type="external" title="Force stop" has_else="true" else_target="Paused" early_return="true" label="T1" />
             </Transitions>
             <Cells>
@@ -347,9 +353,9 @@
                 </Cell>
                 <Cell source="Running" event="STOP">
                     <Relations>
-                        <Relation kind="group" members="T1" shared_condition="running == true" note="Parent: gate on running flag">
+                        <Relation kind="group" members="T1" shared_condition="ctx-&gt;data.running == true" note="Parent: gate on running flag">
                             <Children>
-                                <Relation kind="group" members="T2" shared_condition="g_system_tick &gt; 0" note="Child: gate on tick" />
+                                <Relation kind="group" members="T2" shared_condition="ctx-&gt;data.g_system_tick &gt; 0" note="Child: gate on tick" />
                             </Children>
                         </Relation>
                     </Relations>
