@@ -32,6 +32,12 @@ Version: 3.5 (2026-09-20)
     [v2.8] Persistent debug copy of the generated HTML is retained.
 
     [v2.2] entry / exit are List[str]; display uses "; " separator.
+
+[v2.3 change]
+  - StateMachineTab: add dataModified signal.
+    Relays MatrixTableWidget.transition_changed and
+    SettingsPanel.settings_changed to MainWindow so that the
+    window title's modified marker ([*]) can be updated.
 """
 
 import os
@@ -89,7 +95,6 @@ from statable_gui.libcntrl.role_function_library import RoleFunctionLibrary
 from statable_gui.libcntrl.condition_library import ConditionLibrary
 from statable_gui.libcntrl.literal_library import LiteralLibrary
 
-
 # ======================================================================
 # v2.2: List[str] <-> display helpers for entry / exit
 # ======================================================================
@@ -99,7 +104,6 @@ _ENTRY_EXIT_SEP = "; "
 # QScrollArea viewport, so the empty area around a small diagram
 # blends in (important for dark mode).
 _MERMAID_BG = "#fafafa"
-
 
 def _list_to_display(items) -> str:
     """Convert List[str] to a display string ('A; B; C')."""
@@ -111,7 +115,6 @@ def _list_to_display(items) -> str:
         return _ENTRY_EXIT_SEP.join(str(x) for x in items if str(x).strip())
     return str(items)
 
-
 def _display_to_list(text: str) -> List[str]:
     """Parse a display string ('A; B; C') into List[str]."""
     if not text:
@@ -120,7 +123,6 @@ def _display_to_list(text: str) -> List[str]:
         return [str(x) for x in text if str(x).strip()]
     parts = str(text).split(';')
     return [p.strip() for p in parts if p.strip()]
-
 
 # ======================================================================
 # [v3.2-debug] Custom page to forward JS console to StaTableLogger
@@ -141,7 +143,6 @@ if WEBENGINE_AVAILABLE:
             StaTableLogger.debug(
                 f"[JSConsole:{lvl_name}] {message} "
                 f"(line {line}, {os.path.basename(source)})")
-
 
 class MermaidWidget(QWidget):
     """Mermaid diagram preview widget.
@@ -598,7 +599,6 @@ class MermaidWidget(QWidget):
             f"MermaidWidget: setting web_view fixed size to {w}x{h}")
         self.web_view.setFixedSize(w, h)
 
-
 class SettingsPanel(QWidget):
     """State / role function settings panel.
 
@@ -899,8 +899,21 @@ class SettingsPanel(QWidget):
                 ))
         StaTableLogger.debug("Settings changes applied")
 
-
 class StateMachineTab(QWidget):
+    """Tab hosting one state machine (matrix + mermaid + settings).
+
+    [v2.3 change]
+      - Added dataModified signal. Relays child widget signals
+        (MatrixTableWidget.transition_changed and
+        SettingsPanel.settings_changed) to MainWindow so the
+        window title's modified marker ([*]) is updated.
+    """
+
+    # [v2.3] Notifies MainWindow whenever a child widget reports a
+    #        modification. Relayed from MatrixTableWidget.transition_changed
+    #        and SettingsPanel.settings_changed.
+    dataModified = Signal()
+
     def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None,
                  role_function_library: RoleFunctionLibrary = None,
                  condition_library: ConditionLibrary = None,
@@ -954,6 +967,11 @@ class StateMachineTab(QWidget):
 
         self.table.transition_changed.connect(self.update_mermaid)
         self.settings.settings_changed.connect(self.update_mermaid)
+
+        # [v2.3] Relay child modifications to the parent (MainWindow).
+        #        Signal-to-signal connection; no extra slot needed.
+        self.table.transition_changed.connect(self.dataModified)
+        self.settings.settings_changed.connect(self.dataModified)
 
         self.update_mermaid()
         StaTableLogger.debug("StateMachineTab created")
