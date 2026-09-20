@@ -1,0 +1,77 @@
+# ============================================================
+# StaTable MISRA C:2012 suppressions
+# ============================================================
+# These rules are suppressed by design decision, not by oversight.
+# Each entry documents the rationale so that future auditors can
+# judge whether the decision is still valid.
+#
+# Baseline: 183 MISRA hits (v2.2.5)  ->  10 hits (v2.6)
+# ============================================================
+
+
+# ------------------------------------------------------------
+# MISRA C:2012 Rule 8.4
+# "A compatible declaration shall be visible when an object
+#  or function with external linkage is defined"
+# ------------------------------------------------------------
+# 生成 C の構造上、外部リンケージ定義の可視宣言を完全準拠
+# させるにはモジュール再編成が必要。
+#
+# 具体的には:
+#   - 各層の statable_transitions_<L>.c が他層の
+#     StateMachine_Process_<Other> を直接参照する
+#   - role_functions と transitions が相互参照する
+#
+# これらは「層を跨ぐ協調」という設計意図に基づくもので、
+# 単一の宣言を 1 ファイルに集約すると可読性・保守性が
+# 損なわれる。設計判断として抑制。
+misra-c2012-8.4
+
+
+# ------------------------------------------------------------
+# MISRA C:2012 Rule 11.5
+# "A conversion should not be performed from pointer to void
+#  into pointer to object"
+# ------------------------------------------------------------
+# bare-metal OSAL のキュー実装 (osal.c) は、
+# OSAL_Queue_t::buffer を void * として保持し、
+# Send / Receive 時に uint8_t * へキャストして
+# バイト単位でコピーしている。
+#
+# memcpy を使わない理由:
+#   - リアルタイム性（割り込み禁止区間を最短化）
+#   - コードサイズ（組込み向けに memcpy を避ける）
+#   - 型非依存（任意の item_size に対応）
+#
+# 設計方針として抑制。
+misra-c2012-11.5
+
+
+# ------------------------------------------------------------
+# MISRA C:2012 Rule 18.4
+# "The +, -, += and -= operators should not be applied to
+#  an expression of pointer type"
+# ------------------------------------------------------------
+# 上記 11.5 と同根。OSAL キュー実装のポインタ演算
+# （dest[i], src[i] 等）が該当。
+#
+# 設計方針として抑制。
+misra-c2012-18.4
+
+
+# ------------------------------------------------------------
+# MISRA C:2012 Rule 15.7
+# "All if ... else if constructs shall be terminated with an
+#  else statement"
+# ------------------------------------------------------------
+# `_handled` パターンで生成される排他制御:
+#
+#     bool _handled = false;
+#     if ((!_handled) && (cond_A)) { ... _handled = true; }
+#     if ((!_handled) && (cond_B)) { ... _handled = true; }
+#
+# 各 if は独立したガードであり、`else if` で連結すると
+# 意味論が変わる（短絡評価で後続がスキップされる）。
+#
+# 生成コードの可読性・正確性を優先し、抑制。
+misra-c2012-15.7

@@ -2,6 +2,14 @@
 """
 Timer variable generation module (fully data-driven version)
 
+Version: 2.2 (2026-09-20 / MISRA 10.4 fix)
+  - Fix (MISRA C:2012 Rule 10.4): the derived-timer update expression
+        ctx->data.<derived> = (uint8_t)(ctx->data.<base> / 10);
+    mixed an unsigned `uint32_t` (base) with a signed integer literal
+    `10` (multiplier). Both operands of `/` must have the same
+    essential type category. The multiplier is now emitted as an
+    unsigned literal `10U`, satisfying 10.4.
+
 [v1.5 fix]
   - generate_struct: TimerVariables_t removed
     Timer variables are already expanded into SystemData_t via
@@ -210,20 +218,39 @@ class TimerGenerator:
         return ["void Timer_Update(SystemContext_t *ctx)"]
 
     def _execute_update_derived_timers(self, step, context):
+        """Generate derived-timer update expressions.
+
+        [v2.2 / MISRA 10.4 fix]
+          The multiplier is emitted as an unsigned literal (`10U`)
+          because the base timer variable is `uint32_t` and the `/`
+          operator requires both operands to have the same essential
+          type category.
+
+          Before: ctx->data.<d> = (uint8_t)(ctx->data.<b> / 10);
+          After:  ctx->data.<d> = (uint8_t)(ctx->data.<b> / 10U);
+        """
         global_defs = context.get('global_defs')
         indent = self.strings['indent_1']
         lines = []
 
         for timer in self._get_all_timers(global_defs):
-            base_var = self.naming.sanitize_identifier(getattr(timer, 'variable_name', 'unknown'))
+            base_var = self.naming.sanitize_identifier(
+                getattr(timer, 'variable_name', 'unknown'))
 
             for derived in getattr(timer, 'derived', []):
-                derived_var = self.naming.sanitize_identifier(getattr(derived, 'variable_name', 'unknown'))
+                derived_var = self.naming.sanitize_identifier(
+                    getattr(derived, 'variable_name', 'unknown'))
                 multiplier = getattr(derived, 'multiplier', 1)
-                data_type = self.mapper.map_type(getattr(derived, 'data_type', 'uint8_t'))
+                data_type = self.mapper.map_type(
+                    getattr(derived, 'data_type', 'uint8_t'))
 
                 if multiplier > 0:
-                    lines.append(f"{indent}ctx->data.{derived_var} = ({data_type})(ctx->data.{base_var} / {multiplier});")
+                    # [MISRA 10.4] unsigned literal
+                    lines.append(
+                        f"{indent}ctx->data.{derived_var} = "
+                        f"({data_type})(ctx->data.{base_var} / "
+                        f"{multiplier}U);"
+                    )
 
         return lines
 

@@ -3,27 +3,18 @@
 C code generation main class
 (step-table driven / 13-file support / multi-layer support / by_layer / ISR)
 
-Version: 2.2.8 (2026-09-20 / MISRA 17.3 fixes + get_next_event emission)
-  - Add (MISRA C:2012 Rule 17.3): StateMachine_GetNextEvent_<Layer>
-    implementation is now emitted into statable_transitions_<Layer>.c
-    via a new step `get_next_event`. The prototype is emitted in the
-    header (see _step_state_machine_decl), so the implementation must
-    also be emitted to satisfy the "declared but not defined" check
-    (test_v2_2_p12_10).
+Version: 2.2.9 (2026-09-20 / MISRA 17.3 fix)
+  - Fix (MISRA C:2012 Rule 17.3): statable_transitions_<Layer>.c now
+    directly includes statable_types_common.h so that LOG_* macros
+    (LOG_ERROR / LOG_DEBUG / ...) are visible in the file scope.
+    Previously they were reachable only via a deep include chain
+    (transitions.h -> types.h -> types_common.h); cppcheck did not
+    follow the chain and treated LOG_ERROR as an implicit declaration
+    (3 hits, one per layer).
 
-Version: 2.2.7 (2026-09-20 / MISRA 17.3 fixes)
-  - Fix (MISRA C:2012 Rule 17.3): LOG_DEBUG / LOG_INFO / LOG_WARNING /
-    LOG_ERROR are now defined as no-op macros in statable_types_common.h
-    (step: common_function_decls).
-  - Fix (MISRA C:2012 Rule 17.3): StateMachine_GetNextEvent_<Layer>
-    prototypes are now emitted in statable_transitions_<Layer>.h.
-
+Version: 2.2.8 (2026-09-20 / get_next_event emission)
+Version: 2.2.7 (2026-09-20 / MISRA 17.3 LOG macros + GetNextEvent prototypes)
 Version: 2.2.6 (2026-09-20 / MISRA 17.3 cross-layer include)
-  - Fix (MISRA C:2012 Rule 17.3): In by_layer mode, layer-specific .c
-    files may call role functions declared in other layers. Now
-    _step_include_section emits cross-layer role_functions includes.
-    Full layer list is provided via self._all_layers_for_includes.
-
 Version: 2.2.5 (2026-09-19)
 Version: 2.1 (2026-09-13 / Stage 3: ISR context support)
 Version: 1.6 (by_layer suffix / common types)
@@ -84,9 +75,6 @@ class CCodeGenerator:
     # [Table 1] Per-file step definitions
     # ================================================================
     FILE_STEPS: Dict[str, List[Dict[str, Any]]] = {
-        # v1.6 sec 9.8 #92: common type definitions
-        # v2.2.1: + enums_common step (FLAG_t moved here)
-        # v2.2.2: + common_function_decls step (SystemContext_Init / Timer_*)
         'statable_types_common.h': [
             {'action': 'file_header',
              'filename': 'statable_types_common.h'},
@@ -121,7 +109,6 @@ class CCodeGenerator:
             {'action': 'blank'},
             {'action': 'guard_end'},
         ],
-        # v2.2.5: + layer_transition_context step
         'statable_types.h': [
             {'action': 'file_header',
              'filename': 'statable_types.h'},
@@ -279,9 +266,6 @@ class CCodeGenerator:
         ],
     }
 
-    # ================================================================
-    # [Table 2] struct kind -> generator method dispatch
-    # ================================================================
     STRUCT_KIND_DISPATCH: Dict[str, str] = {
         'system_data':                'system_data',
         'event_flags':                'event_flags',
@@ -290,9 +274,6 @@ class CCodeGenerator:
         'pending_event_macros':       'pending_event_macros',
     }
 
-    # ================================================================
-    # [Table 3] filename -> generator method dispatch
-    # ================================================================
     FILE_DISPATCH: Dict[str, str] = {
         'statable_types_common.h':    '_generate_types_common_header',
         'statable_types.h':           '_generate_types_header',
@@ -309,9 +290,6 @@ class CCodeGenerator:
         'statable_all.h':             '_generate_super_include',
     }
 
-    # ================================================================
-    # [Table 4] filename -> category (for by_type)
-    # ================================================================
     FILE_CATEGORY: Dict[str, str] = {
         'statable_types_common.h':   'include',
         'statable_types.h':          'include',
@@ -327,18 +305,12 @@ class CCodeGenerator:
         'osal.c':                    'common',
     }
 
-    # ================================================================
-    # [Table 5] folder_structure -> path resolver method
-    # ================================================================
     FOLDER_STRUCTURE_RESOLVERS: Dict[str, str] = {
         'flat':     '_resolve_path_flat',
         'by_type':  '_resolve_path_by_type',
         'by_layer': '_resolve_path_by_layer',
     }
 
-    # ================================================================
-    # [Table 6] File classification for by_layer
-    # ================================================================
     LAYER_SPECIFIC_FILES = {
         'statable_types.h',
         'statable_transitions.h',
@@ -358,9 +330,6 @@ class CCodeGenerator:
         'statable_all.h',
     }
 
-    # ================================================================
-    # Constructor
-    # ================================================================
     def __init__(self,
                  config: Optional[CodeGenerationConfig] = None):
         self.mapper = CTypeMapper()
@@ -478,6 +447,8 @@ class CCodeGenerator:
             },
         }
 
+        # [v2.2.9 / MISRA 17.3 fix] statable_types_common.h added to
+        # transitions_c so LOG_* macros are visible in file scope.
         self.include_headers: Dict[str, List[str]] = {
             'types': [
                 '#include <stdint.h>',
@@ -493,6 +464,7 @@ class CCodeGenerator:
             'transitions_c': [
                 '#include "statable_transitions{layer_suffix}.h"',
                 '#include "statable_role_functions{layer_suffix}.h"',
+                '#include "statable_types_common.h"',
             ],
             'role_functions_h': [
                 '#include "statable_types{layer_suffix}.h"',
@@ -557,16 +529,10 @@ class CCodeGenerator:
             'super_loop_run_func':    self._step_super_loop_run_func,
         }
 
-    # ================================================================
-    # Logging
-    # ================================================================
     def _log_debug(self, message, level='debug'):
         log_func = getattr(logger, level, logger.debug)
         log_func(message)
 
-    # ================================================================
-    # Configuration
-    # ================================================================
     def get_config(self) -> CodeGenerationConfig:
         return self.config
 
@@ -582,9 +548,6 @@ class CCodeGenerator:
         self.config_manager.reset()
         self.config = self.config_manager.get_config()
 
-    # ================================================================
-    # Helpers
-    # ================================================================
     def _get_states_list(self, state_machine):
         return list(state_machine.states.values())
 
@@ -611,7 +574,6 @@ class CCodeGenerator:
         return initial or 'Idle'
 
     def _generate_section_header(self, section_key):
-        """Generate a VALID C block comment section header."""
         start = self.strings['section_line_start']
         end = self.strings['section_line_end']
         title = self.templates.SECTION_HEADERS.get(section_key, '')
@@ -793,9 +755,6 @@ class CCodeGenerator:
                 parts.append(result)
         return '\n'.join(parts)
 
-    # ================================================================
-    # Step executor functions
-    # ================================================================
     def _step_file_header(self, step, ctx):
         filename = step.get('filename', ctx['filename'])
         layers = ctx.get('layers', [])
@@ -1094,18 +1053,6 @@ class CCodeGenerator:
         return ['\n'.join(results)] if results else ['']
 
     def _step_get_next_event(self, step, ctx):
-        """Emit StateMachine_GetNextEvent_<Layer> implementation.
-
-        [v2.2.8 / MISRA 17.3 fix]
-          The prototype is now emitted in statable_transitions_<Layer>.h
-          (see _step_state_machine_decl). Its implementation must be
-          emitted into statable_transitions_<Layer>.c so that the
-          "declared but not defined" cross-check passes
-          (test_v2_2_p12_10).
-
-          TransitionGenerator.generate_get_next_event_function already
-          existed; it simply was not called from FILE_STEPS.
-        """
         layers = ctx['layers']
         results = []
         for layer_name, sm in layers:
@@ -1404,9 +1351,6 @@ class CCodeGenerator:
         parts.append(T['run_func_close'])
         return parts
 
-    # ================================================================
-    # File generation methods
-    # ================================================================
     def _generate_types_common_header(self, sm, gd):
         return self._run_steps('statable_types_common.h', sm, gd)
 
@@ -1449,9 +1393,6 @@ class CCodeGenerator:
     def _generate_super_loop(self, sm, gd):
         return self._run_steps(self.super_loop_filename, sm, gd)
 
-    # ================================================================
-    # Public methods
-    # ================================================================
     def generate_all(self, state_machine, global_defs,
                      role_function_library=None):
         self._setup_layer_generators(state_machine)

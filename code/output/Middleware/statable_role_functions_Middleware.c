@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 08:37:00
+ * @date    2026-09-20 10:25:08
  */
 
 /*==============================================================
@@ -435,6 +435,7 @@ int RoleFunc_Middleware_Connect(
  * @note   Handle error
  *
  * @note   Call sites:
+ *         - [condition]   STATE_Middleware_Connecting -[EVENT_Middleware_CONNECTED]-> STATE_Middleware_Connected
  *         - [pre_action]  STATE_Middleware_Connecting -[EVENT_Middleware_CONNECTED]-> STATE_Middleware_Error
  *         - [pre_action]  STATE_Middleware_Connecting -[EVENT_Middleware_ERROR]-> STATE_Middleware_Error
  *         - [pre_action]  STATE_Middleware_Connected  -[EVENT_Middleware_ERROR]-> STATE_Middleware_Error
@@ -613,13 +614,13 @@ static uint16_t Transition_GetId(
 {
     uint16_t i;
 
-    if (transition == NULL || table == NULL) {
+    if ((transition == NULL) || (table == NULL)) {
         return TRANSITION_ID_NONE;
     }
 
     for (i = 0; i < table_size; i++) {
-        if (table[i].from_state == transition->from_state &&
-            table[i].event      == transition->event) {
+        if ((table[i].from_state == transition->from_state) &&
+            (table[i].event      == transition->event)) {
             return i;
         }
     }

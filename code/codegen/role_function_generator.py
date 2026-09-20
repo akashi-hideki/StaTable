@@ -2,26 +2,20 @@
 """
 Role function generation module (multi-layer state machine / ISR support)
 
+Version: 3.3 (2026-09-20 / MISRA 12.1 fix)
+  - Fix: Transition_GetId() emits `if (transition == NULL || table == NULL)`
+    and `if (table[i].from_state == ... && table[i].event == ...)`.
+    MISRA C:2012 Rule 12.1 requires explicit parentheses around
+    sub-expressions of `||` / `&&` when mixed with other operators.
+    Now emits `((...) || (...))` and `((...) && (...))`.
+
 Version: 3.2 (2026-09-20 / MISRA fixes)
   - MISRA 17.7 / unreadVariable: `transition_id` and per-variable data
-    pointers are now explicitly discarded via `(void)` immediately after
-    declaration. User code markers can still freely use them.
-    This removes ~250 unreadVariable warnings in generated C without
-    changing the function signature (arg/return types are design-fixed).
+    pointers are explicitly discarded via `(void)`.
 
 Version: 3.1 (2026-09-19 / v2.2.5 fixes)
-  - _collect_call_sites now also collects:
-      * State entry / exit references
-      * Cell-level actions (before_transitions / after_transitions)
-  - _should_emit_implementation now accepts namespace prefix matches.
-
-Version: 3.0 (2026-09-13 / Stage 4: transition-side Namespace.Name support)
-
-[v1.5 addition]
-  - _VALID_C_IDENTIFIER guard added to _normalize_func_ref
-
-[v1.6 addition]
-  - _should_emit_implementation added (layer filter / Option A)
+Version: 3.0 (2026-09-13 / Stage 4)
+[v1.5] [v1.6]
 """
 
 import sys
@@ -279,6 +273,8 @@ class RoleFunctionGenerator:
             ' * @return Index in the table (TRANSITION_ID_NONE if no match)\n'
             ' */\n'
         ),
+        # [v3.3 / MISRA 12.1] Explicit parentheses around sub-expressions
+        # of `||` and `&&`.
         'definition': Template(
             'static uint16_t Transition_GetId(\n'
             '    const $context_type *transition,\n'
@@ -287,13 +283,13 @@ class RoleFunctionGenerator:
             '{\n'
             '    uint16_t i;\n'
             '\n'
-            '    if (transition == NULL || table == NULL) {\n'
+            '    if ((transition == NULL) || (table == NULL)) {\n'
             '        return TRANSITION_ID_NONE;\n'
             '    }\n'
             '\n'
             '    for (i = 0; i < table_size; i++) {\n'
-            '        if (table[i].from_state == transition->from_state &&\n'
-            '            table[i].event      == transition->event) {\n'
+            '        if ((table[i].from_state == transition->from_state) &&\n'
+            '            (table[i].event      == transition->event)) {\n'
             '            return i;\n'
             '        }\n'
             '    }\n'
@@ -689,9 +685,6 @@ class RoleFunctionGenerator:
         from_width = max(
             len(self._state_enum(cs.from_state)) for cs in call_sites
         )
-        event_width = max(
-            len(self._event_enum(cs.event)) for cs in call_sites
-        )
         parts = [T['header']]
         for cs in call_sites:
             from_str = self._state_enum(cs.from_state)
@@ -712,23 +705,6 @@ class RoleFunctionGenerator:
     # v1.6 sec 9.6 #90 Option A: layer filter decision
     # ================================================================
     def _should_emit_implementation(self, func, call_map) -> bool:
-        """Decide whether to emit this function's implementation.
-
-        Conditions for emission:
-          1. Self-layer function
-             (namespace == self.layer_name, OR namespace is a prefix
-              of / equal to the layer_name modulo case)
-          2. Function called from this layer's transitions /
-             state entry-exit / cell actions (has an entry in call_map)
-
-        [v2.2.5 fix]
-          Namespace prefix matching added: XML often uses short namespaces
-          (e.g. namespace="App" for layer_name="Application"), which
-          previously caused self-layer functions to be dropped.
-
-        Otherwise (other-layer function with no caller) is skipped to
-        prevent emitting many empty stubs for other layers.
-        """
         namespace = getattr(func, 'namespace', '') or ''
         layer = self.layer_name or ''
 
@@ -751,7 +727,19 @@ class RoleFunctionGenerator:
         bare = getattr(func, 'name', '') or ''
         if bare and call_map.get(bare):
             return True
+        return False
 
+    def _should_declare_here(self, func) -> bool:
+        if not self.layer_name:
+            return True
+        name, namespace = self._resolve_name_and_namespace(func)
+        layer = self.layer_name
+        if namespace == layer:
+            return True
+        ns_l, ly_l = namespace.lower(), layer.lower()
+        if min(len(ns_l), len(ly_l)) >= 3:
+            if ly_l.startswith(ns_l) or ns_l.startswith(ly_l):
+                return True
         return False
 
     # ================================================================
@@ -795,11 +783,9 @@ class RoleFunctionGenerator:
     def generate_call_sites_table(self, func, call_sites) -> str:
         if not call_sites:
             return ""
-
         short = self._get_short_name(func)
         table_name = f"call_sites_{short}"
         count_macro = f"CALL_SITES_{short}_COUNT"
-
         unique_entries = []
         seen = set()
         for cs in call_sites:
@@ -808,14 +794,11 @@ class RoleFunctionGenerator:
                 continue
             seen.add(k)
             unique_entries.append(cs)
-
         if not unique_entries:
             return ""
-
         from_strs = [self._state_enum(cs.from_state)
                      for cs in unique_entries]
         from_width = max(len(s) for s in from_strs)
-
         T = self.CALL_SITE_TABLE_TEMPLATES
         parts = [
             T['table_header'].substitute(func_name=short),
@@ -824,7 +807,6 @@ class RoleFunctionGenerator:
                 table_name=table_name,
             ),
         ]
-
         for cs in unique_entries:
             from_str = self._state_enum(cs.from_state)
             event_str = self._event_enum(cs.event)
@@ -833,7 +815,6 @@ class RoleFunctionGenerator:
                 from_state=from_str,
                 event=pad + event_str,
             ))
-
         parts.append(T['table_close'])
         parts.append(T['count_macro'].substitute(
             count_macro=count_macro,
@@ -891,7 +872,6 @@ class RoleFunctionGenerator:
         else:
             table_arg = "NULL"
             count_arg = "0"
-
         return ''.join([
             T['local_transition_id_header'],
             T['local_transition_id_decl'].substitute(
@@ -1127,9 +1107,7 @@ class RoleFunctionGenerator:
                 f"skipped={skipped} "
                 f"(not self-layer and no caller in this layer)"
             )
-
         parts = []
-
         if include_transition_id:
             parts.append(self.generate_none_define())
             parts.append('\n')
@@ -1137,7 +1115,6 @@ class RoleFunctionGenerator:
             parts.append('\n')
             parts.append(self.generate_transition_id_prototype())
             parts.append('\n')
-
             for func in filtered_funcs:
                 call_sites = self._get_call_sites_for_func(func, call_map)
                 table_code = self.generate_call_sites_table(
@@ -1146,21 +1123,16 @@ class RoleFunctionGenerator:
                 if table_code:
                     parts.append(table_code)
                     parts.append('\n')
-
             parts.append('\n')
-
         for func in filtered_funcs:
             call_sites = self._get_call_sites_for_func(func, call_map)
             parts.append(self.generate_implementation(
                 func, global_defs, call_sites, include_transition_id,
             ))
             parts.append('\n')
-
         if include_transition_id:
             parts.append(self.generate_transition_id_function())
-
         parts.append(self.generate_tail_user_section())
-
         return ''.join(parts)
 
     def _collect_args(self, func) -> List[tuple]:
@@ -1173,18 +1145,3 @@ class RoleFunctionGenerator:
             ),
             ('ctx', 'SystemContext_t *', 'system context pointer'),
         ]
-
-    def _should_declare_here(self, func) -> bool:
-        """True if `func` belongs to this layer (same rules as
-        _should_emit_implementation)."""
-        if not self.layer_name:
-            return True
-        name, namespace = self._resolve_name_and_namespace(func)
-        layer = self.layer_name
-        if namespace == layer:
-            return True
-        ns_l, ly_l = namespace.lower(), layer.lower()
-        if min(len(ns_l), len(ly_l)) >= 3:
-            if ly_l.startswith(ns_l) or ns_l.startswith(ly_l):
-                return True
-        return False

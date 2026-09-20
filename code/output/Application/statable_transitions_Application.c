@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 08:37:00
+ * @date    2026-09-20 10:25:08
  */
 
 /*==============================================================
@@ -15,6 +15,7 @@
 
 #include "statable_transitions_Application.h"
 #include "statable_role_functions_Application.h"
+#include "statable_types_common.h"
 #include "Driver/statable_role_functions_Driver.h"
 #include "Middleware/statable_role_functions_Middleware.h"
 
@@ -131,14 +132,14 @@ static STATE_Application_t t_Running_PAUSE(
     STATE_Application_t next_state = transition->from_state;
 
     /* ===== Transition[T1] (Commit) ===== */
-    if (counter > 0) {
+    if (RoleFunc_App_PreCheck(transition, ctx) != 0) {
         (void)RoleFunc_App_Pause(transition, ctx);
         next_state = STATE_Application_Paused;
         (void)RoleFunc_App_PauseEntry(transition, ctx);  /* state entry */
     }
 
     /* ===== Transition[T2] (Tentative) ===== */
-    if (counter == 0) {
+    if (RoleFunc_App_PreCheck(transition, ctx) == 0) {
         next_state = STATE_Application_Running;
         (void)RoleFunc_App_RunEntry1(transition, ctx);  /* state entry */
         (void)RoleFunc_App_RunEntry2(transition, ctx);  /* state entry */
@@ -273,7 +274,7 @@ EVENT_Application_t StateMachine_GetNextEvent_Application(SystemContext_t *ctx)
     if (ctx->pending_event_valid) {
         consecutive_count++;
         if (consecutive_count > MAX_CONSECUTIVE_PENDING_EVENTS) {
-            LOG_ERROR("Pending event chain too long (%d)", consecutive_count);
+            /* Pending event chain too long: force reset */
             ctx->pending_event_valid = false;
             consecutive_count = 0;
             return EVENT_Application_NONE;

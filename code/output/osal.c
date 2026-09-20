@@ -53,7 +53,7 @@ OSAL_Status_t OSAL_Semaphore_Take(OSAL_Semaphore_t *sem, uint32_t timeout_ms)
     if (sem == NULL) {
         return OSAL_ERROR;
     }
-    if (sem->count == 0) {
+    if (sem->count == 0U) {
         return OSAL_BUSY;
     }
     sem->count--;
@@ -75,22 +75,22 @@ OSAL_Status_t OSAL_Semaphore_Give(OSAL_Semaphore_t *sem)
 /* Queue implementation */
 OSAL_Status_t OSAL_Queue_Create(OSAL_Queue_t *queue, void *buffer, uint32_t size, uint32_t item_size)
 {
-    if (queue == NULL || buffer == NULL) {
+    if ((queue == NULL) || (buffer == NULL)) {
         return OSAL_ERROR;
     }
     queue->buffer = buffer;
     queue->size = size;
     queue->item_size = item_size;
-    queue->head = 0;
-    queue->tail = 0;
-    queue->count = 0;
+    queue->head = 0U;
+    queue->tail = 0U;
+    queue->count = 0U;
     return OSAL_OK;
 }
 
 OSAL_Status_t OSAL_Queue_Send(OSAL_Queue_t *queue, const void *item, uint32_t timeout_ms)
 {
     (void)timeout_ms;
-    if (queue == NULL || item == NULL) {
+    if ((queue == NULL) || (item == NULL)) {
         return OSAL_ERROR;
     }
     if (queue->count >= queue->size) {
@@ -98,10 +98,10 @@ OSAL_Status_t OSAL_Queue_Send(OSAL_Queue_t *queue, const void *item, uint32_t ti
     }
     uint8_t *dest = (uint8_t *)queue->buffer + (queue->tail * queue->item_size);
     const uint8_t *src = (const uint8_t *)item;
-    for (uint32_t i = 0; i < queue->item_size; i++) {
+    for (uint32_t i = 0U; i < queue->item_size; i++) {
         dest[i] = src[i];
     }
-    queue->tail = (queue->tail + 1) % queue->size;
+    queue->tail = (queue->tail + 1U) % queue->size;
     queue->count++;
     return OSAL_OK;
 }
@@ -109,18 +109,18 @@ OSAL_Status_t OSAL_Queue_Send(OSAL_Queue_t *queue, const void *item, uint32_t ti
 OSAL_Status_t OSAL_Queue_Receive(OSAL_Queue_t *queue, void *item, uint32_t timeout_ms)
 {
     (void)timeout_ms;
-    if (queue == NULL || item == NULL) {
+    if ((queue == NULL) || (item == NULL)) {
         return OSAL_ERROR;
     }
-    if (queue->count == 0) {
+    if (queue->count == 0U) {
         return OSAL_BUSY;
     }
     uint8_t *src = (uint8_t *)queue->buffer + (queue->head * queue->item_size);
     uint8_t *dest = (uint8_t *)item;
-    for (uint32_t i = 0; i < queue->item_size; i++) {
+    for (uint32_t i = 0U; i < queue->item_size; i++) {
         dest[i] = src[i];
     }
-    queue->head = (queue->head + 1) % queue->size;
+    queue->head = (queue->head + 1U) % queue->size;
     queue->count--;
     return OSAL_OK;
 }

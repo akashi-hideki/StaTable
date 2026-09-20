@@ -2,17 +2,22 @@
 """
 Code generation template definitions (multi-layer state machine / ISR support)
 
+Version: 2.2.4 (2026-09-20 / MISRA 12.1 + 10.4 fixes)
+  - Fix (MISRA 12.1): OSAL NULL checks now use explicit parentheses
+    around each operand of `||`.
+      Before: if (queue == NULL || buffer == NULL)
+      After:  if ((queue == NULL) || (buffer == NULL))
+  - Fix (MISRA 10.4): OSAL unsigned comparisons / arithmetic now use
+    unsigned literals (0U, 1U) to avoid mixed signed/unsigned.
+      Before: if (sem->count == 0)     / (queue->tail + 1)
+      After:  if (sem->count == 0U)    / (queue->tail + 1U)
+
 Version: 2.2.3 (2026-09-20 / MISRA 17.3 fix)
   - Fix: OSAL NonRTOS critical section now declares the ARM CMSIS
-    intrinsics __disable_irq / __enable_irq before use. cppcheck +
-    MISRA addon treated them as implicit function declarations
-    (MISRA C:2012 Rule 17.3). The declarations are harmless on real
-    ARM toolchains (GCC/ARMCC/IAR) which provide these as builtins.
+    intrinsics __disable_irq / __enable_irq before use.
 
 Version: 2.2.2 (2026-09-19)
-  - Fix (v2.2.1): section header emitted an invalid C block comment.
-  - Add (v2.2.2): SECTION_HEADERS['common_function_decls'] for the new
-    prototype section in statable_types_common.h
+Version: 2.2.1
 """
 
 
@@ -84,7 +89,6 @@ class CodeTemplates:
         'cell_actions': 'Cell actions (transition-independent)',
         'cell_transitions': 'Cell transitions (ordered)',
         'state_entry_exit': 'State entry / exit calls',
-        # ★ v2.2.2
         'common_function_decls': 'Common function declarations',
     }
 
@@ -147,7 +151,6 @@ class CodeTemplates:
     FORMATS = {
         # --- Valid C section header (2-line open + close) ---
         'section_header': '{start}\n *  {title}\n{end}',
-
         'file_header': '''/**
  * @file    {filename}
  * @brief   {description}
@@ -334,13 +337,14 @@ void OSAL_Critical_Exit(void);''',
     sem->count = initial_count;
     return OSAL_OK;
 }''',
+            # [v2.2.4 / MISRA 10.4] 0 -> 0U
             'semaphore_take_nonrtos': '''OSAL_Status_t OSAL_Semaphore_Take(OSAL_Semaphore_t *sem, uint32_t timeout_ms)
 {
     (void)timeout_ms;
     if (sem == NULL) {
         return OSAL_ERROR;
     }
-    if (sem->count == 0) {
+    if (sem->count == 0U) {
         return OSAL_BUSY;
     }
     sem->count--;
@@ -357,23 +361,25 @@ void OSAL_Critical_Exit(void);''',
     sem->count++;
     return OSAL_OK;
 }''',
+            # [v2.2.4 / MISRA 12.1] (a == NULL) || (b == NULL)
             'queue_create_nonrtos': '''OSAL_Status_t OSAL_Queue_Create(OSAL_Queue_t *queue, void *buffer, uint32_t size, uint32_t item_size)
 {
-    if (queue == NULL || buffer == NULL) {
+    if ((queue == NULL) || (buffer == NULL)) {
         return OSAL_ERROR;
     }
     queue->buffer = buffer;
     queue->size = size;
     queue->item_size = item_size;
-    queue->head = 0;
-    queue->tail = 0;
-    queue->count = 0;
+    queue->head = 0U;
+    queue->tail = 0U;
+    queue->count = 0U;
     return OSAL_OK;
 }''',
+            # [v2.2.4 / MISRA 12.1] + [10.4] 1 -> 1U
             'queue_send_nonrtos': '''OSAL_Status_t OSAL_Queue_Send(OSAL_Queue_t *queue, const void *item, uint32_t timeout_ms)
 {
     (void)timeout_ms;
-    if (queue == NULL || item == NULL) {
+    if ((queue == NULL) || (item == NULL)) {
         return OSAL_ERROR;
     }
     if (queue->count >= queue->size) {
@@ -381,28 +387,29 @@ void OSAL_Critical_Exit(void);''',
     }
     uint8_t *dest = (uint8_t *)queue->buffer + (queue->tail * queue->item_size);
     const uint8_t *src = (const uint8_t *)item;
-    for (uint32_t i = 0; i < queue->item_size; i++) {
+    for (uint32_t i = 0U; i < queue->item_size; i++) {
         dest[i] = src[i];
     }
-    queue->tail = (queue->tail + 1) % queue->size;
+    queue->tail = (queue->tail + 1U) % queue->size;
     queue->count++;
     return OSAL_OK;
 }''',
+            # [v2.2.4 / MISRA 12.1] + [10.4] 0 -> 0U / 1 -> 1U
             'queue_receive_nonrtos': '''OSAL_Status_t OSAL_Queue_Receive(OSAL_Queue_t *queue, void *item, uint32_t timeout_ms)
 {
     (void)timeout_ms;
-    if (queue == NULL || item == NULL) {
+    if ((queue == NULL) || (item == NULL)) {
         return OSAL_ERROR;
     }
-    if (queue->count == 0) {
+    if (queue->count == 0U) {
         return OSAL_BUSY;
     }
     uint8_t *src = (uint8_t *)queue->buffer + (queue->head * queue->item_size);
     uint8_t *dest = (uint8_t *)item;
-    for (uint32_t i = 0; i < queue->item_size; i++) {
+    for (uint32_t i = 0U; i < queue->item_size; i++) {
         dest[i] = src[i];
     }
-    queue->head = (queue->head + 1) % queue->size;
+    queue->head = (queue->head + 1U) % queue->size;
     queue->count--;
     return OSAL_OK;
 }''',

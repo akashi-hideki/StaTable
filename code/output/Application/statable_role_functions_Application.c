@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 08:37:00
+ * @date    2026-09-20 10:25:08
  */
 
 /*==============================================================
@@ -1043,13 +1043,13 @@ static uint16_t Transition_GetId(
 {
     uint16_t i;
 
-    if (transition == NULL || table == NULL) {
+    if ((transition == NULL) || (table == NULL)) {
         return TRANSITION_ID_NONE;
     }
 
     for (i = 0; i < table_size; i++) {
-        if (table[i].from_state == transition->from_state &&
-            table[i].event      == transition->event) {
+        if ((table[i].from_state == transition->from_state) &&
+            (table[i].event      == transition->event)) {
             return i;
         }
     }

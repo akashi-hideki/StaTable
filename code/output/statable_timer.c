@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 08:37:00
+ * @date    2026-09-20 10:25:08
  */
 
 /*==============================================================
@@ -58,5 +58,5 @@ void Timer_Update(SystemContext_t *ctx)
     if (ctx == NULL) {
         return;
     }
-    ctx->data.g_tick_10ms = (uint8_t)(ctx->data.g_system_tick / 10);
+    ctx->data.g_tick_10ms = (uint8_t)(ctx->data.g_system_tick / 10U);
 }

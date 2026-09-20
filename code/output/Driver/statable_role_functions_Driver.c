@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 08:37:00
+ * @date    2026-09-20 10:25:08
  */
 
 /*==============================================================
@@ -121,7 +121,8 @@ static const RoleFuncCallSiteEntry_Driver_t call_sites_Reset[] = {
 
 /* --- call site table for PreCheck --- */
 static const RoleFuncCallSiteEntry_Driver_t call_sites_PreCheck[] = {
-    { STATE_Driver_Idle, EVENT_Driver_INIT },
+    { STATE_Driver_Initializing, EVENT_Driver_READY },
+    { STATE_Driver_Idle,         EVENT_Driver_INIT },
 };
 #define CALL_SITES_PreCheck_COUNT \
     (sizeof(call_sites_PreCheck) / sizeof(call_sites_PreCheck[0]))
@@ -619,7 +620,8 @@ int RoleFunc_Driver_Reset(
  * @note   Pre-check
  *
  * @note   Call sites:
- *         - [cell_action_before_transitions]  STATE_Driver_Idle -[EVENT_Driver_INIT]-> (not set)
+ *         - [condition]                       STATE_Driver_Initializing -[EVENT_Driver_READY]-> STATE_Driver_Ready
+ *         - [cell_action_before_transitions]  STATE_Driver_Idle         -[EVENT_Driver_INIT]-> (not set)
  */
 int RoleFunc_Driver_PreCheck(
     const TransitionContext_Driver_t *transition,
@@ -742,13 +744,13 @@ static uint16_t Transition_GetId(
 {
     uint16_t i;
 
-    if (transition == NULL || table == NULL) {
+    if ((transition == NULL) || (table == NULL)) {
         return TRANSITION_ID_NONE;
     }
 
     for (i = 0; i < table_size; i++) {
-        if (table[i].from_state == transition->from_state &&
-            table[i].event      == transition->event) {
+        if ((table[i].from_state == transition->from_state) &&
+            (table[i].event      == transition->event)) {
             return i;
         }
     }

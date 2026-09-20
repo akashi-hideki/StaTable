@@ -6,7 +6,7 @@
  *          - Manual editing is not recommended
  *          - To modify, use StaTable
  *
- * @date    2026-09-20 08:37:00
+ * @date    2026-09-20 10:25:08
  */
 
 /*==============================================================
@@ -15,6 +15,7 @@
 
 #include "statable_transitions_Middleware.h"
 #include "statable_role_functions_Middleware.h"
+#include "statable_types_common.h"
 #include "Driver/statable_role_functions_Driver.h"
 #include "Application/statable_role_functions_Application.h"
 
@@ -96,7 +97,7 @@ static STATE_Middleware_t t_Connecting_CONNECTED(
     if (error_code == 0) {
 
         /* ===== Transition[T1] (Commit) ===== */
-        if ((!_handled) && (retry_count < 3)) {
+        if ((!_handled) && (RoleFunc_Middleware_HandleErr(transition, ctx) == 0)) {
             (void)RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
             next_state = STATE_Middleware_Connected;
             (void)RoleFunc_Middleware_ConnOkEntry(transition, ctx);  /* state entry */
@@ -104,7 +105,7 @@ static STATE_Middleware_t t_Connecting_CONNECTED(
         }
 
         /* ===== Transition[T2] (Commit) ===== */
-        if ((!_handled) && (retry_count >= 3)) {
+        if ((!_handled) && (RoleFunc_Middleware_HandleErr(transition, ctx) != 0)) {
             (void)RoleFunc_Middleware_ConnExit(transition, ctx);  /* state exit */
             (void)RoleFunc_Middleware_HandleErr(transition, ctx);
             next_state = STATE_Middleware_Error;
@@ -237,7 +238,7 @@ EVENT_Middleware_t StateMachine_GetNextEvent_Middleware(SystemContext_t *ctx)
     if (ctx->pending_event_valid) {
         consecutive_count++;
         if (consecutive_count > MAX_CONSECUTIVE_PENDING_EVENTS) {
-            LOG_ERROR("Pending event chain too long (%d)", consecutive_count);
+            /* Pending event chain too long: force reset */
             ctx->pending_event_valid = false;
             consecutive_count = 0;
             return EVENT_Middleware_NONE;
