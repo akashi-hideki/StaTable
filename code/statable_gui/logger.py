@@ -61,10 +61,23 @@ class _TraceBallHandler(logging.Handler):
         super().__init__()
         self.callback: Optional[Callable[[str], None]] = None
 
-    def set_callback(self, callback: Callable[[str], None]):
+    def set_callback(self, callback: Optional[Callable[[str], None]]):
         self.callback = callback
 
     def emit(self, record: logging.LogRecord):
+        """Forward the record to the callback (TraceBall widget).
+
+        [v2.3 fix] If the callback target has been deleted by Qt
+        (e.g. the TraceBallWidget was destroyed when a MainWindow was
+        garbage-collected), the C++ object access raises RuntimeError.
+        In that case, clear the callback so subsequent records do not
+        keep retrying; a new widget will install a new callback in its
+        own __init__.
+        """
         if self.callback:
-            msg = self.format(record)
-            self.callback(msg)
+            try:
+                msg = self.format(record)
+                self.callback(msg)
+            except RuntimeError:
+                # Target widget was deleted; drop the stale callback.
+                self.callback = None

@@ -1,5 +1,5 @@
 # statable_gui/main_window.py
-"""\nStaTable main window\nIntegrates code generation, validation/AI integration, and shared library management\n(multi-layer support)\n\n[v1.5 fix]\n  - Pass namespace in RoleFunction registration in __init__ (bug #86)\n"""
+"""\nStaTable main window\nIntegrates code generation, validation/AI integration, and shared library management\n(multi-layer support)\n\n[v1.5 fix]\n  - Pass namespace in RoleFunction registration in __init__ (bug #86)\n\n[v2.3 change]\n  - Add New Project feature (F-15).\n    * new_project(): reset to an empty Application layer.\n    * _maybe_save(): unified unsaved-changes confirmation.\n    * closeEvent(): prompt on window close.\n    * _update_window_title(): 'Untitled[*] - StaTable' format.\n    * _on_tab_data_modified(): slot for StateMachineTab.dataModified.\n  - save_project() now returns bool (success / cancel / failure).\n  - open_project() prompts via _maybe_save() at the beginning.\n  - add_state_machine_tab() connects dataModified.\n  - Tab add / rename / close set windowModified(True).\n"""
 
 import sys
 import os
@@ -70,7 +70,6 @@ except ImportError:
 
 # Validation / AI integration module
 from .validation_dialog import ValidationDialog
-
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -344,6 +343,15 @@ class MainWindow(QMainWindow):
         menubar = self.menuBar()
 
         file_menu = menubar.addMenu("File")
+
+        # [v2.3] New Project (Ctrl+N)
+        new_project_action = QAction("New Project...", self)
+        new_project_action.setShortcut("Ctrl+N")
+        new_project_action.triggered.connect(self.new_project)
+        file_menu.addAction(new_project_action)
+
+        file_menu.addSeparator()
+
         open_action = QAction("Open Project...", self)
         open_action.triggered.connect(self.open_project)
         file_menu.addAction(open_action)
@@ -572,8 +580,13 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Project save / load
     # ------------------------------------------------------------------
-    def save_project(self):
-        """Save all tabs, global definitions, shared libraries, and\n           project settings"""
+    def save_project(self) -> bool:
+        """Save all tabs, global definitions, shared libraries, and
+        project settings.
+
+        [v2.3] Returns:
+            True on success, False on cancel or failure.
+        """
         StaTableLogger.debug(
             "MainWindow.save_project called")
 
@@ -593,7 +606,7 @@ class MainWindow(QMainWindow):
             "XML files (*.xml)")
         if not filepath:
             StaTableLogger.debug("Save cancelled")
-            return
+            return False
         try:
             # Collect project settings
             config = self.config_manager.get_config()
@@ -647,6 +660,11 @@ class MainWindow(QMainWindow):
                 Path(filepath).parent)
             self.logger.info(
                 f"Project saved to {filepath}")
+
+            # [v2.3] Clear modified flag on success
+            self.setWindowModified(False)
+            self._update_window_title()
+            return True
         except Exception as e:
             import traceback
             self.logger.error(
@@ -656,9 +674,14 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(
                 self, "Error",
                 f"Failed to save project:\n{e}")
+            return False
 
     def open_project(self):
         """Load the whole project"""
+        # [v2.3] Prompt to save before loading
+        if not self._maybe_save():
+            return
+
         StaTableLogger.debug(
             "MainWindow.open_project called")
 
@@ -684,6 +707,12 @@ class MainWindow(QMainWindow):
             self.close_all_tabs()
             for name, sm in tabs:
                 self.add_state_machine_tab(name, sm)
+
+            # [v2.3] Clear modified flag AFTER tabs are restored,
+            #        so dataModified emissions from add_state_machine_tab
+            #        do not leave the window marked as modified.
+            self.setWindowModified(False)
+            self._update_window_title()
 
             self.global_defs = global_defs
             self.global_defs.add_timer_variables()
@@ -867,6 +896,9 @@ class MainWindow(QMainWindow):
             self.logger.info(
                 f"Tab renamed: {current_name} -> "
                 f"{new_name.strip()}")
+            # [v2.3] Mark modified
+            self.setWindowModified(True)
+            self._update_window_title()
 
     def add_new_tab(self):
         name, ok = QInputDialog.getText(
@@ -877,6 +909,9 @@ class MainWindow(QMainWindow):
             self.add_state_machine_tab(name.strip(), sm)
             self.logger.info(
                 f"New tab added: {name.strip()}")
+            # [v2.3] Mark modified
+            self.setWindowModified(True)
+            self._update_window_title()
 
     def add_state_machine_tab(self, name: str,
                               sm: StateMachine):
@@ -897,6 +932,10 @@ class MainWindow(QMainWindow):
             role_function_library=self.role_function_library,
             condition_library=self.condition_library,
             literal_library=self.literal_library)
+
+        # [v2.3] Relay tab modification signal to MainWindow
+        tab.dataModified.connect(self._on_tab_data_modified)
+
         idx = self.tab_widget.addTab(tab, name)
         self.tab_widget.setCurrentIndex(idx)
         self.logger.debug(
@@ -914,6 +953,9 @@ class MainWindow(QMainWindow):
         widget.deleteLater()
         self.logger.info(
             f"Tab closed at index {index}")
+        # [v2.3] Mark modified
+        self.setWindowModified(True)
+        self._update_window_title()
 
     # ------------------------------------------------------------------
     # Log / validation / code generation
@@ -1094,3 +1136,89 @@ class MainWindow(QMainWindow):
                 self, "Warnings during generation",
                 "The following warnings occurred:\n\n"
                 + "\n".join(f"- {m}" for m in unique))
+
+    # ==================================================================
+    # New Project feature (v2.3 / F-15)
+    # ==================================================================
+
+    def new_project(self) -> None:
+        """Start a new empty project.
+
+        Preserves: Preferences, TraceBall log.
+        Clears:    tabs, global definitions, shared libraries,
+                   ConfigManager, windowModified flag.
+        """
+        if not self._maybe_save():
+            return
+
+        StaTableLogger.debug("MainWindow.new_project: start")
+
+        # 1. Remove all tabs (close_all_tabs uses removeTab directly)
+        self.close_all_tabs()
+
+        # 2. Reset project-scoped global definitions
+        self.global_defs = GlobalDefinitions()
+        self.global_defs.add_timer_variables()
+
+        # 3. Clear shared libraries (decision #5, revised)
+        self.role_function_library = RoleFunctionLibrary()
+        self.condition_library = ConditionLibrary()
+        self.literal_library = LiteralLibrary()
+
+        # 4. Reset code generation config to defaults
+        self.config_manager.reset()
+
+        # 5. One empty Application layer
+        empty_sm = StateMachine()
+        empty_sm.layer_name = "Application"
+        empty_sm.layer_priority = 5
+        self.add_state_machine_tab("Application", empty_sm)
+
+        # 6. Reset modified flag and window title
+        self.setWindowModified(False)
+        self._update_window_title()
+
+        # 7. Status bar notification
+        self.statusBar().showMessage("New project created", 3000)
+
+        StaTableLogger.debug("MainWindow.new_project: done")
+
+    def _maybe_save(self) -> bool:
+        """Prompt to save if there are unsaved changes.
+
+        Returns True to proceed, False to abort.
+        Called from new_project / open_project / closeEvent.
+        """
+        if not self.isWindowModified():
+            return True
+
+        ret = QMessageBox.warning(
+            self,
+            "Unsaved Changes",
+            "The current project has unsaved changes.\n"
+            "Do you want to save them before continuing?",
+            QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+            QMessageBox.Save,
+        )
+        if ret == QMessageBox.Save:
+            return self.save_project()
+        return ret == QMessageBox.Discard
+
+    def closeEvent(self, event) -> None:
+        """Prompt on window close if there are unsaved changes."""
+        if self._maybe_save():
+            event.accept()
+        else:
+            event.ignore()
+
+    def _update_window_title(self) -> None:
+        """Update window title with modified marker.
+
+        Qt replaces [*] with '*' when setWindowModified(True).
+        """
+        self.setWindowTitle("Untitled[*] - StaTable")
+
+    def _on_tab_data_modified(self) -> None:
+        """Slot connected to each StateMachineTab.dataModified signal."""
+        self.setWindowModified(True)
+        self._update_window_title()
