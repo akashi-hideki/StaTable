@@ -1295,6 +1295,7 @@ python tools/analyze_misra_impact.py \
 - `tools/verify_new_project_remaining.py` (v2.3): R-1/R-2/R-3 verification
 - `tools/verify_new_project_final.py` (v2.3): Final pre-implementation verification
 - `tools/verify_new_project_code_facts.py` (v2.3): B-1〜B-6 code-fact verification
+- `tools/rename_ja_suffix.py` (v2.3): batch rename `*_jp.*` -> `*_ja.*` with reference updates
 
 ### 11.6 Testing Gaps
 
@@ -1353,6 +1354,7 @@ python tools/analyze_misra_impact.py \
 | C-37 | `InterruptSettingsDialog` / `TypeManagerDialog` edits not reflected in `windowModified` | **Not addressed (v2.4)** | exec() return value not used |
 | C-38 | `SettingsPanel.add_state` does not emit `settings_changed` | **Existing behavior** | Adding a state does not propagate to windowModified |
 | C-39 | Dialog-driven edits do not propagate to `dataModified` | **Design decision** | v2.3 scope limited to in-tab edits |
+| C-40 | `StaTableLogger` singleton and TraceBall callback retention | **Mitigated in v2.3** (`_TraceBallHandler.emit` catches `RuntimeError`) | Safety for test environments creating multiple `MainWindow` instances |
 
 ---
 

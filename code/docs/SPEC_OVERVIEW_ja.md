@@ -1295,6 +1295,7 @@ python tools/analyze_misra_impact.py \
 - `tools/verify_new_project_remaining.py`（v2.3）：R-1/R-2/R-3 検証
 - `tools/verify_new_project_final.py`（v2.3）：実装前最終確認
 - `tools/verify_new_project_code_facts.py`（v2.3）：B-1〜B-6 コード事実確認
+- `tools/rename_ja_suffix.py`（v2.3）：`*_jp.*` → `*_ja.*` 一括リネーム（参照更新付き）
 
 ### 11.6 テストギャップ
 
@@ -1353,6 +1354,7 @@ python tools/analyze_misra_impact.py \
 | C-37 | `InterruptSettingsDialog` / `TypeManagerDialog` の編集が `windowModified` に反映されない | **未対応（v2.4）** | exec() 戻り値未使用 |
 | C-38 | `SettingsPanel.add_state` が `settings_changed` を emit しない | **既存動作** | state 追加が windowModified に伝播しない |
 | C-39 | ダイアログ経由の編集が `dataModified` に伝播しない | **設計判断** | v2.3 スコープをタブ内編集に限定 |
+| C-40 | `StaTableLogger` シングルトンと TraceBall のコールバック保持 | **v2.3 で緩和**（`_TraceBallHandler.emit` で `RuntimeError` を catch） | 複数 `MainWindow` を生成するテスト環境での安全性確保 |
 
 ---
 
