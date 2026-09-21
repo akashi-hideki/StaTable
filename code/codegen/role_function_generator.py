@@ -1086,6 +1086,16 @@ class RoleFunctionGenerator:
                     or getattr(f, 'name', '')
                 if qn:
                     defined_keys.add(qn)
+                # [v3.3.1 fix] Also register the bare name. The call_map
+                # may contain bare names (e.g. "Start_Init") even when
+                # the function is defined with a namespace
+                # (e.g. "Application.Start_Init"). The resolver
+                # _get_call_sites_for_func() already falls back to bare
+                # names, so the generated C code was always correct;
+                # only this warning was wrong.
+                bare = getattr(f, 'name', '')
+                if bare:
+                    defined_keys.add(bare)
             for ref in call_map.keys():
                 if ref and ref not in defined_keys:
                     self._log_debug(
