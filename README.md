@@ -1,3 +1,4 @@
+```markdown
 # StaTable
 
 **MISRA C:2012-aware state machine design and C code generation for embedded systems.**
@@ -29,6 +30,15 @@ custom tooling from scratch.
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
 - ✅ **13 test suites, 551 PASS / 0 FAIL / 2 SKIP**
+
+---
+
+## Demo
+
+![StaTable Demo](code/docs/images/demo.gif)
+
+*Design state machines in a table-driven editor, visualize them as Mermaid
+diagrams, and generate production-ready C code with a single click.*
 
 ---
 
@@ -354,3 +364,4 @@ it helps others discover the project.
 ---
 
 *Built with ❤️ for embedded engineers who care about quality.*
+```
