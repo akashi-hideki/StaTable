@@ -1,12 +1,12 @@
-# `docs/SPEC_SCREENS_ja.md` v2.3（画面仕様書、決定#5 反映済み）
+# `docs/SPEC_SCREENS_ja.md` v2.4（画面仕様書、決定#5 反映済み）
 
 **注記**：既存の `SPEC_SCREENS_ja.md` の内容が手元にないため、`SPEC_OVERVIEW_ja.md` v2.3 の記述と事前調査結果から**再構成した完全版**を出力します。既存ファイルと差異がある場合は、該当セクションのみ差分適用してください。
 
 ```markdown
-# StaTable 画面仕様書 v2.3（日本語）
+# StaTable 画面仕様書 v2.4（日本語）
 
-Version: 2.3
-Date: 2026-09-21
+Version: 2.4
+Date: 2026-09-22
 Scope: StaTable GUI 画面全体
 Prerequisite: `SPEC_OVERVIEW_ja.md` v2.3 参照
 
@@ -221,7 +221,16 @@ View
 ```python
 self.table.transition_changed.connect(self.dataModified)
 self.settings.settings_changed.connect(self.dataModified)
+
 ```
+
+### 5.4 v3.11 追加配線
+
+| 項目 | 内容 |
+|------|------|
+| `layer_names_provider` | `StateMachineTab` が `SettingsPanel` に伝播 |
+| 用途 | Namespace コンボボックスに全タブのレイヤ名を候補表示 |
+| 追加元 | `MainWindow._get_all_layer_names()`（v2.4） |
 
 ---
 
@@ -446,6 +455,9 @@ def _update_window_title(self) -> None:
 | | | - §10：ステータスバー仕様追加（v2.3 で使用開始） |
 | | | - §11：改訂履歴（本エントリ） |
 
+| 2.4 | 2026-09-22 | UI 整理・Namespace コンボ対応： |
+| | | - §5.4: `layer_names_provider` 配線を追記 |
+| | | - §11: 改訂履歴（本エントリ） |
 ---
 
 以上、`SPEC_SCREENS_ja.md` v2.3（決定#5 反映済み）の完全版です。

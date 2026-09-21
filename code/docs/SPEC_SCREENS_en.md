@@ -1,12 +1,12 @@
-# `docs/SPEC_SCREENS_en.md` v2.3 (English, Screen Specification)
+# `docs/SPEC_SCREENS_en.md` v2.4 (English, Screen Specification)
 
 **Note**: Since the existing `SPEC_SCREENS_en.md` content is not available, this is a **reconstructed complete version** based on `SPEC_OVERVIEW_en.md` v2.3 and the pre-implementation investigation results. If it differs from the existing file, apply only the relevant diffs.
 
 ```markdown
-# StaTable Screen Specification v2.3 (English)
+# StaTable Screen Specification v2.4 (English)
 
-Version: 2.3
-Date: 2026-09-21
+Version: 2.4
+Date: 2026-09-22
 Scope: StaTable GUI screens (whole)
 Prerequisite: See `SPEC_OVERVIEW_en.md` v2.3
 
@@ -221,7 +221,16 @@ Internal connection (end of `__init__`):
 ```python
 self.table.transition_changed.connect(self.dataModified)
 self.settings.settings_changed.connect(self.dataModified)
+
 ```
+
+### 5.4 v3.11 Wiring Addition
+
+| Item | Content |
+|------|---------|
+| `layer_names_provider` | Forwarded by `StateMachineTab` to `SettingsPanel` |
+| Purpose | Populate the Namespace combo box with all tab names |
+| Source | `MainWindow._get_all_layer_names()` (v2.4) |
 
 ---
 
@@ -446,6 +455,9 @@ Since `MainWindow(QMainWindow)` is inherited, `statusBar()` is available automat
 | | | - §10: Status bar specification added (used from v2.3) |
 | | | - §11: Revision history (this entry) |
 
+| 2.4 | 2026-09-22 | UI cleanup / namespace combo: |
+| | | - §5.4: documented `layer_names_provider` wiring |
+| | | - §11: revision history (this entry) |
 ---
 
 End of document.

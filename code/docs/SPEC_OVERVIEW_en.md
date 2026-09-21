@@ -1,10 +1,10 @@
-# `docs/SPEC_OVERVIEW_en.md` v2.3（決定#5 反映済み完全版）
+# `docs/SPEC_OVERVIEW_en.md` v2.4（決定#5 反映済み完全版）
 
 ```markdown
-# StaTable Overall Specification v2.3 (English, Detailed)
+# StaTable Overall Specification v2.4 (English, Detailed)
 
-Version: 2.3
-Date: 2026-09-21
+Version: 2.4
+Date: 2026-09-22
 Scope: StaTable project (whole)
 Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 
@@ -1401,6 +1401,11 @@ python tools/analyze_misra_impact.py \
 | C-39 | Dialog-driven edits do not propagate to `dataModified` | **Design decision** | v2.3 scope limited to in-tab edits |
 | C-41 | Role functions do not auto-detect the calling layer | **Design constraint** | To preserve layer independence, role functions are designed layer-agnostic. If caller-layer info is needed, split the function (see §3.2.7) |
 | C-40 | `StaTableLogger` singleton and TraceBall callback retention | **Mitigated in v2.3** (`_TraceBallHandler.emit` catches `RuntimeError`) | Safety for test environments creating multiple `MainWindow` instances |
+| C-42 | RoleFunction reserved fields hidden from GUI | **Changed in v2.4** | return_type / arg1_* / arg2_* removed from UI. RoleFunctionDialog carries them forward from `_original` |
+| C-43 | Reserved fields in `libcntrl.RoleFunction` | **Added in v1.5** | return_type / arg1_* / arg2_* kept and preserved through XML round-trip |
+| C-44 | Namespace combo box candidates | **v3.11 covers all tabs** | `layer_names_provider` supplies every tab name |
+| C-45 | Empty `used_*` attributes | **Suppressed in v3.8.1** | Empty used_global_vars / used_events / used_literals are not written to XML |
+| C-46 | State.do / RoleFunction reserved fields | **Reserved** | Not shown in UI. Not used by codegen. Preserved in XML I/O (since v3.7) |
 
 ---
 
@@ -1667,6 +1672,16 @@ StaTable/
 | | | - §14.2: `main_window.py` updated to ~1,100 LOC |
 | | | - §15: v2.3 revision history (this entry) |
 
+| 2.4 | 2026-09-22 | UI cleanup / reserved fields / namespace combo: |
+| | | - §1.4: test suites remain 551 PASS / 2 SKIP |
+| | | - §3.2.7: documented `RoleFunction.used_global_vars/events/literals` |
+| | | - §3.5.2: empty `used_*` attributes are not written (v3.8.1) |
+| | | - §4.2: MainWindow v2.4 (added `_get_all_layer_names()`) |
+| | | - §4.3: StateMachineTab v3.11 (`layer_names_provider` wiring) |
+| | | - §4.6: State list 5 cols / Role function 4 cols / Namespace inline combo |
+| | | - §5.3: libcntrl.RoleFunction v1.5 (reserved fields added) |
+| | | - §12: C-42..C-46 added |
+| | | - §15: this entry |
 ---
 
 End of document.

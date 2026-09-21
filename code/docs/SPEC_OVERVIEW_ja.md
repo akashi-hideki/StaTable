@@ -1,10 +1,10 @@
-# `docs/SPEC_OVERVIEW_ja.md` v2.3（決定#5 反映済み完全版）
+# `docs/SPEC_OVERVIEW_ja.md` v2.4（決定#5 反映済み完全版）
 
 ```markdown
-# StaTable 全体仕様書 v2.3（日本語、詳細版）
+# StaTable 全体仕様書 v2.4（日本語、詳細版）
 
-Version: 2.3
-Date: 2026-09-21
+Version: 2.4
+Date: 2026-09-22
 Scope: StaTable プロジェクト全体
 Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`、`codegen/`）
 
@@ -1400,6 +1400,11 @@ python tools/analyze_misra_impact.py \
 | C-39 | ダイアログ経由の編集が `dataModified` に伝播しない | **設計判断** | v2.3 スコープをタブ内編集に限定 |
 | C-41 | Role 関数は呼び出し元層を自動識別しない | **設計上の制約** | 各層の独立性を保つため、Role 関数は layer-agnostic に設計する。呼び出し元層が必要な場合は関数を分割する（§3.2.7 参照） |
 | C-40 | `StaTableLogger` シングルトンと TraceBall のコールバック保持 | **v2.3 で緩和**（`_TraceBallHandler.emit` で `RuntimeError` を catch） | 複数 `MainWindow` を生成するテスト環境での安全性確保 |
+| C-42 | RoleFunction 予約フィールドの GUI 非表示化 | **v2.4 で変更** | return_type / arg1_* / arg2_* は UI から削除。RoleFunctionDialog は `_original` から引き継ぎ |
+| C-43 | `libcntrl.RoleFunction` の予約フィールド | **v1.5 で追加** | return_type / arg1_* / arg2_* を保持し XML ラウンドトリップで予約値を維持 |
+| C-44 | Namespace コンボボックスの候補 | **v3.11 で全タブ対応** | `layer_names_provider` 経由で全タブ名を候補に追加 |
+| C-45 | 空の `used_*` 属性 | **v3.8.1 で出力抑制** | 空の used_global_vars / used_events / used_literals は XML 属性として出力しない |
+| C-46 | State.do / RoleFunction の予約フィールド | **予約（Reserved）** | UI 非表示。codegen 未使用。XML I/O で保持（v3.7 以降） |
 
 ---
 
@@ -1666,6 +1671,16 @@ StaTable/
 | | | - §14.2：`main_window.py` を ~1,100 LOC に更新 |
 | | | - §15：v2.3 改訂履歴（本エントリ） |
 
+| 2.4 | 2026-09-22 | UI 整理・予約フィールド・Namespace コンボ対応： |
+| | | - §1.4: テストスイートは 551 PASS / 2 SKIP のまま |
+| | | - §3.2.7: `RoleFunction.used_global_vars/events/literals` 追加を明記 |
+| | | - §3.5.2: 空の `used_*` は属性出力しない（v3.8.1） |
+| | | - §4.2: MainWindow v2.4（`_get_all_layer_names()` 追加） |
+| | | - §4.3: StateMachineTab v3.11（`layer_names_provider` 配線） |
+| | | - §4.6: State list 5列 / Role function 4列 / Namespace インラインコンボ |
+| | | - §5.3: libcntrl.RoleFunction v1.5（予約フィールド追加） |
+| | | - §12: C-42〜C-46 追加 |
+| | | - §15: 本エントリ |
 ---
 
 以上、`SPEC_OVERVIEW_ja.md` v2.3（決定#5 反映済み）の完全版です。
