@@ -84,6 +84,11 @@ The StaTable SDK provides programmatic access to the state-transition design and
 | qualified_name | Unique name in `namespace.name` form (e.g., `Driver.Init`) |
 | call_sites | The list of calling cells for each role function |
 | transition_id | Index within call_sites. `0xFFFF` = no match |
+| `used_global_vars` | v3.8: List of SystemVariable names referenced by a role function |
+| `used_events` | v3.8: List of Event names referenced by a role function |
+| `used_literals` | v3.8: List of literal names referenced by a role function |
+| `layer_names_provider` | v3.11: Callable returning all tab names (namespace combo candidates) |
+| Reserved fields | v3.7 / v1.5: `return_type` / `arg1_*` / `arg2_*` / `do` — not exposed in UI, preserved through XML |
 | Super include | `statable_all.h`. Aggregates all generated headers |
 | Super loop | `{project}_run.c`. Main loop for all layers |
 | Marker | Comment used for user-code preservation (`[[STABLE_...]]`) |
@@ -444,6 +449,11 @@ class RoleFunction:
     arg2_type: str = ""
     arg2_name: str = ""
     title: str = ""
+    # [v3.8] GUI symbol tracking (mirrors libcntrl.RoleFunction).
+    # Persisted in XML; not consumed by codegen.
+    used_global_vars: List[str] = []
+    used_events: List[str] = []
+    used_literals: List[str] = []
 ```
 
 | Field | Type | Required | Default |
@@ -457,6 +467,9 @@ class RoleFunction:
 | `arg2_type` | `str` | – | `""` |
 | `arg2_name` | `str` | – | `""` |
 | `title` | `str` | – | `""` |
+| `used_global_vars` | `List[str]` | – | `[]` |
+| `used_events` | `List[str]` | – | `[]` |
+| `used_literals` | `List[str]` | – | `[]` |
 
 **Properties**
 
@@ -1392,6 +1405,13 @@ def merge_all_files(
 | `used_global_vars` | `List[str]` | `[]` |
 | `used_events` | `List[str]` | `[]` |
 | `used_literals` | `List[str]` | `[]` |
+| `return_type` | `str` | `""` (Reserved, v1.5) |
+| `arg1_type` | `str` | `""` (Reserved, v1.5) |
+| `arg1_name` | `str` | `""` (Reserved, v1.5) |
+| `arg2_type` | `str` | `""` (Reserved, v1.5) |
+| `arg2_name` | `str` | `""` (Reserved, v1.5) |
+
+**Reserved fields note (v1.5)**: `return_type` / `arg1_*` / `arg2_*` are not exposed in the GUI and not consumed by codegen. They are preserved through XML I/O for backward compatibility with pre-v3.7 project files.
 
 **Property**: `qualified_name`.
 
@@ -1688,7 +1708,8 @@ code/
 | 10 | `test_v2_2_p12_8.py` | Stage 8 | 25 PASS |
 | 11 | `test_v2_2_p12_9.py` | Stage 9 | 41 PASS |
 | 12 | `test_v2_2_p12_10.py` | Stage 10 | 29 PASS / 2 SKIP |
-| **Total** | | | **537 PASS / 2 SKIP** |
+| 13 | `test_v2_3_p1.py` | New Project (v2.3) | 14 PASS |
+| **Total** | | | **551 PASS / 2 SKIP** |
 
 ### 10.3 Environment Variables
 
@@ -1714,7 +1735,7 @@ code/
 
 | Component | Version |
 |-----------|---------|
-| StaTable | 2.2 |
+| StaTable | 2.4.1 |
 | `c_code_generator.py` | 2.2.9 |
 | `role_function_generator.py` | 3.3 |
 | `transition_generator.py` | 2.6 |
@@ -1726,6 +1747,14 @@ code/
 | `osal_generator.py` | 2.2 |
 | `naming_convention.py` | 2.2.5 |
 | `code_merger.py` | 2.0 |
+| `widgets.py` | 3.11 |
+| `main_window.py` | 2.4 |
+| `role_function_dialog.py` | 3.9 |
+| `model.py` | 3.8 |
+| `xml_io.py` | 3.8.2 |
+| `sample_data.py` | 3.12 |
+| `libcntrl/role_function_library.py` | 1.5 |
+| `validate/change_applier.py` | 2.4.1 (C-28 fix) |
 
 ### 10.6 Revision History
 
