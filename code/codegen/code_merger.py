@@ -10,11 +10,20 @@ Supported markers:
     - ISR_XXX uses <name> in "TIMER0" form (no layer)
   - File-tail user area: [[STABLE_USER_CODE_TAIL_START/END]]
 
-[v2.0 fix]
-  - inject_file_user_code: if an existing START/END block is present,
-    replace its contents. Old implementation always inserted a new block
-    after the includes, leaving the original block as dead code and the
-    placeholder behind.
+Version History
+---------------
+v2.0 - inject_file_user_code: if an existing START/END block is present,
+       replace its contents. Old implementation always inserted a new
+       block after the includes, leaving the original block as dead code
+       and the placeholder behind.
+
+v2.1 - Idempotency fix. The replacement pattern previously captured
+       the trailing newline into group(2), so each merge added one
+       extra newline per marker (4 markers -> +4 chars per merge).
+       The new pattern replaces the ENTIRE block (START..END) with a
+       freshly constructed block (START\\n user_code \\n END), and
+       uses a callable replacement to avoid re.sub escape handling.
+       Verified by tests/test_v2_4_p1_merge.py §3.
 """
 
 import re
@@ -56,7 +65,7 @@ class CodeMerger:
 
     # ===== Extraction =====
     def extract_file_user_code(self, existing_content: str) -> str:
-        """Extract file-level user code"""
+        """Extract file-level user code (contents between START and END)."""
         start = self.markers['file_user_start']
         end = self.markers['file_user_end']
 
@@ -70,7 +79,7 @@ class CodeMerger:
 
     def extract_func_user_code(self, existing_content: str,
                                func_name: str) -> str:
-        """Extract per-function user code"""
+        """Extract per-function user code."""
         start = self.markers['func_user_start'].format(func_name=func_name)
         end = self.markers['func_user_end'].format(func_name=func_name)
 
@@ -111,9 +120,8 @@ class CodeMerger:
         )
         return func_user_codes
 
-    # File-tail user code extraction
     def extract_file_tail_user_code(self, existing_content: str) -> str:
-        """Extract file-tail user code"""
+        """Extract file-tail user code."""
         start = self.markers['file_tail_user_start']
         end = self.markers['file_tail_user_end']
 
@@ -125,20 +133,47 @@ class CodeMerger:
             return match.group(1)
         return ""
 
+    # ===== Helper: block replacement (idempotent) =====
+    @staticmethod
+    def _replace_block(text: str, start_marker: str, end_marker: str,
+                       user_code: str) -> Tuple[str, int]:
+        """
+        Replace the contents of an existing START..END block with a
+        canonical block:
+
+            START
+            <user_code>
+            END
+
+        Returns (new_text, replaced_count).
+        The replacement uses a callable to bypass re.sub escape handling.
+        """
+        pattern = re.compile(
+            rf'{re.escape(start_marker)}.*?{re.escape(end_marker)}',
+            re.DOTALL,
+        )
+        canonical = f"{start_marker}\n{user_code}\n{end_marker}"
+        new_text, count = pattern.subn(
+            lambda m: canonical, text, count=1,
+        )
+        return new_text, count
+
     # ===== Injection =====
     def inject_file_user_code(self, generated_content: str,
                               user_code: str) -> str:
         """
         Inject file-level user code into the generated code.
 
-        [v2.0 fix]
-          If an existing START/END block is present, replace its contents
-          with user_code. If no block exists, insert a new one after the
-          includes.
-
-          Old: always insert a new block after includes -> the original
+        [v2.0]
+          If an existing START/END block is present, replace its contents.
+          Old: always inserted a new block after includes -> the original
                block became dead code.
           New: replace existing block -> always exactly one block.
+
+        [v2.1]
+          Idempotency fix. The whole block (START..END) is now replaced
+          with a freshly constructed one, so repeated merges do not
+          accumulate extra newlines.
         """
         if not user_code:
             return generated_content
@@ -147,18 +182,15 @@ class CodeMerger:
         end = self.markers['file_user_end']
 
         # ---- 1. Replace if existing block found ----
-        pattern = rf'({re.escape(start)}\s*\n).*?(\n\s*{re.escape(end)})'
-        replacement = rf'\g<1>{user_code}\n\g<2>'
-        result, count = re.subn(
-            pattern, replacement, generated_content,
-            count=1, flags=re.DOTALL,
+        result, count = self._replace_block(
+            generated_content, start, end, user_code,
         )
         if count:
             self._log_debug("Replaced file user code")
             return result
 
         # ---- 2. No block: insert new one after includes ----
-        injection = f"{start}\n{user_code}\n{end}\n"
+        canonical = f"{start}\n{user_code}\n{end}"
         lines = generated_content.split('\n')
         result_lines = []
         injected = False
@@ -169,22 +201,19 @@ class CodeMerger:
                 last_include_idx = i
 
         if last_include_idx >= 0:
-            # Inject after the includes
             for i, line in enumerate(lines):
                 result_lines.append(line)
                 if i == last_include_idx:
                     result_lines.append("")
-                    result_lines.append(injection.rstrip('\n'))
+                    result_lines.append(canonical)
                     injected = True
 
         if not injected:
-            # No includes: inject at the top
-            result_lines.insert(0, injection.rstrip('\n'))
+            result_lines.insert(0, canonical)
 
         self._log_debug("Inserted new file user code block")
         return '\n'.join(result_lines)
 
-    # Per-function user code injection: replace existing marker block
     def inject_func_user_code(self, generated_content: str,
                               func_name: str, user_code: str) -> str:
         """
@@ -200,12 +229,8 @@ class CodeMerger:
         start = self.markers['func_user_start'].format(func_name=func_name)
         end = self.markers['func_user_end'].format(func_name=func_name)
 
-        pattern = rf'({re.escape(start)}\s*\n).*?(\n\s*{re.escape(end)})'
-        replacement = rf'\g<1>{user_code}\n\g<2>'
-
-        result, count = re.subn(
-            pattern, replacement, generated_content,
-            count=1, flags=re.DOTALL,
+        result, count = self._replace_block(
+            generated_content, start, end, user_code,
         )
         if count:
             self._log_debug(f"Injected user code for function {func_name}")
@@ -215,22 +240,17 @@ class CodeMerger:
             )
         return result
 
-    # File-tail user code injection
     def inject_file_tail_user_code(self, generated_content: str,
                                    user_code: str) -> str:
-        """Inject user code into the file-tail marker (replace)"""
+        """Inject user code into the file-tail marker (replace)."""
         if not user_code:
             return generated_content
 
         start = self.markers['file_tail_user_start']
         end = self.markers['file_tail_user_end']
 
-        pattern = rf'({re.escape(start)}\s*\n).*?(\n\s*{re.escape(end)})'
-        replacement = rf'\g<1>{user_code}\n\g<2>'
-
-        result, count = re.subn(
-            pattern, replacement, generated_content,
-            count=1, flags=re.DOTALL,
+        result, count = self._replace_block(
+            generated_content, start, end, user_code,
         )
         if count:
             self._log_debug("Injected tail user code")
