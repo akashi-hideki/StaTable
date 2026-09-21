@@ -255,7 +255,16 @@ Where MISRA C:2012 compliance is non-negotiable.
 
 ## Roadmap
 
-### v2.3 (Current — Released 2026-09-21)
+### v2.4 (Current — Released 2026-09-22)
+
+- ✅ UI cleanup: State list 5 columns, Role function 4 columns
+- ✅ Namespace combo box listing all project layers
+- ✅ Reserved fields hidden from UI (State.do, RoleFunction signature)
+- ✅ XML round-trip preserved for reserved fields (empty `used_*` attributes suppressed)
+- ✅ Role function Edit path restored (button + row double-click)
+- ✅ **551 PASS / 0 FAIL / 2 SKIP**
+
+### v2.3 (Released 2026-09-21)
 
 - ✅ New Project feature (Ctrl+N)
 - ✅ Unsaved-changes dialog (Save / Discard / Cancel)
