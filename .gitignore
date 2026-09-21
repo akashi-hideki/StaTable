@@ -1,5 +1,48 @@
-*.pyc
-/code/logs/*.log
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
 
+# === Virtual environments ===
+.venv/
+venv/
+env/
+ENV/
+
+# === Testing ===
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# === IDE / Editor ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Project-specific ===
 # CI generated output
 code/output/
+code/logs/*.log
+code/misra_report/
+
+# Debug files
+*.bak
+*.tmp
+*.log
+code/statable_mermaid_debug.html
+# Test artifacts
+code/tests/data/new.xml
