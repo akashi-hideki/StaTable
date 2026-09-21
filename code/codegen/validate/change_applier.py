@@ -234,6 +234,11 @@ class ChangeApplier:
     def _add_variable(self, params: Dict) -> Tuple[bool, str]:
         from statable.global_defs import SystemVariable
         name = params.get('name', '')
+        if not name:
+            return False, "Variable 'name' is required"
+        # [C-28 fix] Duplicate check
+        if any(getattr(v, 'name', '') == name for v in self.gd.variables):
+            return False, f"Variable '{name}' already exists"
         var = SystemVariable(
             name=name, type=params.get('type', 'uint8'),
             group=params.get('group', ''),
@@ -244,6 +249,11 @@ class ChangeApplier:
     def _add_flag(self, params: Dict) -> Tuple[bool, str]:
         from statable.global_defs import EventFlag
         name = params.get('name', '')
+        if not name:
+            return False, "Flag 'name' is required"
+        # [C-28 fix] Duplicate check
+        if any(getattr(f, 'name', '') == name for f in self.gd.flags):
+            return False, f"Flag '{name}' already exists"
         flag = EventFlag(
             name=name, min_value=params.get('min_value', 0),
             max_value=params.get('max_value', 1),
