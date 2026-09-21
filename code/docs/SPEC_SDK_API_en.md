@@ -79,6 +79,7 @@ The StaTable SDK provides programmatic access to the state-transition design and
 | Cell action | v2.2: A transition-independent `ActionStep` attached to a cell |
 | Cell relation | v2.2: A `TransitionRelation` between transitions in a cell |
 | Role function | A C function called from transitions, conditions, or ISRs |
+| Role function (design principle) | Layer-agnostic: does not depend on the calling layer. For layer-specific behavior, split into separate functions (see SPEC_OVERVIEW §3.2.7) |
 | namespace | The owning layer or explicit namespace of a role function |
 | qualified_name | Unique name in `namespace.name` form (e.g., `Driver.Init`) |
 | call_sites | The list of calling cells for each role function |

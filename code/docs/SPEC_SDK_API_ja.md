@@ -79,6 +79,7 @@ StaTable SDK は、StaTable GUI アプリケーションが使用する状態遷
 | セルアクション | v2.2：セルに付属する遷移非依存の `ActionStep` |
 | セル関係 | v2.2：セル内遷移間の `TransitionRelation` |
 | ロール関数 | 遷移・条件・ISR から呼ばれる C 関数 |
+| ロール関数（設計原則） | 呼び出し元層に依存しない（layer-agnostic）。層別動作は関数分割で対応（SPEC_OVERVIEW §3.2.7 参照） |
 | 名前空間（namespace） | ロール関数の所属層または明示的名前空間 |
 | qualified_name | `namespace.name` 形式の一意名（例：`Driver.Init`） |
 | call_sites | 各ロール関数の呼び出しセル一覧 |

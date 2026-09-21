@@ -44,6 +44,7 @@ Generate C-language state machine code from `StateMachine` + `GlobalDefinitions`
 - Multi-layer state machines (tab = layer)
 - Super-include (`statable_all.h`) and super-loop (`{project}_run.c`)
 - ISR-callable role functions (Stage 3)
+- Layer-agnostic role functions: do not depend on the calling layer (see SPEC_OVERVIEW §3.2.7)
 - `Namespace.Name` accepted in conditions / actions (Stage 4)
 
 ### 1.2 Scope

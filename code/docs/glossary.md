@@ -61,6 +61,8 @@
 | 戻り値 | return value |
 | 戻り値型 | return type |
 | 名前空間 | namespace |
+| 呼び出し元層 | calling layer |
+| 層非依存 | layer-agnostic |
 | 純粋名 | bare name |
 
 ## 4. 層（Layer）
