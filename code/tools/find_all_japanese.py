@@ -1,4 +1,4 @@
-# find_all_japanese.py - 全 .py ファイルを生テキストで走査
+# find_all_japanese.py - Scan all .py files for Japanese characters
 import re
 import sys
 from pathlib import Path
