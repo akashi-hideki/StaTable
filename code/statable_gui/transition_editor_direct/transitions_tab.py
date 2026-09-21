@@ -88,6 +88,12 @@ class TransitionsTab(QWidget):
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SingleSelection)
+        # [FIX] Disable inline editing so that double-click always triggers
+        #       the dialog handler (ConditionBuilderDialog / TransitionActionsDialog).
+        #       Without this, Qt starts inline editing after the first dialog
+        #       closes, and subsequent double-clicks are swallowed by the
+        #       inline editor (cellDoubleClicked no longer fires).
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.cellDoubleClicked.connect(self._on_cell_double_clicked)
         layout.addWidget(self.table)
 
@@ -219,12 +225,13 @@ class TransitionsTab(QWidget):
             global_defs=self.global_defs,
             state_machine=self.state_machine,
             states=self.states,
-            parent=self,
+            parent=self.window(),
         )
         if dlg.exec() == QDialog.Accepted:
             new_cond = dlg.get_condition_text()
             if cond_item is None:
                 cond_item = QTableWidgetItem(new_cond)
+                cond_item.setFlags(cond_item.flags() & ~Qt.ItemIsEditable)
                 self.table.setItem(row, COL_CONDITION, cond_item)
             else:
                 cond_item.setText(new_cond)
@@ -240,7 +247,7 @@ class TransitionsTab(QWidget):
         els = self._parse_csv(else_item.text() if else_item else "")
 
         dlg = TransitionActionsDialog(
-            parent=self,
+            parent=self.window(),
             label=label,
             pre_actions=pre,
             else_actions=els,
@@ -279,6 +286,7 @@ class TransitionsTab(QWidget):
         text = self._csv(items)
         if item is None:
             item = QTableWidgetItem(text)
+            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, col, item)
         else:
             item.setText(text)
@@ -297,14 +305,22 @@ class TransitionsTab(QWidget):
         label = getattr(trans, 'label', '') if trans else ""
         if not label:
             label = f"T{row + 1}"
-        self.table.setItem(row, COL_LABEL, QTableWidgetItem(label))
+        label_item = QTableWidgetItem(label)
+        # Label is intentionally non-editable inline.
+        # (Reserved for future "Rename Label..." dialog.)
+        label_item.setFlags(label_item.flags() & ~Qt.ItemIsEditable)
+        self.table.setItem(row, COL_LABEL, label_item)
 
         cond = getattr(trans, 'condition', '') if trans else ""
-        self.table.setItem(row, COL_CONDITION, QTableWidgetItem(cond))
+        cond_item = QTableWidgetItem(cond)
+        # Condition is edited via dialog (double-click), not inline.
+        cond_item.setFlags(cond_item.flags() & ~Qt.ItemIsEditable)
+        self.table.setItem(row, COL_CONDITION, cond_item)
 
         pre = getattr(trans, 'pre_actions', []) if trans else []
-        self.table.setItem(row, COL_PRE,
-                           QTableWidgetItem(self._csv(list(pre))))
+        pre_item = QTableWidgetItem(self._csv(list(pre)))
+        pre_item.setFlags(pre_item.flags() & ~Qt.ItemIsEditable)
+        self.table.setItem(row, COL_PRE, pre_item)
 
         target = getattr(trans, 'target', '') if trans else ""
         self.table.setCellWidget(row, COL_TARGET,
@@ -319,8 +335,9 @@ class TransitionsTab(QWidget):
                                  self._make_state_combo(else_target))
 
         ea = getattr(trans, 'else_actions', []) if trans else []
-        self.table.setItem(row, COL_ELSE,
-                           QTableWidgetItem(self._csv(list(ea))))
+        else_item = QTableWidgetItem(self._csv(list(ea)))
+        else_item.setFlags(else_item.flags() & ~Qt.ItemIsEditable)
+        self.table.setItem(row, COL_ELSE, else_item)
 
         mode_combo = QComboBox()
         mode_combo.addItems(["Commit", "Tentative"])
