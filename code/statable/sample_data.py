@@ -1,4 +1,27 @@
-"""Sample data generation (business logic layer)."""
+"""Sample data generation (business logic layer).
+
+Version History
+---------------
+v2.2  - entry / exit: List[str]; cell actions and relations added.
+v3.8  - RoleFunction.used_global_vars / used_events / used_literals
+        are available (optional).
+v3.12 - Explicit namespace="Application" added to all sample role
+        functions. Previously they all used namespace="", which
+        meant the namespace combo box in the GUI had no candidates
+        coming from the role function list.
+
+        Design note
+        -----------
+        In StaTable the role-function namespace must match the
+        *layer name* (tab name) for the declaration to be emitted
+        by codegen/role_function_generator.py. Feature-group style
+        namespaces ("Sensor", "Error", ...) are not supported by
+        the current layer model. See SPEC_OVERVIEW §3.2.7
+        "Design Principle (v2.3)".
+
+        The sample below therefore uses namespace="Application",
+        which matches the initial tab name created by MainWindow.
+"""
 
 from .model import (
     State, Event, Transition, StateType, EventKind,
@@ -14,8 +37,14 @@ from .global_defs import (
 )
 
 
+# [v3.12] Layer name used by the sample state machine.
+#         Must match the initial tab name created by MainWindow.
+_SAMPLE_LAYER = "Application"
+
+
 def create_sample_state_machine() -> StateMachine:
     sm = StateMachine()
+    sm.layer_name = _SAMPLE_LAYER
 
     # ==================================================================
     # States (v2.2: entry / exit are List[str])
@@ -64,11 +93,22 @@ def create_sample_state_machine() -> StateMachine:
                        title="Completion transition"))
 
     # ==================================================================
-    # Role functions (all valid identifiers)
+    # Role functions
+    #
+    # [v3.12] All sample functions belong to the Application layer.
+    #         namespace is now explicitly set so that the namespace
+    #         combo box in RoleFunctionDialog / SettingsPanel has
+    #         at least one candidate even before the user adds
+    #         additional tabs.
+    #
+    #         Call sites (pre_actions / entry / exit / ActionStep.
+    #         role_function) keep using the bare names below; the
+    #         code generator resolves them via the bare-name
+    #         fallback in _get_call_sites_for_func().
     # ==================================================================
     sm.add_role_function(RoleFunction(
         name="Sensor_Init",
-        namespace="",
+        namespace=_SAMPLE_LAYER,
         description="Sensor initialization",
         return_type="int",
         arg1_type="uint8_t", arg1_name="channel",
@@ -77,7 +117,7 @@ def create_sample_state_machine() -> StateMachine:
     ))
     sm.add_role_function(RoleFunction(
         name="Error_Log",
-        namespace="",
+        namespace=_SAMPLE_LAYER,
         description="Error log output",
         return_type="void",
         arg1_type="int", arg1_name="err_code",
@@ -86,49 +126,49 @@ def create_sample_state_machine() -> StateMachine:
     ))
     sm.add_role_function(RoleFunction(
         name="Start_Init",
-        namespace="",
+        namespace=_SAMPLE_LAYER,
         description="Startup initialization",
         return_type="void",
         title="Startup initialization",
     ))
     sm.add_role_function(RoleFunction(
         name="Stop_Cleanup",
-        namespace="",
+        namespace=_SAMPLE_LAYER,
         description="Stop cleanup",
         return_type="void",
         title="Stop cleanup",
     ))
     sm.add_role_function(RoleFunction(
         name="Retry_Increment",
-        namespace="",
+        namespace=_SAMPLE_LAYER,
         description="Increment retry counter",
         return_type="void",
         title="Increment retry counter",
     ))
     sm.add_role_function(RoleFunction(
         name="Ignore_Event",
-        namespace="",
+        namespace=_SAMPLE_LAYER,
         description="Ignore the current event",
         return_type="void",
         title="Ignore the current event",
     ))
     sm.add_role_function(RoleFunction(
         name="Idle_Entry",
-        namespace="",
+        namespace=_SAMPLE_LAYER,
         description="Idle state entry action",
         return_type="void",
         title="Idle entry",
     ))
     sm.add_role_function(RoleFunction(
         name="Error_Entry",
-        namespace="",
+        namespace=_SAMPLE_LAYER,
         description="Error state entry action",
         return_type="void",
         title="Error entry",
     ))
     sm.add_role_function(RoleFunction(
         name="Error_Exit",
-        namespace="",
+        namespace=_SAMPLE_LAYER,
         description="Error state exit action",
         return_type="void",
         title="Error exit",

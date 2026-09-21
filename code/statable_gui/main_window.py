@@ -1,5 +1,32 @@
 # statable_gui/main_window.py
-"""\nStaTable main window\nIntegrates code generation, validation/AI integration, and shared library management\n(multi-layer support)\n\n[v1.5 fix]\n  - Pass namespace in RoleFunction registration in __init__ (bug #86)\n\n[v2.3 change]\n  - Add New Project feature (F-15).\n    * new_project(): reset to an empty Application layer.\n    * _maybe_save(): unified unsaved-changes confirmation.\n    * closeEvent(): prompt on window close.\n    * _update_window_title(): 'Untitled[*] - StaTable' format.\n    * _on_tab_data_modified(): slot for StateMachineTab.dataModified.\n  - save_project() now returns bool (success / cancel / failure).\n  - open_project() prompts via _maybe_save() at the beginning.\n  - add_state_machine_tab() connects dataModified.\n  - Tab add / rename / close set windowModified(True).\n"""
+"""
+StaTable main window
+Integrates code generation, validation/AI integration, and shared library
+management (multi-layer support).
+
+Version History
+---------------
+v1.5    - Pass namespace in RoleFunction registration in __init__ (bug #86)
+
+v2.3    - Add New Project feature (F-15).
+          * new_project(): reset to an empty Application layer.
+          * _maybe_save(): unified unsaved-changes confirmation.
+          * closeEvent(): prompt on window close.
+          * _update_window_title(): 'Untitled[*] - StaTable' format.
+          * _on_tab_data_modified(): slot for StateMachineTab.dataModified.
+          * save_project() now returns bool (success / cancel / failure).
+          * open_project() prompts via _maybe_save() at the beginning.
+          * add_state_machine_tab() connects dataModified.
+          * Tab add / rename / close set windowModified(True).
+
+v2.4    - Provide all layer names to StateMachineTab (v3.11).
+          * _get_all_layer_names(): new helper returning every tab
+            name (= every layer name in the project).
+          * add_state_machine_tab(): pass `layer_names_provider` to
+            StateMachineTab, which forwards it to SettingsPanel so
+            the namespace combo box (inline editor + RoleFunctionDialog)
+            lists all layers, not just the current tab's layer.
+"""
 
 import sys
 import os
@@ -70,6 +97,7 @@ except ImportError:
 
 # Validation / AI integration module
 from .validation_dialog import ValidationDialog
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -184,7 +212,7 @@ class MainWindow(QMainWindow):
             self.close_tab)
         self.setCentralWidget(self.tab_widget)
 
-        # \"+\" button
+        # "+" button
         self.add_tab_button = QToolButton()
         self.add_tab_button.setText("+")
         self.add_tab_button.setToolTip(
@@ -931,7 +959,11 @@ class MainWindow(QMainWindow):
             global_defs=self.global_defs,
             role_function_library=self.role_function_library,
             condition_library=self.condition_library,
-            literal_library=self.literal_library)
+            literal_library=self.literal_library,
+            # [v2.4] Provide all tab names as namespace candidates.
+            #        Forwarded to SettingsPanel so the inline combo
+            #        box and RoleFunctionDialog list every layer.
+            layer_names_provider=self._get_all_layer_names)
 
         # [v2.3] Relay tab modification signal to MainWindow
         tab.dataModified.connect(self._on_tab_data_modified)
@@ -996,6 +1028,27 @@ class MainWindow(QMainWindow):
             key=lambda x: getattr(x[1], 'layer_priority', 5)
         )
         return layers
+
+    def _get_all_layer_names(self) -> list:
+        """Return all tab names (= all layer names in the project).
+
+        [v2.4]
+          Used by StateMachineTab / SettingsPanel to populate the
+          namespace combo box with every layer in the project, not
+          just the current tab's layer. Called via the
+          `layer_names_provider` callable on every editor creation,
+          so newly added / renamed tabs are reflected immediately.
+        """
+        names = []
+        try:
+            for i in range(self.tab_widget.count()):
+                text = self.tab_widget.tabText(i)
+                if text and text not in names:
+                    names.append(text)
+        except Exception as e:
+            StaTableLogger.warning(
+                f"_get_all_layer_names failed: {e}")
+        return names
 
     def open_validation_dialog(self):
         StaTableLogger.debug(

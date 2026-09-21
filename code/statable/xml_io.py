@@ -2,11 +2,38 @@
 """
 XML I/O for StaTable.
 
-[v2.2 additions]
-  - State.entry / exit: str -> List[str]
-  - Transition.early_return / label
-  - Cell-level metadata: <Cells><Cell>...</Cell></Cells>
-  - §12-5: TransitionRelation.children (recursive nesting)
+Version History
+---------------
+v2.2   - State.entry / exit: str -> List[str]
+         Transition.early_return / label
+         Cell-level metadata: <Cells><Cell>...</Cell></Cells>
+         §12-5: TransitionRelation.children (recursive nesting)
+
+v3.7   - Reserved fields documented:
+           * State.do
+           * RoleFunction.return_type / arg1_type / arg1_name
+                                    / arg2_type / arg2_name
+         These are still read/written for backward compatibility,
+         even though the GUI no longer exposes them.
+
+v3.8   - RoleFunction: persist used_global_vars / used_events /
+         used_literals as comma-separated attributes. Old XML
+         without these attributes loads with empty lists.
+         Also applies to the shared library (role_function_library).
+
+v3.8.1 - Only emit used_* attributes when non-empty. This keeps
+         the canonical XML of pre-v3.8 project files identical
+         after a save, so that test_v2_2_p12_9.py's canonical
+         tree comparison (Level 1) still passes.
+         Empty values still load as [] via _split_csv().
+
+v3.8.2 - role_function_library_to_element / _from_element now
+         also emit / read the reserved signature fields
+         (return_type / arg1_* / arg2_*) of the shared library.
+         The test fixture tests/data/v22_features_test3.xml
+         contains these attributes in <SharedLibraries>, so
+         omitting them caused a canonical XML mismatch.
+         libcntrl.RoleFunction carries these fields since v1.5.
 """
 
 import xml.etree.ElementTree as ET
@@ -66,6 +93,30 @@ def _normalize_str_list(value) -> List[str]:
     return _normalize_actions(value)
 
 
+def _split_csv(text: str) -> List[str]:
+    """Split a comma-separated attribute value into a clean list."""
+    if not text:
+        return []
+    return [x.strip() for x in text.split(",") if x.strip()]
+
+
+def _add_used_attrs(attrs: dict, rf) -> None:
+    """[v3.8.1] Attach used_* attributes only when non-empty.
+
+    This keeps canonical XML identical for project files created
+    before v3.8: a role function with no symbol references produces
+    no used_* attributes at all, instead of three empty ones.
+    """
+    for attr_name, field_name in (
+        ("used_global_vars", "used_global_vars"),
+        ("used_events", "used_events"),
+        ("used_literals", "used_literals"),
+    ):
+        values = list(getattr(rf, field_name, []) or [])
+        if values:
+            attrs[attr_name] = ",".join(str(v) for v in values)
+
+
 # ======================================================================
 # v2.2 §12-5: Recursive relation serialization
 # ======================================================================
@@ -109,11 +160,17 @@ def _relation_from_element(elem) -> TransitionRelation:
 # StateMachine -> XML
 # ======================================================================
 def _state_to_element(state: State) -> ET.Element:
-    """Serialize one State (v2.2: entry/exit as child elements)."""
+    """Serialize one State (v2.2: entry/exit as child elements).
+
+    [v3.7] `do` is a reserved field (not exposed in UI). It is
+    still written to XML for backward compatibility.
+    """
     attrs = {
         "name": state.name,
         "type": state.type.value,
         "parent": state.parent or "",
+        # [Reserved] Not exposed in UI / not used by codegen.
+        # Kept in XML output for backward compatibility.
         "do": state.do,
         "description": state.description,
     }
@@ -135,7 +192,12 @@ def _state_to_element(state: State) -> ET.Element:
 
 
 def _state_from_element(elem: ET.Element) -> State:
-    """Deserialize one State (supports old and new formats)."""
+    """Deserialize one State (supports old and new formats).
+
+    [v3.7] `do` is a reserved field. It is still read from XML so
+    that old projects round-trip without data loss, even though the
+    GUI does not expose it.
+    """
     entry_list: List[str] = []
     exit_list: List[str] = []
 
@@ -167,6 +229,7 @@ def _state_from_element(elem: ET.Element) -> State:
         parent=elem.get("parent") or None,
         entry=entry_list,
         exit=exit_list,
+        # [Reserved] preserved through XML I/O for backward compatibility.
         do=elem.get("do", ""),
         description=elem.get("description", ""),
     )
@@ -212,12 +275,20 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
         ET.SubElement(events_elem, "Event", **attrs)
 
     # RoleFunctions
+    # [v3.7] return_type / arg1_* / arg2_* are reserved fields
+    # (not exposed in UI, not used by codegen). They are still
+    # written to XML for backward compatibility.
+    # [v3.8] used_global_vars / used_events / used_literals are
+    # written as comma-separated attributes.
+    # [v3.8.1] used_* attributes are only emitted when non-empty,
+    # so pre-v3.8 files round-trip with identical canonical XML.
     roles_elem = ET.SubElement(root, "RoleFunctions")
     for rf in sm.role_functions.values():
         attrs = {
             "name": rf.name,
             "namespace": getattr(rf, 'namespace', ''),
             "description": rf.description,
+            # [Reserved] kept for backward compatibility.
             "return_type": rf.return_type,
             "arg1_type": rf.arg1_type,
             "arg1_name": rf.arg1_name,
@@ -225,6 +296,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
             "arg2_name": rf.arg2_name,
             "title": rf.title,
         }
+        _add_used_attrs(attrs, rf)
         ET.SubElement(roles_elem, "RoleFunction", **attrs)
 
     # Transitions
@@ -287,7 +359,15 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
 
 
 def state_machine_from_element(elem: ET.Element) -> StateMachine:
-    """Build StateMachine from XML Element."""
+    """Build StateMachine from XML Element.
+
+    [v3.7] Reserved role-function fields (return_type / arg1_* /
+    arg2_*) are still read here so that old projects round-trip
+    without data loss.
+
+    [v3.8] used_global_vars / used_events / used_literals are read
+    from comma-separated attributes; missing -> [].
+    """
     logger.debug(f"state_machine_from_element: tag={elem.tag}")
 
     sm = StateMachine()
@@ -335,6 +415,9 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
                 logger.error(f"  Failed to load event: {e}", exc_info=True)
 
     # RoleFunctions
+    # [v3.7] return_type / arg1_* / arg2_* are reserved fields.
+    # [v3.8] used_global_vars / used_events / used_literals are read
+    # from comma-separated attributes; missing -> [].
     roles_elem = elem.find("RoleFunctions")
     if roles_elem is not None:
         for rf_elem in roles_elem:
@@ -350,12 +433,20 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
                     name=raw_name,
                     namespace=namespace,
                     description=rf_elem.get("description", ""),
+                    # [Reserved] preserved for backward compatibility.
                     return_type=rf_elem.get("return_type", "int"),
                     arg1_type=rf_elem.get("arg1_type", "int"),
                     arg1_name=rf_elem.get("arg1_name", "arg1"),
                     arg2_type=rf_elem.get("arg2_type", "int"),
                     arg2_name=rf_elem.get("arg2_name", "arg2"),
                     title=rf_elem.get("title", ""),
+                    # [v3.8] GUI symbol tracking.
+                    used_global_vars=_split_csv(
+                        rf_elem.get("used_global_vars", "")),
+                    used_events=_split_csv(
+                        rf_elem.get("used_events", "")),
+                    used_literals=_split_csv(
+                        rf_elem.get("used_literals", "")),
                 ))
             except Exception as e:
                 logger.error(f"  Failed to load role_function: {e}", exc_info=True)
@@ -692,28 +783,61 @@ def global_defs_from_element(elem: ET.Element) -> GlobalDefinitions:
 
 
 # ======================================================================
-# Shared library -> XML  (unchanged)
+# Shared library -> XML
 # ======================================================================
 def role_function_library_to_element(lib) -> Optional[ET.Element]:
+    """Serialize the shared role function library.
+
+    [v3.8]
+      libcntrl.RoleFunction has used_global_vars / used_events /
+      used_literals. They are written as comma-separated attributes.
+
+    [v3.8.1]
+      used_* attributes are only emitted when non-empty, so the
+      canonical XML of pre-v3.8 projects is unchanged after a
+      round-trip through the GUI.
+
+    [v3.8.2]
+      Also emit the reserved signature fields
+      (return_type / arg1_* / arg2_*). The test fixture
+      tests/data/v22_features_test3.xml contains these attributes
+      in the <SharedLibraries> section, so omitting them caused a
+      canonical XML mismatch in test_v2_2_p12_9.py.
+      libcntrl.RoleFunction carries these fields since v1.5.
+    """
     if lib is None:
         return None
     root = ET.Element("RoleFunctionLibrary")
     for rf in lib.list_all():
-        ET.SubElement(root, "RoleFunction", **{
+        attrs = {
             "name": rf.name,
             "namespace": getattr(rf, 'namespace', ''),
-            "title": getattr(rf, 'title', ''),
             "description": getattr(rf, 'description', ''),
+            # [v3.8.2] Reserved signature fields: preserved for
+            # canonical XML equality with pre-v3.8 fixtures.
             "return_type": getattr(rf, 'return_type', ''),
             "arg1_type": getattr(rf, 'arg1_type', ''),
             "arg1_name": getattr(rf, 'arg1_name', ''),
             "arg2_type": getattr(rf, 'arg2_type', ''),
             "arg2_name": getattr(rf, 'arg2_name', ''),
-        })
+            "title": getattr(rf, 'title', ''),
+        }
+        _add_used_attrs(attrs, rf)
+        ET.SubElement(root, "RoleFunction", **attrs)
     return root
 
 
 def role_function_library_from_element(elem: Optional[ET.Element]):
+    """Deserialize the shared role function library.
+
+    [v3.8]
+      used_global_vars / used_events / used_literals are read from
+      comma-separated attributes; missing -> [].
+
+    [v3.8.2]
+      Reserved signature fields (return_type / arg1_* / arg2_*) are
+      read back so that the values round-trip unchanged.
+    """
     if elem is None:
         return RoleFunctionLibrary() if RoleFunctionLibrary else None
     lib = RoleFunctionLibrary()
@@ -728,6 +852,7 @@ def role_function_library_from_element(elem: Optional[ET.Element]):
                     description=rf_elem.get("description", ""),
                 )
             except TypeError:
+                # Older libcntrl.RoleFunction without namespace kwarg
                 rf = LibRoleFunction(
                     name=name,
                     title=rf_elem.get("title", ""),
@@ -735,10 +860,19 @@ def role_function_library_from_element(elem: Optional[ET.Element]):
                 )
                 if hasattr(rf, 'namespace'):
                     rf.namespace = namespace
+
+            # [v3.8.2] Reserved signature fields
             for attr in ('return_type', 'arg1_type', 'arg1_name',
                          'arg2_type', 'arg2_name'):
                 if hasattr(rf, attr):
                     setattr(rf, attr, rf_elem.get(attr, ''))
+
+            # [v3.8] symbol references
+            for attr in ('used_global_vars', 'used_events',
+                         'used_literals'):
+                if hasattr(rf, attr):
+                    setattr(rf, attr,
+                            _split_csv(rf_elem.get(attr, "")))
             lib.add(rf)
         except Exception as e:
             logger.error(f"load role function failed: {e}", exc_info=True)

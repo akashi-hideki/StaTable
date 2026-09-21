@@ -1,6 +1,17 @@
 # statable_gui/libcntrl/role_function_library.py
 """
 Shared role function library
+
+Version History
+---------------
+v1.0  - Initial shared library.
+v1.5  - Added reserved signature fields
+        (return_type / arg1_type / arg1_name / arg2_type / arg2_name).
+        These are not used by the code generator (its C signature is
+        fixed), and they are not exposed in the GUI. They are kept
+        here only so that XML I/O round-trips old project files
+        (tests/data/v22_features_test3.xml) without canonical
+        differences. See xml_io.py v3.8.2.
 """
 
 from dataclasses import dataclass, field
@@ -9,11 +20,29 @@ from typing import List, Dict, Optional
 
 @dataclass
 class RoleFunction:
-    """Shared role function definition\n\n    namespace: layer name / feature group name (e.g., \"Driver\")\n      - Referenceable as `Driver.Init`\n      - Empty string means no layer\n    """
-    name: str                       # Bare name (e.g., \"Init\")
-    namespace: str = ""             # Namespace (e.g., \"Driver\")
+    """Shared role function definition.
+
+    namespace: layer name / feature group name (e.g., "Driver")
+      - Referenceable as `Driver.Init`
+      - Empty string means no layer
+
+    [v1.5]
+      Reserved signature fields are present but not used:
+        * return_type / arg1_type / arg1_name / arg2_type / arg2_name
+      Their only purpose is XML round-trip preservation.
+    """
+    name: str
+    namespace: str = ""
     description: str = ""
     title: str = ""
+    # [v1.5] Reserved signature fields (not exposed in GUI,
+    #        not consumed by codegen; preserved for XML round-trip).
+    return_type: str = ""
+    arg1_type: str = ""
+    arg1_name: str = ""
+    arg2_type: str = ""
+    arg2_name: str = ""
+    # [v1.4] GUI symbol tracking
     used_global_vars: List[str] = field(default_factory=list)
     used_events: List[str] = field(default_factory=list)
     used_literals: List[str] = field(default_factory=list)
@@ -35,6 +64,13 @@ class RoleFunction:
             'namespace': self.namespace,
             'description': self.description,
             'title': self.title,
+            # [v1.5] Reserved signature fields
+            'return_type': self.return_type,
+            'arg1_type': self.arg1_type,
+            'arg1_name': self.arg1_name,
+            'arg2_type': self.arg2_type,
+            'arg2_name': self.arg2_name,
+            # [v1.4] symbol references
             'used_global_vars': list(self.used_global_vars),
             'used_events': list(self.used_events),
             'used_literals': list(self.used_literals),
@@ -47,6 +83,11 @@ class RoleFunction:
             namespace=data.get('namespace', ''),
             description=data.get('description', ''),
             title=data.get('title', ''),
+            return_type=data.get('return_type', ''),
+            arg1_type=data.get('arg1_type', ''),
+            arg1_name=data.get('arg1_name', ''),
+            arg2_type=data.get('arg2_type', ''),
+            arg2_name=data.get('arg2_name', ''),
             used_global_vars=list(data.get('used_global_vars', [])),
             used_events=list(data.get('used_events', [])),
             used_literals=list(data.get('used_literals', [])),

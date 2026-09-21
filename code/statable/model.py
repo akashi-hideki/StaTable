@@ -1,3 +1,29 @@
+"""
+statable/model.py
+Data model for StaTable.
+
+Version History
+---------------
+v1.0     - Initial data model.
+v1.6     - Transition: kw_only=True. Prevents positional-argument
+           field-order mistakes (see v1.4 §9.6 #67).
+v2.2     - State.entry / State.exit: str -> List[str].
+           ActionStep and TransitionRelation added.
+v2.2.4   - ActionStep / TransitionRelation: kw_only=True.
+v3.7     - Reserved-field annotations added:
+             * State.do
+             * RoleFunction.return_type / arg1_type / arg1_name
+                                      / arg2_type / arg2_name
+           These fields are not exposed in the GUI and not used by
+           the code generator, but are retained in the data model
+           and XML I/O for backward compatibility.
+v3.8     - RoleFunction: added used_global_vars / used_events /
+           used_literals. These mirror libcntrl.RoleFunction and
+           enable the GUI dialog to track symbol references (see
+           statable_gui/role_function_dialog.py v3.9). Persisted in
+           XML (xml_io.py v3.8); not consumed by the code generator.
+"""
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, List
@@ -42,12 +68,21 @@ class State:
         Multiple entry / exit actions are supported.
         For defensive compatibility, str / None are auto-normalized
         in __post_init__.
+
+    [v3.7 note]
+      `do` is a **reserved field**. The code generator does not
+      reference it, and it is not exposed in the GUI SettingsPanel
+      (the "do function" column was removed in v3.7). It remains
+      in the data model and in XML I/O for backward compatibility
+      with projects created before v3.7.
     """
     name: str
     type: StateType = StateType.NORMAL
     parent: Optional[str] = None
     entry: List[str] = field(default_factory=list)
     exit: List[str] = field(default_factory=list)
+    # [Reserved] Not exposed in UI / not used by codegen.
+    # Persisted in XML for backward compatibility only.
     do: str = ""
     description: str = ""
 
@@ -173,20 +208,68 @@ class TransitionRelation:
 
 @dataclass(kw_only=True)
 class RoleFunction:
-    """Role function (shared library / state machine local)."""
+    """Role function (shared library / state machine local).
+
+    [v3.7 note]
+      The C signature generated for a role function is **fixed** to
+
+          int RoleFunc_<NS>_<Name>(const Transition_t* transition,
+                                   Context_t* ctx);
+
+      by `codegen/role_function_generator.py`, which does not
+      reference `return_type` / `arg1_*` / `arg2_*` at all.
+      Those fields are therefore **reserved**:
+
+        - They are not exposed in the GUI SettingsPanel or in
+          RoleFunctionDialog (v3.7 / v3.8).
+        - They are still serialized / deserialized by xml_io.py
+          for backward compatibility with projects created
+          before v3.7.
+        - `SettingsPanel.apply_changes()` and `RoleFunctionDialog.
+          get_role_function()` carry existing values forward so
+          that an XML round-trip remains lossless.
+
+      Do not remove these fields without a migration plan; old
+      project files may rely on their presence.
+
+    [v3.8 addition]
+      used_global_vars / used_events / used_literals mirror the
+      fields of libcntrl.RoleFunction. They let the RoleFunctionDialog
+      track which symbols a role function references, without
+      changing the generated C signature (which remains fixed as
+      above). Persisted in XML; not consumed by the code generator.
+    """
     name: str
     namespace: str = ""
     description: str = ""
+    # [Reserved] Not exposed in UI / not used by codegen.
+    # Persisted in XML for backward compatibility only.
     return_type: str = "void"
+    # [Reserved] Not exposed in UI / not used by codegen.
     arg1_type: str = ""
+    # [Reserved] Not exposed in UI / not used by codegen.
     arg1_name: str = ""
+    # [Reserved] Not exposed in UI / not used by codegen.
     arg2_type: str = ""
+    # [Reserved] Not exposed in UI / not used by codegen.
     arg2_name: str = ""
     title: str = ""
+    # [v3.8] GUI symbol tracking (mirrors libcntrl.RoleFunction).
+    # Persisted in XML; not consumed by codegen.
+    used_global_vars: List[str] = field(default_factory=list)
+    used_events: List[str] = field(default_factory=list)
+    used_literals: List[str] = field(default_factory=list)
 
     def __post_init__(self):
         if not self.title:
             self.title = f"Role function: {self.qualified_name}"
+        # v3.8: defensive normalization
+        if self.used_global_vars is None:
+            self.used_global_vars = []
+        if self.used_events is None:
+            self.used_events = []
+        if self.used_literals is None:
+            self.used_literals = []
 
     @property
     def qualified_name(self) -> str:

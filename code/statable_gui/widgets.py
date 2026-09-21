@@ -1,60 +1,80 @@
 # statable_gui/widgets.py
 """StaTable main widget (shared library support / v2.2 entry-exit list)
 
-Version: 3.6 (2026-09-21)
-  - SettingsPanel: entry / exit / do columns are non-editable inline
-    (edited via ActionEditDialog). Prevents double-click from being
-    swallowed by the inline editor after the first dialog interaction.
-  - MermaidWidget: unchanged from v3.5.
+Version: 3.11 (2026-09-21)
+  - [v3.11] Namespace combo box: full project-wide candidates.
+      * SettingsPanel now accepts `layer_names_provider`, a
+        zero-argument callable returning every tab name (= every
+        layer name) in the project.
+      * StateMachineTab forwards `layer_names_provider` to
+        SettingsPanel.
+      * _get_namespace_choices() merges candidates from:
+          1. layer_names_provider  (all tabs: Application, Driver, ...)
+          2. sm.layer_name         (current tab, in case provider
+                                    is not supplied)
+          3. role_function_library namespaces
+          4. sm.role_functions namespaces
+        Deduplicated while preserving order, so the inline combo
+        box and RoleFunctionDialog show the same complete list.
 
-    [v3.5 change]
-      * QScrollArea alignment changed from
-          Qt.AlignLeft | Qt.AlignTop
-        to
-          Qt.AlignLeft | Qt.AlignVCenter
-        so that a small (short) diagram appears in the vertical
-        middle of the widget. When the diagram is taller than the
-        viewport, scrolling takes over and alignment is ignored.
+    [v3.10 behavior retained]
+      * Role function table: inline editing restricted to the
+        Namespace column (editable QComboBox delegate).
+        Title / Function name / Description are read-only there.
+      * _NamespaceDelegate uses _get_namespace_choices() on every
+        editor creation, so the candidate list stays fresh.
 
+    [v3.9 behavior retained]
+      * SettingsPanel receives role_function_library and
+        literal_library from StateMachineTab.
+      * RoleFunctionDialog renders namespace as an editable
+        QComboBox populated with candidates.
+
+    [v3.8 behavior retained]
+      * "Edit" button + row double-click for role functions.
+      * used_global_vars / used_events / used_literals persisted.
+      * apply_changes() uses getattr(...) for defensive access.
+
+    [v3.7 behavior retained]
+      * State list:    6 -> 5 columns (removed "do function").
+      * Role function: 9 -> 4 columns (removed "Return type",
+        "Arg 1 type", "Arg 1 name", "Arg 2 type", "Arg 2 name").
+      * StateMachineTab: QSplitter(Qt.Horizontal).
+      * apply_changes() carries reserved values forward.
+
+    [v3.6 behavior retained]
+      * SettingsPanel: entry / exit columns are non-editable
+        inline (edited via ActionEditDialog).
+    [v3.5 behavior retained]
+      * MermaidWidget: QScrollArea alignment VCenter.
     [v3.4 behavior retained]
-      * getSvgSize() returns a JSON string, avoiding PySide6's
-        runJavaScript array-to-'' conversion.
-
+      * getSvgSize() returns a JSON string.
     [v3.3 behavior retained]
-      * QScrollArea viewport background set to #fafafa (dark-mode fix).
-      * json.loads() parses the JSON string form of the size array.
-
+      * QScrollArea viewport background #fafafa.
     [v3.2 behavior retained]
-      * Only Python triggers rendering (no window.load listener).
-      * renderMermaid() awaits mermaid.init / run / polls.
-      * Python retries up to 5 times (200 ms apart).
-      * JS console.log is forwarded to StaTableLogger.
-
-    [v3.0 change] MAX_SVG_WIDTH raised 1200 -> 3000.
-
-    [v2.8] Persistent debug copy of the generated HTML is retained.
-
-    [v2.2] entry / exit are List[str]; display uses "; " separator.
+      * Async render; JS console forwarded to StaTableLogger.
+    [v3.0] MAX_SVG_WIDTH 1200 -> 3000.
+    [v2.8] Persistent debug copy retained.
+    [v2.2] entry / exit are List[str]; "; " separator.
 
 [v2.3 change]
-  - StateMachineTab: add dataModified signal.
-    Relays MatrixTableWidget.transition_changed and
-    SettingsPanel.settings_changed to MainWindow so that the
-    window title's modified marker ([*]) can be updated.
+  - StateMachineTab: dataModified signal relays child modifications
+    to MainWindow (for the [*] window-modified marker).
 """
 
 import os
 import json
 import shutil
 import tempfile
-from typing import Optional, List
+from typing import Optional, List, Callable
 
 from PySide6.QtCore import Qt, Signal, QUrl, QTimer
 from PySide6.QtGui import QFont, QKeyEvent, QPalette, QColor
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
     QPushButton, QPlainTextEdit, QSplitter, QLabel, QHeaderView,
-    QTabWidget, QAbstractItemView, QMessageBox, QDialog, QScrollArea
+    QTabWidget, QAbstractItemView, QMessageBox, QDialog, QScrollArea,
+    QComboBox, QStyledItemDelegate
 )
 
 # ============================================================
@@ -102,10 +122,6 @@ from statable_gui.libcntrl.literal_library import LiteralLibrary
 # v2.2: List[str] <-> display helpers for entry / exit
 # ======================================================================
 _ENTRY_EXIT_SEP = "; "
-
-# [v3.3] Background color shared between the HTML body and the
-# QScrollArea viewport, so the empty area around a small diagram
-# blends in (important for dark mode).
 _MERMAID_BG = "#fafafa"
 
 
@@ -151,17 +167,64 @@ if WEBENGINE_AVAILABLE:
                 f"(line {line}, {os.path.basename(source)})")
 
 
+# ======================================================================
+# [v3.10] Namespace column delegate (editable QComboBox)
+# ======================================================================
+class _NamespaceDelegate(QStyledItemDelegate):
+    """Inline editor for the Role-function Namespace column.
+
+    [v3.10]
+      Renders an editable QComboBox populated with the current
+      namespace candidates (supplied by `choices_provider`). The
+      user can either pick a candidate or type a custom value.
+
+    [v3.11]
+      `choices_provider` is re-evaluated on every editor creation,
+      so newly added layers / namespaces appear immediately.
+    """
+
+    def __init__(self, choices_provider, parent=None):
+        super().__init__(parent)
+        self._choices_provider = choices_provider
+
+    def createEditor(self, parent, option, index):
+        combo = QComboBox(parent)
+        combo.setEditable(True)
+        combo.setInsertPolicy(QComboBox.NoInsert)
+        # First entry: empty namespace (no layer)
+        combo.addItem("")
+        try:
+            for ns in (self._choices_provider() or []):
+                ns = (ns or "").strip()
+                if ns and combo.findText(ns) < 0:
+                    combo.addItem(ns)
+        except Exception as e:
+            StaTableLogger.warning(
+                f"_NamespaceDelegate.choices_provider failed: {e}")
+        return combo
+
+    def setEditorData(self, editor, index):
+        value = index.data(Qt.EditRole) or ""
+        value = str(value)
+        idx = editor.findText(value)
+        if idx >= 0:
+            editor.setCurrentIndex(idx)
+        else:
+            editor.setEditText(value)
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, editor.currentText().strip(), Qt.EditRole)
+
+
 class MermaidWidget(QWidget):
     """Mermaid diagram preview widget.
 
     [v3.5] Diagram vertically centered in the viewport.
       QScrollArea alignment = Qt.AlignLeft | Qt.AlignVCenter.
 
-    [v3.4] getSvgSize() returns a JSON string (reliable across
-      PySide6 runJavaScript array-conversion quirks).
+    [v3.4] getSvgSize() returns a JSON string.
 
-    [v3.3] QScrollArea viewport background set to _MERMAID_BG;
-      _apply_svg_size parses JSON strings as well as lists.
+    [v3.3] QScrollArea viewport background set to _MERMAID_BG.
 
     [v3.2] Async render (mermaid.init/run + polling) and
       retry-based sizing; JS console forwarded to StaTableLogger.
@@ -207,28 +270,19 @@ class MermaidWidget(QWidget):
         if WEBENGINE_AVAILABLE:
             self.scroll_area = QScrollArea()
             self.scroll_area.setWidgetResizable(False)
-            # [v3.5] Vertically center the (small) diagram; horizontal
-            # stays left-aligned. When the diagram is larger than the
-            # viewport on either axis, scrolling takes over and
-            # alignment is ignored on that axis.
             self.scroll_area.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             self.scroll_area.setHorizontalScrollBarPolicy(
                 Qt.ScrollBarAsNeeded)
             self.scroll_area.setVerticalScrollBarPolicy(
                 Qt.ScrollBarAsNeeded)
 
-            # [v3.3] Viewport background = HTML body color.
             self.scroll_area.viewport().setAutoFillBackground(True)
             pal = self.scroll_area.viewport().palette()
             pal.setColor(QPalette.Window, QColor(_MERMAID_BG))
             self.scroll_area.viewport().setPalette(pal)
-            StaTableLogger.debug(
-                f"MermaidWidget: scroll_area viewport background set "
-                f"to {_MERMAID_BG}")
 
             self.web_view = QWebEngineView()
 
-            # [v3.2-debug] JS console -> Python log.
             try:
                 self.web_view.setPage(_DebugWebEnginePage(self.web_view))
                 StaTableLogger.debug(
@@ -241,7 +295,6 @@ class MermaidWidget(QWidget):
 
             try:
                 self.web_view.setZoomFactor(1.0)
-                StaTableLogger.debug("MermaidWidget: zoomFactor set to 1.0")
             except Exception as e:
                 StaTableLogger.warning(f"setZoomFactor failed: {e}")
 
@@ -254,9 +307,6 @@ class MermaidWidget(QWidget):
 
             self.scroll_area.setWidget(self.web_view)
             layout.addWidget(self.scroll_area)
-            StaTableLogger.debug(
-                "MermaidWidget: WebEngine available + file access enabled "
-                "(wrapped in QScrollArea, VCenter alignment)")
         else:
             self.text_view = QPlainTextEdit()
             self.text_view.setReadOnly(True)
@@ -271,8 +321,6 @@ class MermaidWidget(QWidget):
     def set_mermaid_code(self, code: str):
         StaTableLogger.debug("MermaidWidget.set_mermaid_code called")
         if self._disabled:
-            StaTableLogger.debug(
-                "MermaidWidget.set_mermaid_code: skipped (disabled)")
             return
 
         if self.web_view:
@@ -283,8 +331,6 @@ class MermaidWidget(QWidget):
                 return
 
             js_abs_url = QUrl.fromLocalFile(str(mermaid_js_path)).toString()
-            StaTableLogger.debug(
-                f"MermaidWidget: mermaid.js url = {js_abs_url}")
 
             html = f"""<!DOCTYPE html>
 <html>
@@ -433,9 +479,6 @@ class MermaidWidget(QWidget):
             return 'ok';
         }}
 
-        /* [v3.4] Returns a JSON string instead of a bare array.
-           PySide6's runJavaScript callback sometimes converts JS
-           arrays to '' at the Qt boundary; a string is reliable. */
         function getSvgSize() {{
             console.log('[MermaidDebug] getSvgSize: ENTER');
             var svg = document.querySelector('.mermaid svg');
@@ -508,22 +551,16 @@ class MermaidWidget(QWidget):
                         f"[DEBUG] failed to save debug HTML: {e}")
 
                 self.web_view.load(QUrl.fromLocalFile(temp_path))
-                StaTableLogger.debug(
-                    f"MermaidWidget: loading URL {temp_path}")
             except Exception as e:
                 StaTableLogger.error(
                     f"Failed to create temporary HTML: {e}")
         elif self.text_view:
             self.text_view.setPlainText(code)
-            StaTableLogger.debug(
-                "MermaidWidget: text fallback updated")
 
     def _on_load_finished(self, ok: bool):
         StaTableLogger.debug(
             f"MermaidWidget._on_load_finished: ok={ok}")
         if ok and self.web_view:
-            StaTableLogger.debug(
-                "MermaidWidget: invoking renderMermaid() via JS")
             self.web_view.page().runJavaScript(
                 "renderMermaid();",
                 lambda r: StaTableLogger.debug(
@@ -541,8 +578,6 @@ class MermaidWidget(QWidget):
         StaTableLogger.debug(
             f"MermaidWidget._request_svg_size: retry={retry}")
         if not self.web_view:
-            StaTableLogger.warning(
-                "MermaidWidget._request_svg_size: no web_view")
             return
         self.web_view.page().runJavaScript(
             "getSvgSize();",
@@ -550,7 +585,6 @@ class MermaidWidget(QWidget):
         )
 
     def _apply_svg_size(self, result, retry: int = 0):
-        """[v3.4] Accept JSON string (new) or list/tuple (legacy)."""
         StaTableLogger.debug(
             f"MermaidWidget._apply_svg_size: retry={retry}, "
             f"result={result!r}, type={type(result).__name__}")
@@ -565,11 +599,8 @@ class MermaidWidget(QWidget):
                     parsed = json.loads(s)
                     if isinstance(parsed, (list, tuple)) and len(parsed) >= 2:
                         values = parsed
-                        StaTableLogger.debug(
-                            f"MermaidWidget: parsed JSON string -> {values}")
-                except (json.JSONDecodeError, ValueError) as e:
-                    StaTableLogger.debug(
-                        f"MermaidWidget: JSON parse failed: {e}")
+                except (json.JSONDecodeError, ValueError):
+                    pass
 
         valid = False
         w = h = 0
@@ -579,16 +610,12 @@ class MermaidWidget(QWidget):
                 h = int(values[1])
                 if w > 0 and h > 0:
                     valid = True
-            except (ValueError, TypeError) as e:
-                StaTableLogger.warning(
-                    f"_apply_svg_size: int() failed: {e}")
+            except (ValueError, TypeError):
+                pass
 
         if not valid:
             if retry < self.SIZE_RETRY_MAX:
                 next_retry = retry + 1
-                StaTableLogger.debug(
-                    f"MermaidWidget: size not ready, scheduling retry "
-                    f"{next_retry}/{self.SIZE_RETRY_MAX}")
                 QTimer.singleShot(
                     self.SIZE_RETRY_DELAY_MS,
                     lambda: self._request_svg_size(retry=next_retry),
@@ -601,37 +628,55 @@ class MermaidWidget(QWidget):
 
         w = min(w, self.MAX_CONTENT_W)
         h = min(h, self.MAX_CONTENT_H)
-
-        StaTableLogger.debug(
-            f"MermaidWidget: setting web_view fixed size to {w}x{h}")
         self.web_view.setFixedSize(w, h)
 
 
 class SettingsPanel(QWidget):
     """State / role function settings panel.
 
-    [v2.2 change]
-      - State.entry / State.exit are List[str].
-      - Display format: "; " separated.
-      - apply_changes() parses display back to List[str].
+    [v3.11]
+      Accepts `layer_names_provider`, a zero-argument callable that
+      returns all tab names (all layer names in the project). It is
+      used by _get_namespace_choices() to populate the namespace
+      combo box with every layer, not just the current one.
 
-    [v2.3.1 fix]
-      - Columns 2 (entry), 3 (exit), 4 (do) are non-editable inline.
-        They are edited via ActionEditDialog (double-click). Without
-        this, the inline editor would swallow subsequent double-clicks
-        and the dialog would never re-open.
-      - Columns 0 (Name), 1 (Description), 5 (Type) remain editable
-        inline as before.
+    [v3.10]
+      Role function table: only the Namespace column is editable
+      inline (via _NamespaceDelegate).
+
+    [v3.9]
+      Receives role_function_library and literal_library.
+
+    [v3.8]
+      "Edit" button + row double-click for role functions.
+
+    [v3.7]
+      State list: 5 columns. Role function: 4 columns.
+      Reserved fields carried forward in apply_changes().
     """
     settings_changed = Signal()
 
     # Columns whose items are edited via ActionEditDialog (not inline).
-    NON_INLINE_EDIT_COLS = (2, 3, 4)
+    # State list layout: 0=Name, 1=Description, 2=entry, 3=exit, 4=Type
+    NON_INLINE_EDIT_COLS = (2, 3)
 
-    def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None, parent=None):
+    # [v3.10] Role-function table layout: 0=Title, 1=Function name,
+    #         2=Namespace, 3=Description. Only column 2 is editable.
+    ROLE_NAMESPACE_COL = 2
+
+    def __init__(self, sm: StateMachine,
+                 global_defs: GlobalDefinitions = None,
+                 literal_library: LiteralLibrary = None,
+                 role_function_library: RoleFunctionLibrary = None,
+                 layer_names_provider: Callable[[], List[str]] = None,
+                 parent=None):
         super().__init__(parent)
         self.sm = sm
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
+        self.literal_library = literal_library
+        self.role_function_library = role_function_library
+        # [v3.11] Callable returning all tab names (= all layer names)
+        self.layer_names_provider = layer_names_provider
         self._updating = False
 
         self._debounce_timer = QTimer()
@@ -646,12 +691,13 @@ class SettingsPanel(QWidget):
         # ---- State tab ----
         state_tab = QWidget()
         state_layout = QVBoxLayout(state_tab)
-        self.state_table = QTableWidget(0, 6)
+        self.state_table = QTableWidget(0, 5)
         self.state_table.setHorizontalHeaderLabels([
             "Name", "Description",
-            "entry function", "exit function", "do function", "Type"
+            "entry function", "exit function", "Type"
         ])
-        self.state_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.state_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.Stretch)
         self.state_table.setFont(QFont("Consolas", 10))
         state_layout.addWidget(self.state_table)
         btn_state = QHBoxLayout()
@@ -667,20 +713,30 @@ class SettingsPanel(QWidget):
         # ---- Role function tab ----
         role_tab = QWidget()
         role_layout = QVBoxLayout(role_tab)
-        self.role_table = QTableWidget(0, 9)
+        self.role_table = QTableWidget(0, 4)
         self.role_table.setHorizontalHeaderLabels([
-            "Title", "Function name", "Namespace", "Description", "Return type",
-            "Arg 1 type", "Arg 1 name", "Arg 2 type", "Arg 2 name"
+            "Title", "Function name", "Namespace", "Description"
         ])
-        self.role_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.role_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.Stretch)
         self.role_table.setFont(QFont("Consolas", 10))
+
+        # [v3.10] Namespace column: editable QComboBox delegate.
+        self._namespace_delegate = _NamespaceDelegate(
+            self._get_namespace_choices, self.role_table)
+        self.role_table.setItemDelegateForColumn(
+            self.ROLE_NAMESPACE_COL, self._namespace_delegate)
+
         role_layout.addWidget(self.role_table)
         btn_role = QHBoxLayout()
         add_role_btn = QPushButton("Add")
         add_role_btn.clicked.connect(self.add_role_function)
+        edit_role_btn = QPushButton("Edit")
+        edit_role_btn.clicked.connect(self.edit_role_function)
         del_role_btn = QPushButton("Delete")
         del_role_btn.clicked.connect(self.delete_role_function)
         btn_role.addWidget(add_role_btn)
+        btn_role.addWidget(edit_role_btn)
         btn_role.addWidget(del_role_btn)
         role_layout.addLayout(btn_role)
 
@@ -694,6 +750,8 @@ class SettingsPanel(QWidget):
         self.role_table.itemChanged.connect(self.on_role_table_item_changed)
         self.state_table.cellDoubleClicked.connect(
             self.on_state_table_cell_double_clicked)
+        self.role_table.cellDoubleClicked.connect(
+            self.on_role_table_cell_double_clicked)
 
         self.populate()
         StaTableLogger.debug("SettingsPanel initialized")
@@ -704,12 +762,67 @@ class SettingsPanel(QWidget):
 
     @staticmethod
     def _make_state_item(text: str, col: int) -> QTableWidgetItem:
-        """Create a state-table item, non-editable for dialog-only columns."""
         item = QTableWidgetItem(text)
         if col in SettingsPanel.NON_INLINE_EDIT_COLS:
             item.setFlags(item.flags() & ~Qt.ItemIsEditable)
         return item
 
+    # ------------------------------------------------------------------
+    # Namespace choices provider (shared by delegate + dialog)
+    # ------------------------------------------------------------------
+    def _get_namespace_choices(self) -> List[str]:
+        """Return namespace candidates (deduped, order preserved).
+
+        [v3.11]
+          Candidates come from (in order):
+            1. layer_names_provider    (all tabs: Application, Driver,
+                                        Middleware, ...)
+            2. self.sm.layer_name      (current tab, in case provider
+                                        is unavailable)
+            3. role_function_library   (shared library)
+            4. sm.role_functions       (this StateMachine)
+
+          Used both by the inline namespace combo-box delegate and
+          by _role_function_dialog_kwargs() for RoleFunctionDialog,
+          so both show the same complete list.
+        """
+        ordered: List[str] = []
+
+        def _add(ns):
+            ns = (ns or "").strip()
+            if ns and ns not in ordered:
+                ordered.append(ns)
+
+        # 1. All tab names (= all layer names in the project)
+        if self.layer_names_provider is not None:
+            try:
+                for name in self.layer_names_provider():
+                    _add(name)
+            except Exception as e:
+                StaTableLogger.warning(
+                    f"layer_names_provider failed: {e}")
+
+        # 2. Current tab's layer name (fallback)
+        _add(getattr(self.sm, 'layer_name', ''))
+
+        # 3. Shared library namespaces
+        if self.role_function_library is not None:
+            try:
+                for rf in self.role_function_library.list_all():
+                    _add(getattr(rf, 'namespace', ''))
+            except Exception as e:
+                StaTableLogger.warning(
+                    f"role_function_library.list_all() failed: {e}")
+
+        # 4. Namespaces used in this StateMachine
+        for rf in self.sm.role_functions.values():
+            _add(getattr(rf, 'namespace', ''))
+
+        return ordered
+
+    # ------------------------------------------------------------------
+    # Populate
+    # ------------------------------------------------------------------
     def populate(self):
         self._updating = True
 
@@ -734,11 +847,7 @@ class SettingsPanel(QWidget):
                 "Double-click to edit via action dialog")
             self.state_table.setItem(row, 3, exit_item)
 
-            do_item = self._make_state_item(state.do, 4)
-            do_item.setToolTip("Double-click to edit")
-            self.state_table.setItem(row, 4, do_item)
-
-            self.state_table.setItem(row, 5, QTableWidgetItem(state.type.value))
+            self.state_table.setItem(row, 4, QTableWidgetItem(state.type.value))
 
         self.populate_role_table()
 
@@ -748,23 +857,29 @@ class SettingsPanel(QWidget):
             f"{len(self.sm.role_functions)} roles")
 
     def populate_role_table(self):
+        """Refresh the role function table.
+
+        [v3.10]
+          Only the Namespace column is editable inline.
+        """
         roles = list(self.sm.role_functions.values())
         self.role_table.setRowCount(len(roles))
         for row, rf in enumerate(roles):
-            self.role_table.setItem(row, 0, QTableWidgetItem(rf.title))
-            self.role_table.setItem(row, 1, QTableWidgetItem(rf.name))
-            self.role_table.setItem(row, 2, QTableWidgetItem(rf.namespace))
-            self.role_table.setItem(row, 3, QTableWidgetItem(rf.description))
-            self.role_table.setItem(row, 4, QTableWidgetItem(rf.return_type))
-            self.role_table.setItem(row, 5, QTableWidgetItem(rf.arg1_type))
-            self.role_table.setItem(row, 6, QTableWidgetItem(rf.arg1_name))
-            self.role_table.setItem(row, 7, QTableWidgetItem(rf.arg2_type))
-            self.role_table.setItem(row, 8, QTableWidgetItem(rf.arg2_name))
+            values = [rf.title, rf.name, rf.namespace, rf.description]
+            for col, text in enumerate(values):
+                item = QTableWidgetItem(text)
+                if col != self.ROLE_NAMESPACE_COL:
+                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                self.role_table.setItem(row, col, item)
 
+    # ------------------------------------------------------------------
+    # State editing
+    # ------------------------------------------------------------------
     def on_state_table_cell_double_clicked(self, row, col):
         StaTableLogger.debug(
-            f"SettingsPanel.on_state_table_cell_double_clicked: row={row}, col={col}")
-        if col not in (2, 3, 4):
+            f"SettingsPanel.on_state_table_cell_double_clicked: "
+            f"row={row}, col={col}")
+        if col not in (2, 3):
             return
 
         item = self.state_table.item(row, col)
@@ -788,7 +903,7 @@ class SettingsPanel(QWidget):
     def add_state(self):
         row = self.state_table.rowCount()
         self.state_table.insertRow(row)
-        defaults = ["", "", "", "", "", "normal"]
+        defaults = ["", "", "", "", "normal"]
         for col, default in enumerate(defaults):
             self.state_table.setItem(
                 row, col, self._make_state_item(default, col))
@@ -822,9 +937,45 @@ class SettingsPanel(QWidget):
             self.settings_changed.emit()
             StaTableLogger.info("Event definitions updated")
 
+    # ------------------------------------------------------------------
+    # Role function dialog helpers
+    # ------------------------------------------------------------------
+    def _role_function_dialog_kwargs(self):
+        """Build kwargs for RoleFunctionDialog."""
+        global_vars = [
+            getattr(v, 'name', '') for v in
+            (getattr(self.global_defs, 'variables', []) or [])
+            if getattr(v, 'name', '')
+        ]
+
+        events = [
+            getattr(e, 'name', '') for e in self.sm.events.values()
+            if getattr(e, 'name', '')
+        ]
+
+        literals = []
+        if self.literal_library is not None:
+            try:
+                literals = [
+                    getattr(lit, 'name', '')
+                    for lit in self.literal_library.list_all()
+                    if getattr(lit, 'name', '')
+                ]
+            except Exception as e:
+                StaTableLogger.warning(
+                    f"literal_library.list_all() failed: {e}")
+
+        return dict(
+            global_vars=global_vars,
+            events=events,
+            literals=literals,
+            namespace_choices=self._get_namespace_choices(),
+        )
+
     def add_role_function(self):
         StaTableLogger.debug("SettingsPanel.add_role_function called")
-        dlg = RoleFunctionDialog(self)
+        dlg = RoleFunctionDialog(
+            self, **self._role_function_dialog_kwargs())
         if dlg.exec() == QDialog.Accepted:
             rf = dlg.get_role_function()
             if rf.name in self.sm.role_functions:
@@ -835,6 +986,60 @@ class SettingsPanel(QWidget):
             self.sm.add_role_function(rf)
             self.populate_role_table()
             self.settings_changed.emit()
+
+    def edit_role_function(self):
+        row = self.role_table.currentRow()
+        if row < 0:
+            StaTableLogger.debug("edit_role_function: no row selected")
+            return
+
+        name = (self.role_table.item(row, 1).text().strip()
+                if self.role_table.item(row, 1) else "")
+        if not name or name not in self.sm.role_functions:
+            StaTableLogger.debug(
+                f"edit_role_function: unknown name '{name}'")
+            return
+
+        existing = self.sm.role_functions[name]
+        dlg = RoleFunctionDialog(
+            self,
+            role_function=existing,
+            **self._role_function_dialog_kwargs(),
+        )
+        if dlg.exec() != QDialog.Accepted:
+            return
+
+        updated = dlg.get_role_function()
+
+        if updated.name != name and updated.name in self.sm.role_functions:
+            QMessageBox.warning(
+                self, "Warning",
+                "A role function with the same name already exists.")
+            return
+
+        self.sm.remove_role_function(name)
+        self.sm.add_role_function(updated)
+        self.populate_role_table()
+        self.settings_changed.emit()
+        StaTableLogger.info(
+            f"Role function updated: '{name}' -> '{updated.name}'")
+
+    def on_role_table_cell_double_clicked(self, row, col):
+        """Row double-click handler.
+
+        [v3.10]
+          If the Namespace column was double-clicked, the inline
+          combo-box delegate handles it; do not open the dialog.
+        """
+        StaTableLogger.debug(
+            f"SettingsPanel.on_role_table_cell_double_clicked: "
+            f"row={row}, col={col}")
+
+        if col == self.ROLE_NAMESPACE_COL:
+            return
+
+        self.role_table.selectRow(row)
+        self.edit_role_function()
 
     def delete_role_function(self):
         row = self.role_table.currentRow()
@@ -858,9 +1063,12 @@ class SettingsPanel(QWidget):
     def apply_changes(self):
         """Apply the UI edits back into the StateMachine.
 
-        [v2.2]
-          entry / exit: display string -> List[str] via split(';')
+        [v3.10]
+          The Namespace column may have been edited inline via the
+          combo-box delegate. This method picks up the change and
+          rebuilds the role functions accordingly.
         """
+        # ---- States ----
         for row in range(self.state_table.rowCount()):
             name = (self.state_table.item(row, 0).text().strip()
                     if self.state_table.item(row, 0) else "")
@@ -874,10 +1082,8 @@ class SettingsPanel(QWidget):
             entry_list = _display_to_list(entry_text)
             exit_list = _display_to_list(exit_text)
 
-            do = (self.state_table.item(row, 4).text().strip()
-                  if self.state_table.item(row, 4) else "")
-            type_str = (self.state_table.item(row, 5).text().strip()
-                        if self.state_table.item(row, 5) else "normal")
+            type_str = (self.state_table.item(row, 4).text().strip()
+                        if self.state_table.item(row, 4) else "normal")
 
             if name:
                 if name in self.sm.states:
@@ -885,15 +1091,20 @@ class SettingsPanel(QWidget):
                     st.description = desc
                     st.entry = entry_list
                     st.exit = exit_list
-                    st.do = do
-                    st.type = StateType(type_str)
+                    try:
+                        st.type = StateType(type_str)
+                    except ValueError:
+                        st.type = StateType.NORMAL
                 else:
                     self.sm.add_state(State(
                         name, type=StateType(type_str), description=desc,
-                        entry=entry_list, exit=exit_list, do=do,
+                        entry=entry_list, exit=exit_list,
                     ))
 
+        # ---- Role functions ----
+        existing_roles = dict(self.sm.role_functions)
         self.sm.role_functions.clear()
+
         for row in range(self.role_table.rowCount()):
             title = (self.role_table.item(row, 0).text().strip()
                      if self.role_table.item(row, 0) else "")
@@ -904,27 +1115,35 @@ class SettingsPanel(QWidget):
                              if self.role_table.item(row, 2) else "")
                 desc = (self.role_table.item(row, 3).text().strip()
                         if self.role_table.item(row, 3) else "")
-                ret = (self.role_table.item(row, 4).text().strip()
-                       if self.role_table.item(row, 4) else "int")
-                a1t = (self.role_table.item(row, 5).text().strip()
-                       if self.role_table.item(row, 5) else "int")
-                a1n = (self.role_table.item(row, 6).text().strip()
-                       if self.role_table.item(row, 6) else "arg1")
-                a2t = (self.role_table.item(row, 7).text().strip()
-                       if self.role_table.item(row, 7) else "int")
-                a2n = (self.role_table.item(row, 8).text().strip()
-                       if self.role_table.item(row, 8) else "arg2")
 
+                prev = existing_roles.get(name)
                 self.sm.add_role_function(RoleFunction(
                     name=name,
                     namespace=namespace,
                     description=desc,
-                    return_type=ret,
-                    arg1_type=a1t,
-                    arg1_name=a1n,
-                    arg2_type=a2t,
-                    arg2_name=a2n,
                     title=title,
+                    # [Reserved] carry forward previous values
+                    return_type=(
+                        getattr(prev, 'return_type', 'void')
+                        if prev else "void"),
+                    arg1_type=(
+                        getattr(prev, 'arg1_type', '') if prev else ""),
+                    arg1_name=(
+                        getattr(prev, 'arg1_name', '') if prev else ""),
+                    arg2_type=(
+                        getattr(prev, 'arg2_type', '') if prev else ""),
+                    arg2_name=(
+                        getattr(prev, 'arg2_name', '') if prev else ""),
+                    # [v3.8] carry forward symbol references
+                    used_global_vars=list(
+                        getattr(prev, 'used_global_vars', []) or []
+                    ) if prev else [],
+                    used_events=list(
+                        getattr(prev, 'used_events', []) or []
+                    ) if prev else [],
+                    used_literals=list(
+                        getattr(prev, 'used_literals', []) or []
+                    ) if prev else [],
                 ))
         StaTableLogger.debug("Settings changes applied")
 
@@ -932,34 +1151,51 @@ class SettingsPanel(QWidget):
 class StateMachineTab(QWidget):
     """Tab hosting one state machine (matrix + mermaid + settings).
 
+    [v3.11]
+      Accepts and forwards `layer_names_provider` to SettingsPanel.
+
+    [v3.9]
+      Passes role_function_library and literal_library to SettingsPanel.
+
+    [v3.7 change]
+      Layout: QSplitter(Qt.Horizontal).
+
     [v2.3 change]
-      - Added dataModified signal. Relays child widget signals
-        (MatrixTableWidget.transition_changed and
-        SettingsPanel.settings_changed) to MainWindow so the
-        window title's modified marker ([*]) is updated.
+      dataModified signal relays child modifications to MainWindow.
     """
 
-    # [v2.3] Notifies MainWindow whenever a child widget reports a
-    #        modification. Relayed from MatrixTableWidget.transition_changed
-    #        and SettingsPanel.settings_changed.
     dataModified = Signal()
 
-    def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None,
+    SETTINGS_MIN_WIDTH = 260
+    SETTINGS_MAX_WIDTH = 560
+
+    def __init__(self, sm: StateMachine,
+                 global_defs: GlobalDefinitions = None,
                  role_function_library: RoleFunctionLibrary = None,
                  condition_library: ConditionLibrary = None,
                  literal_library: LiteralLibrary = None,
+                 layer_names_provider: Callable[[], List[str]] = None,
                  parent=None):
         super().__init__(parent)
         self.sm = sm
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
 
-        self.role_function_library = role_function_library if role_function_library else RoleFunctionLibrary()
-        self.condition_library = condition_library if condition_library else ConditionLibrary()
-        self.literal_library = literal_library if literal_library else LiteralLibrary()
+        self.role_function_library = (
+            role_function_library if role_function_library
+            else RoleFunctionLibrary())
+        self.condition_library = (
+            condition_library if condition_library
+            else ConditionLibrary())
+        self.literal_library = (
+            literal_library if literal_library
+            else LiteralLibrary())
+        # [v3.11] forwarded to SettingsPanel
+        self.layer_names_provider = layer_names_provider
 
         StaTableLogger.debug(
             f"StateMachineTab.__init__: global_defs id={id(self.global_defs)}, "
-            f"vars={len(self.global_defs.variables)}, flags={len(self.global_defs.flags)}"
+            f"vars={len(self.global_defs.variables)}, "
+            f"flags={len(self.global_defs.flags)}"
         )
         StaTableLogger.debug(
             f"StateMachineTab shared libraries: "
@@ -968,7 +1204,12 @@ class StateMachineTab(QWidget):
             f"literals={len(self.literal_library.list_all())}"
         )
 
-        layout = QHBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        main_split = QSplitter(Qt.Horizontal)
+        main_split.setChildrenCollapsible(False)
 
         left_split = QSplitter(Qt.Vertical)
         self.table = MatrixTableWidget(
@@ -990,16 +1231,30 @@ class StateMachineTab(QWidget):
         self.table.setMinimumHeight(300)
         self.mermaid.setMinimumHeight(MERMAID_PREVIEW_MIN_HEIGHT)
 
-        layout.addWidget(left_split, stretch=3)
+        main_split.addWidget(left_split)
 
-        self.settings = SettingsPanel(sm, global_defs=self.global_defs)
-        layout.addWidget(self.settings, stretch=1)
+        # [v3.11] Forward layer_names_provider to SettingsPanel.
+        self.settings = SettingsPanel(
+            sm,
+            global_defs=self.global_defs,
+            literal_library=self.literal_library,
+            role_function_library=self.role_function_library,
+            layer_names_provider=self.layer_names_provider,
+        )
+        self.settings.setMinimumWidth(self.SETTINGS_MIN_WIDTH)
+        self.settings.setMaximumWidth(self.SETTINGS_MAX_WIDTH)
+
+        main_split.addWidget(self.settings)
+
+        main_split.setStretchFactor(0, 4)
+        main_split.setStretchFactor(1, 1)
+        main_split.setSizes([WINDOW_HEIGHT, self.SETTINGS_MIN_WIDTH])
+
+        outer.addWidget(main_split)
 
         self.table.transition_changed.connect(self.update_mermaid)
         self.settings.settings_changed.connect(self.update_mermaid)
 
-        # [v2.3] Relay child modifications to the parent (MainWindow).
-        #        Signal-to-signal connection; no extra slot needed.
         self.table.transition_changed.connect(self.dataModified)
         self.settings.settings_changed.connect(self.dataModified)
 
