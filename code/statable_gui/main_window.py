@@ -75,7 +75,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(
-            "StaTable - State Transition Editor")
+            "StaTable - State Transition Editor[*]")
         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
 
         self.logger = StaTableLogger()
