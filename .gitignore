@@ -49,3 +49,6 @@ code/tests/data/new.xml
 
 # Test artifacts (generated during test runs)
 code/tests/data/v22_features_test*.xml
+
+# Temporary reports
+dependency_report.md
