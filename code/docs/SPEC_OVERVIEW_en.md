@@ -433,6 +433,51 @@ class EventSourceLayer(Enum):
 
 **Note**: This class is distinct from `statable_gui.libcntrl.role_function_library.RoleFunction` (see §5.3).
 
+
+**Design Principle (v2.3)**: Role functions must be **layer-agnostic**
+to preserve the independence of each layer.
+
+#### Background
+
+The Driver / Middleware / Application layers should be designed,
+tested, and reused independently. If a role function changes its
+behavior based on the calling layer, the following problems arise:
+
+- **Implicit coupling**: Driver becomes aware of Application's existence
+- **Reduced reusability**: The function cannot be used standalone in other projects
+- **Testing difficulty**: Tests must reproduce the caller layer
+- **MISRA C:2012 risks**: Unused arguments, increased complexity
+
+#### Recommended Design
+
+When layer-specific behavior is needed, **split the role function**:
+
+| Called from | Dedicated role function (example) |
+|-------------|----------------------------------|
+| Application | `Driver.InitForApp` |
+| Middleware  | `Driver.InitForMiddleware` |
+| Layer-agnostic common | `Driver.InitCommon` |
+
+**Benefits**:
+
+- Each layer can evolve independently
+- The caller is explicit (visible in code)
+- Unit testing is straightforward
+- Complies with layering principles
+
+#### Anti-pattern
+
+Checking the calling layer at the top of a role function and branching
+for all calls should be **avoided**. This harms layer independence and
+severely reduces maintainability.
+
+#### Future Extension
+
+A caller-layer retrieval helper based on `transition_id` and
+`call_sites` may be provided as an **opt-in** feature in v3.1+.
+However, the "split functions" approach above remains **recommended**.
+
+
 ### 3.3 `state_machine.py`
 
 #### 3.3.1 Class `StateMachine`
@@ -1354,6 +1399,7 @@ python tools/analyze_misra_impact.py \
 | C-37 | `InterruptSettingsDialog` / `TypeManagerDialog` edits not reflected in `windowModified` | **Not addressed (v2.4)** | exec() return value not used |
 | C-38 | `SettingsPanel.add_state` does not emit `settings_changed` | **Existing behavior** | Adding a state does not propagate to windowModified |
 | C-39 | Dialog-driven edits do not propagate to `dataModified` | **Design decision** | v2.3 scope limited to in-tab edits |
+| C-41 | Role functions do not auto-detect the calling layer | **Design constraint** | To preserve layer independence, role functions are designed layer-agnostic. If caller-layer info is needed, split the function (see §3.2.7) |
 | C-40 | `StaTableLogger` singleton and TraceBall callback retention | **Mitigated in v2.3** (`_TraceBallHandler.emit` catches `RuntimeError`) | Safety for test environments creating multiple `MainWindow` instances |
 
 ---

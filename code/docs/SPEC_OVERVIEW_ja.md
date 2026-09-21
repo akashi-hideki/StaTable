@@ -433,6 +433,50 @@ class EventSourceLayer(Enum):
 
 **注意**：本クラスは `statable_gui.libcntrl.role_function_library.RoleFunction` とは別クラス（§5.3 参照）。
 
+
+**設計原則（v2.3）**：Role 関数は**各層の独立性を保つ**ため、
+呼び出し元層に依存しない設計とする。
+
+#### 背景
+
+Driver / Middleware / Application の各層は、それぞれ独立して
+設計・テスト・再利用できることが望ましい。Role 関数が呼び出し元層を
+識別して動作を変えると、以下の問題が生じる：
+
+- **層間の暗黙的結合**：Driver が Application の存在を意識することになる
+- **再利用性の低下**：他プロジェクトで単独利用できなくなる
+- **テスト困難**：呼び出し元層を再現しないとテストできない
+- **MISRA C:2012 違反リスク**：未使用引数、複雑度増加
+
+#### 望ましい設計
+
+層ごとに異なる動作が必要な場合、**Role 関数を分割**する：
+
+| 層 | 専用 Role 関数（例） |
+|----|-------------------|
+| Application から呼ぶ | `Driver.InitForApp` |
+| Middleware から呼ぶ | `Driver.InitForMiddleware` |
+| 層に依存しない共通処理 | `Driver.InitCommon` |
+
+**利点**：
+
+- 各層が独立して進化できる
+- 呼び出し元が明示的（コードを読めば分かる）
+- 単体テストが容易
+- レイヤリング原則に準拠
+
+#### アンチパターン
+
+Role 関数の冒頭で呼び出し元層を判定し、全呼び出しで分岐させる実装は
+**避ける**こと。これは各層の独立性を損ない、保守性を著しく低下させる。
+
+#### 将来の拡張
+
+`transition_id` と `call_sites` を活用した呼び出し元層取得は、
+v3.1 以降で**オプトイン**機能として提供予定。ただし、上記の
+「関数分割」が引き続き**推奨**される。
+
+
 ### 3.3 `state_machine.py`
 
 #### 3.3.1 `StateMachine` クラス
@@ -1354,6 +1398,7 @@ python tools/analyze_misra_impact.py \
 | C-37 | `InterruptSettingsDialog` / `TypeManagerDialog` の編集が `windowModified` に反映されない | **未対応（v2.4）** | exec() 戻り値未使用 |
 | C-38 | `SettingsPanel.add_state` が `settings_changed` を emit しない | **既存動作** | state 追加が windowModified に伝播しない |
 | C-39 | ダイアログ経由の編集が `dataModified` に伝播しない | **設計判断** | v2.3 スコープをタブ内編集に限定 |
+| C-41 | Role 関数は呼び出し元層を自動識別しない | **設計上の制約** | 各層の独立性を保つため、Role 関数は layer-agnostic に設計する。呼び出し元層が必要な場合は関数を分割する（§3.2.7 参照） |
 | C-40 | `StaTableLogger` シングルトンと TraceBall のコールバック保持 | **v2.3 で緩和**（`_TraceBallHandler.emit` で `RuntimeError` を catch） | 複数 `MainWindow` を生成するテスト環境での安全性確保 |
 
 ---
