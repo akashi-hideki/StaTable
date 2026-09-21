@@ -1,8 +1,8 @@
 ```markdown
 # StaTable SDK API Reference
 
-Version: 1.1 (English Master / Reviewed)
-Date: 2026-09-21
+Version: 1.2 (English Master / Reviewed)
+Date: 2026-09-22
 Target: Tool vendor developers
 License: MIT / Apache 2.0
 Based on: StaTable v2.2.9 / v2.6.1
@@ -964,7 +964,7 @@ class MyValidator(BaseValidator):
 **Two implementation patterns observed in the codebase**:
 
 - **Pattern A (10 validators)**: Override `validate()` for per-rule `try/except`, and use `_create_issue(code, **kwargs)` that pulls `message` / `severity` / `suggestion` from `VALIDATION_RULES`.
-- **Pattern B (1 validator: `CellValidator`)**: Do **not** override `validate()`; use `_make_issue(code, message, target)` with a hard-coded message string. `suggestion` is not set. See §9 L-21.
+- **Pattern B (1 validator: `CellValidator`)**: Do **not** override `validate()`; use `_make_issue(code, message, target)` with a hard-coded message string. `suggestion` is not set. See §9 L-21 / L-30.
 
 ### 5.4 Item Validators (35 rules)
 
@@ -983,6 +983,8 @@ class MyValidator(BaseValidator):
 | `cell` | `CELL_EMPTY_CONDITION`, `CELL_DUPLICATE_LABEL`, `CELL_DANGLING_RELATION`, `CELL_UNREACHABLE_TRANSITION`, `CELL_OVERLAP_POSSIBLE`, `CELL_DUPLICATE_TARGET`, `CELL_EXCLUSIVE_NO_RETURN`, `CELL_EMPTY_TARGET` |
 
 **Note on `ROLE_FUNC_UNUSED`**: The implementation checks only `Transition.action` and `Transition.condition` (exact string match). In v2.2, `pre_actions` / `else_actions` / cell actions are **not** considered, so the rule may produce false positives when only v2.2 action fields are used. See §9 L-23.
+
+**Note on `EventValidator` (v2.4.1)**: `EVENT_UNUSED` and `EVENT_NO_TRANSITION` are semantically duplicated. See §9 L-31.
 
 ### 5.5 Severity Distribution
 
@@ -1067,7 +1069,7 @@ class ChangeApplier:
 }
 ```
 
-**Limitation**: `_add_variable` and `_add_flag` do not check duplicates. See §9 L-19.
+**Note (v2.4.1 / C-28)**: `_add_variable` and `_add_flag` now reject duplicate names and empty names. See §9 L-19.
 
 ---
 
@@ -1501,7 +1503,7 @@ See §5.4 for the full list of 35 codes. Prefixes:
 |---|------------|
 | L-17 | `codegen/validate/` was not shared at S7 time |
 | L-18 | `AIResponseParser` does not parse v2.2 cell-level 7 actions |
-| L-19 | `ChangeApplier._add_variable/_add_flag` do not check duplicates |
+| L-19 | `ChangeApplier._add_variable/_add_flag` **now reject duplicates** (fixed in v2.4.1, C-28) |
 | L-20 | `AIPromptGenerator._format_data` does not output v2.2 `pre_actions` etc. |
 | L-21 | `CellValidator` uses a different design (no `validate()` override, no `suggestion`) |
 | L-22 | `EventValidator` `EVENT_UNUSED` and `EVENT_NO_TRANSITION` are semantically duplicated |
@@ -1522,6 +1524,8 @@ See §5.4 for the full list of 35 codes. Prefixes:
 | L-27 | `statable/xml_io.py` reverse-depends on `statable_gui.libcntrl` (try/except fallback) |
 | L-28 | Two distinct `RoleFunction` classes (`statable.model` vs `libcntrl`) |
 | L-29 | Two distinct `GlobalDefinitions` classes (`statable` vs `statable_gui`) |
+| L-30 | `CellValidator` uses a different design pattern (no `validate()` override, `suggestion` unset) |
+| L-31 | `EventValidator` has semantically duplicated rules (`EVENT_UNUSED` ≡ `EVENT_NO_TRANSITION`) |
 
 ---
 
@@ -1736,6 +1740,9 @@ code/
 | | | - R-5: §10.1 file tree completed (all GUI and libcntrl files enumerated) |
 | | | - R-6: §7.1 XML schema cross-reference to `SPEC_OVERVIEW_en.md` §3.5.2 added |
 | | | - R-7: §5.3 `BaseValidator` pattern A / pattern B distinction added |
+| 1.2 | 2026-09-22 | Sync with v2.4.1 fixes: |
+| | | - C-28 now implemented (§5.7.3, §9 L-19) |
+| | | - L-30 / L-31 added (§5.3, §5.4, §9) |
 
 ---
 
