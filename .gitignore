@@ -46,3 +46,6 @@ code/misra_report/
 code/statable_mermaid_debug.html
 # Test artifacts
 code/tests/data/new.xml
+
+# Test artifacts (generated during test runs)
+code/tests/data/v22_features_test*.xml
