@@ -1,7 +1,11 @@
 # statable_gui/widgets.py
 """StaTable main widget (shared library support / v2.2 entry-exit list)
 
-Version: 3.11 (2026-09-21)
+Version: 3.11 (2026-09-22)
+  - [C-38 fix] SettingsPanel.add_state() now emits settings_changed
+      so that the window's modified flag ([*]) updates when a state
+      is added.
+
   - [v3.11] Namespace combo box: full project-wide candidates.
       * SettingsPanel now accepts `layer_names_provider`, a
         zero-argument callable returning every tab name (= every
@@ -479,6 +483,9 @@ class MermaidWidget(QWidget):
             return 'ok';
         }}
 
+        /* [v3.4] Returns a JSON string instead of a bare array.
+           PySide6's runJavaScript callback sometimes converts JS
+           arrays to '' at the Qt boundary; a string is reliable. */
         function getSvgSize() {{
             console.log('[MermaidDebug] getSvgSize: ENTER');
             var svg = document.querySelector('.mermaid svg');
@@ -633,6 +640,11 @@ class MermaidWidget(QWidget):
 
 class SettingsPanel(QWidget):
     """State / role function settings panel.
+
+    [C-38 fix]
+      add_state() now emits settings_changed so that the parent
+      StateMachineTab / MainWindow updated the window's modified
+      flag when a state is added.
 
     [v3.11]
       Accepts `layer_names_provider`, a zero-argument callable that
@@ -908,6 +920,8 @@ class SettingsPanel(QWidget):
             self.state_table.setItem(
                 row, col, self._make_state_item(default, col))
         self.state_table.editItem(self.state_table.item(row, 0))
+        # [C-38 fix] Notify listeners that a state was added
+        self.settings_changed.emit()
         StaTableLogger.debug("Add state row")
 
     def delete_state(self):

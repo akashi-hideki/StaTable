@@ -54,3 +54,7 @@ code/tests/data/v22_features_test*.xml
 dependency_report.md
 check_report.md
 check_report.md
+
+# Backup files
+*.bak
+*.bak2

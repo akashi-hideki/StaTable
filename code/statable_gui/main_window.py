@@ -26,6 +26,9 @@ v2.4    - Provide all layer names to StateMachineTab (v3.11).
             StateMachineTab, which forwards it to SettingsPanel so
             the namespace combo box (inline editor + RoleFunctionDialog)
             lists all layers, not just the current tab's layer.
+          * [C-19 fix] Add missing '\\n' in the output-directory
+            warning message so "settings.Please specify." is split
+            correctly across two lines.
 """
 
 import sys
@@ -1112,7 +1115,9 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(
                 self, "Warning",
                 "Output directory is not set.\n"
-                "First set the output directory in settings"
+                # [C-19 fix] Add the missing '.' and '\n' so the
+                # message reads "... in settings.\nPlease specify."
+                "First set the output directory in settings.\n"
                 "Please specify.")
             self.open_code_generation_settings()
             config = self.config_manager.get_config()
