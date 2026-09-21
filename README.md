@@ -5,7 +5,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-551%20PASS-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-576%20PASS-green.svg)]()
 [![MISRA](https://img.shields.io/badge/MISRA-C%3A2012-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
@@ -29,7 +29,7 @@ custom tooling from scratch.
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **13 test suites, 551 PASS / 0 FAIL / 2 SKIP**
+- ✅ **14 test suites, 576 PASS / 0 FAIL / 2 SKIP**
 
 ---
 
@@ -95,7 +95,7 @@ python tests/test_v2_2_p1.py
 python tests/test_v2_3_p1.py
 ```
 
-Expected: **551 PASS / 0 FAIL / 2 SKIP** across 13 suites.
+Expected: **576 PASS / 0 FAIL / 2 SKIP** across 14 suites.
 
 ---
 
@@ -255,7 +255,14 @@ Where MISRA C:2012 compliance is non-negotiable.
 
 ## Roadmap
 
-### v2.4 (Current — Released 2026-09-22)
+### v2.4.1 (Current — Released 2026-09-22)
+
+- ✅ Merge idempotency fix (`code_merger.py` v2.1)
+- ✅ False-positive warning fix (`role_function_generator.py` v3.3.1)
+- ✅ New test suite: `test_v2_4_p1_merge.py` (9 groups / 25 assertions)
+- ✅ 14 suites / **576 PASS / 0 FAIL / 2 SKIP**
+
+### v2.4 (Released 2026-09-22)
 
 - ✅ UI cleanup: State list 5 columns, Role function 4 columns
 - ✅ Namespace combo box listing all project layers

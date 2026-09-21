@@ -74,7 +74,7 @@ Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 | I/O | XML (UTF-8), C sources (UTF-8) |
 | Dependencies | PySide6, pycparser (tests only) |
 | Generated code | C99-compliant, `static` functions used extensively |
-| Testing | 13 suites (`tests/test_v2_2_p*.py` + `tests/test_v2_3_p1.py`), 551 PASS / 2 SKIP |
+| Testing | 14 suites (`tests/test_v2_2_p*.py` + `tests/test_v2_3_p1.py` + `tests/test_v2_4_p1_merge.py`), 576 PASS / 2 SKIP |
 | CI | GitHub Actions, `ubuntu-latest` |
 | MISRA | cppcheck 2.x + MISRA addon (informational only) |
 
@@ -1292,8 +1292,9 @@ python tools/analyze_misra_impact.py \
 | `test_v2_2_p12_9.py` | Stage 9 features (XML round-trip) | 41 PASS / 0 FAIL |
 | `test_v2_2_p12_10.py` | Stage 10 features (structure) | 29 PASS / 2 SKIP / 0 FAIL |
 | `test_v2_3_p1.py` | New Project (v2.3) | 14 PASS / 0 FAIL |
+| `test_v2_4_p1_merge.py` | Code merge (v2.4.1) | 25 PASS / 0 FAIL |
 
-**Total**: **551 PASS / 0 FAIL / 2 SKIP**
+**Total**: **576 PASS / 0 FAIL / 2 SKIP**
 
 ### 11.2 `test_v2_2_p2.py` Update History
 
@@ -1672,6 +1673,11 @@ StaTable/
 | | | - §14.2: `main_window.py` updated to ~1,100 LOC |
 | | | - §15: v2.3 revision history (this entry) |
 
+| 2.4.1 | 2026-09-22 | Merge idempotency fix + test suite: |
+| | | - `code_merger.py` v2.1: idempotency fix (each merge added +1 newline per marker) |
+| | | - `role_function_generator.py` v3.3.1: silence false-positive warnings |
+| | | - `tests/test_v2_4_p1_merge.py`: 9 groups / 25 assertions |
+| | | - Test suites 13 -> 14, 551 -> 576 PASS / 2 SKIP |
 | 2.4 | 2026-09-22 | UI cleanup / reserved fields / namespace combo: |
 | | | - §1.4: test suites remain 551 PASS / 2 SKIP |
 | | | - §3.2.7: documented `RoleFunction.used_global_vars/events/literals` |

@@ -74,7 +74,7 @@ Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`�
 | I/O | XML（UTF-8）、C ソース（UTF-8） |
 | 依存関係 | PySide6、pycparser（テストのみ） |
 | 生成コード | C99 準拠、`static` 関数を多用 |
-| テスト | 13スイート（`tests/test_v2_2_p*.py` + `tests/test_v2_3_p1.py`）、551 PASS / 2 SKIP |
+| テスト | 14スイート（`tests/test_v2_2_p*.py` + `tests/test_v2_3_p1.py` + `tests/test_v2_4_p1_merge.py`）、576 PASS / 2 SKIP |
 | CI | GitHub Actions、`ubuntu-latest` |
 | MISRA | cppcheck 2.x + MISRA addon（情報提供のみ） |
 
@@ -1291,8 +1291,9 @@ python tools/analyze_misra_impact.py \
 | `test_v2_2_p12_9.py` | Stage 9 機能（XML ラウンドトリップ） | 41 PASS / 0 FAIL |
 | `test_v2_2_p12_10.py` | Stage 10 機能（構造） | 29 PASS / 2 SKIP / 0 FAIL |
 | `test_v2_3_p1.py` | 新規プロジェクト（v2.3） | 14 PASS / 0 FAIL |
+| `test_v2_4_p1_merge.py` | コードマージ（v2.4.1） | 25 PASS / 0 FAIL |
 
-**合計**：**551 PASS / 0 FAIL / 2 SKIP**
+**合計**：**576 PASS / 0 FAIL / 2 SKIP**
 
 ### 11.2 `test_v2_2_p2.py` 更新履歴
 
@@ -1671,6 +1672,11 @@ StaTable/
 | | | - §14.2：`main_window.py` を ~1,100 LOC に更新 |
 | | | - §15：v2.3 改訂履歴（本エントリ） |
 
+| 2.4.1 | 2026-09-22 | マージ冪等性修正 + テスト追加： |
+| | | - `code_merger.py` v2.1: マージ非冪等性バグ修正（マーカー毎に +1 改行） |
+| | | - `role_function_generator.py` v3.3.1: 誤検知警告を抑制 |
+| | | - `tests/test_v2_4_p1_merge.py`: 9グループ / 25アサーション追加 |
+| | | - テストスイート 13 → 14、551 → 576 PASS / 2 SKIP |
 | 2.4 | 2026-09-22 | UI 整理・予約フィールド・Namespace コンボ対応： |
 | | | - §1.4: テストスイートは 551 PASS / 2 SKIP のまま |
 | | | - §3.2.7: `RoleFunction.used_global_vars/events/literals` 追加を明記 |
