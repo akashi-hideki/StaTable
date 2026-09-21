@@ -7,6 +7,10 @@ Editing is done via RelationsEditDialog.
 [v2.2 enhancement]
   - Members list shows "T1: cond_A -> Active" so labels are identifiable.
   - set_transitions() lets the dialog pass transition details.
+
+[v2.3.1 fix]
+  - Add setEditTriggers(NoEditTriggers) to prevent inline edit from
+    swallowing subsequent double-clicks. Same fix as transitions_tab.py.
 """
 
 import logging
@@ -59,6 +63,9 @@ class RelationsTab(QWidget):
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SingleSelection)
+        # [v2.3.1 fix] Disable inline editing so that double-click always
+        #              triggers the edit dialog.
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.cellDoubleClicked.connect(self._on_double_click)
         layout.addWidget(self.table)
 
@@ -105,6 +112,12 @@ class RelationsTab(QWidget):
     def row_count(self) -> int:
         return self.table.rowCount()
 
+    def _make_item(self, text: str) -> QTableWidgetItem:
+        """Create a non-editable table item."""
+        item = QTableWidgetItem(text)
+        item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+        return item
+
     def add_relation(self, relation: Optional[TransitionRelation] = None) -> int:
         """Add a relation. If relation is None, opens the edit dialog first."""
         if relation is None:
@@ -128,12 +141,12 @@ class RelationsTab(QWidget):
         row = self.table.rowCount()
         self.table.insertRow(row)
 
-        self.table.setItem(row, COL_KIND, QTableWidgetItem(relation.kind))
+        self.table.setItem(row, COL_KIND, self._make_item(relation.kind))
         self.table.setItem(row, COL_MEMBERS,
-                           QTableWidgetItem(", ".join(relation.members)))
+                           self._make_item(", ".join(relation.members)))
         self.table.setItem(row, COL_SHARED,
-                           QTableWidgetItem(relation.shared_condition))
-        self.table.setItem(row, COL_NOTE, QTableWidgetItem(relation.note))
+                           self._make_item(relation.shared_condition))
+        self.table.setItem(row, COL_NOTE, self._make_item(relation.note))
 
         self.relations_changed.emit()
         return row
@@ -165,12 +178,12 @@ class RelationsTab(QWidget):
         for r in relations:
             row = self.table.rowCount()
             self.table.insertRow(row)
-            self.table.setItem(row, COL_KIND, QTableWidgetItem(r.kind))
+            self.table.setItem(row, COL_KIND, self._make_item(r.kind))
             self.table.setItem(row, COL_MEMBERS,
-                               QTableWidgetItem(", ".join(r.members)))
+                               self._make_item(", ".join(r.members)))
             self.table.setItem(row, COL_SHARED,
-                               QTableWidgetItem(r.shared_condition))
-            self.table.setItem(row, COL_NOTE, QTableWidgetItem(r.note))
+                               self._make_item(r.shared_condition))
+            self.table.setItem(row, COL_NOTE, self._make_item(r.note))
 
     # ------------------------------------------------------------------
     # Slots
@@ -208,10 +221,10 @@ class RelationsTab(QWidget):
             return
 
         new_r = dlg.get_relation()
-        self.table.setItem(row, COL_KIND, QTableWidgetItem(new_r.kind))
+        self.table.setItem(row, COL_KIND, self._make_item(new_r.kind))
         self.table.setItem(row, COL_MEMBERS,
-                           QTableWidgetItem(", ".join(new_r.members)))
+                           self._make_item(", ".join(new_r.members)))
         self.table.setItem(row, COL_SHARED,
-                           QTableWidgetItem(new_r.shared_condition))
-        self.table.setItem(row, COL_NOTE, QTableWidgetItem(new_r.note))
+                           self._make_item(new_r.shared_condition))
+        self.table.setItem(row, COL_NOTE, self._make_item(new_r.note))
         self.relations_changed.emit()

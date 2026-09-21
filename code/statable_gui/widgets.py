@@ -1,8 +1,11 @@
 # statable_gui/widgets.py
 """StaTable main widget (shared library support / v2.2 entry-exit list)
 
-Version: 3.5 (2026-09-20)
-  - MermaidWidget: vertically center the diagram in the viewport.
+Version: 3.6 (2026-09-21)
+  - SettingsPanel: entry / exit / do columns are non-editable inline
+    (edited via ActionEditDialog). Prevents double-click from being
+    swallowed by the inline editor after the first dialog interaction.
+  - MermaidWidget: unchanged from v3.5.
 
     [v3.5 change]
       * QScrollArea alignment changed from
@@ -105,6 +108,7 @@ _ENTRY_EXIT_SEP = "; "
 # blends in (important for dark mode).
 _MERMAID_BG = "#fafafa"
 
+
 def _list_to_display(items) -> str:
     """Convert List[str] to a display string ('A; B; C')."""
     if items is None:
@@ -115,6 +119,7 @@ def _list_to_display(items) -> str:
         return _ENTRY_EXIT_SEP.join(str(x) for x in items if str(x).strip())
     return str(items)
 
+
 def _display_to_list(text: str) -> List[str]:
     """Parse a display string ('A; B; C') into List[str]."""
     if not text:
@@ -123,6 +128,7 @@ def _display_to_list(text: str) -> List[str]:
         return [str(x) for x in text if str(x).strip()]
     parts = str(text).split(';')
     return [p.strip() for p in parts if p.strip()]
+
 
 # ======================================================================
 # [v3.2-debug] Custom page to forward JS console to StaTableLogger
@@ -143,6 +149,7 @@ if WEBENGINE_AVAILABLE:
             StaTableLogger.debug(
                 f"[JSConsole:{lvl_name}] {message} "
                 f"(line {line}, {os.path.basename(source)})")
+
 
 class MermaidWidget(QWidget):
     """Mermaid diagram preview widget.
@@ -599,6 +606,7 @@ class MermaidWidget(QWidget):
             f"MermaidWidget: setting web_view fixed size to {w}x{h}")
         self.web_view.setFixedSize(w, h)
 
+
 class SettingsPanel(QWidget):
     """State / role function settings panel.
 
@@ -606,8 +614,19 @@ class SettingsPanel(QWidget):
       - State.entry / State.exit are List[str].
       - Display format: "; " separated.
       - apply_changes() parses display back to List[str].
+
+    [v2.3.1 fix]
+      - Columns 2 (entry), 3 (exit), 4 (do) are non-editable inline.
+        They are edited via ActionEditDialog (double-click). Without
+        this, the inline editor would swallow subsequent double-clicks
+        and the dialog would never re-open.
+      - Columns 0 (Name), 1 (Description), 5 (Type) remain editable
+        inline as before.
     """
     settings_changed = Signal()
+
+    # Columns whose items are edited via ActionEditDialog (not inline).
+    NON_INLINE_EDIT_COLS = (2, 3, 4)
 
     def __init__(self, sm: StateMachine, global_defs: GlobalDefinitions = None, parent=None):
         super().__init__(parent)
@@ -683,6 +702,14 @@ class SettingsPanel(QWidget):
         if not self._updating:
             self.settings_changed.emit()
 
+    @staticmethod
+    def _make_state_item(text: str, col: int) -> QTableWidgetItem:
+        """Create a state-table item, non-editable for dialog-only columns."""
+        item = QTableWidgetItem(text)
+        if col in SettingsPanel.NON_INLINE_EDIT_COLS:
+            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+        return item
+
     def populate(self):
         self._updating = True
 
@@ -695,19 +722,19 @@ class SettingsPanel(QWidget):
             entry_display = _list_to_display(getattr(state, 'entry', []))
             exit_display = _list_to_display(getattr(state, 'exit', []))
 
-            entry_item = QTableWidgetItem(entry_display)
+            entry_item = self._make_state_item(entry_display, 2)
             entry_item.setToolTip(
                 "Multiple functions: separate with '; '\n"
                 "Double-click to edit via action dialog")
             self.state_table.setItem(row, 2, entry_item)
 
-            exit_item = QTableWidgetItem(exit_display)
+            exit_item = self._make_state_item(exit_display, 3)
             exit_item.setToolTip(
                 "Multiple functions: separate with '; '\n"
                 "Double-click to edit via action dialog")
             self.state_table.setItem(row, 3, exit_item)
 
-            do_item = QTableWidgetItem(state.do)
+            do_item = self._make_state_item(state.do, 4)
             do_item.setToolTip("Double-click to edit")
             self.state_table.setItem(row, 4, do_item)
 
@@ -754,15 +781,17 @@ class SettingsPanel(QWidget):
             if item:
                 item.setText(new_text)
             else:
-                item = QTableWidgetItem(new_text)
+                item = self._make_state_item(new_text, col)
                 self.state_table.setItem(row, col, item)
             self.settings_changed.emit()
 
     def add_state(self):
         row = self.state_table.rowCount()
         self.state_table.insertRow(row)
-        for col, default in enumerate(["", "", "", "", "", "normal"]):
-            self.state_table.setItem(row, col, QTableWidgetItem(default))
+        defaults = ["", "", "", "", "", "normal"]
+        for col, default in enumerate(defaults):
+            self.state_table.setItem(
+                row, col, self._make_state_item(default, col))
         self.state_table.editItem(self.state_table.item(row, 0))
         StaTableLogger.debug("Add state row")
 
@@ -898,6 +927,7 @@ class SettingsPanel(QWidget):
                     title=title,
                 ))
         StaTableLogger.debug("Settings changes applied")
+
 
 class StateMachineTab(QWidget):
     """Tab hosting one state machine (matrix + mermaid + settings).

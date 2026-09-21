@@ -52,3 +52,5 @@ code/tests/data/v22_features_test*.xml
 
 # Temporary reports
 dependency_report.md
+check_report.md
+check_report.md
