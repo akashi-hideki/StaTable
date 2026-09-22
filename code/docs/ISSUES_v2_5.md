@@ -156,7 +156,7 @@ ActionEditorDialog の以下2タブに操作ボタンを追加:
 
 **Priority**: 🟡 Medium
 **Type**: Bug / Enhancement
-**Status**: v2.5 で発見（実装は v2.2.5 から）
+**Status**: ✅ v2.5.1 で解消（`_should_declare_here` に call_map フォールバック追加）
 
 #### 現状
 `role_function_generator._should_declare_here`（および `_should_emit_implementation`）

@@ -236,8 +236,8 @@
         </StateMachine>
     </Tab>
 
-    <Tab name="Application">
-        <StateMachine initial="Idle" layer_priority="5" layer_description="Vending machine application" layer_name="Application">
+    <Tab name="Vending">
+        <StateMachine initial="Idle" layer_priority="5" layer_description="Vending layer" layer_name="Vending">
             <States>
                 <State name="Idle" type="initial" parent="" do="" description="Waiting for coin">
                     <Entry>

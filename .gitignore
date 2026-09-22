@@ -67,3 +67,6 @@ code/verify_report/
 
 # v2.5 tutorial: generated output
 code/output_vending/
+
+# v2.5: generated output variants
+code/output_*/

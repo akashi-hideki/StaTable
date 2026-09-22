@@ -730,17 +730,45 @@ class RoleFunctionGenerator:
             return True
         return False
 
-    def _should_declare_here(self, func) -> bool:
+    def _should_declare_here(self, func, call_map=None) -> bool:
+        """Decide whether to emit this function's declaration here.
+
+        [C-50 fix]
+          A function is declared in this layer's header if either:
+            1. its namespace matches the layer (exact or 3+ char
+               prefix match), OR
+            2. it is called from somewhere in this layer (call_map hit).
+
+          Condition (2) mirrors _should_emit_implementation so that
+          declaration (.h) and definition (.c) stay in sync. Without
+          it, a non-prefix namespace (e.g. layer_name="Application",
+          namespace="Vending") produced a definition without a
+          declaration, causing 'implicit declaration of function'.
+        """
         if not self.layer_name:
             return True
         name, namespace = self._resolve_name_and_namespace(func)
         layer = self.layer_name
+
+        # 1a. Exact match
         if namespace == layer:
             return True
+
+        # 1b. Prefix match (App <-> Application, Drv <-> Driver)
         ns_l, ly_l = namespace.lower(), layer.lower()
         if min(len(ns_l), len(ly_l)) >= 3:
             if ly_l.startswith(ns_l) or ns_l.startswith(ly_l):
                 return True
+
+        # 1c. [C-50 fix] Called from this layer
+        if call_map:
+            qn = getattr(func, 'qualified_name', None) or ''
+            if qn and call_map.get(qn):
+                return True
+            bare = getattr(func, 'name', '') or ''
+            if bare and call_map.get(bare):
+                return True
+
         return False
 
     # ================================================================
@@ -1037,7 +1065,8 @@ class RoleFunctionGenerator:
                          f"{self.naming.to_pascal_case(func_name)}")
         return f"{full_name}(transition, ctx)"
 
-    def generate_all_declarations(self, role_functions: List) -> str:
+    def generate_all_declarations(self, role_functions: List,
+                                  state_machine=None) -> str:
         """Generate declarations for self-layer role functions only.
 
     [v3.2 / MISRA 8.5 fix]
@@ -1053,9 +1082,11 @@ class RoleFunctionGenerator:
       c_code_generator._step_include_section).
     """
         unique_funcs = self._dedupe_by_name(role_functions)
+        call_map = self._collect_call_sites(state_machine) \
+            if state_machine is not None else {}
         parts = []
         for func in unique_funcs:
-            if not self._should_declare_here(func):
+            if not self._should_declare_here(func, call_map):
                 continue
             parts.append(self.generate_declaration(func))
             parts.append('\n')

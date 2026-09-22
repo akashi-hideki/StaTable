@@ -1069,7 +1069,8 @@ class CCodeGenerator:
             self._setup_layer_generators(sm)
             decls = (self.role_func_gen
                      .generate_all_declarations(
-                         self._get_role_functions_list(sm)))
+                         self._get_role_functions_list(sm),
+                         state_machine=sm))
             if decls:
                 results.append(decls)
         return ['\n'.join(results)] if results else ['']
