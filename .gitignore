@@ -58,3 +58,9 @@ check_report.md
 # Backup files
 *.bak
 *.bak2
+
+# v2.5: patch-tool backups (with timestamp suffix)
+*.bak_*
+
+# v2.5: local compile-verification reports
+code/verify_report/

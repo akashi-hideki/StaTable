@@ -2,6 +2,10 @@
 """
 OSAL (OS abstraction layer) code generation module (template-split version)
 
+Version: 2.5 (2026-09-22 / ARM toolchain portability fix)
+  - The generated osal.c now includes <stddef.h> so that NULL is
+    defined. Required by ARM GNU Toolchain 14.x (strict C99).
+
 Version: 2.2 (2026-09-20 / MISRA 17.3 fix)
   - The generated osal.c now includes its own header "osal.h" first.
     MISRA C:2012 Rule 17.3 requires that a function be declared before
@@ -102,6 +106,12 @@ class OSALGenerator:
           - Source (osal.c): must include its own header "osal.h" FIRST,
             so all OSAL function prototypes are visible before the
             definitions (MISRA C:2012 Rule 17.3).
+
+        [v2.5 / ARM portability]
+          - Source additionally includes <stddef.h> to make NULL
+            available. Required by ARM GNU Toolchain 14.x, which
+            enforces C99 strictly. MinGW gcc accepts the code without
+            it, but the ARM build fails.
         """
         os_type = context.get('os_type', 'non_rtos')
         is_header = 'guard_name' in context
@@ -115,6 +125,9 @@ class OSALGenerator:
             os_info = self.osal_templates['os_types'].get(os_type, {})
             header_name = os_info.get('header', 'osal.h')
             lines.append(f'#include "{header_name}"')
+            # [v2.5] <stddef.h> provides NULL. Required by ARM
+            # GNU Toolchain 14.x (strict C99).
+            lines.append("#include <stddef.h>")
             lines.append("")
 
         if os_type == 'freertos':
