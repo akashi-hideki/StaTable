@@ -149,3 +149,62 @@ jobs:
       - name: Verify generated C code
         run: |
           python tools/verify_generated_code.py --root output
+
+  # ==============================================================
+  # Job 5: C syntax verification (gcc + arm-none-eabi-gcc)
+  #
+  # Runs both the host gcc and the ARM GNU Toolchain against the
+  # generated C code. Catches portability issues that only one
+  # toolchain surfaces (e.g. NULL without <stddef.h>).
+  #
+  # Logs are uploaded as an artifact for post-run inspection.
+  # ==============================================================
+  verify-c-syntax:
+    name: C syntax verification (gcc + ARM)
+    runs-on: ubuntu-latest
+    needs: [syntax]
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Qt system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libgl1 libglib2.0-0 libdbus-1-3 libxkbcommon0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xfixes0 libxcb-cursor0 libfontconfig1 libfreetype6
+
+      - name: Install ARM GNU Toolchain
+        run: |
+          sudo apt-get install -y gcc-arm-none-eabi
+
+      - name: Install PySide6
+        run: pip install PySide6
+
+      - name: Show toolchain versions
+        run: |
+          gcc --version | head -1
+          arm-none-eabi-gcc --version | head -1
+
+      - name: Generate C code from test XML
+        run: |
+          python tools/gen_output_from_xml.py \
+            --xml tests/data/v22_features_test3.xml \
+            --out output
+
+      - name: Verify C syntax (gcc + arm)
+        run: |
+          python tools/verify_c_syntax.py \
+            --root output --compiler both
+
+      - name: Upload verification log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-c-syntax-logs
+          path: code/verify_report/*.log
+          if-no-files-found: warn
+          retention-days: 30
