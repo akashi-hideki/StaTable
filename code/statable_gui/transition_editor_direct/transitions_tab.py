@@ -1,10 +1,20 @@
 # statable_gui/transition_editor_direct/transitions_tab.py
-"""Transitions tab widget (v2.2).
+"""Transitions tab widget (v2.2, v2.5 new role function button).
 
 Ordered list of transitions with Mode (Commit / Tentative).
 - Pre-actions / Else-actions columns (double-click to edit).
 - Target / Else target: ComboBox (states + "(none)").
 - Has else: ComboBox (Yes / No), linked to Else target enable state.
+
+[v2.5 change]
+  - New "+ New Role Function" button.
+    Clicking it opens RoleFunctionDialog, registers the resulting
+    role function into state_machine.role_functions, and appends
+    its qualified_name to self.role_functions. The new name then
+    becomes available in the TransitionActionsDialog / 
+    ConditionBuilderDialog candidates opened from this tab.
+  - New constructor args: role_function_library, literal_library,
+    layer_names_provider (all optional / keyword).
 """
 
 import logging
@@ -18,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from statable.model import Transition
+from statable_gui.role_function_dialog import RoleFunctionDialog
 from .draft import ActionDraft
 from .transition_actions_dialog import TransitionActionsDialog
 
@@ -41,13 +52,25 @@ WIDGET_COLUMNS = (COL_TARGET, COL_HAS_ELSE, COL_ELSE_TARGET, COL_MODE)
 NONE_LABEL = "(none)"
 
 
+def _qualified_name(rf) -> str:
+    """Return qualified_name if available, else fall back to name."""
+    qn = getattr(rf, 'qualified_name', None)
+    if qn:
+        return qn
+    return getattr(rf, 'name', '') or ''
+
+
 class TransitionsTab(QWidget):
     """Transitions tab (priority = row order)."""
 
     transitions_changed = Signal()
 
     def __init__(self, draft: ActionDraft, states: Optional[List[str]] = None,
-                 global_defs=None, state_machine=None, parent=None):
+                 global_defs=None, state_machine=None,
+                 role_function_library=None,
+                 literal_library=None,
+                 layer_names_provider=None,
+                 parent=None):
         super().__init__(parent)
         self.draft = draft
         self.states = list(states or [])
@@ -55,10 +78,15 @@ class TransitionsTab(QWidget):
         self.state_machine = state_machine
         self.role_functions: List[str] = []
 
+        # v2.5: context for RoleFunctionDialog
+        self.role_function_library = role_function_library
+        self.literal_library = literal_library
+        self.layer_names_provider = layer_names_provider
+
         self._build_ui()
 
     def set_role_functions(self, names: List[str]):
-        self.role_functions = names or []
+        self.role_functions = list(names or [])
 
     def set_states(self, states: List[str]):
         """Replace the state list and rebuild all state combos."""
@@ -117,8 +145,145 @@ class TransitionsTab(QWidget):
         btn_layout.addWidget(up_btn)
         btn_layout.addWidget(down_btn)
         btn_layout.addWidget(edit_actions_btn)
+
+        # v2.5: create a new role function (available in subsequent dialogs)
+        new_role_btn = QPushButton("+ New Role Function")
+        new_role_btn.setToolTip(
+            "Create a new role function.\n"
+            "It is registered into the state machine and becomes\n"
+            "available in the Pre/Else action dialogs of this tab.")
+        new_role_btn.clicked.connect(self._on_new_role_function)
+        btn_layout.addWidget(new_role_btn)
+
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
+
+    # ------------------------------------------------------------------
+    # v2.5: role function creation
+    # ------------------------------------------------------------------
+    def _get_namespace_choices(self) -> List[str]:
+        """Build namespace candidates for the RoleFunctionDialog.
+
+        Mirrors SettingsPanel._get_namespace_choices():
+          1. layer_names_provider  (all tabs in the project)
+          2. state_machine.layer_name
+          3. state_machine.role_functions[].namespace
+          4. role_function_library entries
+        """
+        ordered: List[str] = []
+
+        def _add(ns):
+            ns = (ns or "").strip()
+            if ns and ns not in ordered:
+                ordered.append(ns)
+
+        if self.layer_names_provider is not None:
+            try:
+                for name in self.layer_names_provider():
+                    _add(name)
+            except Exception as e:
+                logger.warning(f"layer_names_provider failed: {e}")
+
+        if self.state_machine is not None:
+            _add(getattr(self.state_machine, 'layer_name', ''))
+            try:
+                for rf in self.state_machine.role_functions.values():
+                    _add(getattr(rf, 'namespace', ''))
+            except Exception as e:
+                logger.warning(
+                    f"state_machine.role_functions iteration failed: {e}")
+
+        if self.role_function_library is not None:
+            try:
+                for rf in self.role_function_library.list_all():
+                    _add(getattr(rf, 'namespace', ''))
+            except Exception as e:
+                logger.warning(
+                    f"role_function_library.list_all() failed: {e}")
+
+        return ordered
+
+    def _dialog_kwargs(self) -> dict:
+        """Build kwargs for RoleFunctionDialog (mirrors SettingsPanel)."""
+        global_vars = []
+        if self.global_defs is not None:
+            global_vars = [
+                getattr(v, 'name', '')
+                for v in (getattr(self.global_defs, 'variables', []) or [])
+                if getattr(v, 'name', '')
+            ]
+
+        events = []
+        if self.state_machine is not None:
+            events = [
+                getattr(e, 'name', '')
+                for e in self.state_machine.events.values()
+                if getattr(e, 'name', '')
+            ]
+
+        literals = []
+        if self.literal_library is not None:
+            try:
+                literals = [
+                    getattr(lit, 'name', '')
+                    for lit in self.literal_library.list_all()
+                    if getattr(lit, 'name', '')
+                ]
+            except Exception as e:
+                logger.warning(
+                    f"literal_library.list_all() failed: {e}")
+
+        return dict(
+            global_vars=global_vars,
+            events=events,
+            literals=literals,
+            namespace_choices=self._get_namespace_choices(),
+        )
+
+    def _on_new_role_function(self):
+        """v2.5: create a new role function.
+
+        Registers the new RoleFunction into state_machine and appends
+        its qualified_name to self.role_functions so that subsequent
+        TransitionActionsDialog / ConditionBuilderDialog instances
+        opened from this tab can reference it.
+        """
+        if self.state_machine is None:
+            QMessageBox.information(
+                self, "Information",
+                "StateMachine is not available; cannot create role "
+                "functions from here.")
+            return
+
+        dlg = RoleFunctionDialog(self, **self._dialog_kwargs())
+        if dlg.exec() != QDialog.Accepted:
+            return
+
+        rf = dlg.get_role_function()
+        if not rf.name:
+            QMessageBox.warning(
+                self, "Warning",
+                "Role function name is required.")
+            return
+        if rf.name in self.state_machine.role_functions:
+            QMessageBox.warning(
+                self, "Warning",
+                "A role function with the same name already exists.")
+            return
+
+        try:
+            self.state_machine.add_role_function(rf)
+        except ValueError as e:
+            QMessageBox.warning(self, "Warning", str(e))
+            return
+
+        qn = _qualified_name(rf)
+        if qn and qn not in self.role_functions:
+            self.role_functions.append(qn)
+
+        logger.info(
+            f"Role function created: {qn} "
+            f"(available in subsequent action dialogs)")
 
     # ------------------------------------------------------------------
     # ComboBox helpers

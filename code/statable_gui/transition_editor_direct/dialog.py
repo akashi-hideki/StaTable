@@ -15,6 +15,17 @@ Tabs:
   - _loading flag suppresses _on_content_changed during initial load.
   - _sync_member_details() propagates {label: "cond -> target"} to
     RelationsTab so the member list shows identifiable entries.
+
+[v2.5 change]
+  - TransitionsTab and ActionsTab now receive `role_function_library`
+    and `literal_library` from this dialog, so that the new
+    "+ New Role Function" buttons on those tabs can open
+    RoleFunctionDialog with the same context as SettingsPanel.
+  - ActionEditorDialog already holds both libraries as `self.*`
+    (they are passed in by MatrixTableWidget.open_transition_dialog),
+    so this is purely a forwarding change.
+  - No new constructor arguments are added to ActionEditorDialog;
+    layer_names_provider is intentionally NOT forwarded (v2.5 scope).
 """
 
 import logging
@@ -117,11 +128,17 @@ class ActionEditorDialog(QDialog):
         # ==============================================================
         # Tab 1: Transitions
         # ==============================================================
+        # [v2.5] Pass shared libraries so "+ New Role Function" on this
+        #        tab can build the same RoleFunctionDialog kwargs as
+        #        SettingsPanel (global_vars / events / literals /
+        #        namespace_choices).
         self.transitions_tab = TransitionsTab(
             self.draft,
             states=self.states,
             global_defs=self.global_defs,
             state_machine=self.state_machine,
+            role_function_library=self.role_function_library,
+            literal_library=self.literal_library,
         )
         # v2.2: provide role function candidates to the TransitionsTab
         self.transitions_tab.set_role_functions(self.role_functions)
@@ -130,11 +147,14 @@ class ActionEditorDialog(QDialog):
         # ==============================================================
         # Tab 2: Pre / Post Actions
         # ==============================================================
+        # [v2.5] Same context propagation as Tab 1.
         self.actions_tab = ActionsTab(
             self.draft,
             role_functions=self.role_functions,
             global_defs=self.global_defs,
             state_machine=self.state_machine,
+            role_function_library=self.role_function_library,
+            literal_library=self.literal_library,
         )
         self.tabs.addTab(self.actions_tab, self.TAB_NAMES[1])
 
