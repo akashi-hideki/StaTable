@@ -73,3 +73,6 @@ code/output_*/
 
 # Working file for git_runner.py (local only)
 code/tools/git_ops.txt
+
+# Local MISRA reports
+code/misra_report_*/
