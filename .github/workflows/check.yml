@@ -101,6 +101,16 @@ jobs:
         run: |
           python tests/test_v2_3_p1.py
 
+      - name: Run v2.4 test suites
+        run: |
+          python tests/test_v2_4_p1_merge.py
+
+      - name: Run v2.5 test suites
+        run: |
+          python tests/test_v2_5_p1.py
+          python tests/test_v2_5_p2.py
+          python tests/test_v2_5_p3.py
+
   # ==============================================================
   # Job 4: Generated C code verification
   # ==============================================================

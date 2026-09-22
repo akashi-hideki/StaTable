@@ -1731,6 +1731,16 @@ StaTable/
 | | | - `role_function_generator.py` v3.3.1: 誤検知警告を抑制 |
 | | | - `tests/test_v2_4_p1_merge.py`: 9グループ / 25アサーション追加 |
 | | | - テストスイート 13 → 14、551 → 576 PASS / 2 SKIP |
+| 2.5.2 | 2026-09-23 | (void) 抑制をユーザー編集可能領域へ移動： |
+| | | - `_generate_local_data_pointers` を `_decls` と `_suppress` に分割 |
+| | | - `(void)` 群を `STABLE_USER_CODE` マーカー内に出力 |
+| | | - ユーザーが個別行を削除可能、`code_merger` が保持 |
+| | | - `tests/test_v2_5_p3.py`（25 PASS）追加 |
+| 2.5.1 | 2026-09-23 | C-50（namespace 前方一致制約）解消： |
+| | | - `_should_declare_here` に call_map フォールバック追加 |
+| | | - `generate_all_declarations` に `state_machine` 引数追加 |
+| | | - 任意の namespace / layer_name が使用可能に |
+| | | - `tests/test_v2_5_p2.py`（16 PASS）追加 |
 | 2.5 | 2026-09-22 | ActionEditorDialog ロール関数管理（F-16）： |
 | | | - §1.3：F-16 追加（セル編集中のロール関数管理） |
 | | | - §1.4：テストスイートを 15、651 PASS / 2 SKIP に更新 |
