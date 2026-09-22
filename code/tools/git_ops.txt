@@ -1,72 +1,20 @@
-# git_ops.txt
-# ----------------------------------------------------------------------
-# git_runner.py 用の Git 操作スクリプト
-#
-# '#' で始まる行と空行は無視されます。
-# 使用可能なキーワード:
-#   status, branch, log [N], diff, show [ref]
-#   add <path>, add-all, reset <path>, reset-hard [ref]
-#   checkout <branch>, fetch, pull [remote br], push [remote br]
-#   commit-msg <subj>
-#   commit-begin ... commit-end   (複数行メッセージ)
-#   run <raw git cmd>, pause, abort
-#
-# 使い方:
-#   python tools/git_runner.py --dry-run   # プレビュー
-#   python tools/git_runner.py             # 実行
-# ----------------------------------------------------------------------
-
-# ======================================================================
-# 現在の状態を確認
-# ======================================================================
 status
 
-# ======================================================================
-# ファイルをステージ
-# ======================================================================
-add code/tools/git_runner.py
 add code/tools/git_ops.txt
 
-# ======================================================================
-# ステージ内容を確認
-# ======================================================================
 status
 
-# ======================================================================
-# コミット（複数行メッセージ）
-# ======================================================================
 commit-begin
-tools: add git_runner.py for scripted Git operations
+tools: record the git_ops.txt example used for commit 8330911
 
-Motivation:
-  Complex Git workflows (multi-line commit messages, staged
-  sequences, quote-heavy PowerShell escapes) were error-prone
-  when driven manually from PowerShell. This tool lets the
-  operations live in a plain text file (git_ops.txt) that is
-  read and executed sequentially.
+The example demonstrates the workflow:
+  status -> add -> status -> commit-begin/end -> push
 
-Usage:
-  python tools/git_runner.py --dry-run
-  python tools/git_runner.py
-
-Features:
-  - commit-begin/commit-end blocks for multi-line messages
-  - reset-hard guarded by an interactive confirmation
-  - --dry-run, --continue-on-error, --list options
-  - Unknown commands fail fast before any git call
+This file is editable; git_runner.py reads it on each invocation.
 commit-end
 
-# ======================================================================
-# 直近のログを確認
-# ======================================================================
 log 3
 
-# ======================================================================
-# リモートへプッシュ
-# ======================================================================
 push
 
-# ======================================================================
-# 最終確認
-# ======================================================================
 status
