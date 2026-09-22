@@ -152,6 +152,47 @@ ActionEditorDialog の以下2タブに操作ボタンを追加:
 
 ---
 
+### 候補 6: RoleFunction.namespace の「前方一致制約」を緩和
+
+**Priority**: 🟡 Medium
+**Type**: Bug / Enhancement
+**Status**: v2.5 で発見（実装は v2.2.5 から）
+
+#### 現状
+`role_function_generator._should_declare_here`（および `_should_emit_implementation`）
+は以下の場合のみ、その層のヘッダに宣言を出力する：
+
+- `namespace == layer_name`（完全一致）
+- `min(len(ns), len(layer)) >= 3` かつ
+  `layer.lower().startswith(ns.lower())` または
+  `namespace.lower().startswith(layer.lower())`（双方向の前方一致）
+
+#### 問題
+不一致の場合：
+- **呼び出し**（`RoleFunc_<NS>_<Name>`）は `transition_generator` が生成する
+- **宣言**は `role_function_generator` が生成しない
+- → `implicit declaration of function 'RoleFunc_<NS>_*'` でコンパイルエラー
+
+#### 再現例（v2.5 TUTORIAL で実証）
+| namespace | layer_name | 判定 | 結果 |
+|-----------|-----------|------|------|
+| `App` | `Application` | 前方一致（3文字） | ✅ 12/12 PASS |
+| `Vending` | `Application` | 双方向不一致 | ❌ 11/12 FAIL（gcc / arm 両方） |
+
+#### 対応案
+| # | 案 | 変更ファイル | リスク |
+|---|----|------------|-------|
+| A | SPEC に明記（v2.5 で C-50 として追加済み） | 文書のみ | なし |
+| B | `_should_declare_here` を「その層から呼ばれる関数」基準に変更 | `role_function_generator.py` | 中 |
+| C | XML 読み込み時に前方一致を自動補正 or 警告 | `xml_io.py` | 中 |
+| D | 呼び出し側も宣言側と同じ判定を行う | 両 generator | 大 |
+
+#### 回避策（現実的）
+namespace を層の短縮名（`App`、`Drv`、`Mw` など）にする。
+TUTORIAL では `Vending` → `App` に変更して解決（`tools/fix_vending_namespace_v2.py`）。
+
+---
+
 ## 変更履歴
 
 | バージョン | 日付 | 内容 |

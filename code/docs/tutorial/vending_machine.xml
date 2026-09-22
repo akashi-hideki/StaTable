@@ -1,0 +1,338 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Project name="VendingMachineTutorial">
+    <ProjectSettings>
+        <CodeGeneration project_name="VendingMachineTutorial" table_type="array" generation_style="table_driven" os_type="non_rtos" folder_structure="by_layer" include_dir_name="include" source_dir_name="src" common_dir_name="common" project_dir_name="project" generate_super_include="true" super_include_file="statable_all.h" max_consecutive_pending_events="16" external_includes_in_super="true" external_includes_in_role="true" external_includes_in_transitions="false" external_includes_in_common="false" />
+    </ProjectSettings>
+    <GlobalDefinitions>
+        <SystemVariables>
+            <Variable name="balance" type="uint32_t" unit="yen" default_value="0" group="Payment" description="Current inserted amount" title="Balance" array_size="0" />
+            <Variable name="price" type="uint32_t" unit="yen" default_value="150" group="Payment" description="Price of the selected item" title="Price" array_size="0" />
+            <Variable name="change" type="uint32_t" unit="yen" default_value="0" group="Payment" description="Change to return" title="Change" array_size="0" />
+            <Variable name="stock" type="uint8_t" unit="pcs" default_value="10" group="Inventory" description="Remaining stock" title="Stock" array_size="0" />
+            <Variable name="coin_value" type="uint32_t" unit="yen" default_value="0" group="Hardware" description="Coin value" title="Coin value" array_size="0" />
+            <Variable name="item_id" type="uint8_t" unit="" default_value="0" group="Hardware" description="Selected item ID" title="Item ID" array_size="0" />
+            <Variable name="error_code" type="uint8_t" unit="" default_value="0" group="System" description="Error code" title="Error code" array_size="0" />
+            <Variable name="g_system_tick" type="volatile uint32_t" unit="1ms" default_value="0" group="Timer" description="System tick" title="System tick" array_size="0" />
+        </SystemVariables>
+        <EventFlags>
+            <Flag name="EVT_READY" min_value="0" max_value="1" group="System" description="Ready flag" title="Ready" />
+            <Flag name="EVT_OUT_OF_STOCK" min_value="0" max_value="1" group="System" description="Out of stock" title="Out of stock" />
+        </EventFlags>
+        <Interrupts>
+            <Interrupt name="TIMER0" description="1ms timer" event_names="" is_timer="true" title="Timer0">
+                <Action condition="" action="ctx-&gt;data.g_system_tick++" />
+                <UsedVariable name="g_system_tick" />
+            </Interrupt>
+        </Interrupts>
+        <TimerBase>
+            <Timer variable_name="g_system_tick" unit="1ms" data_type="volatile uint32_t" title="System tick" interrupt_name="TIMER0" />
+        </TimerBase>
+    </GlobalDefinitions>
+    <SharedLibraries>
+        <RoleFunctionLibrary>
+            <RoleFunction name="ReadCoinSensor" namespace="Driver" title="Read coin sensor" description="Read coin acceptor" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ReadButton" namespace="Driver" title="Read button" description="Read button matrix" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StartMotor" namespace="Driver" title="Start motor" description="Activate dispensing motor" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StopMotor" namespace="Driver" title="Stop motor" description="Deactivate dispensing motor" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StartCoinReturn" namespace="Driver" title="Start coin return" description="Activate coin-return solenoid" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StopCoinReturn" namespace="Driver" title="Stop coin return" description="Deactivate coin-return solenoid" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="CheckMotorStatus" namespace="Driver" title="Check motor status" description="Return non-zero if motor running" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="LogHwFault" namespace="Driver" title="Log hardware fault" description="Record hardware fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ClearHwFault" namespace="Driver" title="Clear hardware fault" description="Attempt recovery" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="AccumulatePayment" namespace="Middleware" title="Accumulate payment" description="Add coin to balance" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ResetPayment" namespace="Middleware" title="Reset payment" description="Zero the balance" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="CalculateChange" namespace="Middleware" title="Calculate change" description="Compute change" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="CheckStock" namespace="Middleware" title="Check stock" description="Return non-zero if stock > 0" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="DecrementStock" namespace="Middleware" title="Decrement stock" description="Reduce stock by one" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="LogTransaction" namespace="Middleware" title="Log transaction" description="Persist completed sale" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="HandleMwError" namespace="Middleware" title="Handle MW error" description="Process payment error" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ValidateRequest" namespace="Middleware" title="Validate request" description="Pre-check request" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="IdleEntry" namespace="App" title="Idle entry" description="Reset balance display" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="IdleExit" namespace="App" title="Idle exit" description="Clear idle indicator" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ShowBalance" namespace="App" title="Show balance" description="Refresh LCD" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ShowDispensing" namespace="App" title="Show dispensing" description="Display dispensing message" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ShowError" namespace="App" title="Show error" description="Display error message" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="RequestDispense" namespace="App" title="Request dispense" description="Signal middleware to dispense" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="RequestCoinReturn" namespace="App" title="Request coin return" description="Signal driver to return coins" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ClearError" namespace="App" title="Clear error" description="Return to idle after maintenance" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="PreCheck" namespace="App" title="Pre-check" description="Pre-transition validation" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="PostCommit" namespace="App" title="Post commit" description="Post-transition bookkeeping" return_type="" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+        </RoleFunctionLibrary>
+        <ConditionLibrary>
+            <Condition name="balance &gt;= price" condition="ctx-&gt;data.balance &gt;= ctx-&gt;data.price" />
+            <Condition name="balance &lt; price" condition="ctx-&gt;data.balance &lt; ctx-&gt;data.price" />
+            <Condition name="balance &gt; price" condition="ctx-&gt;data.balance &gt; ctx-&gt;data.price" />
+            <Condition name="balance == price" condition="ctx-&gt;data.balance == ctx-&gt;data.price" />
+            <Condition name="stock &gt; 0" condition="ctx-&gt;data.stock &gt; 0" />
+            <Condition name="stock == 0" condition="ctx-&gt;data.stock == 0" />
+            <Condition name="Driver.CheckMotorStatus == 0" condition="RoleFunc_Driver_CheckMotorStatus(transition, ctx) == 0" />
+            <Condition name="Middleware.ValidateRequest == 0" condition="RoleFunc_Middleware_ValidateRequest(transition, ctx) == 0" />
+            <Condition name="Middleware.ValidateRequest != 0" condition="RoleFunc_Middleware_ValidateRequest(transition, ctx) != 0" />
+            <Condition name="App.PreCheck == 0" condition="RoleFunc_App_PreCheck(transition, ctx) == 0" />
+            <Condition name="App.PreCheck != 0" condition="RoleFunc_App_PreCheck(transition, ctx) != 0" />
+        </ConditionLibrary>
+        <LiteralLibrary>
+            <Literal name="PRICE_150" value="150" description="Default price" />
+            <Literal name="PRICE_180" value="180" description="Premium price" />
+            <Literal name="STOCK_LOW" value="3" description="Low stock threshold" />
+        </LiteralLibrary>
+    </SharedLibraries>
+
+    <Tab name="Driver">
+        <StateMachine initial="Waiting" layer_priority="1" layer_description="Hardware driver layer" layer_name="Driver">
+            <States>
+                <State name="Waiting" type="initial" parent="" do="" description="Waiting for hardware event">
+                    <Entry>
+                        <Action name="Driver.ClearHwFault" />
+                    </Entry>
+                </State>
+                <State name="CoinPulse" type="normal" parent="" do="" description="Coin sensor edge detected" />
+                <State name="ButtonPressed" type="normal" parent="" do="" description="Item button pressed" />
+                <State name="MotorRunning" type="normal" parent="" do="" description="Dispensing motor active">
+                    <Entry>
+                        <Action name="Driver.StartMotor" />
+                    </Entry>
+                </State>
+                <State name="HardwareFault" type="normal" parent="" do="" description="Hardware fault">
+                    <Entry>
+                        <Action name="Driver.LogHwFault" />
+                    </Entry>
+                </State>
+            </States>
+            <Events>
+                <Event name="COIN_SENSOR" id="1" kind="signal" params="" priority="0" description="Coin sensor edge" delivery_type="queue" source_layer="driver" data_type="uint32_t" data_name="coin_value" title="Coin sensor" />
+                <Event name="BUTTON_SENSOR" id="2" kind="signal" params="" priority="0" description="Button pressed" delivery_type="queue" source_layer="driver" data_type="uint8_t" data_name="item_id" title="Button" />
+                <Event name="MOTOR_COMPLETE" id="3" kind="signal" params="" priority="0" description="Motor cycle complete" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Motor complete" />
+                <Event name="HW_FAULT" id="4" kind="signal" params="err_code" priority="9" description="Hardware fault" delivery_type="queue" source_layer="driver" data_type="uint8_t" data_name="err_code" title="HW fault" />
+                <Event name="CLEAR_FAULT" id="5" kind="signal" params="" priority="0" description="Clear fault" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Clear fault" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="ReadCoinSensor" namespace="Driver" description="Read coin acceptor" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Read coin sensor" />
+                <RoleFunction name="ReadButton" namespace="Driver" description="Read button matrix" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Read button" />
+                <RoleFunction name="StartMotor" namespace="Driver" description="Activate motor" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Start motor" />
+                <RoleFunction name="StopMotor" namespace="Driver" description="Deactivate motor" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Stop motor" />
+                <RoleFunction name="StartCoinReturn" namespace="Driver" description="Activate coin return" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Start coin return" />
+                <RoleFunction name="StopCoinReturn" namespace="Driver" description="Deactivate coin return" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Stop coin return" />
+                <RoleFunction name="CheckMotorStatus" namespace="Driver" description="Check motor" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Check motor" />
+                <RoleFunction name="LogHwFault" namespace="Driver" description="Record fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Log fault" />
+                <RoleFunction name="ClearHwFault" namespace="Driver" description="Attempt recovery" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Clear fault" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="Waiting" event="COIN_SENSOR" condition="" action="" target="CoinPulse" transition_type="external" title="Coin detected" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Driver.ReadCoinSensor" />
+                </Transition>
+                <Transition source="Waiting" event="BUTTON_SENSOR" condition="" action="" target="ButtonPressed" transition_type="external" title="Button pressed" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Driver.ReadButton" />
+                </Transition>
+                <Transition source="MotorRunning" event="MOTOR_COMPLETE" condition="RoleFunc_Driver_CheckMotorStatus(transition, ctx) == 0" action="" target="Waiting" transition_type="external" title="Motor finished" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Driver.StopMotor" />
+                </Transition>
+                <Transition source="Waiting" event="HW_FAULT" condition="" action="" target="HardwareFault" transition_type="external" title="Fault (waiting)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="CoinPulse" event="HW_FAULT" condition="" action="" target="HardwareFault" transition_type="external" title="Fault (coin)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="ButtonPressed" event="HW_FAULT" condition="" action="" target="HardwareFault" transition_type="external" title="Fault (button)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="MotorRunning" event="HW_FAULT" condition="" action="" target="HardwareFault" transition_type="external" title="Fault (motor)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HardwareFault" event="CLEAR_FAULT" condition="" action="" target="Waiting" transition_type="external" title="Fault cleared" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Driver.ClearHwFault" />
+                </Transition>
+                <Transition source="CoinPulse" event="MOTOR_COMPLETE" condition="" action="" target="Waiting" transition_type="external" title="Return from coin pulse" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="ButtonPressed" event="MOTOR_COMPLETE" condition="" action="" target="Waiting" transition_type="external" title="Return from button" has_else="false" else_target="" early_return="true" label="T1" />
+            </Transitions>
+            <Cells>
+                <Cell source="Waiting" event="COIN_SENSOR">
+                    <Actions>
+                        <Action role_function="Driver.ReadCoinSensor" trigger="before_transitions" title="Read coin" />
+                        <Action role_function="Driver.StopCoinReturn" trigger="after_transitions" title="Ensure coin return off" />
+                    </Actions>
+                </Cell>
+            </Cells>
+        </StateMachine>
+    </Tab>
+
+    <Tab name="Middleware">
+        <StateMachine initial="Waiting" layer_priority="3" layer_description="Payment and inventory middleware" layer_name="Middleware">
+            <States>
+                <State name="Waiting" type="initial" parent="" do="" description="Waiting for request" />
+                <State name="Accumulating" type="normal" parent="" do="" description="Accumulating coins">
+                    <Entry>
+                        <Action name="Middleware.AccumulatePayment" />
+                    </Entry>
+                </State>
+                <State name="Ready" type="normal" parent="" do="" description="Enough balance" />
+                <State name="CheckingStock" type="normal" parent="" do="" description="Verifying stock" />
+                <State name="Releasing" type="normal" parent="" do="" description="Dispense in progress">
+                    <Entry>
+                        <Action name="Middleware.DecrementStock" />
+                    </Entry>
+                </State>
+                <State name="MwError" type="normal" parent="" do="" description="Middleware error">
+                    <Entry>
+                        <Action name="Middleware.HandleMwError" />
+                    </Entry>
+                </State>
+            </States>
+            <Events>
+                <Event name="PAYMENT_ADD" id="1" kind="signal" params="coin_value" priority="0" description="New coin" delivery_type="direct" source_layer="driver" data_type="uint32_t" data_name="coin_value" title="Payment add" />
+                <Event name="ITEM_SELECT" id="2" kind="signal" params="item_id" priority="0" description="Item selected" delivery_type="direct" source_layer="driver" data_type="uint8_t" data_name="item_id" title="Item select" />
+                <Event name="CANCEL_REQ" id="3" kind="signal" params="" priority="1" description="Cancel" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Cancel" />
+                <Event name="RELEASE_DONE" id="4" kind="signal" params="" priority="0" description="Dispense complete" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Release done" />
+                <Event name="STOCK_EMPTY" id="5" kind="signal" params="" priority="5" description="Out of stock" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Stock empty" />
+                <Event name="MW_FAULT" id="6" kind="signal" params="err_code" priority="9" description="Fault" delivery_type="queue" source_layer="driver" data_type="uint8_t" data_name="err_code" title="MW fault" />
+                <Event name="MW_RESET" id="7" kind="signal" params="" priority="0" description="Reset" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Reset" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="AccumulatePayment" namespace="Middleware" description="Add coin to balance" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Accumulate payment" />
+                <RoleFunction name="ResetPayment" namespace="Middleware" description="Zero balance" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Reset payment" />
+                <RoleFunction name="CalculateChange" namespace="Middleware" description="Compute change" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Calculate change" />
+                <RoleFunction name="CheckStock" namespace="Middleware" description="Return non-zero if stock > 0" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Check stock" />
+                <RoleFunction name="DecrementStock" namespace="Middleware" description="Reduce stock by one" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Decrement stock" />
+                <RoleFunction name="LogTransaction" namespace="Middleware" description="Persist sale" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Log transaction" />
+                <RoleFunction name="HandleMwError" namespace="Middleware" description="Handle error" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Handle MW error" />
+                <RoleFunction name="ValidateRequest" namespace="Middleware" description="Pre-check request" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Validate request" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="Waiting" event="PAYMENT_ADD" condition="" action="" target="Accumulating" transition_type="external" title="First coin" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Accumulating" event="PAYMENT_ADD" condition="" action="" target="Accumulating" transition_type="external" title="More coins" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Accumulating" event="ITEM_SELECT" condition="ctx-&gt;data.balance &gt;= ctx-&gt;data.price" action="" target="CheckingStock" transition_type="external" title="Enough balance" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Accumulating" event="ITEM_SELECT" condition="ctx-&gt;data.balance &lt; ctx-&gt;data.price" action="" target="Accumulating" transition_type="external" title="Insufficient" has_else="false" else_target="" early_return="false" label="T2" />
+                <Transition source="CheckingStock" event="RELEASE_DONE" condition="RoleFunc_Middleware_CheckStock(transition, ctx) != 0" action="" target="Releasing" transition_type="external" title="Stock available" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="CheckingStock" event="STOCK_EMPTY" condition="" action="" target="MwError" transition_type="external" title="Out of stock" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Releasing" event="RELEASE_DONE" condition="ctx-&gt;data.balance &gt; ctx-&gt;data.price" action="" target="Waiting" transition_type="external" title="With change" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Middleware.CalculateChange" />
+                    <PreAction action="Middleware.LogTransaction" />
+                </Transition>
+                <Transition source="Releasing" event="RELEASE_DONE" condition="ctx-&gt;data.balance == ctx-&gt;data.price" action="" target="Waiting" transition_type="external" title="Exact" has_else="false" else_target="" early_return="true" label="T2">
+                    <PreAction action="Middleware.LogTransaction" />
+                </Transition>
+                <Transition source="Accumulating" event="CANCEL_REQ" condition="" action="" target="Waiting" transition_type="external" title="Cancel" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Middleware.ResetPayment" />
+                </Transition>
+                <Transition source="Waiting" event="MW_RESET" condition="" action="" target="Waiting" transition_type="external" title="Reset (no-op)" has_else="false" else_target="" early_return="false" label="T1" />
+                <Transition source="Accumulating" event="MW_RESET" condition="" action="" target="Waiting" transition_type="external" title="Reset during accumulation" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Middleware.ResetPayment" />
+                </Transition>
+                <Transition source="Releasing" event="MW_RESET" condition="" action="" target="Waiting" transition_type="external" title="Reset during release" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="MwError" event="MW_RESET" condition="" action="" target="Waiting" transition_type="external" title="Clear error" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Waiting" event="MW_FAULT" condition="" action="" target="MwError" transition_type="external" title="Fault (waiting)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Accumulating" event="MW_FAULT" condition="" action="" target="MwError" transition_type="external" title="Fault (accumulating)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="CheckingStock" event="MW_FAULT" condition="" action="" target="MwError" transition_type="external" title="Fault (checking)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Releasing" event="MW_FAULT" condition="" action="" target="MwError" transition_type="external" title="Fault (releasing)" has_else="false" else_target="" early_return="true" label="T1" />
+            </Transitions>
+            <Cells>
+                <Cell source="Accumulating" event="ITEM_SELECT">
+                    <Relations>
+                        <Relation kind="exclusive" members="T1,T2" shared_condition="" note="Enough vs insufficient" />
+                    </Relations>
+                </Cell>
+                <Cell source="Releasing" event="RELEASE_DONE">
+                    <Relations>
+                        <Relation kind="group" members="T1,T2" shared_condition="RoleFunc_Middleware_CheckStock(transition, ctx) != 0" note="Only if stock">
+                            <Children>
+                                <Relation kind="exclusive" members="T1,T2" shared_condition="" note="With change vs exact" />
+                            </Children>
+                        </Relation>
+                    </Relations>
+                </Cell>
+            </Cells>
+        </StateMachine>
+    </Tab>
+
+    <Tab name="Application">
+        <StateMachine initial="Idle" layer_priority="5" layer_description="Vending machine application" layer_name="Application">
+            <States>
+                <State name="Idle" type="initial" parent="" do="" description="Waiting for coin">
+                    <Entry>
+                        <Action name="App.IdleEntry" />
+                    </Entry>
+                    <Exit>
+                        <Action name="App.IdleExit" />
+                    </Exit>
+                </State>
+                <State name="HasCredit" type="normal" parent="" do="" description="Coins inserted">
+                    <Entry>
+                        <Action name="App.ShowBalance" />
+                    </Entry>
+                </State>
+                <State name="Dispensing" type="normal" parent="" do="" description="Dispensing">
+                    <Entry>
+                        <Action name="App.ShowDispensing" />
+                        <Action name="App.RequestDispense" />
+                    </Entry>
+                </State>
+                <State name="ReturningChange" type="normal" parent="" do="" description="Returning change">
+                    <Entry>
+                        <Action name="App.RequestCoinReturn" />
+                    </Entry>
+                </State>
+                <State name="Error" type="final" parent="" do="" description="Fatal error">
+                    <Entry>
+                        <Action name="App.ShowError" />
+                    </Entry>
+                </State>
+            </States>
+            <Events>
+                <Event name="INSERT_COIN" id="1" kind="signal" params="coin_value" priority="0" description="Coin inserted" delivery_type="direct" source_layer="driver" data_type="uint32_t" data_name="coin_value" title="Insert coin" />
+                <Event name="SELECT_ITEM" id="2" kind="signal" params="item_id" priority="0" description="Item selected" delivery_type="direct" source_layer="driver" data_type="uint8_t" data_name="item_id" title="Select item" />
+                <Event name="CANCEL" id="3" kind="signal" params="" priority="1" description="Cancel" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Cancel" />
+                <Event name="DISPENSE_DONE" id="4" kind="signal" params="" priority="0" description="Dispensed" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Dispense done" />
+                <Event name="CHANGE_RETURNED" id="5" kind="signal" params="" priority="0" description="Change returned" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Change returned" />
+                <Event name="FAULT" id="6" kind="signal" params="err_code" priority="9" description="Fault" delivery_type="queue" source_layer="driver" data_type="uint8_t" data_name="err_code" title="Fault" />
+                <Event name="RESET" id="7" kind="signal" params="" priority="0" description="Reset" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Reset" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="IdleEntry" namespace="App" description="Reset balance" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Idle entry" />
+                <RoleFunction name="IdleExit" namespace="App" description="Clear idle" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Idle exit" />
+                <RoleFunction name="ShowBalance" namespace="App" description="Refresh LCD" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Show balance" />
+                <RoleFunction name="ShowDispensing" namespace="App" description="Display dispensing" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Show dispensing" />
+                <RoleFunction name="ShowError" namespace="App" description="Display error" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Show error" />
+                <RoleFunction name="RequestDispense" namespace="App" description="Signal middleware" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Request dispense" />
+                <RoleFunction name="RequestCoinReturn" namespace="App" description="Signal driver" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Request coin return" />
+                <RoleFunction name="ClearError" namespace="App" description="Return to idle" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Clear error" />
+                <RoleFunction name="PreCheck" namespace="App" description="Pre-transition validation" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Pre-check" />
+                <RoleFunction name="PostCommit" namespace="App" description="Post-transition bookkeeping" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" title="Post commit" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="Idle" event="INSERT_COIN" condition="" action="" target="HasCredit" transition_type="external" title="Accept first coin" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HasCredit" event="INSERT_COIN" condition="" action="" target="HasCredit" transition_type="external" title="More coins" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="App.ShowBalance" />
+                </Transition>
+                <Transition source="HasCredit" event="SELECT_ITEM" condition="ctx-&gt;data.balance &gt;= ctx-&gt;data.price" action="" target="Dispensing" transition_type="external" title="Start dispensing" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HasCredit" event="SELECT_ITEM" condition="ctx-&gt;data.balance &lt; ctx-&gt;data.price" action="" target="HasCredit" transition_type="external" title="Insufficient" has_else="false" else_target="" early_return="false" label="T2">
+                    <PreAction action="App.ShowBalance" />
+                </Transition>
+                <Transition source="HasCredit" event="CANCEL" condition="" action="" target="ReturningChange" transition_type="external" title="Cancel" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Dispensing" event="DISPENSE_DONE" condition="ctx-&gt;data.balance &gt; ctx-&gt;data.price" action="" target="ReturningChange" transition_type="external" title="Return change" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Dispensing" event="DISPENSE_DONE" condition="ctx-&gt;data.balance == ctx-&gt;data.price" action="" target="Idle" transition_type="external" title="Exact - done" has_else="false" else_target="" early_return="true" label="T2" />
+                <Transition source="ReturningChange" event="CHANGE_RETURNED" condition="" action="" target="Idle" transition_type="external" title="Change returned" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Idle" event="FAULT" condition="" action="" target="Error" transition_type="external" title="Fault (idle)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HasCredit" event="FAULT" condition="" action="" target="Error" transition_type="external" title="Fault (credit)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Dispensing" event="FAULT" condition="" action="" target="Error" transition_type="external" title="Fault (dispensing)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="ReturningChange" event="FAULT" condition="" action="" target="Error" transition_type="external" title="Fault (change)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Error" event="RESET" condition="" action="" target="Idle" transition_type="external" title="Maintenance reset" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="App.ClearError" />
+                </Transition>
+            </Transitions>
+            <Cells>
+                <Cell source="Idle" event="INSERT_COIN">
+                    <Actions>
+                        <Action role_function="App.PreCheck" trigger="before_transitions" title="Pre-check" />
+                        <Action role_function="App.PostCommit" trigger="after_transitions" title="Post-commit" />
+                    </Actions>
+                </Cell>
+                <Cell source="HasCredit" event="SELECT_ITEM">
+                    <Relations>
+                        <Relation kind="exclusive" members="T1,T2" shared_condition="" note="Enough vs insufficient" />
+                    </Relations>
+                </Cell>
+                <Cell source="Dispensing" event="DISPENSE_DONE">
+                    <Relations>
+                        <Relation kind="group" members="T1,T2" shared_condition="ctx-&gt;data.stock &gt; 0" note="Only if stock">
+                            <Children>
+                                <Relation kind="exclusive" members="T1,T2" shared_condition="" note="With change vs exact" />
+                            </Children>
+                        </Relation>
+                    </Relations>
+                </Cell>
+            </Cells>
+        </StateMachine>
+    </Tab>
+</Project>
