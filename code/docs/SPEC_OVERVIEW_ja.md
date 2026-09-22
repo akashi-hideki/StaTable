@@ -1,9 +1,9 @@
-# `docs/SPEC_OVERVIEW_ja.md` v2.4（決定#5 反映済み完全版）
+# `docs/SPEC_OVERVIEW_ja.md` v2.5
 
 ```markdown
-# StaTable 全体仕様書 v2.4（日本語、詳細版）
+# StaTable 全体仕様書 v2.5（日本語、詳細版）
 
-Version: 2.4
+Version: 2.5
 Date: 2026-09-22
 Scope: StaTable プロジェクト全体
 Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`、`codegen/`）
@@ -63,6 +63,7 @@ Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`�
 | F-13 | MISRA C:2012 対応 | 生成 C コードを MISRA C:2012 で検証（情報提供目的） |
 | F-14 | セル単位 AI アクション | v2.2：17種の変更アクション（legacy 10 + cell-level 7） |
 | F-15 | 新規プロジェクト | v2.3：サンプルを消去し空の Application 層から開始（Ctrl+N） |
+| F-16 | セル編集中のロール関数管理 | v2.5：ActionEditorDialog 内で Role 関数を新規作成・編集・削除 |
 
 ### 1.4 非機能要件
 
@@ -74,7 +75,7 @@ Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`�
 | I/O | XML（UTF-8）、C ソース（UTF-8） |
 | 依存関係 | PySide6、pycparser（テストのみ） |
 | 生成コード | C99 準拠、`static` 関数を多用 |
-| テスト | 14スイート（`tests/test_v2_2_p*.py` + `tests/test_v2_3_p1.py` + `tests/test_v2_4_p1_merge.py`）、576 PASS / 2 SKIP |
+| テスト | 15スイート（`tests/test_v2_2_p*.py` + `tests/test_v2_3_p1.py` + `tests/test_v2_4_p1_merge.py` + `tests/test_v2_5_p1.py`）、651 PASS / 2 SKIP |
 | CI | GitHub Actions、`ubuntu-latest` |
 | MISRA | cppcheck 2.x + MISRA addon（情報提供のみ） |
 
@@ -101,6 +102,8 @@ Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`�
 | `windowModified` | v2.3：Qt 標準の変更フラグ。`[*]` プレースホルダでタイトルに反映 |
 | `_maybe_save()` | v2.3：未保存確認ダイアログを一元化する MainWindow メソッド |
 | `dataModified` | v2.3：`StateMachineTab` の変更通知シグナル |
+| `_find_rf_by_display` | v2.5：`_ActionGroup` のヘルパー。qualified_name から `RoleFunction` オブジェクトを逆引き |
+| `_dump_sm_roles` | v2.5：`_ActionGroup` のデバッグヘルパー。`state_machine.role_functions` の内容をログ出力 |
 
 ---
 
@@ -946,15 +949,29 @@ self.settings.settings_changed.connect(self.dataModified)
 | `flow_widget.py` | `FlowWidget`, `FlowListWidget` | **レガシー** |
 | `edit_dialogs.py` | `FunctionEditDialog`, `TransitionEditDialog` | **レガシー** |
 
-### 6.2 `ActionEditorDialog`（v2.2：5タブ）
+### 6.2 `ActionEditorDialog`（v2.5：5タブ + ロール関数管理）
 
-| タブ | 内容 |
-|------|------|
-| Transitions | `TransitionsTab` |
-| Pre / Post Actions | `ActionsTab` |
-| Relations | `RelationsTab` |
-| Overview | `OverviewTab` |
-| Preview | `CodeWidget` |
+| タブ | 内容 | v2.5 追加ボタン |
+|------|------|----------------|
+| Transitions | `TransitionsTab` | `+ New Role Function` |
+| Pre / Post Actions | `ActionsTab`（Pre / Post の2グループ） | `+ New Role Function` / `Edit Role Function` / `Delete Role Function` |
+| Relations | `RelationsTab` | – |
+| Overview | `OverviewTab` | – |
+| Preview | `CodeWidget` | – |
+
+**v2.5 補足**
+
+- 各ボタンは既存の `RoleFunctionDialog` を再利用する。
+- 新規作成された `RoleFunction` は `state_machine.role_functions`
+  （**純粋名キー** = `rf.name`）に登録され、UI には
+  `qualified_name`（`namespace.name`）で表示される。
+- この差異を吸収するため `_find_rf_by_display()` を `_ActionGroup`
+  に追加（v2.5）。Edit / Delete ハンドラは同ヘルパーを経由して
+  正しい dict エントリを操作する。
+- `TransitionsTab` には `+ New Role Function` のみ配置。追加された
+  関数は `self.role_functions` リストに反映され、以降の
+  `TransitionActionsDialog` / `ConditionBuilderDialog` の候補となる
+  （直接行への追記は行わない）。
 
 ### 6.3 `CoverageAnalyzer`（v2.2）
 
@@ -1274,7 +1291,7 @@ python tools/analyze_misra_impact.py \
 
 ## 11. テスト方針
 
-### 11.1 テストスイート（13）
+### 11.1 テストスイート（15）
 
 | ファイル | 対象 | 期待結果 |
 |---------|------|---------|
@@ -1292,8 +1309,9 @@ python tools/analyze_misra_impact.py \
 | `test_v2_2_p12_10.py` | Stage 10 機能（構造） | 29 PASS / 2 SKIP / 0 FAIL |
 | `test_v2_3_p1.py` | 新規プロジェクト（v2.3） | 14 PASS / 0 FAIL |
 | `test_v2_4_p1_merge.py` | コードマージ（v2.4.1） | 25 PASS / 0 FAIL |
+| `test_v2_5_p1.py` | ActionEditorDialog ロール関数管理（v2.5） | 75 PASS / 0 FAIL |
 
-**合計**：**576 PASS / 0 FAIL / 2 SKIP**
+**合計**：**651 PASS / 0 FAIL / 2 SKIP**
 
 ### 11.2 `test_v2_2_p2.py` 更新履歴
 
@@ -1323,6 +1341,36 @@ python tools/analyze_misra_impact.py \
 | `test_save_project_returns_bool` | `save_project` が bool を返す |
 | `test_tab_data_modified_signal_exists` | `dataModified` シグナル存在 |
 | `test_tab_data_modified_sets_window_modified` | emit で `windowModified == True` |
+
+### 11.3.1 `test_v2_5_p1.py` 内容
+
+ActionEditorDialog のロール関数管理機能（v2.5）の 75 テスト：
+
+| セクション | 検証内容 | 件数 |
+|-----------|---------|-----:|
+| 1. Module import | `ActionsTab` / `TransitionsTab` / `_ActionGroup` / `_qualified_name` | 5 |
+| 2. `_ActionGroup` 新引数・3ボタン | role_function_library / literal_library / state_machine / layer_names_provider の保持、`+ New` / `Edit` / `Delete` ボタン存在 | 10 |
+| 3. `ActionsTab` 引数伝播 | 両グループへの新引数伝播、ボタン存在 | 10 |
+| 4. `TransitionsTab` 引数伝播 | 新引数と `+ New` ボタン | 5 |
+| 5. `_find_rf_by_display` | qualified / bare / miss / empty / no-sm の5パターン | 7 |
+| 6. `_get_namespace_choices` | 順序、dedup、provider なし、rfl 経由 | 7 |
+| 7. `_dialog_kwargs` | `global_vars` / `events` / `literals` / `namespace_choices` | 5 |
+| 8. `_on_new_role_function` | 正常作成、シグナル emit、行追加、combo 更新 | 6 |
+| 9. 同上（重複） | 警告表示、行追加なし、sm 不変 | 3 |
+| 10. `_on_edit_role_function` | ★回帰テスト（qualified_name → bare name 逆引き、namespace 変更） | 4 |
+| 11. 同上（rename） | bare name 変更時の旧キー削除 + 新キー追加 | 3 |
+| 12. 同上（未登録） | 情報ダイアログ、ダイアログ未起動 | 2 |
+| 13. `_on_delete_role_function` | 削除成功、行削除、combo 更新、シグナル emit | 4 |
+| 14. 同上（キャンセル） | 中止時は無変更 | 2 |
+| 15. `TransitionsTab._on_new_role_function` | 新規作成フロー | 2 |
+| **合計** | | **75** |
+
+**回帰テスト（セクション10）の重要性**:
+
+`StateMachine.role_functions` は **純粋名**（`rf.name`）でキー管理されますが、
+UI には **qualified_name**（`namespace.name`）を表示します。v2.5 実装中に
+この不一致により Edit / Delete が機能しない不具合が発生したため、
+`_find_rf_by_display()` による逆引きを実装し、本テストで再発を防止しています。
 
 ### 11.4 実行環境
 
@@ -1406,6 +1454,9 @@ python tools/analyze_misra_impact.py \
 | C-44 | Namespace コンボボックスの候補 | **v3.11 で全タブ対応** | `layer_names_provider` 経由で全タブ名を候補に追加 |
 | C-45 | 空の `used_*` 属性 | **v3.8.1 で出力抑制** | 空の used_global_vars / used_events / used_literals は XML 属性として出力しない |
 | C-46 | State.do / RoleFunction の予約フィールド | **予約（Reserved）** | UI 非表示。codegen 未使用。XML I/O で保持（v3.7 以降） |
+| C-47 | Namespace コンボ候補は現タブ + 登録済みロール関数のみ | **v2.5 スコープ外** | 全タブの layer 名を候補にする配線（`MainWindow → StateMachineTab → MatrixTableWidget → ActionEditorDialog`）は別 Issue |
+| C-48 | `_ActionGroup` の行テキストは qualified_name、`StateMachine.role_functions` は bare name | **v2.5 で吸収** | `_find_rf_by_display()` で逆引き。同種の UI を追加する際は同様の考慮が必要 |
+| C-49 | XML の `Tab name` / `layer_name` / `RoleFunction.namespace` が不一致の場合、Namespace コンボに複数候補が出る | **データ起因** | 例：`Tab name="Application"` で `namespace="App"` の場合、両方が候補に。正しい XML なら発生しない（§3.2.7 / C-11 参照） |
 
 ---
 
@@ -1436,6 +1487,8 @@ python tools/analyze_misra_impact.py \
 | `windowModified` | v2.3：Qt 標準の変更フラグ。タイトルの `[*]` プレースホルダで `*` に置換される |
 | `_maybe_save()` | v2.3：未保存確認を一元化する `MainWindow` メソッド |
 | `dataModified` | v2.3：`StateMachineTab` の変更通知シグナル |
+| Role 関数管理ボタン | v2.5：ActionEditorDialog 内の `+ New` / `Edit` / `Delete Role Function` |
+| `_find_rf_by_display` | v2.5：qualified_name から `RoleFunction` を逆引きするヘルパー |
 
 ---
 
@@ -1677,6 +1730,16 @@ StaTable/
 | | | - `role_function_generator.py` v3.3.1: 誤検知警告を抑制 |
 | | | - `tests/test_v2_4_p1_merge.py`: 9グループ / 25アサーション追加 |
 | | | - テストスイート 13 → 14、551 → 576 PASS / 2 SKIP |
+| 2.5 | 2026-09-22 | ActionEditorDialog ロール関数管理（F-16）： |
+| | | - §1.3：F-16 追加（セル編集中のロール関数管理） |
+| | | - §1.4：テストスイートを 15、651 PASS / 2 SKIP に更新 |
+| | | - §1.5：`_find_rf_by_display` / `_dump_sm_roles` 用語追加 |
+| | | - §6.2：ActionEditorDialog を v2.5 対応に更新（タブ表に追加ボタン列） |
+| | | - §11.1：テストスイート表に `test_v2_5_p1.py`（75 PASS）を追加 |
+| | | - §11.3.1：`test_v2_5_p1.py` の内容（15セクション / 75テスト）追加 |
+| | | - §12：C-47（Namespace 全タブ未対応）、C-48（qualified vs bare 吸収）、C-49（XML 不一致）追加 |
+| | | - §13：Role 関数管理ボタン / `_find_rf_by_display` 追加 |
+| | | - §15：本エントリ |
 | 2.4 | 2026-09-22 | UI 整理・予約フィールド・Namespace コンボ対応： |
 | | | - §1.4: テストスイートは 551 PASS / 2 SKIP のまま |
 | | | - §3.2.7: `RoleFunction.used_global_vars/events/literals` 追加を明記 |
@@ -1689,7 +1752,7 @@ StaTable/
 | | | - §15: 本エントリ |
 ---
 
-以上、`SPEC_OVERVIEW_ja.md` v2.3（決定#5 反映済み）の完全版です。
+以上、`SPEC_OVERVIEW_ja.md` v2.5 の完全版です。
 ```
 
 ---
