@@ -111,6 +111,7 @@ jobs:
           python tests/test_v2_5_p2.py
           python tests/test_v2_5_p3.py
           python tests/test_v2_5_p4.py
+          python tests/test_v2_5_p5.py
 
   # ==============================================================
   # Job 4: Generated C code verification
