@@ -161,11 +161,17 @@ jobs:
           python tools/verify_generated_code.py --root output
 
   # ==============================================================
-  # Job 5: C syntax verification (gcc + arm-none-eabi-gcc)
+  # Job 5: C syntax verification (gcc + arm-none-eabi-gcc, strict)
   #
   # Runs both the host gcc and the ARM GNU Toolchain against the
   # generated C code. Catches portability issues that only one
   # toolchain surfaces (e.g. NULL without <stddef.h>).
+  #
+  # --strict promotes compiler warnings to errors (-Werror), with
+  # a single exception: unused-parameter is reported but does not
+  # fail the build, because transition function signatures are
+  # fixed by the function-pointer table (see misra/baseline.md,
+  # misra-c2012-2.7 suppression).
   #
   # Logs are uploaded as an artifact for post-run inspection.
   # ==============================================================
@@ -205,10 +211,10 @@ jobs:
             --xml tests/data/v22_features_test3.xml \
             --out output
 
-      - name: Verify C syntax (gcc + arm)
+      - name: Verify C syntax (gcc + arm, strict)
         run: |
           python tools/verify_c_syntax.py \
-            --root output --compiler both
+            --root output --compiler both --strict
 
       - name: Upload verification log
         if: always()
