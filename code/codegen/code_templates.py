@@ -397,18 +397,20 @@ void OSAL_Critical_Exit(void);''',
     queue->count--;
     return OSAL_OK;
 }''',
-            'critical_enter_nonrtos': '''/* ARM Cortex-M interrupt intrinsics (declared for static analyzers; */
-/* the toolchain also provides them as builtins).                   */
-extern void __disable_irq(void);
-extern void __enable_irq(void);
-
+            'critical_enter_nonrtos': '''/* ARM Cortex-M interrupt control via inline assembly.
+ * We use cpsid/cpsie directly instead of the CMSIS intrinsics
+ * __disable_irq/__enable_irq, because an `extern` declaration
+ * of those intrinsics compiles to an external function call
+ * (not an inline intrinsic), which fails to link in any
+ * build without a CMSIS-based startup.  The raw instructions
+ * require no external symbol. */
 void OSAL_Critical_Enter(void)
 {
-    __disable_irq();
+    __asm__ volatile ("cpsid i" ::: "memory");
 }''',
             'critical_exit_nonrtos': '''void OSAL_Critical_Exit(void)
 {
-    __enable_irq();
+    __asm__ volatile ("cpsie i" ::: "memory");
 }''',
         },
     }

@@ -303,3 +303,74 @@ jobs:
           path: code/misra_report_vending/
           if-no-files-found: warn
           retention-days: 30
+
+  # ==============================================================
+  # Job 7: ARM link verification (framework links, no hardware)
+  #
+  # Compiles the generated framework with arm-none-eabi-gcc,
+  # links it against a minimal generic Cortex-M startup +
+  # stub main + linker script (tools/arm_template/), and
+  # produces firmware.elf / firmware.bin.
+  #
+  # This catches link-time issues that the syntax-only check
+  # (verify-c-syntax) cannot see, e.g. a role function
+  # referenced by the transition table but never generated, or
+  # a missing intrinsic.  In v2.5.3 it found and fixed the
+  # __disable_irq / __enable_irq unresolved-reference issue in
+  # the NonRTOS OSAL critical section (see code_templates.py,
+  # now uses inline "cpsid i" / "cpsie i" asm).
+  #
+  # The startup / stub main / linker script are NOT for
+  # production; the "user provides main / startup / linker"
+  # contract is documented in docs/OSAL_PORTING_GUIDE_ja.md.
+  # ==============================================================
+  arm-link:
+    name: ARM link verification
+    runs-on: ubuntu-latest
+    needs: [syntax]
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install ARM GNU Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi
+
+      - name: Install PySide6
+        run: pip install PySide6
+
+      - name: Show toolchain version
+        run: arm-none-eabi-gcc --version | head -1
+
+      - name: Generate C code from TUTORIAL
+        run: |
+          python tools/gen_output_from_xml.py \
+            --xml docs/tutorial/vending_machine.xml \
+            --out output_vending
+
+      - name: Link verification
+        run: |
+          python tools/verify_arm_link.py --root output_vending
+
+      - name: Run R-13(B) test suite
+        run: |
+          python tests/test_v2_5_p8.py
+
+      - name: Upload firmware artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arm-link-artifacts
+          path: |
+            code/verify_report/arm_link/firmware.elf
+            code/verify_report/arm_link/firmware.bin
+            code/verify_report/arm_link/firmware.map
+            code/verify_report/verify_arm_link_*.log
+          if-no-files-found: warn
+          retention-days: 30
