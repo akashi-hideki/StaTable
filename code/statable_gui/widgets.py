@@ -984,6 +984,8 @@ class SettingsPanel(QWidget):
             events=events,
             literals=literals,
             namespace_choices=self._get_namespace_choices(),
+            # [R-7] pass library so "+ New Literal" works
+            literal_library=self.literal_library,
         )
 
     def add_role_function(self):

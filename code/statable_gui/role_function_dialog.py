@@ -4,77 +4,44 @@ Role function create / edit dialog.
 
 Version History
 ---------------
-v1.0  - Initial dialog (name / description / return_type / arg1_* /
-        arg2_* / title).
-v1.5  - Added namespace field; all arguments passed as kwargs (model
-        RoleFunction became kw_only=True).
-v3.7  - Removed reserved fields (return_type / arg1_* / arg2_*) from
-        the UI. Their values were carried forward from the original
-        object through `self._original`.
-v3.8  - Layout restructured to mirror
-        statable_gui/libcntrl/role_function_edit_dialog.py:
-          * Top:    QFormLayout (Function name / Namespace /
-                    Display name / Description)
-          * Middle: three QGroupBox sections with checkable
-                    QListWidgets (Used global variables / Used events /
-                    Used literals)
-          * Bottom: QDialogButtonBox (OK / Cancel)
-        Reserved fields are still preserved via _original for XML
-        round-trip. New fields used_global_vars / used_events /
-        used_literals are persisted.
-v3.9  - Namespace field changed from QLineEdit to QComboBox
-        (editable). Candidates are supplied by the caller through
-        `namespace_choices`; custom values remain possible via the
-        editable combo box.
+v1.0  - Initial dialog.
+v1.5  - Added namespace field.
+v3.7  - Removed reserved fields from the UI.
+v3.8  - Layout restructured (3 QGroupBox sections).
+v3.9  - Namespace field as editable QComboBox.
+
+[R-7]
+  - Added "+ New Literal" button below the "Used literals" group.
+    Opens NewLiteralDialog, adds the new LiteralDefinition to the
+    shared literal_library, and appends it (pre-checked) to the
+    list widget.
+  - New constructor argument `literal_library=None`. When None, the
+    button is hidden and behavior is unchanged (backward compat).
 """
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QFormLayout, QLineEdit, QComboBox,
-    QListWidget, QListWidgetItem, QDialogButtonBox, QGroupBox
+    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit, QComboBox,
+    QListWidget, QListWidgetItem, QDialogButtonBox, QGroupBox,
+    QPushButton, QMessageBox,
 )
 from PySide6.QtCore import Qt
 
 from statable.model import RoleFunction
 from .logger import StaTableLogger
 
+try:
+    from .literal_definition_dialog import NewLiteralDialog
+except ImportError:
+    from literal_definition_dialog import NewLiteralDialog
+
 
 class RoleFunctionDialog(QDialog):
-    """Dialog for creating / editing role functions.
-
-    [v3.9 - Namespace as combo box]
-      The namespace field is now an editable QComboBox populated
-      with `namespace_choices`. Users can still type a new
-      namespace if needed.
-
-    [v3.8 - Layout restructure]
-      Mirrors the structure of
-      statable_gui/libcntrl/role_function_edit_dialog.py:
-
-        - Top:    QFormLayout
-                    * Function name
-                    * Namespace (combo box)
-                    * Display name
-                    * Description
-        - Middle: Three QGroupBox sections, each with a checkable
-                  QListWidget:
-                    * Used global variables
-                    * Used events
-                    * Used literals (select from existing)
-        - Bottom: QDialogButtonBox (OK / Cancel)
-
-      The reserved signature fields (return_type / arg1_* / arg2_*)
-      are NOT shown. Their previous values are carried forward from
-      `role_function` so that an XML round-trip remains lossless.
-
-      Callers may pass `global_vars`, `events`, `literals` to
-      populate the checkable lists, and `namespace_choices` to
-      populate the namespace combo box. If omitted, sections appear
-      empty (still visible, so the layout matches exactly).
-    """
+    """Dialog for creating / editing role functions."""
 
     def __init__(self, parent=None, role_function=None,
                  global_vars=None, events=None, literals=None,
-                 namespace_choices=None):
+                 namespace_choices=None,
+                 literal_library=None):
         super().__init__(parent)
         self.setWindowTitle("Edit role function")
         self.setMinimumWidth(500)
@@ -84,6 +51,8 @@ class RoleFunctionDialog(QDialog):
         self._events = list(events or [])
         self._literals = list(literals or [])
         self._namespace_choices = list(namespace_choices or [])
+        # [R-7] shared library for creating new literals
+        self._literal_library = literal_library
 
         self._setup_ui()
         self._load_data()
@@ -101,11 +70,9 @@ class RoleFunctionDialog(QDialog):
         self.name_edit = QLineEdit()
         form.addRow("Function name:", self.name_edit)
 
-        # [v3.9] namespace as editable combo box
         self.namespace_combo = QComboBox()
         self.namespace_combo.setEditable(True)
         self.namespace_combo.setInsertPolicy(QComboBox.NoInsert)
-        # First entry: empty (no layer). The user can type freely.
         self.namespace_combo.addItem("")
         for ns in self._namespace_choices:
             if ns and ns != "":
@@ -137,6 +104,17 @@ class RoleFunctionDialog(QDialog):
             main_layout, "Used literals (select from existing)",
             self._literals)
 
+        # [R-7] "+ New Literal" button (only when library available)
+        if self._literal_library is not None:
+            btn_row = QHBoxLayout()
+            btn_row.addStretch()
+            self.new_literal_btn = QPushButton("+ New Literal")
+            self.new_literal_btn.setToolTip(
+                "Create a new literal and add it to the list above")
+            self.new_literal_btn.clicked.connect(self._on_new_literal)
+            btn_row.addWidget(self.new_literal_btn)
+            main_layout.addLayout(btn_row)
+
         # ---- Bottom: buttons ----
         buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -146,7 +124,6 @@ class RoleFunctionDialog(QDialog):
 
     @staticmethod
     def _make_check_list(parent_layout, title, items):
-        """Build one QGroupBox + checkable QListWidget, add to layout."""
         group = QGroupBox(title)
         group_layout = QVBoxLayout(group)
         lst = QListWidget()
@@ -172,9 +149,6 @@ class RoleFunctionDialog(QDialog):
         self.title_edit.setText(rf.title)
         self.desc_edit.setText(rf.description)
 
-        # [v3.9] Set namespace on the combo box. If the value isn't
-        #        in the list, add it so the user still sees the
-        #        current value.
         ns = getattr(rf, 'namespace', '') or ''
         idx = self.namespace_combo.findText(ns)
         if idx >= 0:
@@ -210,38 +184,48 @@ class RoleFunctionDialog(QDialog):
         return result
 
     # ------------------------------------------------------------------
+    # [R-7] New literal handler
+    # ------------------------------------------------------------------
+    def _on_new_literal(self):
+        if self._literal_library is None:
+            return
+
+        dlg = NewLiteralDialog(self)
+        if dlg.exec() != QDialog.Accepted:
+            return
+
+        lit = dlg.get_literal()
+        try:
+            self._literal_library.add(lit)
+        except ValueError:
+            QMessageBox.warning(
+                self, "Warning",
+                f"A literal named '{lit.name}' already exists.")
+            return
+
+        # Append to the list widget, pre-checked
+        item = QListWidgetItem(lit.name)
+        item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+        item.setCheckState(Qt.Checked)
+        self.literal_list.addItem(item)
+        StaTableLogger.info(f"New literal created: {lit.name}")
+
+    # ------------------------------------------------------------------
     # OK / Cancel
     # ------------------------------------------------------------------
     def _on_accept(self):
-        """OK: auto-set provisional title if title is empty."""
         if not self.title_edit.text().strip():
             auto_title = (
                 f"Role function: "
                 f"{self.name_edit.text().strip() or '(unnamed)'}")
             self.title_edit.setText(auto_title)
-            StaTableLogger.debug(f"Auto title generated: '{auto_title}'")
         self.accept()
 
     # ------------------------------------------------------------------
     # Result
     # ------------------------------------------------------------------
     def get_role_function(self) -> RoleFunction:
-        """Return the edited RoleFunction.
-
-        [v3.7]
-          Reserved fields (return_type / arg1_* / arg2_*) are not
-          edited here; they are carried forward from `_original`.
-
-        [v3.8]
-          Used global vars / events / literals collected from the
-          checkable lists.
-
-        [v3.9]
-          Namespace read from the editable combo box.
-        """
         orig = self._original
-
-        # v3.9: read from combo box (works whether selected or typed)
         namespace = self.namespace_combo.currentText().strip()
 
         return RoleFunction(
@@ -249,13 +233,11 @@ class RoleFunctionDialog(QDialog):
             namespace=namespace,
             description=self.desc_edit.text().strip(),
             title=self.title_edit.text().strip(),
-            # [Reserved] carried forward for XML round-trip
             return_type=orig.return_type if orig else "void",
             arg1_type=orig.arg1_type if orig else "",
             arg1_name=orig.arg1_name if orig else "",
             arg2_type=orig.arg2_type if orig else "",
             arg2_name=orig.arg2_name if orig else "",
-            # [v3.8] newly tracked symbol references
             used_global_vars=self._collect_checked(self.global_list),
             used_events=self._collect_checked(self.event_list),
             used_literals=self._collect_checked(self.literal_list),

@@ -152,6 +152,7 @@ class ActionEditorDialog(QDialog):
             state_machine=self.state_machine,
             role_function_library=self.role_function_library,
             literal_library=self.literal_library,
+            condition_library=self.condition_library,
             layer_names_provider=self.layer_names_provider,
         )
         # v2.2: provide role function candidates to the TransitionsTab

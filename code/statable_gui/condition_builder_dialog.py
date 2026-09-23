@@ -1,11 +1,10 @@
 # statable_gui/condition_builder_dialog.py
-"""\nTransition condition builder dialog (literal support / event name edit field / target state selection)\n"""
+"""Transition condition builder dialog (literal support / R-8 condition template support)"""
 
 import re
 import sys
 import os
 
-# Path settings
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
@@ -23,18 +22,36 @@ from PySide6.QtGui import QFontMetrics
 from statable.global_defs import GlobalDefinitions
 from statable.state_machine import StateMachine
 
-# Shared literal library
 from statable_gui.libcntrl.literal_library import LiteralLibrary, LiteralDefinition
+from statable_gui.libcntrl.condition_library import ConditionLibrary
+
+try:
+    from .condition_template_dialog import NewConditionTemplateDialog
+except ImportError:
+    from condition_template_dialog import NewConditionTemplateDialog
+
+
 class ConditionBuilderDialog(QDialog):
-    """Dialog to build transition condition via GUI"""
+    """Dialog to build transition condition via GUI.
+
+    [R-8]
+      - Optional `condition_library` argument.
+      - Symbol tree gains a "Condition templates" category that lists
+        all templates from the library.  Double-clicking one inserts
+        its condition text into the expression editor.
+      - "+ New Template" button (left pane) opens
+        NewConditionTemplateDialog, adds the template to the library,
+        and refreshes the symbol tree.
+    """
 
     def __init__(self, condition: str = "", event_name: str = "",
                  global_defs: GlobalDefinitions = None,
                  state_machine: StateMachine = None,
                  literal_library: LiteralLibrary = None,
                  states: list = None,
-                 target_state: str = "",          # Added: current target
-                 else_target_state: str = "",     # Added: current else target
+                 target_state: str = "",
+                 else_target_state: str = "",
+                 condition_library: ConditionLibrary = None,
                  parent=None):
         super().__init__(parent)
         self.setWindowTitle("Transition condition builder")
@@ -43,15 +60,15 @@ class ConditionBuilderDialog(QDialog):
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.state_machine = state_machine if state_machine else StateMachine()
         self.literal_library = literal_library if literal_library else LiteralLibrary()
+        # [R-8] optional condition template library
+        self.condition_library = condition_library
         self.event_name = event_name
 
-        # Target state choices (list passed from outside, or retrieved from state machine)
         self.states = states if states is not None else self._get_states_from_state_machine()
         self.target_state = target_state
         self.else_target_state = else_target_state
 
         self._setup_ui()
-        #Reflect current value to combo box after UI
         self.set_current_targets()
         self.condition_edit.setPlainText(condition)
         self.event_name_edit.setText(event_name)
@@ -59,7 +76,6 @@ class ConditionBuilderDialog(QDialog):
         self._update_c_code_view()
 
     def _get_states_from_state_machine(self):
-        """Get state name list from state machine"""
         if self.state_machine:
             return [s.name for s in self.state_machine.states.values()]
         return []
@@ -69,27 +85,24 @@ class ConditionBuilderDialog(QDialog):
         main_layout.setContentsMargins(4, 4, 4, 4)
         main_layout.setSpacing(4)
 
-        # Event name edit field
         event_layout = QHBoxLayout()
         event_layout.addWidget(QLabel("Event name:"))
         self.event_name_edit = QLineEdit()
         event_layout.addWidget(self.event_name_edit)
         main_layout.addLayout(event_layout)
 
-        # Target state selection
         target_layout = QHBoxLayout()
         target_layout.addWidget(QLabel("Target:"))
         self.target_combo = QComboBox()
-        self.target_combo.addItem("")           # Unset placeholder
+        self.target_combo.addItem("")
         self.target_combo.addItems(self.states)
         target_layout.addWidget(self.target_combo)
         main_layout.addLayout(target_layout)
 
-        # else target state selection
         else_target_layout = QHBoxLayout()
         else_target_layout.addWidget(QLabel("else target:"))
         self.else_target_combo = QComboBox()
-        self.else_target_combo.addItem("")      # Unset placeholder
+        self.else_target_combo.addItem("")
         self.else_target_combo.addItems(self.states)
         else_target_layout.addWidget(self.else_target_combo)
         main_layout.addLayout(else_target_layout)
@@ -116,6 +129,14 @@ class ConditionBuilderDialog(QDialog):
         num_layout.addWidget(num_insert_btn)
         left_layout.addLayout(num_layout)
 
+        # [R-8] "+ New Template" button (only when library available)
+        if self.condition_library is not None:
+            self.new_template_btn = QPushButton("+ New Template")
+            self.new_template_btn.setToolTip(
+                "Create a new condition template and add it to the tree")
+            self.new_template_btn.clicked.connect(self._on_new_template)
+            left_layout.addWidget(self.new_template_btn)
+
         main_splitter.addWidget(left_widget)
 
         # Right pane
@@ -124,7 +145,6 @@ class ConditionBuilderDialog(QDialog):
         right_layout.setContentsMargins(4, 4, 4, 4)
         right_layout.setSpacing(2)
 
-        # Literalize button
         literal_btn = QPushButton("Literalize")
         literal_btn.clicked.connect(self._open_literalization)
         right_layout.addWidget(literal_btn, alignment=Qt.AlignLeft)
@@ -132,7 +152,8 @@ class ConditionBuilderDialog(QDialog):
         self.condition_edit = QPlainTextEdit()
         self.condition_edit.setPlaceholderText("Example: battery_voltage > 3000")
         self.condition_edit.setFrameStyle(QFrame.NoFrame)
-        self.condition_edit.setStyleSheet("QPlainTextEdit { padding: 0px; color: black; background: white; }")
+        self.condition_edit.setStyleSheet(
+            "QPlainTextEdit { padding: 0px; color: black; background: white; }")
         self.condition_edit.document().setDocumentMargin(0)
         self.condition_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
@@ -142,7 +163,6 @@ class ConditionBuilderDialog(QDialog):
         self.condition_edit.textChanged.connect(self._update_c_code_view)
         right_layout.addWidget(self.condition_edit, 1)
 
-        # Clear button
         clear_btn = QPushButton("Clear")
         clear_btn.clicked.connect(self._clear_condition)
         btn_layout = QHBoxLayout()
@@ -154,7 +174,6 @@ class ConditionBuilderDialog(QDialog):
         main_splitter.setSizes([300, 700])
         main_layout.addWidget(main_splitter)
 
-        #Bottom: display C code in ctx-> form
         bottom_widget = QGroupBox("Generated C code (ctx-> form)")
         bottom_layout = QVBoxLayout(bottom_widget)
         bottom_layout.setContentsMargins(4, 4, 4, 4)
@@ -163,7 +182,8 @@ class ConditionBuilderDialog(QDialog):
         self.c_code_view = QPlainTextEdit()
         self.c_code_view.setReadOnly(True)
         self.c_code_view.setFrameStyle(QFrame.NoFrame)
-        self.c_code_view.setStyleSheet("QPlainTextEdit { padding: 0px; color: black; background: #f5f5f5; }")
+        self.c_code_view.setStyleSheet(
+            "QPlainTextEdit { padding: 0px; color: black; background: #f5f5f5; }")
         self.c_code_view.document().setDocumentMargin(0)
         self.c_code_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.c_code_view.setFixedHeight(row_height * 2 + 4)
@@ -176,7 +196,6 @@ class ConditionBuilderDialog(QDialog):
         main_layout.addWidget(buttons)
 
     def set_current_targets(self):
-        """Reflect the current target in the combo box"""
         if self.target_state in self.states:
             idx = self.target_combo.findText(self.target_state)
             if idx >= 0:
@@ -187,10 +206,8 @@ class ConditionBuilderDialog(QDialog):
                 self.else_target_combo.setCurrentIndex(idx)
 
     def _populate_tree(self):
-        """Add available symbols to the tree by category"""
         self.symbol_tree.clear()
 
-        # Global variables
         global_vars_item = QTreeWidgetItem(["Global variables"])
         for var in getattr(self.global_defs, 'variables', []):
             child = QTreeWidgetItem([var.name])
@@ -199,7 +216,6 @@ class ConditionBuilderDialog(QDialog):
             global_vars_item.addChild(child)
         self.symbol_tree.addTopLevelItem(global_vars_item)
 
-        # Event flags
         flags_item = QTreeWidgetItem(["Event flags"])
         for flag in getattr(self.global_defs, 'flags', []):
             child = QTreeWidgetItem([flag.name])
@@ -208,7 +224,6 @@ class ConditionBuilderDialog(QDialog):
             flags_item.addChild(child)
         self.symbol_tree.addTopLevelItem(flags_item)
 
-        # Event variable
         event_vars_item = QTreeWidgetItem(["Event variable"])
         for event in self.state_machine.events.values():
             data_name = getattr(event, 'data_name', '')
@@ -220,7 +235,6 @@ class ConditionBuilderDialog(QDialog):
                 event_vars_item.addChild(child)
         self.symbol_tree.addTopLevelItem(event_vars_item)
 
-        # Role function (bool)
         role_funcs_item = QTreeWidgetItem(["Role function (bool)"])
         for rf in self.state_machine.role_functions.values():
             if getattr(rf, 'return_type', '') == 'bool':
@@ -230,7 +244,6 @@ class ConditionBuilderDialog(QDialog):
                 role_funcs_item.addChild(child)
         self.symbol_tree.addTopLevelItem(role_funcs_item)
 
-        # Literal
         literal_item = QTreeWidgetItem(["Literal"])
         for lit in self.literal_library.list_all():
             child = QTreeWidgetItem([lit.name])
@@ -239,7 +252,25 @@ class ConditionBuilderDialog(QDialog):
             literal_item.addChild(child)
         self.symbol_tree.addTopLevelItem(literal_item)
 
-        # Constant symbol
+        # [R-8] Condition templates
+        if self.condition_library is not None:
+            tmpl_item = QTreeWidgetItem(["Condition templates"])
+            try:
+                for tmpl in self.condition_library.list_all():
+                    name = getattr(tmpl, 'name', '') or ''
+                    cond = getattr(tmpl, 'condition', '') or ''
+                    if not name and not cond:
+                        continue
+                    # Display name; insert condition text
+                    display = name if name else cond
+                    child = QTreeWidgetItem([display])
+                    child.setData(0, Qt.UserRole, cond)
+                    child.setToolTip(0, f"{name}: {cond}")
+                    tmpl_item.addChild(child)
+            except Exception:
+                pass
+            self.symbol_tree.addTopLevelItem(tmpl_item)
+
         const_item = QTreeWidgetItem(["Constant symbol"])
         true_child = QTreeWidgetItem(["true"])
         true_child.setData(0, Qt.UserRole, "true")
@@ -271,6 +302,29 @@ class ConditionBuilderDialog(QDialog):
     def _clear_condition(self):
         self.condition_edit.clear()
         self._update_c_code_view()
+
+    # ------------------------------------------------------------------
+    # [R-8] New template handler
+    # ------------------------------------------------------------------
+    def _on_new_template(self):
+        if self.condition_library is None:
+            return
+
+        dlg = NewConditionTemplateDialog(self)
+        if dlg.exec() != QDialog.Accepted:
+            return
+
+        tmpl = dlg.get_template()
+        try:
+            self.condition_library.add(tmpl)
+        except ValueError:
+            QMessageBox.warning(
+                self, "Warning",
+                f"A condition template named '{tmpl.name}' already exists.")
+            return
+
+        # Refresh tree to include the new template
+        self._populate_tree()
 
     def _update_c_code_view(self):
         raw_text = self.condition_edit.toPlainText()
@@ -387,7 +441,9 @@ class LiteralizationDialog(QDialog):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Literalize numeric values in the condition expression. Give each value a name."))
+        layout.addWidget(QLabel(
+            "Literalize numeric values in the condition expression. "
+            "Give each value a name."))
 
         self.table = QTableWidget(0, 3)
         self.table.setHorizontalHeaderLabels(["Row", "Numeric", "Literal name"])

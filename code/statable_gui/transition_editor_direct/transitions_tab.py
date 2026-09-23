@@ -69,6 +69,7 @@ class TransitionsTab(QWidget):
                  global_defs=None, state_machine=None,
                  role_function_library=None,
                  literal_library=None,
+                 condition_library=None,
                  layer_names_provider=None,
                  parent=None):
         super().__init__(parent)
@@ -81,6 +82,7 @@ class TransitionsTab(QWidget):
         # v2.5: context for RoleFunctionDialog
         self.role_function_library = role_function_library
         self.literal_library = literal_library
+        self.condition_library = condition_library
         self.layer_names_provider = layer_names_provider
 
         self._build_ui()
@@ -390,6 +392,8 @@ class TransitionsTab(QWidget):
             global_defs=self.global_defs,
             state_machine=self.state_machine,
             states=self.states,
+            literal_library=self.literal_library,
+            condition_library=self.condition_library,
             parent=self.window(),
         )
         if dlg.exec() == QDialog.Accepted:
