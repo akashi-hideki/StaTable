@@ -1226,12 +1226,16 @@ class StateMachineTab(QWidget):
         main_split.setChildrenCollapsible(False)
 
         left_split = QSplitter(Qt.Vertical)
+        # [R-6] Forward layer_names_provider to MatrixTableWidget so
+        #       that ActionEditorDialog / TransitionsTab / ActionsTab
+        #       can list every layer in the project.
         self.table = MatrixTableWidget(
             sm,
             global_defs=self.global_defs,
             role_function_library=self.role_function_library,
             condition_library=self.condition_library,
-            literal_library=self.literal_library
+            literal_library=self.literal_library,
+            layer_names_provider=self.layer_names_provider,
         )
         self.mermaid = MermaidWidget()
         left_split.addWidget(self.table)

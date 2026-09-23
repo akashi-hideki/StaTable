@@ -18,20 +18,24 @@ Tabs:
 
 [v2.5 change]
   - TransitionsTab and ActionsTab now receive `role_function_library`
-    and `literal_library` from this dialog, so that the new
-    "+ New Role Function" buttons on those tabs can open
-    RoleFunctionDialog with the same context as SettingsPanel.
-  - ActionEditorDialog already holds both libraries as `self.*`
-    (they are passed in by MatrixTableWidget.open_transition_dialog),
-    so this is purely a forwarding change.
-  - No new constructor arguments are added to ActionEditorDialog;
-    layer_names_provider is intentionally NOT forwarded (v2.5 scope).
+    and `literal_library` from this dialog.
+
+[R-6 change]
+  - ActionEditorDialog now accepts `layer_names_provider` and forwards
+    it to TransitionsTab and ActionsTab.  This completes the 4-hop
+    wiring:
+        MainWindow → StateMachineTab → MatrixTableWidget
+                  → ActionEditorDialog → TransitionsTab / ActionsTab
+    so the namespace combo box on those tabs lists every layer in
+    the project, not just the current tab's layer.
+  - Previously this dialog intentionally did NOT forward the
+    provider (v2.5 scope).  R-6 completes the wiring.
 """
 
 import logging
 import sys
 import os
-from typing import List
+from typing import List, Callable
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
@@ -74,7 +78,9 @@ class ActionEditorDialog(QDialog):
                  role_functions=None, transition_events=None,
                  states=None, global_defs=None, state_machine=None,
                  role_function_library=None, condition_library=None,
-                 literal_library=None, parent=None):
+                 literal_library=None,
+                 layer_names_provider: Callable[[], List[str]] = None,
+                 parent=None):
         super().__init__(parent)
         self.draft = draft
         self.role_functions = role_functions or []
@@ -94,12 +100,17 @@ class ActionEditorDialog(QDialog):
             literal_library if literal_library
             else LiteralLibrary()
         )
+        # [R-6] All-tabs namespace provider (forwarded to tabs).
+        self.layer_names_provider = layer_names_provider
 
         # v2.2 fix: guard flag for _load_draft
         self._loading = False
 
         logger.debug("=== ActionEditorDialog init ===")
         logger.debug(f"source={draft.source}, event={draft.event}")
+        logger.debug(
+            f"has_layer_names_provider="
+            f"{layer_names_provider is not None}")
 
         self.setWindowTitle(
             f"Action edit: {draft.source} --[{draft.event}]--> ?")
@@ -132,6 +143,8 @@ class ActionEditorDialog(QDialog):
         #        tab can build the same RoleFunctionDialog kwargs as
         #        SettingsPanel (global_vars / events / literals /
         #        namespace_choices).
+        # [R-6]  Forward layer_names_provider so namespace_choices
+        #        include every layer in the project.
         self.transitions_tab = TransitionsTab(
             self.draft,
             states=self.states,
@@ -139,6 +152,7 @@ class ActionEditorDialog(QDialog):
             state_machine=self.state_machine,
             role_function_library=self.role_function_library,
             literal_library=self.literal_library,
+            layer_names_provider=self.layer_names_provider,
         )
         # v2.2: provide role function candidates to the TransitionsTab
         self.transitions_tab.set_role_functions(self.role_functions)
@@ -148,6 +162,7 @@ class ActionEditorDialog(QDialog):
         # Tab 2: Pre / Post Actions
         # ==============================================================
         # [v2.5] Same context propagation as Tab 1.
+        # [R-6]  Forward layer_names_provider.
         self.actions_tab = ActionsTab(
             self.draft,
             role_functions=self.role_functions,
@@ -155,6 +170,7 @@ class ActionEditorDialog(QDialog):
             state_machine=self.state_machine,
             role_function_library=self.role_function_library,
             literal_library=self.literal_library,
+            layer_names_provider=self.layer_names_provider,
         )
         self.tabs.addTab(self.actions_tab, self.TAB_NAMES[1])
 
@@ -210,14 +226,6 @@ class ActionEditorDialog(QDialog):
 
         [v2.2 fix]
           Order: Actions -> Relations -> Transitions (last).
-          TransitionsTab.set_transitions() emits transitions_changed
-          for each row insertion, which calls _on_content_changed ->
-          _save_draft. If Transitions were loaded first, the subsequent
-          _save_draft would overwrite draft.cell_actions / cell_relations
-          with the still-empty tab contents.
-
-          The _loading flag additionally suppresses _on_content_changed
-          during the initial load.
         """
         self._loading = True
         try:
@@ -271,9 +279,6 @@ class ActionEditorDialog(QDialog):
     def _sync_member_details(self):
         """Build {label: 'cond -> target [mode]'} from the TransitionsTab
         and pass it to RelationsTab so members are identifiable.
-
-        Example entry:
-            T1: err_code != 0 -> Error  [Commit]
         """
         details = {}
         try:

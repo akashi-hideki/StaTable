@@ -1,7 +1,12 @@
 # statable_gui/matrix_table.py
-"""State transition table widget (D&D editor direct launch support / v2.2 multi-transition)."""
+"""State transition table widget (D&D editor direct launch support / v2.2 multi-transition).
 
-from typing import List
+[R-6 change]
+  MatrixTableWidget now accepts `layer_names_provider` and forwards
+  it to ActionEditorDialog, completing the all-tabs namespace wiring.
+"""
+
+from typing import List, Callable
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QKeyEvent
@@ -42,8 +47,7 @@ def _truncate_text(text: str, max_chars: int = 40) -> str:
 
 
 def _mode_marker(trans: Transition) -> str:
-    """
-    v2.2: Return the mode marker for a transition.
+    """Return the mode marker for a transition.
 
       " [C]" -> Commit    (early_return=True)
       " [T]" -> Tentative (early_return=False)
@@ -58,7 +62,7 @@ def _mode_marker(trans: Transition) -> str:
 
 
 def _mode_label(trans: Transition) -> str:
-    """v2.2: Human-readable mode label for tooltips."""
+    """Human-readable mode label for tooltips."""
     er = getattr(trans, 'early_return', None)
     if er is True:
         return "Commit"
@@ -77,13 +81,10 @@ def _build_transition_tooltip(trans: Transition) -> str:
         parts.append("Event: Completion transition")
     if trans.condition:
         parts.append(f"State transition condition:\n{trans.condition}")
-    # v2.2: Mode (Commit / Tentative)
     parts.append(f"Mode: {_mode_label(trans)}")
-    # v2.2: else info
     if getattr(trans, 'has_else', False):
         else_t = getattr(trans, 'else_target', '') or '(not set)'
         parts.append(f"else target: {else_t}")
-    # v2.2: label (T1, T2, ...)
     lbl = getattr(trans, 'label', '')
     if lbl:
         parts.append(f"Label: {lbl}")
@@ -105,6 +106,7 @@ class MatrixTableWidget(QTableWidget):
                  role_function_library: RoleFunctionLibrary = None,
                  condition_library: ConditionLibrary = None,
                  literal_library: LiteralLibrary = None,
+                 layer_names_provider: Callable[[], List[str]] = None,
                  parent=None):
         super().__init__(0, 0, parent)
         self.sm = sm
@@ -113,11 +115,14 @@ class MatrixTableWidget(QTableWidget):
         self.role_function_library = role_function_library if role_function_library else RoleFunctionLibrary()
         self.condition_library = condition_library if condition_library else ConditionLibrary()
         self.literal_library = literal_library if literal_library else LiteralLibrary()
+        # [R-6] All-tabs namespace provider (forwarded to ActionEditorDialog).
+        self.layer_names_provider = layer_names_provider
 
         StaTableLogger.debug(
             f"MatrixTableWidget.__init__: roles={len(self.role_function_library.list_all())}, "
             f"conditions={len(self.condition_library.list_all())}, "
-            f"literals={len(self.literal_library.list_all())}"
+            f"literals={len(self.literal_library.list_all())}, "
+            f"has_lnp={layer_names_provider is not None}"
         )
 
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
@@ -190,14 +195,6 @@ class MatrixTableWidget(QTableWidget):
         return self.sm.get_transitions_for_cell(state, event)
 
     def _generate_cell_label(self, trans: Transition, event: str) -> str:
-        """
-        Generate the cell label for one transition.
-
-        [v2.2]
-          - Add [C]/[T] mode marker (Commit / Tentative).
-          - Append [N] when there are multiple transitions in the cell
-            (handled at caller side by joining labels with newline).
-        """
         parts = []
         if trans.title and trans.title != "(untitled transition)":
             parts.append(trans.title)
@@ -212,12 +209,10 @@ class MatrixTableWidget(QTableWidget):
             condition_display = _truncate_text(trans.condition, 30)
             parts.append(f"[{condition_display}]")
 
-        # v2.2: mode marker
         marker = _mode_marker(trans)
         if marker:
             parts.append(marker.strip())
 
-        # v2.2: label (T1, T2, ...) if set
         lbl = getattr(trans, 'label', '')
         if lbl:
             parts.append(f"<{lbl}>")
@@ -296,7 +291,8 @@ class MatrixTableWidget(QTableWidget):
             f"(library={len(self.role_function_library.list_all())}, "
             f"sm={len(self.sm.role_functions)}), "
             f"conditions={len(self.condition_library.list_all())}, "
-            f"literals={len(self.literal_library.list_all())}"
+            f"literals={len(self.literal_library.list_all())}, "
+            f"has_lnp={self.layer_names_provider is not None}"
         )
 
         dialog = ActionEditorDialog(
@@ -309,6 +305,9 @@ class MatrixTableWidget(QTableWidget):
             role_function_library=self.role_function_library,
             condition_library=self.condition_library,
             literal_library=self.literal_library,
+            # [R-6] Forward provider so TransitionsTab / ActionsTab
+            #       inside the dialog list every layer in the project.
+            layer_names_provider=self.layer_names_provider,
             parent=self
         )
 
@@ -360,7 +359,6 @@ class MatrixTableWidget(QTableWidget):
                 if trans_list:
                     for trans in trans_list:
                         self.sm.remove_transition(trans)
-                    # Also remove cell metadata
                     state = self.horizontalHeaderItem(
                         current.column()).text() if self.horizontalHeaderItem(current.column()) else ""
                     raw_event = self.verticalHeaderItem(
