@@ -397,20 +397,43 @@ void OSAL_Critical_Exit(void);''',
     queue->count--;
     return OSAL_OK;
 }''',
-            'critical_enter_nonrtos': '''/* ARM Cortex-M interrupt control via inline assembly.
- * We use cpsid/cpsie directly instead of the CMSIS intrinsics
- * __disable_irq/__enable_irq, because an `extern` declaration
- * of those intrinsics compiles to an external function call
- * (not an inline intrinsic), which fails to link in any
- * build without a CMSIS-based startup.  The raw instructions
- * require no external symbol. */
+            'critical_enter_nonrtos': '''/* ===== Critical section: enter =====
+ *
+ * [!] STUB - must be implemented for your target.
+ *
+ * Called by the generated framework to prevent interrupts /
+ * preemption until OSAL_Critical_Exit() is called.  Must be
+ * nestable on platforms where the caller may re-enter.
+ *
+ * Implementation examples:
+ *   ARM Cortex-M : __asm__ volatile ("cpsid i" ::: "memory");
+ *   ARM Cortex-A : __asm__ volatile ("msr DAIFSet, #2" ::: "memory");
+ *   RISC-V       : __asm__ volatile ("csrsi mstatus, 8" ::: "memory");
+ *   FreeRTOS     : taskENTER_CRITICAL();
+ *
+ * See docs/OSAL_PORTING_GUIDE_ja.md for the OSAL contract. */
 void OSAL_Critical_Enter(void)
 {
-    __asm__ volatile ("cpsid i" ::: "memory");
+    /* TODO: implement for your target. */
 }''',
-            'critical_exit_nonrtos': '''void OSAL_Critical_Exit(void)
+            'critical_exit_nonrtos': '''/* ===== Critical section: exit =====
+ *
+ * [!] STUB - must be implemented for your target.
+ *
+ * Re-enables interrupts / preemption after a matching
+ * OSAL_Critical_Enter().  Must respect nesting depth if the
+ * platform requires it.
+ *
+ * Implementation examples:
+ *   ARM Cortex-M : __asm__ volatile ("cpsie i" ::: "memory");
+ *   ARM Cortex-A : __asm__ volatile ("msr DAIFClr, #2" ::: "memory");
+ *   RISC-V       : __asm__ volatile ("csrci mstatus, 8" ::: "memory");
+ *   FreeRTOS     : taskEXIT_CRITICAL();
+ *
+ * See docs/OSAL_PORTING_GUIDE_ja.md for the OSAL contract. */
+void OSAL_Critical_Exit(void)
 {
-    __asm__ volatile ("cpsie i" ::: "memory");
+    /* TODO: implement for your target. */
 }''',
         },
     }
