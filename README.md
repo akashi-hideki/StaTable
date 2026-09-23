@@ -1,11 +1,10 @@
-```markdown
 # StaTable
 
 **MISRA C:2012-aware state machine design and C code generation for embedded systems.**
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-576%20PASS-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-776%20PASS-green.svg)]()
 [![MISRA](https://img.shields.io/badge/MISRA-C%3A2012-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
@@ -29,7 +28,16 @@ custom tooling from scratch.
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **14 test suites, 576 PASS / 0 FAIL / 2 SKIP**
+- ✅ **21 test suites, 776 PASS / 0 FAIL / 2 SKIP**
+
+### v2.5 Highlights
+
+- ✅ **User-editable (void) suppression** — all `(void)` lines for generated locals now live inside the user-code marker, so you can delete them once you start using the variable (R-10)
+- ✅ **Namespace all-tabs wiring** — the Role function dialog lists every layer in the project, not just the current tab (R-6)
+- ✅ **Inline library creation** — `+ New Literal` inside RoleFunctionDialog (R-7), `+ New Template` inside ConditionBuilderDialog (R-8)
+- ✅ **ARM link verification without hardware** — `verify_arm_link.py` links the generated framework with `arm-none-eabi-gcc` and produces `firmware.elf` / `firmware.bin` (R-13B)
+- ✅ **OSAL porting guide** — `docs/OSAL_PORTING_GUIDE_ja.md` describes the OSAL contract and shows how to add a new OS or bare-metal target (R-14)
+- ✅ **Strict CI** — gcc + ARM compilation with `-Werror`, cppcheck + MISRA addon, ARM link verification (7 CI jobs total)
 
 ---
 
@@ -50,7 +58,7 @@ diagrams, and generate production-ready C code with a single click.*
 | **Ubuntu 22.04+** | ⚠️ **Auto tests pass on CI** | GUI not yet manually verified — feedback welcome |
 | **macOS** | ⚠️ **Not tested** | Community testing welcome |
 
-**Note for Linux users**: The automated test suite (13 suites, 551 tests)
+**Note for Linux users**: The automated test suite (21 suites, 776 tests)
 passes on Ubuntu via GitHub Actions, but the GUI has only been manually
 verified on Windows. If you try it on Linux, please report your experience
 via [GitHub Issues](https://github.com/akashi-hideki/StaTable/issues).
@@ -95,7 +103,7 @@ python tests/test_v2_2_p1.py
 python tests/test_v2_3_p1.py
 ```
 
-Expected: **576 PASS / 0 FAIL / 2 SKIP** across 14 suites.
+Expected: **776 PASS / 0 FAIL / 2 SKIP** across 21 suites.
 
 ---
 
@@ -249,11 +257,29 @@ Where MISRA C:2012 compliance is non-negotiable.
 | [SPEC_SCREENS_en.md](code/docs/SPEC_SCREENS_en.md) | English | GUI screen specification |
 | [SPEC_SCREENS_ja.md](code/docs/SPEC_SCREENS_ja.md) | 日本語 | 画面仕様書 |
 | [SPEC_CODEGEN_v3.md](code/docs/SPEC_CODEGEN_v3.md) | English | Code generation details |
+| [OSAL_PORTING_GUIDE_ja.md](code/docs/OSAL_PORTING_GUIDE_ja.md) | 日本語 | OSAL 移植ガイド（R-14） |
 | [IMPLEMENTATION_PLAN_v2_3.md](code/docs/IMPLEMENTATION_PLAN_v2_3.md) | English | v2.3 implementation plan |
 
 ---
 
 ## Roadmap
+
+### v2.5 / v2.5.3 (Released 2026-09-23)
+
+- ✅ C-50 resolution: arbitrary namespaces accepted (v2.5.1)
+- ✅ (void) suppression moved into user-code marker (v2.5.2)
+- ✅ MISRA check fixed: BOM / encoding / stream (R-15)
+- ✅ MISRA CI integrated (R-12)
+- ✅ strict mode `-Werror` in verify-c-syntax (R-11)
+- ✅ Namespace all-tabs wiring (R-6)
+- ✅ `+ New Literal` / `+ New Template` (R-7 + R-8)
+- ✅ OSAL porting guide (R-14 part 1)
+- ✅ ARM link verification (R-13 part B) — found and fixed the
+  `__disable_irq` link error; critical section is now emitted as
+  stubs with per-architecture examples
+- ✅ **776 PASS / 0 FAIL / 2 SKIP** across 21 suites
+- ✅ 7 CI jobs: no-japanese / syntax / tests / generated-code /
+  verify-c-syntax / misra-check / arm-link
 
 ### v2.4.1 (Current — Released 2026-09-22)
 
@@ -350,7 +376,7 @@ python tests/test_v2_3_p1.py
 # ...
 ```
 
-All 13 suites should pass (551 PASS / 2 SKIP).
+All 21 suites should pass (776 PASS / 2 SKIP).
 
 ---
 
@@ -380,4 +406,3 @@ it helps others discover the project.
 ---
 
 *Built with ❤️ for embedded engineers who care about quality.*
-```
