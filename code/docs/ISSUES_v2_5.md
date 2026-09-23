@@ -250,6 +250,87 @@ TUTORIAL では `Vending` → `App` に変更して解決（`tools/fix_vending_n
 
 ---
 
+
+### 候補 8: EventQueue 基盤の統合
+
+**Priority**: 🟡 Medium
+**Type**: Enhancement / Codegen
+**Status**: C-52 として SPEC に記録（v2.6 で実装予定）
+
+#### 現状
+
+- `GlobalDefinitions.event_queues` で `<EventQueues>` を定義できる
+- `EventDeliveryType.QUEUE` も XML に書ける
+- しかし `codegen` は以下の理由で未統合:
+  - `FIRE_EVENT` マクロは `pending_event` に直接代入
+  - `GetNextEvent_<Layer>` は `pending_event_valid` のみ参照
+  - `OSAL_Queue_Create/Send/Receive` は実装済みだが未使用
+  - 生成 `statable_event_queue.c` は
+    「No event queue definitions」で空
+
+#### 影響
+
+- 1スロットのため、**処理前に次のイベントが来ると上書きされる**
+- `delivery_type=QUEUE` を指定しても**挙動が変わらない**
+- 層別キューによる**層間 ID 衝突の解決**ができない
+
+#### 対応案
+
+| # | 内容 | 工数 |
+|---|------|------|
+| A | `FIRE_EVENT` を `delivery_type` で分岐 | 1〜2h |
+| B | `GetNextEvent` を `OSAL_Queue_Receive` 対応に | 2〜3h |
+| C | 層別 `OSAL_Queue_t` を生成 | 2〜3h |
+| D | テスト（キュー経由遷移） | 1h |
+
+**合計 4〜8h。v2.6 で実装。**
+
+#### 関連
+
+- C-52（SPEC §12）
+- 候補 9（層間 ID 衝突）
+
+---
+
+### 候補 9: 層間 Event ID 衝突の解消
+
+**Priority**: 🟡 Medium
+**Type**: Design / Data model
+**Status**: C-53 として SPEC に記録（v2.6 で実装予定）
+
+#### 現状
+
+- `SystemContext_t.pending_event` は `uint16_t` 1つ
+- 3層（Driver / Middleware / Application）が同じフィールドを共有
+- `EVENT_<Layer>_<NAME>` の値は層ごとに独立採番
+
+#### 問題
+
+| 層 | イベント | 値 |
+|----|---------|:---:|
+| Driver | `EVENT_Driver_COIN` | 1 |
+| Application | `EVENT_Application_REQUEST` | 1 |
+
+**同時発行時に衝突。** どちらか一方が失われる。
+
+#### 対応案
+
+| # | 内容 | 工数 |
+|---|------|------|
+| A | 層別 `pending_event` フィールド（`pending_Driver` 等） | 1h |
+| B | 層別 `OSAL_Queue_t`（候補 8 と統合） | 候補 8 に含む |
+| C | Event ID をグローバルにユニーク化 | 2h |
+| D | `source_layer` で判別（現状は情報のみ） | 1h |
+
+**B（候補 8 との統合）が最もクリーン。v2.6 で実装。**
+
+#### 関連
+
+- C-53（SPEC §12）
+- 候補 8（EventQueue 基盤の統合）
+
+---
+
 ## 変更履歴
 
 | バージョン | 日付 | 内容 |
