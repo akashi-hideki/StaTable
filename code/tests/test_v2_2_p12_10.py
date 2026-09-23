@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 P12-10 Comprehensive validation for StaTable v2.2.5 (v8).
 
@@ -261,6 +261,13 @@ def try_pycparser(files, structure):
     failures = []
     for fname in sorted(files):
         if not fname.endswith('.c'):
+            continue
+        # [R-13 follow-up] Skip OSAL implementations.  They use
+        # GNU inline asm ("cpsid i" / "cpsie i" for ARM Cortex-M)
+        # which pycparser cannot parse.  osal*.c are already
+        # covered by verify_c_syntax.py (gcc + arm) and
+        # verify_arm_link.py (real ARM link).
+        if os.path.basename(fname).startswith('osal'):
             continue
         src = _preprocess_for_pycparser(fname, files)
         try:
