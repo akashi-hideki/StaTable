@@ -230,6 +230,16 @@ class TransitionGenerator:
             '        ctx->pending_event_valid = false;\n'
             '        return evt;\n'
             '    }\n'
+            '\n'
+            '    /* [C-52] Drain this layer\'s queue. */\n'
+            '    if (ctx->queue_$layer.count > 0U) {\n'
+            '        $event_type qevt = ($event_type)ctx->queue_$layer.buffer[ctx->queue_$layer.head];\n'
+            '        ctx->queue_$layer.head = (uint16_t)((ctx->queue_$layer.head + 1U) % STATABLE_LAYER_QUEUE_SIZE);\n'
+            '        ctx->queue_$layer.count--;\n'
+            '        consecutive_count = 0;\n'
+            '        return qevt;\n'
+            '    }\n'
+            '\n'
             '    consecutive_count = 0;\n'
             '    return $event_none;\n'
             '}\n'
@@ -830,9 +840,12 @@ class TransitionGenerator:
         parts.append(T['signature'].substitute(
             event_type=self._event_type(),
             func_name=func_name))
+        # [C-52] Pass layer name; falls back to layer_name attr
+        layer = self.layer_name or ""
         parts.append(T['body'].substitute(
             event_type=self._event_type(),
-            event_none=event_none))
+            event_none=event_none,
+            layer=layer))
         return ''.join(parts)
 
     def generate_all(self, state_machine: StateMachine) -> Dict[str, str]:

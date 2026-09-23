@@ -272,6 +272,11 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
             "data_name": event.data_name,
             "title": event.title,
         }
+        # [C-51 Step 2] Emit trigger only when non-empty, so
+        # pre-C-51 projects round-trip with identical XML.
+        _trigger = getattr(event, 'trigger', '') or ''
+        if _trigger:
+            attrs['trigger'] = _trigger
         ET.SubElement(events_elem, "Event", **attrs)
 
     # RoleFunctions
@@ -410,6 +415,8 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
                     data_type=event_elem.get("data_type", ""),
                     data_name=event_elem.get("data_name", ""),
                     title=event_elem.get("title", ""),
+                    # [C-51 Step 2] Free-text trigger; missing -> ""
+                    trigger=event_elem.get("trigger", ""),
                 ))
             except Exception as e:
                 logger.error(f"  Failed to load event: {e}", exc_info=True)

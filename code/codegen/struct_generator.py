@@ -73,6 +73,10 @@ class CStructGenerator:
         'member_pending_event_valid': (
             '    bool pending_event_valid;       /* pending event valid flag */\n'
         ),
+        # [C-52] one queue per layer
+        'member_queue': Template(
+            '    EventQueueState_t queue_$layer;  /* [C-52] per-layer queue */\n'
+        ),
 
         # --- struct end ---
         'struct_end': Template(
@@ -111,6 +115,31 @@ class CStructGenerator:
             '#ifndef MAX_CONSECUTIVE_PENDING_EVENTS\n'
             '#define MAX_CONSECUTIVE_PENDING_EVENTS 16\n'
             '#endif\n'
+        ),
+        # [C-52] per-layer queue size + init macro
+        'queue_section_comment': (
+            '\n'
+            '/* ============================================================== */\n'
+            '/*  Layer event queue (C-52)                                      */\n'
+            '/* ============================================================== */\n'
+        ),
+        'queue_size_macro': (
+            '\n'
+            '/* Per-layer queue capacity. Override via -D at build time. */\n'
+            '#ifndef STATABLE_LAYER_QUEUE_SIZE\n'
+            '#define STATABLE_LAYER_QUEUE_SIZE 16\n'
+            '#endif\n'
+        ),
+        'queue_state_type': (
+            '\n'
+            '/* Ring buffer state (one instance per layer, embedded in */\n'
+            '/* SystemContext_t).  Single-producer / single-consumer. */\n'
+            'typedef struct {\n'
+            '    uint16_t buffer[STATABLE_LAYER_QUEUE_SIZE];\n'
+            '    volatile uint16_t head;\n'
+            '    volatile uint16_t tail;\n'
+            '    volatile uint16_t count;\n'
+            '} EventQueueState_t;\n'
         ),
     }
 
@@ -191,11 +220,17 @@ class CStructGenerator:
         self.strings = self.templates.STRINGS
         self.formats = self.templates.FORMATS
         self.layer_name: str = ""
+        # [C-52] all layers of the current project
+        self._all_layers: list = []
 
     def set_layer(self, layer_name: str):
         """Set layer name (for per-layer TransitionContext generation)"""
         self.layer_name = layer_name
         logger.debug(f"CStructGenerator.set_layer: layer_name='{layer_name}'")
+
+    def set_layers(self, layers):
+        """[C-52] Record all (name, sm) pairs for queue members."""
+        self._all_layers = list(layers or [])
 
     def _log_debug(self, message: str, level: str = 'debug'):
         log_func = getattr(logger, level, logger.debug)
@@ -387,6 +422,13 @@ class CStructGenerator:
         lines.append(T['member_pending_event'].rstrip('\n'))
         lines.append(T['member_pending_event_valid'].rstrip('\n'))
 
+        # [C-52] per-layer queues
+        for layer_name, sm in self._all_layers:
+            layer = getattr(sm, 'layer_name', '') or layer_name
+            if layer:
+                lines.append(
+                    T['member_queue'].substitute(layer=layer).rstrip('\n'))
+
         # struct end
         lines.append(T['struct_end'].substitute(
             type_name=self.templates.TYPE_NAMES['system_context'],
@@ -490,6 +532,54 @@ class CStructGenerator:
             T['max_consecutive_macro'],
         ]
         return ''.join(parts)
+
+    # ================================================================
+    # [C-52] Per-layer queue: types + macros
+    # ================================================================
+    def generate_layer_queue_types(self) -> str:
+        """EventQueueState_t + size macro (emitted once)."""
+        if not self._all_layers:
+            return ""
+        T = self.MACRO_TEMPLATES
+        return ''.join([
+            T['queue_section_comment'],
+            T['queue_size_macro'],
+            T['queue_state_type'],
+        ])
+
+    def generate_layer_queue_macros(self) -> str:
+        """FIRE_EVENT_QUEUE_<Layer> / INIT_EVENT_QUEUE_<Layer> macros."""
+        if not self._all_layers:
+            return ""
+        parts = []
+        seen = set()
+        for layer_name, sm in self._all_layers:
+            layer = getattr(sm, 'layer_name', '') or layer_name
+            if not layer or layer in seen:
+                continue
+            seen.add(layer)
+            parts.append(
+                f'\n'
+                f'/* Queued delivery (non-blocking; drops if full) */\n'
+                f'#define FIRE_EVENT_QUEUE_{layer}(ctx, evt)  do {{ \\\n'
+                f'    EventQueueState_t *q_ = &(ctx)->queue_{layer}; \\\n'
+                f'    if (q_->count < STATABLE_LAYER_QUEUE_SIZE) {{ \\\n'
+                f'        q_->buffer[q_->tail] = (uint16_t)(evt); \\\n'
+                f'        q_->tail = (uint16_t)((q_->tail + 1U) % STATABLE_LAYER_QUEUE_SIZE); \\\n'
+                f'        q_->count++; \\\n'
+                f'    }} \\\n'
+                f'}} while (0)\n'
+            )
+            parts.append(
+                f'\n'
+                f'/* Queue init (called by SystemContext_InitQueues) */\n'
+                f'#define INIT_EVENT_QUEUE_{layer}(ctx)  do {{ \\\n'
+                f'    (ctx)->queue_{layer}.head = 0U; \\\n'
+                f'    (ctx)->queue_{layer}.tail = 0U; \\\n'
+                f'    (ctx)->queue_{layer}.count = 0U; \\\n'
+                f'}} while (0)\n'
+            )
+        return ''.join(parts)
     def generate_all_structs(self, global_defs: GlobalDefinitions) -> str:
         """Generate all structs in bulk
         (custom_type + system_data + event_flags + system_context).
@@ -570,4 +660,8 @@ class CStructGenerator:
             return self.generate_common_transition_context()
         elif struct_type == 'pending_event_macros':
             return self.generate_pending_event_macros()
+        elif struct_type == 'layer_queue_types':
+            return self.generate_layer_queue_types()
+        elif struct_type == 'layer_queue_macros':
+            return self.generate_layer_queue_macros()
         raise ValueError(f"Unknown struct type: {struct_type}")

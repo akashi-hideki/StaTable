@@ -87,6 +87,10 @@ class CCodeGenerator:
             {'action': 'blank'},
             {'action': 'custom_types',
              'when': lambda c: bool(c['global_defs'].custom_types)},
+            # [C-52] EventQueueState_t must be declared BEFORE
+            # SystemContext_t, which embeds it by value.
+            {'action': 'struct', 'kind': 'layer_queue_types'},
+            {'action': 'blank'},
             {'action': 'section_header', 'key': 'system_structs'},
             {'action': 'blank'},
             {'action': 'struct', 'kind': 'system_data'},
@@ -98,6 +102,9 @@ class CCodeGenerator:
             {'action': 'struct', 'kind': 'common_transition_context'},
             {'action': 'blank'},
             {'action': 'struct', 'kind': 'pending_event_macros'},
+            {'action': 'blank'},
+            # [C-52] per-layer queue macros (FIRE_EVENT_QUEUE_<Layer>)
+            {'action': 'struct', 'kind': 'layer_queue_macros'},
             {'action': 'blank'},
             {'action': 'section_header', 'key': 'var_macros'},
             {'action': 'blank'},
@@ -194,6 +201,9 @@ class CCodeGenerator:
             {'action': 'section_header', 'key': 'init_func'},
             {'action': 'blank'},
             {'action': 'init_func'},
+            {'action': 'blank'},
+            # [C-52] per-layer queue initialization
+            {'action': 'init_queues'},
         ],
         'statable_event_queue.c': [
             {'action': 'file_header',
@@ -272,6 +282,9 @@ class CCodeGenerator:
         'system_context':             'system_context',
         'common_transition_context':  'common_transition_context',
         'pending_event_macros':       'pending_event_macros',
+        # [C-52]
+        'layer_queue_types':          'layer_queue_types',
+        'layer_queue_macros':         'layer_queue_macros',
     }
 
     FILE_DISPATCH: Dict[str, str] = {
@@ -504,6 +517,7 @@ class CCodeGenerator:
             'role_decls':         self._step_role_decls,
             'role_impls':         self._step_role_impls,
             'init_func':          self._step_init_func,
+            'init_queues':        self._step_init_queues,
             'event_queues':       self._step_event_queues,
             'interrupts':         self._step_interrupts,
             'timer_struct':       self._step_timer_struct,
@@ -925,6 +939,12 @@ class CCodeGenerator:
             'void SystemContext_Init(SystemContext_t *ctx);',
             '',
             '/**',
+            ' * @brief  Initialize per-layer event queues (C-52)',
+            ' * @param  ctx  System context pointer',
+            ' */',
+            'void SystemContext_InitQueues(SystemContext_t *ctx);',
+            '',
+            '/**',
             ' * @brief  Initialize timer variables (implemented in statable_timer.c)',
             ' * @param  ctx  System context pointer',
             ' */',
@@ -955,6 +975,8 @@ class CCodeGenerator:
         method_name = self.STRUCT_KIND_DISPATCH.get(kind)
         if method_name is None:
             return []
+        # [C-52] propagate layer list for queue members/macros
+        self.struct_gen.set_layers(ctx.get('layers', []))
         return [self.struct_gen.generate_struct(
             kind, ctx['global_defs']
         )]
@@ -1094,6 +1116,32 @@ class CCodeGenerator:
         return [self.variable_gen.generate_init_function(
             ctx['global_defs']
         )]
+
+    def _step_init_queues(self, step, ctx):
+        """[C-52] Emit SystemContext_InitQueues()."""
+        layers = ctx.get('layers', [])
+        if not layers:
+            return ['']
+        parts = [
+            '/**',
+            ' * @brief  Initialize per-layer event queues (C-52)',
+            ' * @param  ctx  System context pointer',
+            ' */',
+            'void SystemContext_InitQueues(SystemContext_t *ctx)',
+            '{',
+            '    if (ctx == NULL) {',
+            '        return;',
+            '    }',
+        ]
+        seen = set()
+        for layer_name, sm in layers:
+            layer = self._get_layer_name(sm) or layer_name
+            if not layer or layer in seen:
+                continue
+            seen.add(layer)
+            parts.append(f'    INIT_EVENT_QUEUE_{layer}(ctx);')
+        parts.append('}')
+        return ['\n'.join(parts)]
 
     def _step_event_queues(self, step, ctx):
         gd = ctx['global_defs']

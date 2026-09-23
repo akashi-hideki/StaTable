@@ -119,6 +119,27 @@ class EventEditDialog(QDialog):
         self.data_check.toggled.connect(self._on_data_check_toggled)
         self._on_data_check_toggled(self.data_check.isChecked())
 
+        # [C-51 Step 2] Trigger free-text field.
+        # Enabled only for kind in {signal, call, time};
+        # kind=change is handled inside transition conditions.
+        self.trigger_edit = QLineEdit(
+            getattr(event, 'trigger', '') if event else "")
+        self.trigger_edit.setPlaceholderText(
+            "e.g. GPIO edge (ISR), debounce 5ms / "
+            "periodic timer 10ms / direct call from Application")
+        self.trigger_edit.setToolTip(
+            "Free-text description of when / from where this event fires.\n"
+            "Examples:\n"
+            "  signal: GPIO edge (ISR), debounce 5ms\n"
+            "  signal: from Application layer via OSAL queue\n"
+            "  call:   direct call from Middleware\n"
+            "  time:   periodic timer (10ms)\n"
+            "Not used for kind=change (use transition condition).")
+        form.addRow("Trigger", self.trigger_edit)
+        self.kind_combo.currentIndexChanged.connect(
+            self._on_kind_changed)
+        self._on_kind_changed()
+
         # OK/Cancel
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self._on_accept)
@@ -130,6 +151,19 @@ class EventEditDialog(QDialog):
     def _on_data_check_toggled(self, checked: bool):
         self.data_type_combo.setEnabled(checked)
         self.data_name_edit.setEnabled(checked)
+
+    def _on_kind_changed(self):
+        # [C-51 Step 2] trigger is meaningful only for
+        # signal / call / time.  kind=change uses the
+        # transition condition instead.
+        kind = self.kind_combo.currentData()
+        enabled = kind in (
+            EventKind.SIGNAL, EventKind.CALL, EventKind.TIME)
+        self.trigger_edit.setEnabled(enabled)
+        if not enabled:
+            self.trigger_edit.setToolTip(
+                "kind=change fires via the transition condition; "
+                "trigger is not used.")
 
     def _on_accept(self):
         """OK button: auto-set provisional title if title is empty"""
@@ -151,6 +185,13 @@ class EventEditDialog(QDialog):
             data_type=data_type,
             data_name=data_name,
             title=self.title_widget.get_title(),
+            # [C-51 Step 2] Only meaningful for signal/call/time.
+            # For other kinds, store "" regardless of UI state.
+            trigger=(self.trigger_edit.text().strip()
+                     if self.kind_combo.currentData() in (
+                         EventKind.SIGNAL, EventKind.CALL,
+                         EventKind.TIME)
+                     else ""),
         )
 
 

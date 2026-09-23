@@ -479,7 +479,10 @@ void OSAL_Critical_Exit(void)
  */''',
         'init_func_signature': 'void {project_name}_Init(void)',
         'init_func_open': '{',
-        'init_context': '    SystemContext_Init(&g_ctx);',
+        'init_context': (
+            '    SystemContext_Init(&g_ctx);\n'
+            '    SystemContext_InitQueues(&g_ctx);'
+        ),
         'init_state': '    g_{layer}_state = STATE_{layer}_{initial};',
         'init_state_nolayer': '    g_state = STATE_{initial};',
         'init_func_close': '}',

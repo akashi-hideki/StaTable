@@ -113,6 +113,13 @@ class Event:
     data_type: str = ""
     data_name: str = ""
     title: str = ""
+    # [C-51 Step 2] Free-text description of when / from where
+    # this event fires.  Only meaningful for kind in
+    # {signal, call, time}; kind=change is handled inside
+    # transition conditions.  Metadata only; not consumed
+    # by codegen.  Backward compatible (missing XML attribute
+    # loads as "").
+    trigger: str = ""
 
     def __post_init__(self):
         if not self.title:
