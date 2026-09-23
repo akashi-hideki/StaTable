@@ -197,7 +197,7 @@ TUTORIAL では `Vending` → `App` に変更して解決（`tools/fix_vending_n
 
 **Priority**: 🟡 Medium
 **Type**: Enhancement / Data model
-**Status**: v2.5.2 で発見（設計ギャップ）
+**Status**: ✅ 完了（v2.5.4 / C-51 Step 2）
 
 #### 現状
 
@@ -255,7 +255,7 @@ TUTORIAL では `Vending` → `App` に変更して解決（`tools/fix_vending_n
 
 **Priority**: 🟡 Medium
 **Type**: Enhancement / Codegen
-**Status**: C-52 として SPEC に記録（v2.6 で実装予定）
+**Status**: ✅ 完了（v2.5.4 / C-52）
 
 #### 現状
 
@@ -296,7 +296,7 @@ TUTORIAL では `Vending` → `App` に変更して解決（`tools/fix_vending_n
 
 **Priority**: 🟡 Medium
 **Type**: Design / Data model
-**Status**: C-53 として SPEC に記録（v2.6 で実装予定）
+**Status**: ✅ 完了（v2.5.4 / C-52 で解決）
 
 #### 現状
 

@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-776%20PASS-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-796%20PASS-green.svg)]()
 [![MISRA](https://img.shields.io/badge/MISRA-C%3A2012-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
@@ -28,7 +28,7 @@ custom tooling from scratch.
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **21 test suites, 776 PASS / 0 FAIL / 2 SKIP**
+- ✅ **22 test suites, 796 PASS / 0 FAIL / 2 SKIP**
 
 ### v2.5 Highlights
 
@@ -38,6 +38,8 @@ custom tooling from scratch.
 - ✅ **ARM link verification without hardware** — `verify_arm_link.py` links the generated framework with `arm-none-eabi-gcc` and produces `firmware.elf` / `firmware.bin` (R-13B)
 - ✅ **OSAL porting guide** — `docs/OSAL_PORTING_GUIDE_ja.md` describes the OSAL contract and shows how to add a new OS or bare-metal target (R-14)
 - ✅ **Strict CI** — gcc + ARM compilation with `-Werror`, cppcheck + MISRA addon, ARM link verification (7 CI jobs total)
+- ✅ **Event trigger field** — `Event.trigger` records when / from where an event fires as free text (C-51 Step 2)
+- ✅ **Per-layer event queues** — `SystemContext_t` gains a per-layer ring buffer; `GetNextEvent_<Layer>` drains it, so `delivery_type="queue"` events actually work (C-52)
 
 ---
 
@@ -58,7 +60,7 @@ diagrams, and generate production-ready C code with a single click.*
 | **Ubuntu 22.04+** | ⚠️ **Auto tests pass on CI** | GUI not yet manually verified — feedback welcome |
 | **macOS** | ⚠️ **Not tested** | Community testing welcome |
 
-**Note for Linux users**: The automated test suite (21 suites, 776 tests)
+**Note for Linux users**: The automated test suite (22 suites, 796 tests)
 passes on Ubuntu via GitHub Actions, but the GUI has only been manually
 verified on Windows. If you try it on Linux, please report your experience
 via [GitHub Issues](https://github.com/akashi-hideki/StaTable/issues).
@@ -103,7 +105,7 @@ python tests/test_v2_2_p1.py
 python tests/test_v2_3_p1.py
 ```
 
-Expected: **776 PASS / 0 FAIL / 2 SKIP** across 21 suites.
+Expected: **796 PASS / 0 FAIL / 2 SKIP** across 22 suites.
 
 ---
 
@@ -264,6 +266,13 @@ Where MISRA C:2012 compliance is non-negotiable.
 
 ## Roadmap
 
+### v2.5.4 (Released 2026-09-24)
+
+- ✅ Event trigger field: `Event.trigger` free-text (C-51 Step 2)
+- ✅ Per-layer event queues in `SystemContext_t` (C-52)
+- ✅ Layer ID collision avoided by per-layer queues (C-53)
+- ✅ **796 PASS / 0 FAIL / 2 SKIP** across 22 suites
+
 ### v2.5 / v2.5.3 (Released 2026-09-23)
 
 - ✅ C-50 resolution: arbitrary namespaces accepted (v2.5.1)
@@ -281,7 +290,7 @@ Where MISRA C:2012 compliance is non-negotiable.
 - ✅ 7 CI jobs: no-japanese / syntax / tests / generated-code /
   verify-c-syntax / misra-check / arm-link
 
-### v2.4.1 (Current — Released 2026-09-22)
+### v2.4.1 (Released 2026-09-22)
 
 - ✅ Merge idempotency fix (`code_merger.py` v2.1)
 - ✅ False-positive warning fix (`role_function_generator.py` v3.3.1)
@@ -376,7 +385,7 @@ python tests/test_v2_3_p1.py
 # ...
 ```
 
-All 21 suites should pass (776 PASS / 2 SKIP).
+All 22 suites should pass (796 PASS / 2 SKIP).
 
 ---
 

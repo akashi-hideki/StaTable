@@ -1458,9 +1458,9 @@ UI には **qualified_name**（`namespace.name`）を表示します。v2.5 実�
 | C-48 | `_ActionGroup` の行テキストは qualified_name、`StateMachine.role_functions` は bare name | **v2.5 で吸収** | `_find_rf_by_display()` で逆引き。同種の UI を追加する際は同様の考慮が必要 |
 | C-49 | XML の `Tab name` / `layer_name` / `RoleFunction.namespace` が不一致の場合、Namespace コンボに複数候補が出る | **データ起因** | 例：`Tab name="Application"` で `namespace="App"` の場合、両方が候補に。正しい XML なら発生しない（§3.2.7 / C-11 参照） |
 | C-50 | RoleFunction の namespace は layer_name と「完全一致 or 3文字以上の前方一致」または呼び出し元層から呼ばれていること | **v2.5.1 で解消** | `role_function_generator` の `_should_declare_here` / `_should_emit_implementation` が `namespace == layer_name` または `layer_name.startswith(namespace)` / `namespace.startswith(layer_name)`（min 3 文字）を要求。不一致の場合、宣言が欠落し `implicit declaration` エラー。呼び出し側（`transition_generator._generate_role_func_call`）は namespace をそのまま使うため非対称 （v2.5 TUTORIAL 作成時に発見、`App` ↔ `Application` は可、`Vending` ↔ `Application` は不可） |
-| C-51 | イベントの「発生条件」を XML で定義できない | **設計ギャップ（別 Issue）** | `<Event>` には kind / delivery_type / source_layer はあるが、「いつ・何を契機に発生するか」（トリガー種別・発生源・周期・デバウンス）を書く場所がない。`GetNextEvent_<Layer>` はユーザー実装に委ねられており、codegen は生成しない。→ ISSUES_v2_5.md 候補7参照 |
-| C-52 | EventQueue 基盤が未統合 | **設計ギャップ** | `<EventQueues>` で定義しても `GetNextEvent_<Layer>` は `pending_event`（1スロット）を直接参照する。`delivery_type=QUEUE` も codegen に反映されず、OSAL Queue は 実装済みだが呼び出しがない。層別キューへの統合は v2.6 で検討 |
-| C-53 | 層間 Event ID 衝突の可能性 | **設計制約** | `pending_event` は `uint16_t` 1つで、3層が同じフィールドを共有する。`EVENT_Driver_X = 1` と `EVENT_Application_Y = 1` が衝突し得る。層別キュー or ID 空間分離が必要 |
+| C-51 | イベントの「発生条件」を XML で定義できない | **✅ 実装済み（v2.5.4 / Step 2）** | `Event.trigger` 自由記述フィールドを追加。`kind in {signal, call, time}` のみ有効。`kind=change` は遷移条件で扱う。構造化 `<Trigger>`（Step 3）は v2.6 で検討。→ ISSUES_v2_5.md 候補7 |
+| C-52 | EventQueue 基盤が未統合 | **✅ 実装済み（v2.5.4）** | `SystemContext_t` に層別 `EventQueueState_t queue_<Layer>` を追加。`FIRE_EVENT_QUEUE_<Layer>` / `INIT_EVENT_QUEUE_<Layer>` マクロ、`SystemContext_InitQueues()`、`GetNextEvent_<Layer>` のキュー排出を実装 |
+| C-53 | 層間 Event ID 衝突の可能性 | **✅ 解決（v2.5.4 / C-52）** | 層別キュー `queue_<Layer>` を導入。`delivery_type="queue"` イベントは層別バッファで衝突しない。`delivery_type="direct"` の `pending_event` は依然共有だが、QUEUE 配送を推奨 |
 
 
 ---
