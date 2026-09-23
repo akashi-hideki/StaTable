@@ -193,6 +193,63 @@ TUTORIAL では `Vending` → `App` に変更して解決（`tools/fix_vending_n
 
 ---
 
+### 候補 7: イベントの「発生条件」定義（trigger）
+
+**Priority**: 🟡 Medium
+**Type**: Enhancement / Data model
+**Status**: v2.5.2 で発見（設計ギャップ）
+
+#### 現状
+
+`<Event>` 要素には以下の属性がある:
+
+- `kind`（signal / call / time / change）
+- `delivery_type`（direct / queue / double）
+- `source_layer`（driver / middleware）
+- `priority`, `data_type`, `data_name`
+
+しかし **「いつ発生するか」を書く場所がない**。
+`description` に自由記述はできるが、構造化されていない:
+
+| 不足情報 | 例（SELECT_ITEM） |
+|---------|-----------------|
+| 発生源 | 商品ボタン GPIO |
+| トリガー種別 | エッジ検出 |
+| デバウンス | 20ms |
+| ポーリング周期 | 10ms |
+| データ生成 | `item_id = ボタン index` |
+
+#### 影響
+
+- 状態遷移表のセルを見ても「そのイベントがいつ来るか」が分からない
+- `StateMachine_GetNextEvent_<Layer>` はユーザー実装（codegen は空関数を出力）
+- バリデーションで「time イベントなのに周期未定義」を検出できない
+
+#### 対応案（段階的）
+
+| # | 案 | 工数 | codegen |
+|---|----|------|---------|
+| A | `trigger` 自由記述属性を追加 | 1〜2h | 影響なし |
+| B | `<Trigger type="..." source="..."/>` 構造化 | 4〜6h | v2.6 で活用 |
+| C | GUI に「イベントカタログ」タブ | 1日 | – |
+
+#### 推奨
+
+段階的に進める:
+
+1. SPEC に C-51 として記録（本 Issue で実施）
+2. 投稿後のフィードバックを待つ
+3. v2.6 で案 A → 案 B の順に実装
+
+#### 対象ファイル（将来）
+
+- `statable/model.py`（`EventTrigger` dataclass 追加）
+- `statable/xml_io.py`（`<Trigger>` 子要素の I/O）
+- `statable_gui/event_definition_dialog.py`（トリガー編集 UI）
+- `codegen/transition_generator.py`（v2.6 で GetNextEvent 自動生成）
+
+---
+
 ## 変更履歴
 
 | バージョン | 日付 | 内容 |

@@ -1458,6 +1458,7 @@ UI には **qualified_name**（`namespace.name`）を表示します。v2.5 実�
 | C-48 | `_ActionGroup` の行テキストは qualified_name、`StateMachine.role_functions` は bare name | **v2.5 で吸収** | `_find_rf_by_display()` で逆引き。同種の UI を追加する際は同様の考慮が必要 |
 | C-49 | XML の `Tab name` / `layer_name` / `RoleFunction.namespace` が不一致の場合、Namespace コンボに複数候補が出る | **データ起因** | 例：`Tab name="Application"` で `namespace="App"` の場合、両方が候補に。正しい XML なら発生しない（§3.2.7 / C-11 参照） |
 | C-50 | RoleFunction の namespace は layer_name と「完全一致 or 3文字以上の前方一致」または呼び出し元層から呼ばれていること | **v2.5.1 で解消** | `role_function_generator` の `_should_declare_here` / `_should_emit_implementation` が `namespace == layer_name` または `layer_name.startswith(namespace)` / `namespace.startswith(layer_name)`（min 3 文字）を要求。不一致の場合、宣言が欠落し `implicit declaration` エラー。呼び出し側（`transition_generator._generate_role_func_call`）は namespace をそのまま使うため非対称 （v2.5 TUTORIAL 作成時に発見、`App` ↔ `Application` は可、`Vending` ↔ `Application` は不可） |
+| C-51 | イベントの「発生条件」を XML で定義できない | **設計ギャップ（別 Issue）** | `<Event>` には kind / delivery_type / source_layer はあるが、「いつ・何を契機に発生するか」（トリガー種別・発生源・周期・デバウンス）を書く場所がない。`GetNextEvent_<Layer>` はユーザー実装に委ねられており、codegen は生成しない。→ ISSUES_v2_5.md 候補7参照 |
 
 ---
 
