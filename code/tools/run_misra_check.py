@@ -123,8 +123,9 @@ def write_summary(out_dir, c_files, misra, non_misra, samples):
     lines += [
         '## Artifacts',
         '',
-        '- `cppcheck_raw.xml` — XML from stdout',
-        '- `cppcheck_stderr.txt` — XML from stderr (may be empty)',
+        '- `cppcheck_raw.xml` — cppcheck XML (extracted from stdout or stderr)',
+        '- `cppcheck_stdout.txt` — raw stdout (may be empty)',
+        '- `cppcheck_stderr.txt` — raw stderr (may be empty; cppcheck 2.21 emits XML here)',
         '',
         '## Next Steps',
         '',
@@ -164,10 +165,32 @@ def main():
     suppressions = Path(args.suppressions)
 
     cmd = build_cppcheck_command(c_files, include_dirs, suppressions)
+
+    # Guard: cppcheck rejects suppressions files with a UTF-8 BOM.
+    # The BOM is parsed as part of the first rule id (e.g.
+    # "misra-c2012-2.3" -> invalid id) and cppcheck aborts before
+    # emitting any XML.
+    if suppressions.exists():
+        head = suppressions.read_bytes()[:3]
+        if head == b'\xef\xbb\xbf':
+            print(
+                f'WARN: {suppressions} starts with a UTF-8 BOM; '
+                'cppcheck will reject the first suppression. '
+                'Re-save the file without BOM.',
+                file=sys.stderr,
+            )
+
     print('Running cppcheck...')
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+            timeout=600,
+        )
     except FileNotFoundError:
         print('ERROR: cppcheck is not installed.', file=sys.stderr)
         return 1
@@ -175,10 +198,19 @@ def main():
         print('ERROR: cppcheck timed out.', file=sys.stderr)
         return 1
 
-    (out_dir / 'cppcheck_raw.xml').write_text(result.stdout or '', encoding='utf-8')
-    (out_dir / 'cppcheck_stderr.txt').write_text(result.stderr or '', encoding='utf-8')
+    stdout = result.stdout or ''
+    stderr = result.stderr or ''
 
-    xml_text = find_xml(result.stdout or '', result.stderr or '')
+    # cppcheck 2.21 emits XML to stderr; older versions to stdout.
+    # find_xml() picks whichever stream carries valid XML.
+    xml_text = find_xml(stdout, stderr)
+
+    # Canonical XML (non-empty regardless of which stream carried it)
+    (out_dir / 'cppcheck_raw.xml').write_text(xml_text, encoding='utf-8')
+    # Raw streams preserved for diagnostics
+    (out_dir / 'cppcheck_stdout.txt').write_text(stdout, encoding='utf-8')
+    (out_dir / 'cppcheck_stderr.txt').write_text(stderr, encoding='utf-8')
+
     misra, non_misra, samples = parse_xml(xml_text)
 
     write_summary(out_dir, c_files, misra, non_misra, samples)
