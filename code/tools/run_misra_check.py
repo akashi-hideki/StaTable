@@ -19,10 +19,10 @@ def collect_c_files(root: Path):
     return sorted(root.rglob('*.c'))
 
 
-def build_cppcheck_command(c_files, include_dirs, suppressions_file):
+def build_cppcheck_command(c_files, include_dirs, suppressions_file,
+                           addon_dir=None):
     cmd = [
         'cppcheck',
-        '--addon=misra',
         '--enable=warning,style,performance,portability',
         '--inline-suppr',
         '--error-exitcode=0',
@@ -30,6 +30,24 @@ def build_cppcheck_command(c_files, include_dirs, suppressions_file):
         '--xml-version=2',
         '--quiet',
     ]
+
+    # MISRA addon: prefer an explicit directory (used in CI, where
+    # the addon is fetched from the matching cppcheck tag).  Fall
+    # back to cppcheck's built-in search path ("misra").
+    if addon_dir:
+        addon_file = Path(addon_dir) / 'misra.py'
+        if not addon_file.exists():
+            print(
+                f'WARN: {addon_file} not found; falling back to '
+                'cppcheck built-in addon search.',
+                file=sys.stderr,
+            )
+            cmd.append('--addon=misra')
+        else:
+            cmd.append(f'--addon={addon_file}')
+    else:
+        cmd.append('--addon=misra')
+
     if suppressions_file and suppressions_file.exists():
         cmd.append(f'--suppressions-list={suppressions_file}')
     for inc in include_dirs:
@@ -142,6 +160,12 @@ def main():
     parser.add_argument('--root', required=True)
     parser.add_argument('--out', required=True)
     parser.add_argument('--suppressions', default='misra/suppressions.txt')
+    parser.add_argument(
+        '--addon-dir',
+        default=None,
+        help=("Directory containing misra.py and misra_9.py. "
+              "If omitted, cppcheck's built-in addon search is used."),
+    )
     args = parser.parse_args()
 
     root = Path(args.root)
@@ -164,7 +188,8 @@ def main():
     include_dirs = [d for d in include_dirs if d.exists()]
     suppressions = Path(args.suppressions)
 
-    cmd = build_cppcheck_command(c_files, include_dirs, suppressions)
+    cmd = build_cppcheck_command(
+        c_files, include_dirs, suppressions, addon_dir=args.addon_dir)
 
     # Guard: cppcheck rejects suppressions files with a UTF-8 BOM.
     # The BOM is parsed as part of the first rule id (e.g.

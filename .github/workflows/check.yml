@@ -218,3 +218,79 @@ jobs:
           path: code/verify_report/*.log
           if-no-files-found: warn
           retention-days: 30
+
+  # ==============================================================
+  # Job 6: MISRA check (informational)
+  #
+  # Runs cppcheck + MISRA addon against the 3-layer vending
+  # machine TUTORIAL.  Informational only: continue-on-error is
+  # true so a MISRA regression never blocks the build.  The
+  # report and the raw cppcheck XML are uploaded as artifacts.
+  #
+  # The MISRA addon is fetched from the cppcheck 2.21.0 tag so
+  # CI and the local development environment use the exact same
+  # ruleset (Ubuntu's cppcheck package lags behind).
+  # ==============================================================
+  misra-check:
+    name: MISRA check (informational)
+    runs-on: ubuntu-latest
+    needs: [syntax]
+    continue-on-error: true
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install cppcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck
+          cppcheck --version
+
+      - name: Fetch cppcheck 2.21.0 MISRA addon
+        run: |
+          mkdir -p tools/cppcheck-addons
+          curl -sSL \
+            https://raw.githubusercontent.com/danmar/cppcheck/2.21.0/addons/misra.py \
+            -o tools/cppcheck-addons/misra.py
+          curl -sSL \
+            https://raw.githubusercontent.com/danmar/cppcheck/2.21.0/addons/misra_9.py \
+            -o tools/cppcheck-addons/misra_9.py
+          ls -la tools/cppcheck-addons/
+
+      - name: Install PySide6
+        run: pip install PySide6
+
+      - name: Generate C code from TUTORIAL
+        run: |
+          python tools/gen_output_from_xml.py \
+            --xml docs/tutorial/vending_machine.xml \
+            --out output_vending
+
+      - name: Run MISRA check
+        run: |
+          python tools/run_misra_check.py \
+            --root output_vending \
+            --out misra_report_vending \
+            --addon-dir tools/cppcheck-addons \
+            --suppressions misra/suppressions.txt
+
+      - name: Show MISRA summary
+        if: always()
+        run: |
+          if [ -f misra_report_vending/summary.md ]; then
+            cat misra_report_vending/summary.md
+          fi
+
+      - name: Upload MISRA report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: misra-report
+          path: code/misra_report_vending/
+          if-no-files-found: warn
+          retention-days: 30
