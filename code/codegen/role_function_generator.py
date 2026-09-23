@@ -2,17 +2,16 @@
 """
 Role function generation module (multi-layer state machine / ISR support)
 
+Version: 3.4 (2026-09-23 / R-10: all (void) suppressions in user marker)
+  - Extend the v2.5.2 user-editable suppression block (which covered
+    only ctx->data.*) to also cover from_state, event, transition_id,
+    and ctx.  All (void) lines now live INSIDE the STABLE_USER_CODE
+    marker so users can delete individual lines once they start using
+    the corresponding variable.  The now-unused `null_guard_suppress`
+    and `unused_ctx` templates were removed.
+
 Version: 3.3 (2026-09-20 / MISRA 12.1 fix)
-  - Fix: Transition_GetId() emits `if (transition == NULL || table == NULL)`
-    and `if (table[i].from_state == ... && table[i].event == ...)`.
-    MISRA C:2012 Rule 12.1 requires explicit parentheses around
-    sub-expressions of `||` / `&&` when mixed with other operators.
-    Now emits `((...) || (...))` and `((...) && (...))`.
-
 Version: 3.2 (2026-09-20 / MISRA fixes)
-  - MISRA 17.7 / unreadVariable: `transition_id` and per-variable data
-    pointers are explicitly discarded via `(void)`.
-
 Version: 3.1 (2026-09-19 / v2.2.5 fixes)
 Version: 3.0 (2026-09-13 / Stage 4)
 [v1.5] [v1.6]
@@ -167,23 +166,18 @@ class RoleFunctionGenerator:
         'null_guard_close': (
             '    }\n'
         ),
-        'null_guard_suppress': Template(
-            '    (void)$member_name;   /* suppress unused warning */\n'
-        ),
 
-        'unused_ctx': '    (void)ctx;         /* suppress unused argument warning */\n',
         'blank': '\n',
 
         'local_transition_id_header': (
             '    /* ===== transition ID (index within call_sites) ===== */\n'
         ),
-        # [v3.2 / MISRA 17.7] Explicitly discard `transition_id`
-        # immediately after declaration. User code markers may still
-        # freely reference it.
+        # [v3.2 / MISRA 17.7] transition_id is declared here, but its
+        # (void) suppression was moved into the user-code marker by
+        # v3.4 / R-10.
         'local_transition_id_decl': Template(
             '    const uint16_t transition_id = Transition_GetId(\n'
             '        transition, $table_arg, $count_arg);\n'
-            '    (void)transition_id;   /* suppress unused warning */\n'
         ),
 
         'local_data_header': '    /* ===== local pointer to ctx->data ===== */\n',
@@ -717,7 +711,6 @@ class RoleFunctionGenerator:
         if namespace and layer:
             ns_l, ly_l = namespace.lower(), layer.lower()
             if ly_l.startswith(ns_l) or ns_l.startswith(ly_l):
-                # Require at least 3 chars to avoid spurious short matches
                 if min(len(ns_l), len(ly_l)) >= 3:
                     return True
 
@@ -738,12 +731,6 @@ class RoleFunctionGenerator:
             1. its namespace matches the layer (exact or 3+ char
                prefix match), OR
             2. it is called from somewhere in this layer (call_map hit).
-
-          Condition (2) mirrors _should_emit_implementation so that
-          declaration (.h) and definition (.c) stay in sync. Without
-          it, a non-prefix namespace (e.g. layer_name="Application",
-          namespace="Vending") produced a definition without a
-          declaration, causing 'implicit declaration of function'.
         """
         if not self.layer_name:
             return True
@@ -754,7 +741,7 @@ class RoleFunctionGenerator:
         if namespace == layer:
             return True
 
-        # 1b. Prefix match (App <-> Application, Drv <-> Driver)
+        # 1b. Prefix match
         ns_l, ly_l = namespace.lower(), layer.lower()
         if min(len(ns_l), len(ly_l)) >= 3:
             if ly_l.startswith(ns_l) or ns_l.startswith(ly_l):
@@ -868,6 +855,13 @@ class RoleFunctionGenerator:
         return description or unit or ""
 
     def _generate_local_transition_members(self) -> str:
+        """Declarations for from_state / event only.
+
+        [v3.4 / R-10]
+          The (void) suppression lines were removed from this method
+          and moved into _generate_local_data_suppress, which is
+          emitted inside the user-code marker.
+        """
         T = self.IMPLEMENTATION_TEMPLATES
         parts = [
             T['null_guard_header'],
@@ -885,14 +879,18 @@ class RoleFunctionGenerator:
             T['null_guard_assign'].substitute(member_name='from_state'),
             T['null_guard_assign'].substitute(member_name='event'),
             T['null_guard_close'],
-            T['null_guard_suppress'].substitute(member_name='from_state'),
-            T['null_guard_suppress'].substitute(member_name='event'),
             T['blank'],
         ]
         return ''.join(parts)
 
     def _generate_local_transition_id(self, func,
                                       has_call_sites: bool) -> str:
+        """Declaration of transition_id only.
+
+        [v3.4 / R-10]
+          The (void)transition_id; line was removed from the template
+          and moved into _generate_local_data_suppress.
+        """
         T = self.IMPLEMENTATION_TEMPLATES
         if has_call_sites:
             short = self._get_short_name(func)
@@ -914,11 +912,8 @@ class RoleFunctionGenerator:
         """Generate local pointer declarations to ctx->data.
 
         [v2.5.2 / user-editable suppression]
-          The (void) suppression lines previously emitted here have
-          been moved into the user-code marker (see
-          _generate_local_data_suppress). This keeps the declarations
-          outside the marker (they must match the data layout) while
-          letting the user delete individual (void) lines.
+          Declarations only; the (void) suppression lines are emitted
+          by _generate_local_data_suppress inside the user marker.
         """
         if global_defs is None:
             return ""
@@ -949,44 +944,52 @@ class RoleFunctionGenerator:
         parts.append(T['blank'])
         return ''.join(parts)
 
-    def _generate_local_data_suppress(self, global_defs) -> str:
-        """Generate the (void) suppression block for ctx->data pointers.
+    def _generate_local_data_suppress(self, global_defs,
+                                      include_transition_id: bool = True) -> str:
+        """Generate the (void) suppression block for all auto-declared
+        variables: from_state, event, transition_id, and either ctx or
+        ctx->data.* (depending on whether local data pointers exist).
 
-        [v2.5.2 / user-editable]
-          This block is emitted INSIDE the user-code marker so the user
-          can delete individual (void) lines as they start using the
-          variables. Once edited, code_merger preserves the user's
-          version across regenerations.
+        [v3.4 / R-10]
+          Extended from v2.5.2 (which covered only ctx->data.*).
+          All suppressions now live inside the user-code marker so
+          users can delete individual lines once they start using the
+          corresponding variable.  Regeneration preserves the user's
+          version via code_merger.
         """
-        if global_defs is None:
-            return ""
-        variables = getattr(global_defs, 'variables', []) or []
-        if not variables:
-            return ""
         parts = []
         # [v2.5.2] Explanatory header, printed once per role function.
         parts.append(
             '    /* --- auto-generated: unused-variable suppression ---\n'
             '     *     Delete each (void) line once you start using the\n'
-            '     *     corresponding pointer. Keeping them all is\n'
+            '     *     corresponding variable. Keeping them all is\n'
             '     *     harmless (no-op).                                   */\n'
         )
-        for var in variables:
-            var_name = self.naming.sanitize_identifier(
-                getattr(var, 'name', 'unnamed')
-            )
-            parts.append(f'    (void){var_name};'
-                         f'   /* suppress unused warning */\n')
+        # transition-guard locals (always declared by the generator)
+        parts.append(
+            '    (void)from_state;   /* suppress unused warning */\n')
+        parts.append(
+            '    (void)event;        /* suppress unused warning */\n')
+        # transition_id (declared only when state_machine is available)
+        if include_transition_id:
+            parts.append(
+                '    (void)transition_id;   /* suppress unused warning */\n')
+        # ctx / ctx->data.*
+        if self._has_local_data_pointers(global_defs):
+            for var in (getattr(global_defs, 'variables', []) or []):
+                var_name = self.naming.sanitize_identifier(
+                    getattr(var, 'name', 'unnamed'))
+                parts.append(
+                    f'    (void){var_name};'
+                    f'   /* suppress unused warning */\n')
+        else:
+            parts.append(
+                '    (void)ctx;         /* suppress unused argument warning */\n')
         parts.append('\n')
         return ''.join(parts)
 
     def _generate_local_data_pointers(self, global_defs) -> str:
-        """Legacy wrapper: delegate to _generate_local_data_decls.
-
-        Kept for backward compatibility with any caller (including
-        tests) that still uses the old name. New code should call
-        _generate_local_data_decls directly.
-        """
+        """Legacy wrapper: delegate to _generate_local_data_decls."""
         return self._generate_local_data_decls(global_defs)
 
     def _has_local_data_pointers(self, global_defs) -> bool:
@@ -1060,8 +1063,6 @@ class RoleFunctionGenerator:
 
         if self._has_local_data_pointers(global_defs):
             parts.append(self._generate_local_data_decls(global_defs))
-        else:
-            parts.append(T['unused_ctx'])
 
         parts.append(self._generate_local_retvar())
 
@@ -1075,10 +1076,13 @@ class RoleFunctionGenerator:
             marker_name=marker_name
         ))
 
-        # [v2.5.2] (void) suppression lines now live INSIDE the
-        # user-code marker so they can be deleted freely.
-        if self._has_local_data_pointers(global_defs):
-            parts.append(self._generate_local_data_suppress(global_defs))
+        # [v3.4 / R-10] ALL (void) suppression lines live INSIDE the
+        # user-code marker so the user can delete individual lines
+        # once they start using the corresponding variable.
+        parts.append(self._generate_local_data_suppress(
+            global_defs,
+            include_transition_id=include_transition_id,
+        ))
 
         parts.append(T['user_marker_hint'])
         parts.append(T['user_marker_end'].substitute(
@@ -1117,9 +1121,7 @@ class RoleFunctionGenerator:
       Middleware/... -> MISRA 8.5 (declared more than once).
 
       Now only functions whose namespace belongs to this layer are
-      declared here. Cross-layer prototypes are made visible by
-      including the other layers' role_functions headers (see
-      c_code_generator._step_include_section).
+      declared here.
     """
         unique_funcs = self._dedupe_by_name(role_functions)
         call_map = self._collect_call_sites(state_machine) \
@@ -1157,13 +1159,6 @@ class RoleFunctionGenerator:
                     or getattr(f, 'name', '')
                 if qn:
                     defined_keys.add(qn)
-                # [v3.3.1 fix] Also register the bare name. The call_map
-                # may contain bare names (e.g. "Start_Init") even when
-                # the function is defined with a namespace
-                # (e.g. "Application.Start_Init"). The resolver
-                # _get_call_sites_for_func() already falls back to bare
-                # names, so the generated C code was always correct;
-                # only this warning was wrong.
                 bare = getattr(f, 'name', '')
                 if bare:
                     defined_keys.add(bare)
