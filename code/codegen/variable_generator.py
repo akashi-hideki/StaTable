@@ -106,8 +106,8 @@ class VariableGenerator:
         {'action': 'template', 'key': 'flags_comment'},
         {'action': 'loop', 'source': 'flags', 'generator': 'init'},
         {'action': 'blank'},
-        {'action': 'template', 'key': 'pending_event_comment'},
-        {'action': 'template', 'key': 'pending_event_init'},
+        # [F-3 Step 2] pending_event init removed: per-layer
+        # slots are reset by SystemContext_InitQueues().
         {'action': 'blank'},
         {'action': 'template', 'key': 'exit_log',
          'format': {'func_name': '{func_name}', 'log_debug': '{log_debug}'}},

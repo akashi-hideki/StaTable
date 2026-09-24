@@ -67,11 +67,11 @@ class CStructGenerator:
         ),
 
         # --- pending_event members ---
-        'member_pending_event': (
-            '    uint16_t pending_event;         /* pending event */\n'
+        'member_pending_event': Template(
+            '    uint16_t pending_event_$layer;      /* [F-3 S2] pending event */\n'
         ),
-        'member_pending_event_valid': (
-            '    bool pending_event_valid;       /* pending event valid flag */\n'
+        'member_pending_event_valid': Template(
+            '    bool pending_event_valid_$layer;    /* [F-3 S2] pending valid flag */\n'
         ),
         # [C-52] one queue per layer
         'member_queue': Template(
@@ -436,9 +436,16 @@ class CStructGenerator:
             event_flags_type=self.templates.TYPE_NAMES['event_flags'],
         ).rstrip('\n'))
 
-        # pending_event / pending_event_valid
-        lines.append(T['member_pending_event'].rstrip('\n'))
-        lines.append(T['member_pending_event_valid'].rstrip('\n'))
+        # [F-3 Step 2] per-layer pending_event slots
+        for layer_name, sm in self._all_layers:
+            layer = getattr(sm, 'layer_name', '') or layer_name
+            if layer:
+                lines.append(
+                    T['member_pending_event'].substitute(
+                        layer=layer).rstrip('\n'))
+                lines.append(
+                    T['member_pending_event_valid'].substitute(
+                        layer=layer).rstrip('\n'))
 
         # [C-52] per-layer queues
         for layer_name, sm in self._all_layers:
@@ -544,11 +551,32 @@ class CStructGenerator:
         """
         self._log_debug("Generating pending event macros")
         T = self.MACRO_TEMPLATES
-        parts = [
-            T['section_comment'],
-            T['fire_event_macro'],
-            T['max_consecutive_macro'],
-        ]
+        parts = [T['section_comment']]
+        # [F-3 Step 2] FIRE_EVENT(ctx, evt) is removed.
+        parts.append(
+            '\n'
+            '/* [F-3 Step 2] FIRE_EVENT(ctx, evt) is removed.           */\n'
+            '/* Use FIRE_EVENT_<Layer>(ctx, evt) with an explicit layer. */\n'
+        )
+        _bs = chr(92)  # backslash
+        _tpl = (
+            '\n'
+            '/* Fire event for {layer} layer (protected) */\n'
+            '#define FIRE_EVENT_{layer}(ctx, evt)  do {{ {bs}\n'
+            '    STATABLE_ENTER_CRITICAL(); {bs}\n'
+            '    (ctx)->pending_event_{layer} = (uint16_t)(evt); {bs}\n'
+            '    (ctx)->pending_event_valid_{layer} = true; {bs}\n'
+            '    STATABLE_EXIT_CRITICAL(); {bs}\n'
+            '}} while (0)\n'
+        )
+        seen = set()
+        for layer_name, sm in self._all_layers:
+            layer = getattr(sm, 'layer_name', '') or layer_name
+            if not layer or layer in seen:
+                continue
+            seen.add(layer)
+            parts.append(_tpl.format(layer=layer, bs=_bs))
+        parts.append(T['max_consecutive_macro'])
         return ''.join(parts)
 
     # ================================================================

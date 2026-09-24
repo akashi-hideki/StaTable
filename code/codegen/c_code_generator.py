@@ -1139,6 +1139,9 @@ class CCodeGenerator:
             if not layer or layer in seen:
                 continue
             seen.add(layer)
+            # [F-3 Step 2] reset per-layer pending slot
+            parts.append(f'    ctx->pending_event_{layer} = 0U;')
+            parts.append(f'    ctx->pending_event_valid_{layer} = false;')
             parts.append(f'    INIT_EVENT_QUEUE_{layer}(ctx);')
         parts.append('}')
         return ['\n'.join(parts)]

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """StaTable F-3 test suite: pending_event atomic read-then-clear.
 
-Verifies the generated GetNextEvent body:
-  - Read-then-clear is wrapped in STATABLE_ENTER/EXIT_CRITICAL
-  - pending_event is declared at function top (not inside if-block)
-  - Consecutive-count overflow still works
+Now tracks F-3 Step 2 (per-layer pending_event_<Layer>):
+  - Read-then-clear wrapped in STATABLE_ENTER/EXIT_CRITICAL
+  - Own-layer slot (pending_event_<Layer> / pending_event_valid_<Layer>)
+  - No bare pending_event reference
+  - Consecutive-count overflow preserved
   - Queue drain still protected
 
 Run:
@@ -67,29 +68,31 @@ def _make_sm():
     return sm
 
 
-# ======================================================================
-# [1] Generated body contains atomic read-then-clear
-# ======================================================================
-def test_atomic_read_clear():
-    print("\n[1] Atomic read-then-clear")
-
+def _gen():
     from codegen.transition_generator import TransitionGenerator
     gen = TransitionGenerator()
     gen.set_layer("Driver")
-    out = gen.generate_get_next_event_function(_make_sm())
+    return gen.generate_get_next_event_function(_make_sm())
 
-    check("has [F-3] comment",
-          "[F-3] Read-then-clear pending_event atomically." in out,
-          f"got:\n{out}")
+
+# ======================================================================
+# [1] Atomic read-then-clear (per-layer slot)
+# ======================================================================
+def test_atomic_read_clear():
+    print("\n[1] Atomic read-then-clear (per-layer slot)")
+
+    out = _gen()
+
+    check("has [F-3 S2] comment",
+          "[F-3 S2]" in out, f"got:\n{out}")
     check("evt declared at top",
           "    EVENT_Driver_t evt = EVENT_Driver_NONE;\n" in out,
           f"got:\n{out}")
 
-    # Verify order: ENTER_CRITICAL -> read -> clear -> EXIT_CRITICAL
     i_enter = out.find("STATABLE_ENTER_CRITICAL()")
-    i_read = out.find("evt = (EVENT_Driver_t)ctx->pending_event")
-    i_clear = out.find("ctx->pending_event_valid = false")
-    i_exit = out.find("STATABLE_EXIT_CRITICAL()")
+    i_read = out.find("evt = (EVENT_Driver_t)ctx->pending_event_Driver")
+    i_clear = out.find("ctx->pending_event_valid_Driver = false")
+    i_exit = out.find("STATABLE_EXIT_CRITICAL()", i_enter) if i_enter >= 0 else -1
 
     check("ENTER_CRITICAL before read",
           0 < i_enter < i_read,
@@ -101,6 +104,12 @@ def test_atomic_read_clear():
           0 < i_clear < i_exit,
           f"i_clear={i_clear}, i_exit={i_exit}")
 
+    # No bare pending_event reference
+    check("no bare ctx->pending_event",
+          "ctx->pending_event;" not in out
+          and "ctx->pending_event_valid;" not in out,
+          f"got:\n{out}")
+
 
 # ======================================================================
 # [2] Consecutive-count overflow behavior preserved
@@ -108,11 +117,7 @@ def test_atomic_read_clear():
 def test_overflow_still_works():
     print("\n[2] Consecutive-count overflow preserved")
 
-    from codegen.transition_generator import TransitionGenerator
-    gen = TransitionGenerator()
-    gen.set_layer("Driver")
-    out = gen.generate_get_next_event_function(_make_sm())
-
+    out = _gen()
     check("MAX_CONSECUTIVE_PENDING_EVENTS check",
           "consecutive_count > MAX_CONSECUTIVE_PENDING_EVENTS" in out)
     check("returns NONE on overflow",
@@ -126,13 +131,8 @@ def test_overflow_still_works():
 def test_queue_drain_still_protected():
     print("\n[3] Queue drain still protected")
 
-    from codegen.transition_generator import TransitionGenerator
-    gen = TransitionGenerator()
-    gen.set_layer("Driver")
-    out = gen.generate_get_next_event_function(_make_sm())
-
-    check("queue_Driver referenced",
-          "ctx->queue_Driver" in out)
+    out = _gen()
+    check("queue_Driver referenced", "ctx->queue_Driver" in out)
     check("queue drain has STATABLE_ENTER_CRITICAL",
           out.count("STATABLE_ENTER_CRITICAL()") >= 2,
           f"count={out.count('STATABLE_ENTER_CRITICAL()')}")
@@ -147,11 +147,7 @@ def test_queue_drain_still_protected():
 def test_structure():
     print("\n[4] Structure sanity")
 
-    from codegen.transition_generator import TransitionGenerator
-    gen = TransitionGenerator()
-    gen.set_layer("Driver")
-    out = gen.generate_get_next_event_function(_make_sm())
-
+    out = _gen()
     check("braces balanced",
           out.count("{") == out.count("}"),
           f"open={out.count('{')}, close={out.count('}')}")
@@ -164,7 +160,7 @@ def test_structure():
 # ======================================================================
 def main():
     print("=" * 70)
-    print("  StaTable F-3 (pending_event atomic read-then-clear)")
+    print("  StaTable F-3 (pending_event atomic read-then-clear, Step 2)")
     print("=" * 70)
 
     test_atomic_read_clear()
