@@ -133,13 +133,31 @@ class CStructGenerator:
         'queue_state_type': (
             '\n'
             '/* Ring buffer state (one instance per layer, embedded in */\n'
-            '/* SystemContext_t).  Single-producer / single-consumer. */\n'
+            '/* SystemContext_t).  Protected by STATABLE_ENTER/EXIT_  */\n'
+            '/* CRITICAL hooks (see below).                            */\n'
             'typedef struct {\n'
             '    uint16_t buffer[STATABLE_LAYER_QUEUE_SIZE];\n'
             '    volatile uint16_t head;\n'
             '    volatile uint16_t tail;\n'
             '    volatile uint16_t count;\n'
+            '    volatile uint32_t dropped;  /* [C-54] full-drop count */\n'
             '} EventQueueState_t;\n'
+        ),
+        # [C-54] Critical section hooks (default no-op)
+        'critical_hooks': (
+            '\n'
+            '/* ============================================================== */\n'
+            '/*  Critical section hooks (C-54)                                 */\n'
+            '/* ============================================================== */\n'
+            '/* Called around per-layer queue operations to make them safe    */\n'
+            '/* against ISR preemption.  Default: no-op (single-context).     */\n'
+            '/* Override at build time via -D (see OSAL porting guide).       */\n'
+            '#ifndef STATABLE_ENTER_CRITICAL\n'
+            '#define STATABLE_ENTER_CRITICAL()  do { } while (0)\n'
+            '#endif\n'
+            '#ifndef STATABLE_EXIT_CRITICAL\n'
+            '#define STATABLE_EXIT_CRITICAL()   do { } while (0)\n'
+            '#endif\n'
         ),
     }
 
@@ -543,6 +561,7 @@ class CStructGenerator:
         T = self.MACRO_TEMPLATES
         return ''.join([
             T['queue_section_comment'],
+            T['critical_hooks'],
             T['queue_size_macro'],
             T['queue_state_type'],
         ])
@@ -560,23 +579,30 @@ class CStructGenerator:
             seen.add(layer)
             parts.append(
                 f'\n'
-                f'/* Queued delivery (non-blocking; drops if full) */\n'
+                f'/* Queue send (C-54: protected by hooks; drops+counts if full) */\n'
                 f'#define FIRE_EVENT_QUEUE_{layer}(ctx, evt)  do {{ \\\n'
+                f'    STATABLE_ENTER_CRITICAL(); \\\n'
                 f'    EventQueueState_t *q_ = &(ctx)->queue_{layer}; \\\n'
                 f'    if (q_->count < STATABLE_LAYER_QUEUE_SIZE) {{ \\\n'
                 f'        q_->buffer[q_->tail] = (uint16_t)(evt); \\\n'
                 f'        q_->tail = (uint16_t)((q_->tail + 1U) % STATABLE_LAYER_QUEUE_SIZE); \\\n'
                 f'        q_->count++; \\\n'
+                f'    }} else {{ \\\n'
+                f'        q_->dropped++; \\\n'
                 f'    }} \\\n'
+                f'    STATABLE_EXIT_CRITICAL(); \\\n'
                 f'}} while (0)\n'
             )
             parts.append(
                 f'\n'
-                f'/* Queue init (called by SystemContext_InitQueues) */\n'
+                f'/* Queue init (C-54: protected) */\n'
                 f'#define INIT_EVENT_QUEUE_{layer}(ctx)  do {{ \\\n'
+                f'    STATABLE_ENTER_CRITICAL(); \\\n'
                 f'    (ctx)->queue_{layer}.head = 0U; \\\n'
                 f'    (ctx)->queue_{layer}.tail = 0U; \\\n'
                 f'    (ctx)->queue_{layer}.count = 0U; \\\n'
+                f'    (ctx)->queue_{layer}.dropped = 0U; \\\n'
+                f'    STATABLE_EXIT_CRITICAL(); \\\n'
                 f'}} while (0)\n'
             )
         return ''.join(parts)

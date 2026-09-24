@@ -331,6 +331,38 @@ TUTORIAL では `Vending` → `App` に変更して解決（`tools/fix_vending_n
 
 ---
 
+
+### 候補 10: ISR コンテキストでのキュー競合 (C-54)
+
+**Priority**: 🟡 Medium
+**Type**: Safety / Codegen
+**Status**: ✅ 完了（v2.5.5）
+
+#### 設計レビューで検出した懸念
+
+| # | 深刻度 | 内容 |
+|---|:---:|------|
+| F-1 | 🔴 Critical | 層別キューの `count++` / `count--` が非アトミック（Producer 2つ: ISR + loop） |
+| F-2 | 🔴 Critical | `FIRE_EVENT` は全層共有 `pending_event` に書くため層誤配送 |
+| F-3 | 🟡 High | `pending_event` の read-then-clear が ISR と競合 |
+| F-4 | 🟡 High | キュー満杯時にサイレントドロップ |
+| F-5 | 🟢 Medium | 推奨 API が未文書化 |
+
+#### 対応（v2.5.5）
+
+| # | 対応 |
+|---|------|
+| R1 | `STATABLE_ENTER/EXIT_CRITICAL` フックで `count` RMW を保護 |
+| R2 | `FIRE_EVENT_QUEUE_<Layer>` を推奨 API として明記 |
+| R3 | `dropped` カウンタ追加 |
+
+#### 関連
+
+- C-52（EventQueue 基盤）
+- C-53（層間 ID 衝突）
+
+---
+
 ## 変更履歴
 
 | バージョン | 日付 | 内容 |
