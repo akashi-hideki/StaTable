@@ -1459,8 +1459,8 @@ UI には **qualified_name**（`namespace.name`）を表示します。v2.5 実�
 | C-49 | XML の `Tab name` / `layer_name` / `RoleFunction.namespace` が不一致の場合、Namespace コンボに複数候補が出る | **データ起因** | 例：`Tab name="Application"` で `namespace="App"` の場合、両方が候補に。正しい XML なら発生しない（§3.2.7 / C-11 参照） |
 | C-50 | RoleFunction の namespace は layer_name と「完全一致 or 3文字以上の前方一致」または呼び出し元層から呼ばれていること | **v2.5.1 で解消** | `role_function_generator` の `_should_declare_here` / `_should_emit_implementation` が `namespace == layer_name` または `layer_name.startswith(namespace)` / `namespace.startswith(layer_name)`（min 3 文字）を要求。不一致の場合、宣言が欠落し `implicit declaration` エラー。呼び出し側（`transition_generator._generate_role_func_call`）は namespace をそのまま使うため非対称 （v2.5 TUTORIAL 作成時に発見、`App` ↔ `Application` は可、`Vending` ↔ `Application` は不可） |
 | C-51 | イベントの「発生条件」を XML で定義できない | **✅ 実装済み（v2.5.4 / Step 2）** | `Event.trigger` 自由記述フィールドを追加。`kind in {signal, call, time}` のみ有効。`kind=change` は遷移条件で扱う。構造化 `<Trigger>`（Step 3）は v2.6 で検討。→ ISSUES_v2_5.md 候補7 |
-| C-52 | EventQueue 基盤が未統合 | **✅ 実装済み（v2.5.4）** | `SystemContext_t` に層別 `EventQueueState_t queue_<Layer>` を追加。`FIRE_EVENT_QUEUE_<Layer>` / `INIT_EVENT_QUEUE_<Layer>` マクロ、`SystemContext_InitQueues()`、`GetNextEvent_<Layer>` のキュー排出を実装 |
-| C-53 | 層間 Event ID 衝突の可能性 | **✅ 解決（v2.5.4 / C-52）** | 層別キュー `queue_<Layer>` を導入。`delivery_type="queue"` イベントは層別バッファで衝突しない。`delivery_type="direct"` の `pending_event` は依然共有だが、QUEUE 配送を推奨 |
+| C-52 | EventQueue 基盤が未統合 | **✅ 実装済み（v2.5.4）** | `SystemContext_t` に層別 `EventQueueState_t queue_<Layer>` を追加。`FIRE_EVENT_QUEUE_<Layer>` / `INIT_EVENT_QUEUE_<Layer>` マクロ、`SystemContext_InitQueues()`、`GetNextEvent_<Layer>` のキュー排出を実装。C-54 で ISR 安全性を強化 |
+| C-53 | 層間 Event ID 衝突の可能性 | **✅ 解決（v2.5.4 / C-52）** | 層別キュー `queue_<Layer>` を導入。`delivery_type="queue"` イベントは層別バッファで衝突しない。`delivery_type="direct"` の `pending_event` は依然共有だが、QUEUE 配送を推奨。C-54 で ISR 競合対策も実施 |
 | C-54 | ISR コンテキストでのキュー競合と API 選択 | **✅ 実装済み（v2.5.5）** | F-1: `count` の read-modify-write 競合 → `STATABLE_ENTER/EXIT_CRITICAL` フックで保護（デフォルト no-op、ビルド時に `-D` で上書き可）。F-2: `FIRE_EVENT` の層誤配送 → `FIRE_EVENT_QUEUE_<Layer>` を推奨 API として文書化。F-4: サイレントドロップ → `EventQueueState_t.dropped` カウンタで可視化 |
 
 

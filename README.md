@@ -40,6 +40,7 @@ custom tooling from scratch.
 - ✅ **Strict CI** — gcc + ARM compilation with `-Werror`, cppcheck + MISRA addon, ARM link verification (7 CI jobs total)
 - ✅ **Event trigger field** — `Event.trigger` records when / from where an event fires as free text (C-51 Step 2)
 - ✅ **Per-layer event queues** — `SystemContext_t` gains a per-layer ring buffer; `GetNextEvent_<Layer>` drains it, so `delivery_type="queue"` events actually work (C-52)
+- ✅ **ISR-safe queue operations** — `STATABLE_ENTER/EXIT_CRITICAL` hooks protect queue RMW; `dropped` counter makes overflow visible (C-54)
 
 ---
 
@@ -265,6 +266,13 @@ Where MISRA C:2012 compliance is non-negotiable.
 ---
 
 ## Roadmap
+
+### v2.5.5 (Released 2026-09-24)
+
+- ✅ ISR-safety review (C-54): critical-section hooks around per-layer queue operations
+- ✅ `dropped` counter on `EventQueueState_t` for overflow visibility
+- ✅ `FIRE_EVENT_QUEUE_<Layer>` documented as the recommended API for ISR / cross-layer delivery
+- ✅ **796 PASS / 0 FAIL / 2 SKIP** across 22 suites
 
 ### v2.5.4 (Released 2026-09-24)
 
