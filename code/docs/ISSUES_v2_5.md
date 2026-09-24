@@ -336,7 +336,7 @@ TUTORIAL では `Vending` → `App` に変更して解決（`tools/fix_vending_n
 
 **Priority**: 🟡 Medium
 **Type**: Safety / Codegen
-**Status**: ✅ 完了（v2.5.5）
+**Status**: ✅ 完了（v2.5.5、F-3 は v2.5.6 で完全解決）
 
 #### 設計レビューで検出した懸念
 
@@ -355,6 +355,7 @@ TUTORIAL では `Vending` → `App` に変更して解決（`tools/fix_vending_n
 | R1 | `STATABLE_ENTER/EXIT_CRITICAL` フックで `count` RMW を保護 |
 | R2 | `FIRE_EVENT_QUEUE_<Layer>` を推奨 API として明記 |
 | R3 | `dropped` カウンタ追加 |
+| R4 | **v2.5.6**: 層別 `pending_event_<Layer>` へ移行（F-3 完全解決、C-55）。`FIRE_EVENT` → `FIRE_EVENT_<Layer>` の**破壊的変更**を伴う |
 
 #### 関連
 
@@ -369,3 +370,4 @@ TUTORIAL では `Vending` → `App` に変更して解決（`tools/fix_vending_n
 |-----------|------|------|
 | 1.0 | 2026-09-22 | 初版。Issue 1 のみ記載 |
 | 1.1 | 2026-09-22 | Issue 1 完了。編集/削除ボタン追加、`_find_rf_by_display` の実装記録、別 Issue 候補5件を追記 |
+| 1.2 | 2026-09-25 | 候補10（C-54 / F-3）を v2.5.6 完了に更新。`FIRE_EVENT` → `FIRE_EVENT_<Layer>` の破壊的変更を記録 |

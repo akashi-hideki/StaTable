@@ -1461,7 +1461,8 @@ UI には **qualified_name**（`namespace.name`）を表示します。v2.5 実�
 | C-51 | イベントの「発生条件」を XML で定義できない | **✅ 実装済み（v2.5.4 / Step 2）** | `Event.trigger` 自由記述フィールドを追加。`kind in {signal, call, time}` のみ有効。`kind=change` は遷移条件で扱う。構造化 `<Trigger>`（Step 3）は v2.6 で検討。→ ISSUES_v2_5.md 候補7 |
 | C-52 | EventQueue 基盤が未統合 | **✅ 実装済み（v2.5.4）** | `SystemContext_t` に層別 `EventQueueState_t queue_<Layer>` を追加。`FIRE_EVENT_QUEUE_<Layer>` / `INIT_EVENT_QUEUE_<Layer>` マクロ、`SystemContext_InitQueues()`、`GetNextEvent_<Layer>` のキュー排出を実装。C-54 で ISR 安全性を強化 |
 | C-53 | 層間 Event ID 衝突の可能性 | **✅ 解決（v2.5.4 / C-52）** | 層別キュー `queue_<Layer>` を導入。`delivery_type="queue"` イベントは層別バッファで衝突しない。`delivery_type="direct"` の `pending_event` は依然共有だが、QUEUE 配送を推奨。C-54 で ISR 競合対策も実施 |
-| C-54 | ISR コンテキストでのキュー競合と API 選択 | **✅ 実装済み（v2.5.5）** | F-1: `count` の read-modify-write 競合 → `STATABLE_ENTER/EXIT_CRITICAL` フックで保護（デフォルト no-op、ビルド時に `-D` で上書き可）。F-2: `FIRE_EVENT` の層誤配送 → `FIRE_EVENT_QUEUE_<Layer>` を推奨 API として文書化。F-4: サイレントドロップ → `EventQueueState_t.dropped` カウンタで可視化 |
+| C-54 | ISR コンテキストでのキュー競合と API 選択 | **✅ 実装済み（v2.5.5、F-2/F-3 は v2.5.6 で完全解決）** | F-1: `count` の read-modify-write 競合 → `STATABLE_ENTER/EXIT_CRITICAL` フックで保護。F-2: `FIRE_EVENT` の層誤配送 → v2.5.5 では `FIRE_EVENT_QUEUE_<Layer>` を推奨 API として文書化、v2.5.6 で層別 `pending_event_<Layer>` に移行し完全解決（C-55）。F-4: サイレントドロップ → `EventQueueState_t.dropped` カウンタで可視化 |
+| C-55 | `pending_event` の read-then-clear 競合 | **✅ 実装済み（v2.5.6）** | F-3 完全解決。`SystemContext_t` に層別 `pending_event_<Layer>` / `pending_event_valid_<Layer>` を追加。`FIRE_EVENT_<Layer>` マクロを新設、`FIRE_EVENT` は削除（**破壊的変更**）。read-then-clear を `STATABLE_ENTER/EXIT_CRITICAL` で保護。`SystemContext_InitQueues()` が全層スロットをリセット |
 
 
 ---
@@ -1679,6 +1680,10 @@ StaTable/
 
 | バージョン | 日付 | 内容 |
 |-----------|------|------|
+| 2.5.6 | 2026-09-25 | F-3 完全解決（層別 pending_event / C-55）： |
+| | | - §12：C-55 追加（層別 `pending_event_<Layer>`、`FIRE_EVENT_<Layer>`、read-then-clear 保護） |
+| | | - §12：C-54 の F-2/F-3 記述を v2.5.6 完了に更新 |
+| | | - **破壊的変更**：`FIRE_EVENT` → `FIRE_EVENT_<Layer>` |
 | 1.0 | 2026-09-20 | 初版（概要） |
 | 2.0 | 2026-09-20 | 詳細版（モジュール別記述、データフロー追加） |
 | 2.1 | 2026-09-20 | MISRA C:2012 対応作業：§7.4 追加（ベースライン履歴、抑制、条件/アクション呼び出し分離）、§7.1 にバージョン列追加、§11.2/11.5 更新、§12 C-21 追加、§14.3 MISRA 成果物追加 |

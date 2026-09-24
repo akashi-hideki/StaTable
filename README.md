@@ -41,6 +41,7 @@ custom tooling from scratch.
 - ✅ **Event trigger field** — `Event.trigger` records when / from where an event fires as free text (C-51 Step 2)
 - ✅ **Per-layer event queues** — `SystemContext_t` gains a per-layer ring buffer; `GetNextEvent_<Layer>` drains it, so `delivery_type="queue"` events actually work (C-52)
 - ✅ **ISR-safe queue operations** — `STATABLE_ENTER/EXIT_CRITICAL` hooks protect queue RMW; `dropped` counter makes overflow visible (C-54)
+- ✅ **Per-layer `pending_event` slots (F-3 resolved)** — each layer owns its own `pending_event_<Layer>` / `pending_event_valid_<Layer>`, eliminating the read-then-clear race and cross-layer ID collisions (C-55)
 
 ---
 
@@ -265,7 +266,46 @@ Where MISRA C:2012 compliance is non-negotiable.
 
 ---
 
+## Breaking Changes
+
+### v2.5.6: `FIRE_EVENT` → `FIRE_EVENT_<Layer>`
+
+The generic `FIRE_EVENT(ctx, evt)` macro has been **removed** and replaced
+by per-layer macros to eliminate cross-layer pending-event collisions.
+
+If your project used `FIRE_EVENT` directly, update as follows:
+
+```c
+/* Before (v2.5.5 and earlier) */
+FIRE_EVENT(ctx, EVENT_Middleware_RESET);
+
+/* After (v2.5.6) */
+FIRE_EVENT_Middleware(ctx, EVENT_Middleware_RESET);
+```
+
+Available macros:
+
+| Macro | Target slot |
+|-------|-------------|
+| `FIRE_EVENT_Driver(ctx, evt)` | `pending_event_Driver` |
+| `FIRE_EVENT_Middleware(ctx, evt)` | `pending_event_Middleware` |
+| `FIRE_EVENT_Application(ctx, evt)` | `pending_event_Application` |
+
+The queue-based API (`FIRE_EVENT_QUEUE_<Layer>`) is unchanged.
+
+---
+
 ## Roadmap
+
+### v2.5.6 (Released 2026-09-25)
+
+- ✅ **F-3 fully resolved**: per-layer `pending_event_<Layer>` slots (C-55)
+- ⚠️ **Breaking change**: `FIRE_EVENT(ctx, evt)` removed; use `FIRE_EVENT_<Layer>(ctx, evt)`
+  - Migration: `FIRE_EVENT(ctx, EVENT_Middleware_RESET)` → `FIRE_EVENT_Middleware(ctx, EVENT_Middleware_RESET)`
+- ✅ Atomic read-then-clear protected by `STATABLE_ENTER/EXIT_CRITICAL` hooks (default no-op)
+- ✅ `SystemContext_InitQueues()` resets all per-layer pending slots
+- ✅ F-3 Step 2 test suite: **28 PASS / 0 FAIL**; atomic RMW: **13 PASS / 0 FAIL**
+- ✅ ARM link verification: `firmware.elf` / `firmware.bin` produced cleanly
 
 ### v2.5.5 (Released 2026-09-24)
 
