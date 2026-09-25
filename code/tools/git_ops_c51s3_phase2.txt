@@ -1,4 +1,6 @@
-# C-51 Step 3 / Phase 2: GUI trigger section
+# C-51 Step 3 / Phase 2: GUI trigger section + tests + CI registration
 add code/statable_gui/event_definition_dialog.py
-commit feat(gui): C-51 Step 3 - Trigger section with source candidates
+add code/tests/test_v2_6_p2.py
+add .github/workflows/check.yml
+commit feat(gui): C-51 Step 3 - Trigger section with source candidates + tests
 push origin main

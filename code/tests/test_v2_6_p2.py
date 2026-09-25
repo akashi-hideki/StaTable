@@ -200,14 +200,14 @@ idx = dlg4.trig_type_combo.findData("edge")
 dlg4.trig_type_combo.setCurrentIndex(idx)
 R.check("edge: edge label visible",
         dlg4.trig_edge_row[0] is not None
-        and dlg4.trig_edge_row[0].isVisible())
+        and not dlg4.trig_edge_row[0].isHidden())
 
 # comparison: condition row visible
 idx = dlg4.trig_type_combo.findData("comparison")
 dlg4.trig_type_combo.setCurrentIndex(idx)
 R.check("comparison: condition label visible",
         dlg4.trig_condition_row[0] is not None
-        and dlg4.trig_condition_row[0].isVisible())
+        and not dlg4.trig_condition_row[0].isHidden())
 
 
 # ======================================================================
