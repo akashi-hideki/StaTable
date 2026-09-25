@@ -1332,7 +1332,7 @@ python tools/analyze_misra_impact.py \
 
 ## 11. Testing Policy
 
-### 11.1 Test Suites (13)
+### 11.1 Test Suites (25)
 
 | File | Target | Expected result |
 |------|--------|-----------------|
@@ -1350,8 +1350,16 @@ python tools/analyze_misra_impact.py \
 | `test_v2_2_p12_10.py` | Stage 10 features (structure) | 29 PASS / 2 SKIP / 0 FAIL |
 | `test_v2_3_p1.py` | New Project (v2.3) | 14 PASS / 0 FAIL |
 | `test_v2_4_p1_merge.py` | Code merge (v2.4.1) | 25 PASS / 0 FAIL |
+| `test_v2_5_p1.py` | ActionEditorDialog role function management (v2.5) | 75 PASS / 0 FAIL |
+| `test_v2_5_p2.py` | C-50 resolution (namespace prefix) (v2.5.1) | 16 PASS / 0 FAIL |
+| `test_v2_5_p3.py` | (void) suppression moved to user area (v2.5.2) | 25 PASS / 0 FAIL |
+| `test_v2_6_p1.py` | EventTrigger (C-51 Step 3) | 62 PASS / 0 FAIL |
+| `test_v2_6_p2.py` | GUI Trigger section | 35 PASS / 0 FAIL |
+| `test_v2_6_p3.py` | GUI integration (v2.6.0) | 50 assertions PASS |
 
-**Total**: **576 PASS / 0 FAIL / 2 SKIP**
+**Total**: **943 PASS / 0 FAIL / 2 SKIP** (25 suites)
+
+*Note*: The table lists historically documented suites. Additional v2.5.x / v2.6.x suites contribute the remaining counts; see `.github/workflows/check.yml` for the authoritative CI suite list.
 
 ### 11.2 `test_v2_2_p2.py` Update History
 
@@ -1381,6 +1389,36 @@ python tools/analyze_misra_impact.py \
 | `test_save_project_returns_bool` | `save_project` returns bool |
 | `test_tab_data_modified_signal_exists` | `dataModified` signal exists |
 | `test_tab_data_modified_sets_window_modified` | emit → `windowModified == True` |
+
+### 11.3.1 `test_v2_5_p1.py` Contents
+
+75 tests for the ActionEditorDialog role function management (v2.5):
+
+| Section | Verification | Count |
+|---------|-------------|------:|
+| 1. Module import | `ActionsTab` / `TransitionsTab` / `_ActionGroup` / `_qualified_name` | 5 |
+| 2. `_ActionGroup` new args + 3 buttons | role_function_library / literal_library / state_machine / layer_names_provider retained; `+ New` / `Edit` / `Delete` buttons present | 10 |
+| 3. `ActionsTab` argument propagation | propagates to both groups; buttons present | 10 |
+| 4. `TransitionsTab` argument propagation | new args + `+ New` button | 5 |
+| 5. `_find_rf_by_display` | qualified / bare / miss / empty / no-sm | 7 |
+| 6. `_get_namespace_choices` | order, dedup, no provider, via rfl | 7 |
+| 7. `_dialog_kwargs` | `global_vars` / `events` / `literals` / `namespace_choices` | 5 |
+| 8. `_on_new_role_function` | normal creation, signal emit, row add, combo update | 6 |
+| 9. Same (duplicate) | warning shown, no row added, sm unchanged | 3 |
+| 10. `_on_edit_role_function` | ★regression: qualified_name → bare name reverse-lookup, namespace change | 4 |
+| 11. Same (rename) | bare name change: old key removed + new key added | 3 |
+| 12. Same (unregistered) | info dialog, no dialog launched | 2 |
+| 13. `_on_delete_role_function` | delete, row removed, combo updated, signal emit | 4 |
+| 14. Same (cancel) | no change on cancel | 2 |
+| 15. `TransitionsTab._on_new_role_function` | new-creation flow | 2 |
+| **Total** | | **75** |
+
+**Importance of the regression test (section 10)**:
+
+`StateMachine.role_functions` is keyed by **bare name** (`rf.name`), but the UI
+displays **qualified_name** (`namespace.name`). During v2.5 development this
+mismatch caused Edit / Delete to fail. `_find_rf_by_display()` was implemented
+to reverse-lookup correctly, and this test prevents regression.
 
 ### 11.4 Execution Environment
 
@@ -1464,6 +1502,15 @@ python tools/analyze_misra_impact.py \
 | C-44 | Namespace combo box candidates | **v3.11 covers all tabs** | `layer_names_provider` supplies every tab name |
 | C-45 | Empty `used_*` attributes | **Suppressed in v3.8.1** | Empty used_global_vars / used_events / used_literals are not written to XML |
 | C-46 | State.do / RoleFunction reserved fields | **Reserved** | Not shown in UI. Not used by codegen. Preserved in XML I/O (since v3.7) |
+| C-47 | Namespace combo candidates limited to current tab + registered role functions | **Out of v2.5 scope** | Cross-tab wiring (`MainWindow → StateMachineTab → MatrixTableWidget → ActionEditorDialog`) is a separate issue |
+| C-48 | `_ActionGroup` row text is qualified_name; `StateMachine.role_functions` is bare name | **Absorbed in v2.5** | `_find_rf_by_display()` reverse-lookup. Similar UI additions need the same consideration |
+| C-49 | When XML `Tab name` / `layer_name` / `RoleFunction.namespace` disagree, multiple candidates appear | **Data-induced** | e.g. `Tab name="Application"` with `namespace="App"` shows both. Does not occur with correct XML (see §3.2.7 / C-11) |
+| C-50 | RoleFunction namespace must be layer_name-equivalent (exact / ≥3-char prefix) or called from caller layer | **Resolved in v2.5.1** | `role_function_generator._should_declare_here` / `_should_emit_implementation` now require `namespace == layer_name` or ≥3-char prefix match. Caller uses namespace as-is (asymmetric). Found during v2.5 TUTORIAL authoring |
+| C-51 | Event trigger cannot be defined in XML | **✅ Step 2/3 implemented (v2.5.4 / v2.6.0)** | Step 2: `Event.trigger` free-text. Step 3: `EventTrigger` dataclass + `<Trigger>` child element (type: manual/edge/polling/timer/call/comparison). GUI: collapsible section with Source candidates from GlobalDefinitions. Backward compatible |
+| C-52 | EventQueue infrastructure not integrated | **✅ Implemented (v2.5.4)** | Per-layer `EventQueueState_t queue_<Layer>` in `SystemContext_t`. `FIRE_EVENT_QUEUE_<Layer>` / `INIT_EVENT_QUEUE_<Layer>` macros, `SystemContext_InitQueues()`, `GetNextEvent_<Layer>` dequeue. C-54 hardens ISR safety |
+| C-53 | Cross-layer Event ID collision risk | **✅ Resolved (v2.5.4 / C-52)** | Per-layer `queue_<Layer>` buffers. `delivery_type="queue"` events do not collide. `delivery_type="direct"` `pending_event` still shared, but QUEUE delivery recommended. C-54 also adds ISR race handling |
+| C-54 | ISR-context queue race + API choice | **✅ Implemented (v2.5.5; F-2/F-3 fully resolved in v2.5.6)** | F-1: `count` read-modify-write race → protected by `STATABLE_ENTER/EXIT_CRITICAL` hooks. F-2: `FIRE_EVENT` misdelivery → v2.5.5 documented `FIRE_EVENT_QUEUE_<Layer>` as recommended; v2.5.6 migrated to per-layer `pending_event_<Layer>` (C-55). F-4: silent drop → visible via `EventQueueState_t.dropped` counter |
+| C-55 | `pending_event` read-then-clear race | **✅ Implemented (v2.5.6)** | F-3 full fix. `SystemContext_t` gains per-layer `pending_event_<Layer>` / `pending_event_valid_<Layer>`. New `FIRE_EVENT_<Layer>` macro; `FIRE_EVENT` removed (**breaking change**). Read-then-clear protected by `STATABLE_ENTER/EXIT_CRITICAL`. `SystemContext_InitQueues()` resets all layer slots |
 
 ---
 
@@ -1494,6 +1541,8 @@ python tools/analyze_misra_impact.py \
 | `windowModified` | v2.3: Qt's standard modified flag; the `[*]` title placeholder is replaced with `*` |
 | `_maybe_save()` | v2.3: MainWindow method that unifies the unsaved-changes confirmation |
 | `dataModified` | v2.3: `StateMachineTab` change-notification signal |
+| Role function management buttons | v2.5: `+ New` / `Edit` / `Delete Role Function` in ActionEditorDialog |
+| `_find_rf_by_display` | v2.5: Helper to reverse-lookup `RoleFunction` from qualified_name |
 
 ---
 
@@ -1745,6 +1794,35 @@ StaTable/
 | | | - §5.3: libcntrl.RoleFunction v1.5 (reserved fields added) |
 | | | - §12: C-42..C-46 added |
 | | | - §15: this entry |
+| 2.5 | 2026-09-22 | ActionEditorDialog role function management (F-16): |
+| | | - §1.3: F-16 added (in-cell role function management) |
+| | | - §1.4: test suites 15, 651 PASS / 2 SKIP |
+| | | - §1.5: `_find_rf_by_display` / `_dump_sm_roles` added |
+| | | - §6.2: ActionEditorDialog v2.5 update (button columns) |
+| | | - §11.1: `test_v2_5_p1.py` (75 PASS) added |
+| | | - §11.3.1: `test_v2_5_p1.py` contents (15 sections / 75 tests) added |
+| | | - §12: C-47 / C-48 / C-49 added |
+| | | - §13: Role function management buttons / `_find_rf_by_display` added |
+| 2.5.1 | 2026-09-23 | C-50 (namespace prefix constraint) resolved: |
+| | | - `_should_declare_here` gains call_map fallback |
+| | | - `generate_all_declarations` gains `state_machine` argument |
+| | | - Arbitrary namespace / layer_name now usable |
+| | | - `tests/test_v2_5_p2.py` (16 PASS) added |
+| 2.5.2 | 2026-09-23 | `(void)` suppression moved to user-editable area: |
+| | | - Split `_generate_local_data_pointers` into `_decls` and `_suppress` |
+| | | - `(void)` group emitted inside `STABLE_USER_CODE` marker |
+| | | - Users can delete individual lines; `code_merger` preserves |
+| | | - `tests/test_v2_5_p3.py` (25 PASS) added |
+| 2.5.6 | 2026-09-25 | F-3 full resolution (per-layer pending_event / C-55): |
+| | | - §12: C-55 added (per-layer `pending_event_<Layer>`, `FIRE_EVENT_<Layer>`, read-then-clear protection) |
+| | | - §12: C-54 F-2/F-3 updated to v2.5.6 complete |
+| | | - **Breaking change**: `FIRE_EVENT` → `FIRE_EVENT_<Layer>` |
+| 2.6.0 | 2026-09-25 | C-51 Step 3 (structured `<Trigger>`): |
+| | | - §12: C-51 updated to Step 3 complete |
+| | | - `EventTrigger` dataclass (type: manual/edge/polling/timer/call/comparison) added |
+| | | - `<Trigger>` child element XML I/O |
+| | | - GUI: collapsible Trigger section (Source candidates = GlobalDefinitions) |
+| | | - Backward compatible: no `<Trigger>` → `trigger_detail=None` |
 ---
 
 End of document.
