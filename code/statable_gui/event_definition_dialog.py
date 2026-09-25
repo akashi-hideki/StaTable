@@ -8,11 +8,13 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
     QPushButton, QLabel, QHeaderView, QComboBox, QLineEdit,
     QFormLayout, QDialogButtonBox, QMessageBox, QAbstractItemView,
-    QWidget, QRadioButton, QButtonGroup, QCheckBox, QSpinBox
+    QWidget, QRadioButton, QButtonGroup, QCheckBox, QSpinBox,
+    QGroupBox
 )
 
 from statable.state_machine import StateMachine
-from statable.model import Event, EventDeliveryType, EventSourceLayer, EventKind
+from statable.model import (Event, EventDeliveryType, EventSourceLayer,
+                            EventKind, EventTrigger)
 from statable.global_defs import GlobalDefinitions
 from .common_widgets import TitleEditWidget, TypeComboBox
 from .logger import StaTableLogger
@@ -37,9 +39,11 @@ class DoubleClickTable(QTableWidget):
 class EventEditDialog(QDialog):
     """Edit state transition event dialog"""
 
-    def __init__(self, parent=None, event: Optional[Event] = None, global_defs=None):
+    def __init__(self, parent=None, event: Optional[Event] = None,
+                 global_defs=None, state_machine=None):
         super().__init__(parent)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
+        self.state_machine = state_machine
         self.setWindowTitle("Edit state transition event")
         self.setMinimumWidth(500)
 
@@ -136,6 +140,8 @@ class EventEditDialog(QDialog):
             "  time:   periodic timer (10ms)\n"
             "Not used for kind=change (use transition condition).")
         form.addRow("Trigger", self.trigger_edit)
+        # [C-51 Step 3] Structured trigger detail section
+        self._build_trigger_detail_section(layout, event)
         self.kind_combo.currentIndexChanged.connect(
             self._on_kind_changed)
         self._on_kind_changed()
@@ -164,6 +170,231 @@ class EventEditDialog(QDialog):
             self.trigger_edit.setToolTip(
                 "kind=change fires via the transition condition; "
                 "trigger is not used.")
+        # [C-51 Step 3] keep the structured trigger section in sync
+        trig_group = getattr(self, 'trig_group', None)
+        if trig_group is not None:
+            trig_group.setEnabled(enabled)
+
+    # ------------------------------------------------------------------
+    # [C-51 Step 3] Structured trigger detail
+    # ------------------------------------------------------------------
+    def _build_trigger_detail_section(self, parent_layout, event):
+        """Add collapsible Trigger detail QGroupBox."""
+        group = QGroupBox("Trigger detail (structured)")
+        group.setCheckable(True)
+        group_layout = QFormLayout(group)
+
+        td = getattr(event, 'trigger_detail', None) if event else None
+        group.setChecked(td is not None)
+
+        # Type
+        self.trig_type_combo = QComboBox()
+        for t in ("manual", "edge", "polling", "timer",
+                  "call", "comparison"):
+            self.trig_type_combo.addItem(t, t)
+        if td is not None:
+            idx = self.trig_type_combo.findData(td.type)
+            if idx >= 0:
+                self.trig_type_combo.setCurrentIndex(idx)
+        group_layout.addRow("Type", self.trig_type_combo)
+
+        # Source (editable: allows custom entry)
+        self.trig_source_combo = QComboBox()
+        self.trig_source_combo.setEditable(True)
+        self.trig_source_combo.setInsertPolicy(QComboBox.NoInsert)
+        if td is not None and td.source:
+            self.trig_source_combo.setCurrentText(td.source)
+        group_layout.addRow("Source", self.trig_source_combo)
+
+        # Edge (edge type)
+        self.trig_edge_combo = QComboBox()
+        for e in ("rising", "falling", "both"):
+            self.trig_edge_combo.addItem(e, e)
+        if td is not None and td.edge:
+            idx = self.trig_edge_combo.findData(td.edge)
+            if idx >= 0:
+                self.trig_edge_combo.setCurrentIndex(idx)
+        self.trig_edge_row = self._register_row(
+            group_layout, "Edge", self.trig_edge_combo)
+
+        # Debounce (edge type)
+        self.trig_debounce_spin = QSpinBox()
+        self.trig_debounce_spin.setRange(0, 100000)
+        self.trig_debounce_spin.setSuffix(" ms")
+        if td is not None:
+            self.trig_debounce_spin.setValue(td.debounce_ms)
+        self.trig_debounce_row = self._register_row(
+            group_layout, "Debounce", self.trig_debounce_spin)
+
+        # Period (polling / timer)
+        self.trig_period_spin = QSpinBox()
+        self.trig_period_spin.setRange(0, 10000000)
+        self.trig_period_spin.setSuffix(" ms")
+        if td is not None:
+            self.trig_period_spin.setValue(td.period_ms)
+        self.trig_period_row = self._register_row(
+            group_layout, "Period", self.trig_period_spin)
+
+        # Auto reload (timer)
+        self.trig_autoreload_check = QCheckBox("Auto reload")
+        self.trig_autoreload_check.setChecked(
+            td.auto_reload if td is not None else True)
+        self.trig_autoreload_row = self._register_row(
+            group_layout, "Timer", self.trig_autoreload_check)
+
+        # Caller (call)
+        self.trig_caller_combo = QComboBox()
+        self.trig_caller_combo.setEditable(True)
+        self.trig_caller_combo.setInsertPolicy(QComboBox.NoInsert)
+        if td is not None and td.caller:
+            self.trig_caller_combo.setCurrentText(td.caller)
+        self.trig_caller_row = self._register_row(
+            group_layout, "Caller", self.trig_caller_combo)
+
+        # Condition + Build (comparison)
+        self.trig_condition_edit = QLineEdit()
+        self.trig_condition_build_btn = QPushButton("Build...")
+        self.trig_condition_build_btn.clicked.connect(
+            self._open_trigger_condition_builder)
+        cond_widget = QWidget()
+        cond_layout = QHBoxLayout(cond_widget)
+        cond_layout.setContentsMargins(0, 0, 0, 0)
+        cond_layout.addWidget(self.trig_condition_edit, 1)
+        cond_layout.addWidget(self.trig_condition_build_btn)
+        if td is not None:
+            self.trig_condition_edit.setText(td.condition)
+        self.trig_condition_row = self._register_row(
+            group_layout, "Condition", cond_widget)
+
+        # Poll period (comparison)
+        self.trig_pollperiod_spin = QSpinBox()
+        self.trig_pollperiod_spin.setRange(0, 10000000)
+        self.trig_pollperiod_spin.setSuffix(" ms")
+        if td is not None:
+            self.trig_pollperiod_spin.setValue(td.poll_period_ms)
+        self.trig_pollperiod_row = self._register_row(
+            group_layout, "Poll period", self.trig_pollperiod_spin)
+
+        # Description (optional)
+        self.trig_desc_edit = QLineEdit()
+        if td is not None:
+            self.trig_desc_edit.setText(td.description)
+        group_layout.addRow("Description", self.trig_desc_edit)
+
+        # Wire up
+        self.trig_type_combo.currentIndexChanged.connect(
+            self._on_trigger_type_changed)
+        group.toggled.connect(lambda _c: self._on_trigger_type_changed())
+
+        parent_layout.addWidget(group)
+        self.trig_group = group
+
+        # Initial state
+        self._on_trigger_type_changed()
+
+    def _register_row(self, layout, label_text, widget):
+        """Add a QFormLayout row; return (label, widget) for visibility."""
+        layout.addRow(label_text, widget)
+        label = layout.labelForField(widget)
+        return (label, widget)
+
+    def _set_row_visible(self, row, visible):
+        lbl, w = row
+        if lbl is not None:
+            lbl.setVisible(visible)
+        w.setVisible(visible)
+
+    def _on_trigger_type_changed(self):
+        """Show/hide dynamic fields based on Type; refresh Source choices."""
+        t = self.trig_type_combo.currentData()
+
+        self._set_row_visible(self.trig_edge_row, t == "edge")
+        self._set_row_visible(self.trig_debounce_row, t == "edge")
+        self._set_row_visible(self.trig_period_row,
+                              t in ("polling", "timer"))
+        self._set_row_visible(self.trig_autoreload_row, t == "timer")
+        self._set_row_visible(self.trig_caller_row, t == "call")
+        self._set_row_visible(self.trig_condition_row, t == "comparison")
+        self._set_row_visible(self.trig_pollperiod_row, t == "comparison")
+
+        self._populate_source_choices(t)
+
+    def _populate_source_choices(self, trigger_type):
+        """Populate Source dropdown from GlobalDefinitions / role_functions."""
+        current = self.trig_source_combo.currentText().strip()
+        self.trig_source_combo.blockSignals(True)
+        self.trig_source_combo.clear()
+        self.trig_source_combo.addItem("")
+
+        candidates = []
+        if trigger_type == "edge":
+            for intr in getattr(self.global_defs, 'interrupts', []) or []:
+                if getattr(intr, 'name', ''):
+                    candidates.append(intr.name)
+        elif trigger_type in ("polling", "timer"):
+            tb = getattr(self.global_defs, 'timer_base', None)
+            if tb is not None and getattr(tb, 'variable_name', ''):
+                candidates.append(tb.variable_name)
+            for t in getattr(self.global_defs, 'extra_timers', []) or []:
+                if getattr(t, 'variable_name', ''):
+                    candidates.append(t.variable_name)
+        elif trigger_type == "call":
+            if self.state_machine is not None:
+                for rf in self.state_machine.role_functions.values():
+                    ns = getattr(rf, 'namespace', '')
+                    n = getattr(rf, 'name', '')
+                    qn = f"{ns}.{n}" if ns else n
+                    if qn:
+                        candidates.append(qn)
+        # comparison: no candidates (use Build button)
+
+        for c in candidates:
+            self.trig_source_combo.addItem(c)
+
+        if current:
+            self.trig_source_combo.setCurrentText(current)
+        self.trig_source_combo.blockSignals(False)
+
+    def _open_trigger_condition_builder(self):
+        """Open ConditionBuilderDialog for comparison-type condition."""
+        try:
+            from .condition_builder_dialog import ConditionBuilderDialog
+        except ImportError:
+            return
+        dlg = ConditionBuilderDialog(
+            condition=self.trig_condition_edit.text(),
+            event_name=self.name_edit.text().strip(),
+            global_defs=self.global_defs,
+            state_machine=self.state_machine,
+            parent=self,
+        )
+        if dlg.exec() == QDialog.Accepted:
+            self.trig_condition_edit.setText(dlg.get_condition_text())
+
+    def _get_trigger_detail(self):
+        """Build EventTrigger from UI, or None if section unchecked."""
+        if not self.trig_group.isChecked():
+            return None
+        t = self.trig_type_combo.currentData()
+        kwargs = {
+            "type": t,
+            "source": self.trig_source_combo.currentText().strip(),
+            "description": self.trig_desc_edit.text().strip(),
+        }
+        if t == "edge":
+            kwargs["edge"] = self.trig_edge_combo.currentData()
+            kwargs["debounce_ms"] = self.trig_debounce_spin.value()
+        elif t == "polling":
+            kwargs["period_ms"] = self.trig_period_spin.value()
+        elif t == "timer":
+            kwargs["period_ms"] = self.trig_period_spin.value()
+            kwargs["auto_reload"] = self.trig_autoreload_check.isChecked()
+        elif t == "call":
+            kwargs["caller"] = self.trig_caller_combo.currentText().strip()
+        elif t == "comparison":
+            kwargs["condition"] = self.trig_condition_edit.text().strip()
+            kwargs["poll_period_ms"] = self.trig_pollperiod_spin.value()
+        return EventTrigger(**kwargs)
 
     def _on_accept(self):
         """OK button: auto-set provisional title if title is empty"""
@@ -192,6 +423,8 @@ class EventEditDialog(QDialog):
                          EventKind.SIGNAL, EventKind.CALL,
                          EventKind.TIME)
                      else ""),
+            # [C-51 Step 3] Structured trigger detail
+            trigger_detail=self._get_trigger_detail(),
         )
 
 
@@ -297,7 +530,9 @@ class EventDefinitionDialog(QDialog):
         event = self._find_event_by_row(row)
         if not event:
             return
-        dlg = EventEditDialog(self, event=event, global_defs=self.global_defs)
+        dlg = EventEditDialog(self, event=event,
+                              global_defs=self.global_defs,
+                              state_machine=self.sm)
         if dlg.exec() == QDialog.Accepted:
             new_event = dlg.get_event()
             if not new_event.name:

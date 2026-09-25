@@ -120,6 +120,7 @@ jobs:
       - name: Run v2.6 test suites
         run: |
           python tests/test_v2_6_p1.py
+          python tests/test_v2_6_p2.py
 
 
   # ==============================================================
