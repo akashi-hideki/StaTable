@@ -650,7 +650,17 @@ However, the "split functions" approach above remains **recommended**.
           </Exit>
         </State>
       </States>
-      <Events>...</Events>
+      <Events>
+        <Event name="BUTTON_SENSOR" kind="signal" ...>
+          <Trigger type="edge" source="GPIO_BUTTON_1"
+                   edge="falling" debounce_ms="20"
+                   description="Button press detection"/>
+        </Event>
+        <Event name="SELECT_ITEM" kind="signal" ...>
+          <Trigger type="manual"
+                   description="Fired by Middleware after validation"/>
+        </Event>
+      </Events>
       <RoleFunctions>
         <RoleFunction name="Init" namespace="Driver" .../>
       </RoleFunctions>
@@ -856,12 +866,17 @@ self.settings.settings_changed.connect(self.dataModified)
 **Signal**:
 - `transition_changed = Signal()`: fires when a transition edit is committed (in `open_transition_dialog` and `keyPressEvent`)
 
-### 4.6 `SettingsPanel` (v2.2)
+### 4.6 `SettingsPanel` (v2.4)
 
 | Tab name | Columns |
 |----------|---------|
-| `State list` | Name / Description / entry function / exit function / do function / Type |
-| `Role function` | Title / Function name / **Namespace** / Description / Return type / Arg 1 type / Arg 1 name / Arg 2 type / Arg 2 name |
+| `State list` | Name / Description / entry function / exit function / Type (5 cols) |
+| `Role function` | Title / Function name / **Namespace** / Description (4 cols) + inline Namespace combo |
+
+**v2.4 changes**:
+- `State list`: `do function` column removed (C-46 reserved field).
+- `Role function`: `Return type` / `Arg 1 type` / `Arg 1 name` / `Arg 2 type` / `Arg 2 name` columns removed (C-42 reserved fields).
+- **Namespace** is now an inline combo box populated from all tab names (`layer_names_provider`).
 
 `State.entry` and `State.exit` are `List[str]`; UI joins/splits via `"; "`.
 
@@ -983,15 +998,21 @@ self.settings.settings_changed.connect(self.dataModified)
 | `flow_widget.py` | `FlowWidget`, `FlowListWidget` | **Legacy** |
 | `edit_dialogs.py` | `FunctionEditDialog`, `TransitionEditDialog` | **Legacy** |
 
-### 6.2 `ActionEditorDialog` (v2.2: 5 tabs)
+### 6.2 `ActionEditorDialog` (v2.5: 5 tabs + role function management)
 
-| Tab | Content |
-|-----|---------|
-| Transitions | `TransitionsTab` |
-| Pre / Post Actions | `ActionsTab` |
-| Relations | `RelationsTab` |
-| Overview | `OverviewTab` |
-| Preview | `CodeWidget` |
+| Tab | Content | v2.5 buttons |
+|-----|---------|--------------|
+| Transitions | `TransitionsTab` | `+ New Role Function` |
+| Pre / Post Actions | `ActionsTab` (Pre / Post groups) | `+ New Role Function` / `Edit Role Function` / `Delete Role Function` |
+| Relations | `RelationsTab` | – |
+| Overview | `OverviewTab` | – |
+| Preview | `CodeWidget` | – |
+
+**v2.5 notes**:
+- Reuses the existing `RoleFunctionDialog`.
+- New role functions are registered in `state_machine.role_functions` keyed by **bare name** (`rf.name`); the UI displays `qualified_name`.
+- `_find_rf_by_display()` bridges the gap (see C-48).
+- `TransitionsTab` only adds to `self.role_functions`; it does not modify rows directly.
 
 ### 6.3 `CoverageAnalyzer` (v2.2)
 
