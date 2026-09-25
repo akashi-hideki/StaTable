@@ -121,6 +121,7 @@ jobs:
         run: |
           python tests/test_v2_6_p1.py
           python tests/test_v2_6_p2.py
+          python tests/test_v2_6_p3.py
 
 
   # ==============================================================
