@@ -1,10 +1,10 @@
-# `docs/SPEC_OVERVIEW_en.md` v2.4（決定#5 反映済み完全版）
+# `docs/SPEC_OVERVIEW_en.md` v2.6
 
 ```markdown
-# StaTable Overall Specification v2.4 (English, Detailed)
+# StaTable Overall Specification v2.6 (English, Detailed)
 
-Version: 2.4
-Date: 2026-09-22
+Version: 2.6
+Date: 2026-09-26
 Scope: StaTable project (whole)
 Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 
@@ -63,6 +63,7 @@ Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 | F-13 | MISRA C:2012 compliance | Generated C code is verified against MISRA C:2012 (informational) |
 | F-14 | Cell-level AI actions | v2.2: 17 change action types (10 legacy + 7 cell-level) |
 | F-15 | New Project | v2.3: Discards sample data and starts from an empty Application layer (Ctrl+N) |
+| F-16 | In-cell role function management | v2.5: Create / edit / delete role functions inside ActionEditorDialog |
 
 ### 1.4 Non-functional Requirements
 
@@ -74,7 +75,7 @@ Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 | I/O | XML (UTF-8), C sources (UTF-8) |
 | Dependencies | PySide6, pycparser (tests only) |
 | Generated code | C99-compliant, `static` functions used extensively |
-| Testing | 14 suites (`tests/test_v2_2_p*.py` + `tests/test_v2_3_p1.py` + `tests/test_v2_4_p1_merge.py`), 576 PASS / 2 SKIP |
+| Testing | 25 suites (`tests/test_v2_2_p*.py` + `tests/test_v2_3_p1.py` + `tests/test_v2_4_p1_merge.py` + `tests/test_v2_5_p*.py` + `tests/test_v2_6_p*.py`), 943 PASS / 0 FAIL / 2 SKIP |
 | CI | GitHub Actions, `ubuntu-latest` |
 | MISRA | cppcheck 2.x + MISRA addon (informational only) |
 
@@ -101,6 +102,8 @@ Prerequisite: Source tree available (`statable/`, `statable_gui/`, `codegen/`)
 | `windowModified` | v2.3: Qt's standard modified flag; reflected via the `[*]` title placeholder |
 | `_maybe_save()` | v2.3: MainWindow method that unifies the unsaved-changes confirmation |
 | `dataModified` | v2.3: `StateMachineTab` change-notification signal |
+| `_find_rf_by_display` | v2.5: `_ActionGroup` helper; reverse-lookup of a `RoleFunction` from `qualified_name` |
+| `_dump_sm_roles` | v2.5: `_ActionGroup` debug helper; logs the contents of `state_machine.role_functions` |
 
 ---
 
@@ -359,6 +362,36 @@ class EventSourceLayer(Enum):
 | `data_type` | str | "" | Associated data type |
 | `data_name` | str | "" | Associated data name |
 | `title` | str | "" | Display name (auto-generated if unset) |
+| `trigger` | str | "" | v2.5.4 (C-51 Step 2): Free-text description of when / from where the event fires (metadata only) |
+| `trigger_detail` | Optional[EventTrigger] | None | v2.6.0 (C-51 Step 3): Structured trigger detail. None = not specified |
+
+#### 3.2.3.1 `EventTrigger` (v2.6.0 / C-51 Step 3)
+
+Structured trigger detail attached to `Event.trigger_detail`. Only `type` is required; other fields are type-specific.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `type` | str | "manual" | manual / edge / polling / timer / call / comparison |
+| `source` | str | "" | Source symbol (GPIO pin, timer, role function, etc.) |
+| `description` | str | "" | Free-text description |
+| `edge` | str | "" | edge: rising / falling / both |
+| `debounce_ms` | int | 0 | edge: debounce time (ms) |
+| `period_ms` | int | 0 | polling / timer: period (ms) |
+| `auto_reload` | bool | True | timer: auto reload flag |
+| `caller` | str | "" | call: caller name |
+| `condition` | str | "" | comparison: condition expression |
+| `poll_period_ms` | int | 0 | comparison: poll period (ms) |
+
+**Methods**:
+
+- `to_dict() -> dict`: serialize non-empty fields only (stable order)
+- `from_dict(d: dict) -> EventTrigger`: classmethod; coerces `int` / `bool` from strings safely
+
+**XML**: emitted as a `<Trigger>` child element of `<Event>` only when `trigger_detail is not None`. Projects without `<Trigger>` load as `trigger_detail=None` (backward compatible with Step 2).
+
+**GUI**: `EventEditDialog` in `statable_gui/event_definition_dialog.py` provides a collapsible "Trigger detail" `QGroupBox`. `_on_trigger_type_changed()` shows/hides type-specific fields. `_populate_source_choices()` fills the Source dropdown from `GlobalDefinitions` (interrupts / timers / role functions). `_open_trigger_condition_builder()` launches `ConditionBuilderDialog` for `comparison`-type triggers.
+
+**Note on numbering**: this section is inserted as `§3.2.3.1` to avoid renumbering `§3.2.4`〜`§3.2.7`. Existing cross-references (e.g. C-41 → `§3.2.7`) remain valid.
 
 #### 3.2.4 `Transition` (v2.2)
 
@@ -424,6 +457,9 @@ class EventSourceLayer(Enum):
 | `arg2_type` | str | "" | Argument 2 type |
 | `arg2_name` | str | "" | Argument 2 name |
 | `title` | str | "" | Display name |
+| `used_global_vars` | List[str] | [] | v3.8: GUI symbol tracking (mirrors libcntrl). Persisted in XML; not consumed by codegen |
+| `used_events` | List[str] | [] | v3.8: Same as above |
+| `used_literals` | List[str] | [] | v3.8: Same as above |
 
 **Property**: `qualified_name -> str`: `namespace.name` or `name`.
 
