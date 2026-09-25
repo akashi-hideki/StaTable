@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-796%20PASS-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-943%20PASS-green.svg)]()
 [![MISRA](https://img.shields.io/badge/MISRA-C%3A2012-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
@@ -28,7 +28,14 @@ custom tooling from scratch.
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **22 test suites, 796 PASS / 0 FAIL / 2 SKIP**
+- ✅ **25 test suites, 943 PASS / 0 FAIL / 2 SKIP**
+
+### v2.6 Highlights
+
+- ✅ **Structured event trigger** — `<Trigger>` child element with 6 types (manual / edge / polling / timer / call / comparison); GUI collapsible section with Source candidates from GlobalDefinitions (C-51 Step 3)
+- ✅ **Condition builder integration** — comparison-type triggers launch the existing `ConditionBuilderDialog`
+- ✅ **GUI integration test** — `test_v2_6_p3.py` runs a full XML-load → edit → save → reload workflow with 50 assertions
+- ✅ **Tutorial 3-language sync** — TUTORIAL_ja / en / zh updated to v1.1
 
 ### v2.5 Highlights
 
@@ -62,7 +69,7 @@ diagrams, and generate production-ready C code with a single click.*
 | **Ubuntu 22.04+** | ⚠️ **Auto tests pass on CI** | GUI not yet manually verified — feedback welcome |
 | **macOS** | ⚠️ **Not tested** | Community testing welcome |
 
-**Note for Linux users**: The automated test suite (22 suites, 796 tests)
+**Note for Linux users**: The automated test suite (25 suites, 943 tests)
 passes on Ubuntu via GitHub Actions, but the GUI has only been manually
 verified on Windows. If you try it on Linux, please report your experience
 via [GitHub Issues](https://github.com/akashi-hideki/StaTable/issues).
@@ -107,7 +114,7 @@ python tests/test_v2_2_p1.py
 python tests/test_v2_3_p1.py
 ```
 
-Expected: **796 PASS / 0 FAIL / 2 SKIP** across 22 suites.
+Expected: **943 PASS / 0 FAIL / 2 SKIP** across 25 suites.
 
 ---
 
@@ -303,7 +310,8 @@ The queue-based API (`FIRE_EVENT_QUEUE_<Layer>`) is unchanged.
 - ✅ **GUI Trigger section** — collapsible `QGroupBox` in `EventEditDialog`; Source dropdown populated from GlobalDefinitions (interrupts / timers / role functions)
 - ✅ **Condition builder integration** — comparison-type triggers launch the existing `ConditionBuilderDialog`
 - ✅ **Backward compatible** — projects without `<Trigger>` still load (`trigger_detail=None`)
-- ✅ Tests: `test_v2_6_p1.py` (62 PASS), `test_v2_6_p2.py` (35 PASS)
+- ✅ Tests: `test_v2_6_p1.py` (62 PASS), `test_v2_6_p2.py` (35 PASS), `test_v2_6_p3.py` (50 PASS)
+- ✅ Tutorial JA/EN/ZH updated to v1.1 (Trigger section)
 
 ### v2.5.6 (Released 2026-09-25)
 
@@ -441,7 +449,7 @@ python tests/test_v2_3_p1.py
 # ...
 ```
 
-All 22 suites should pass (796 PASS / 2 SKIP).
+All 25 suites should pass (943 PASS / 2 SKIP).
 
 ---
 
