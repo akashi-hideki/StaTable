@@ -297,6 +297,14 @@ The queue-based API (`FIRE_EVENT_QUEUE_<Layer>`) is unchanged.
 
 ## Roadmap
 
+### v2.6.0 (Released 2026-09-25)
+
+- ✅ **C-51 Step 3: structured event trigger** — `<Trigger>` child element with 6 types (manual / edge / polling / timer / call / comparison)
+- ✅ **GUI Trigger section** — collapsible `QGroupBox` in `EventEditDialog`; Source dropdown populated from GlobalDefinitions (interrupts / timers / role functions)
+- ✅ **Condition builder integration** — comparison-type triggers launch the existing `ConditionBuilderDialog`
+- ✅ **Backward compatible** — projects without `<Trigger>` still load (`trigger_detail=None`)
+- ✅ Tests: `test_v2_6_p1.py` (62 PASS), `test_v2_6_p2.py` (35 PASS)
+
 ### v2.5.6 (Released 2026-09-25)
 
 - ✅ **F-3 fully resolved**: per-layer `pending_event_<Layer>` slots (C-55)

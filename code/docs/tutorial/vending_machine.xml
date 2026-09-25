@@ -101,7 +101,9 @@
             </States>
             <Events>
                 <Event name="COIN_SENSOR" id="1" kind="signal" params="" priority="0" description="Coin sensor edge" delivery_type="queue" source_layer="driver" data_type="uint32_t" data_name="coin_value" title="Coin sensor" />
-                <Event name="BUTTON_SENSOR" id="2" kind="signal" params="" priority="0" description="Button pressed" delivery_type="queue" source_layer="driver" data_type="uint8_t" data_name="item_id" title="Button" />
+                <Event name="BUTTON_SENSOR" id="2" kind="signal" params="" priority="0" description="Button pressed" delivery_type="queue" source_layer="driver" data_type="uint8_t" data_name="item_id" title="Button">
+                    <Trigger type="edge" source="GPIO_BUTTON_1" edge="falling" debounce_ms="20" description="Product button edge detection" />
+                </Event>
                 <Event name="MOTOR_COMPLETE" id="3" kind="signal" params="" priority="0" description="Motor cycle complete" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Motor complete" />
                 <Event name="HW_FAULT" id="4" kind="signal" params="err_code" priority="9" description="Hardware fault" delivery_type="queue" source_layer="driver" data_type="uint8_t" data_name="err_code" title="HW fault" />
                 <Event name="CLEAR_FAULT" id="5" kind="signal" params="" priority="0" description="Clear fault" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Clear fault" />
@@ -271,7 +273,9 @@
             </States>
             <Events>
                 <Event name="INSERT_COIN" id="1" kind="signal" params="coin_value" priority="0" description="Coin inserted" delivery_type="direct" source_layer="driver" data_type="uint32_t" data_name="coin_value" title="Insert coin" />
-                <Event name="SELECT_ITEM" id="2" kind="signal" params="item_id" priority="0" description="Item selected" delivery_type="direct" source_layer="driver" data_type="uint8_t" data_name="item_id" title="Select item" />
+                <Event name="SELECT_ITEM" id="2" kind="signal" params="item_id" priority="0" description="Item selected" delivery_type="direct" source_layer="driver" data_type="uint8_t" data_name="item_id" title="Select item">
+                    <Trigger type="manual" description="Fired by Middleware after validation" />
+                </Event>
                 <Event name="CANCEL" id="3" kind="signal" params="" priority="1" description="Cancel" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Cancel" />
                 <Event name="DISPENSE_DONE" id="4" kind="signal" params="" priority="0" description="Dispensed" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Dispense done" />
                 <Event name="CHANGE_RETURNED" id="5" kind="signal" params="" priority="0" description="Change returned" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Change returned" />

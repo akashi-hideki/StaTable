@@ -130,13 +130,54 @@ python -m statable_gui.main
 
 ### 4.2 イベント
 
-| イベント | 配送方式 | 付随データ |
-|---------|---------|-----------|
-| `COIN_SENSOR` | queue | `coin_value`（uint32_t） |
-| `BUTTON_SENSOR` | queue | `item_id`（uint8_t） |
-| `MOTOR_COMPLETE` | direct | – |
-| `HW_FAULT` | queue | `err_code`（uint8_t）、優先度 9 |
-| `CLEAR_FAULT` | direct | – |
+| イベント | 配送方式 | 付随データ | Trigger（発生条件） |
+|---------|---------|-----------|-------------------------|
+| `COIN_SENSOR` | queue | `coin_value`（uint32_t） | edge: `GPIO_COIN`, falling, 50ms |
+| `BUTTON_SENSOR` | queue | `item_id`（uint8_t） | edge: `GPIO_BUTTON_1`, falling, 20ms |
+| `MOTOR_COMPLETE` | direct | – | manual |
+| `HW_FAULT` | queue | `err_code`（uint8_t）、優先度 9 | edge: `GPIO_FAULT`, falling, 5ms |
+| `CLEAR_FAULT` | direct | – | manual |
+
+### 4.3 Trigger（発生条件）の記録
+
+C-51 Step 3 以降、イベントの発生条件を構造化して記録できます。
+イベント編集ダイアログの **Trigger detail** セクションを展開して入力します。
+
+#### 対応 Type
+
+| Type | 用途 | 設定項目 |
+|------|------|---------|
+| `manual` | 手動発火（デフォルト） | なし |
+| `edge` | GPIO エッジ検出 | Edge / Debounce / Source |
+| `polling` | 定期ポーリング | Period / Source |
+| `timer` | タイマー満了 | Period / Auto reload / Source |
+| `call` | 関数呼び出し | Caller |
+| `comparison` | 条件比較 | Condition / Poll period |
+
+#### 入力例: 商品ボタン
+
+1. イベント `BUTTON_SENSOR` を選択して編集
+2. Trigger detail セクションをチェック
+3. Type: `edge` を選択
+4. Source: `GPIO_BUTTON_1` を選択（割り込み定義から自動候補）
+5. Edge: `falling` を選択
+6. Debounce: `20` ms を入力
+
+生成される XML:
+
+```xml
+<Event name="BUTTON_SENSOR" ...>
+  <Trigger type="edge" source="GPIO_BUTTON_1"
+           edge="falling" debounce_ms="20" />
+</Event>
+```
+
+#### Source の候補について
+
+- `edge`: 割り込み定義（`GlobalDefinitions.interrupts`）の GPIO 名
+- `timer` / `polling`: タイマー定義（`timer_base` / `extra_timers`）の名前
+- `call`: ロール関数名
+- 候補に無い場合はテキスト直接入力も可能
 
 ### 4.3 設計ポイント
 

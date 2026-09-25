@@ -197,7 +197,7 @@ TUTORIAL では `Vending` → `App` に変更して解決（`tools/fix_vending_n
 
 **Priority**: 🟡 Medium
 **Type**: Enhancement / Data model
-**Status**: ✅ 完了（v2.5.4 / C-51 Step 2）
+**Status**: ✅ 完了（v2.5.4 / C-51 Step 2、v2.6.0 / Step 3 で構造化）
 
 #### 現状
 
@@ -371,3 +371,4 @@ TUTORIAL では `Vending` → `App` に変更して解決（`tools/fix_vending_n
 | 1.0 | 2026-09-22 | 初版。Issue 1 のみ記載 |
 | 1.1 | 2026-09-22 | Issue 1 完了。編集/削除ボタン追加、`_find_rf_by_display` の実装記録、別 Issue 候補5件を追記 |
 | 1.2 | 2026-09-25 | 候補10（C-54 / F-3）を v2.5.6 完了に更新。`FIRE_EVENT` → `FIRE_EVENT_<Layer>` の破壊的変更を記録 |
+| 1.3 | 2026-09-25 | 候補7（C-51）を v2.6.0 Step 3 完了に更新（構造化 `<Trigger>`） |
