@@ -1,8 +1,8 @@
 # StaTable TUTORIAL - A 3-Layer State Machine Built with a Vending Machine
 
-Version: 1.0
-Date: 2026-09-23
-Target: StaTable v2.5.2 or later
+Version: 1.1
+Date: 2026-09-26
+Target: StaTable v2.6.0 or later
 
 ---
 
@@ -116,15 +116,57 @@ python -m statable_gui.main
 
 ### 4.2 Events
 
-| Event | Delivery | Payload |
-|-------|----------|---------|
-| `COIN_SENSOR` | queue | `coin_value` (uint32_t) |
-| `BUTTON_SENSOR` | queue | `item_id` (uint8_t) |
-| `MOTOR_COMPLETE` | direct | - |
-| `HW_FAULT` | queue | `err_code` (uint8_t), priority 9 |
-| `CLEAR_FAULT` | direct | - |
+| Event | Delivery | Payload | Trigger (condition) |
+|-------|----------|---------|---------------------|
+| `COIN_SENSOR` | queue | `coin_value` (uint32_t) | edge: `GPIO_COIN`, falling, 50ms |
+| `BUTTON_SENSOR` | queue | `item_id` (uint8_t) | edge: `GPIO_BUTTON_1`, falling, 20ms |
+| `MOTOR_COMPLETE` | direct | - | manual |
+| `HW_FAULT` | queue | `err_code` (uint8_t), priority 9 | edge: `GPIO_FAULT`, falling, 5ms |
+| `CLEAR_FAULT` | direct | - | manual |
 
-### 4.3 Design notes
+### 4.3 Trigger detail (structured)
+
+Since C-51 Step 3, event firing conditions can be recorded in a
+structured way.  Expand the **Trigger detail** section in the event
+editor dialog to enter them.
+
+#### Supported Types
+
+| Type | Purpose | Fields |
+|------|---------|--------|
+| `manual` | Manual firing (default) | none |
+| `edge` | GPIO edge detection | Edge / Debounce / Source |
+| `polling` | Periodic polling | Period / Source |
+| `timer` | Timer expiry | Period / Auto reload / Source |
+| `call` | Function invocation | Caller |
+| `comparison` | Condition comparison | Condition / Poll period |
+
+#### Example: item button
+
+1. Select event `BUTTON_SENSOR` and edit
+2. Check the Trigger detail section
+3. Type: select `edge`
+4. Source: select `GPIO_BUTTON_1` (auto-candidate from interrupt definitions)
+5. Edge: select `falling`
+6. Debounce: enter `20` ms
+
+Generated XML:
+
+```xml
+<Event name="BUTTON_SENSOR" ...>
+  <Trigger type="edge" source="GPIO_BUTTON_1"
+           edge="falling" debounce_ms="20" />
+</Event>
+```
+
+#### Source candidates
+
+- `edge`: GPIO names from interrupt definitions (`GlobalDefinitions.interrupts`)
+- `timer` / `polling`: names from timer definitions (`timer_base` / `extra_timers`)
+- `call`: role function names
+- Custom text input is also allowed when no candidate matches
+
+### 4.4 Design notes
 
 - **Queue delivery**: Sensor events use `queue` to avoid loss
 - **Priority 9 FAULT**: Processed before normal events

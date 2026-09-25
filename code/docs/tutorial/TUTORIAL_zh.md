@@ -1,8 +1,8 @@
 # StaTable 教程 - 用自动售货机学习三层状态机
 
-Version: 1.0
-Date: 2026-09-23
-对象: StaTable v2.5.2 或更高版本
+Version: 1.1
+Date: 2026-09-26
+对象: StaTable v2.6.0 或更高版本
 
 ---
 
@@ -115,15 +115,56 @@ python -m statable_gui.main
 
 ### 4.2 事件
 
-| 事件 | 配送方式 | 附加数据 |
-|------|----------|----------|
-| `COIN_SENSOR` | queue | `coin_value` (uint32_t) |
-| `BUTTON_SENSOR` | queue | `item_id` (uint8_t) |
-| `MOTOR_COMPLETE` | direct | - |
-| `HW_FAULT` | queue | `err_code` (uint8_t)，优先级 9 |
-| `CLEAR_FAULT` | direct | - |
+| 事件 | 配送方式 | 附加数据 | Trigger（触发条件） |
+|------|----------|----------|---------------------|
+| `COIN_SENSOR` | queue | `coin_value` (uint32_t) | edge: `GPIO_COIN`, falling, 50ms |
+| `BUTTON_SENSOR` | queue | `item_id` (uint8_t) | edge: `GPIO_BUTTON_1`, falling, 20ms |
+| `MOTOR_COMPLETE` | direct | - | manual |
+| `HW_FAULT` | queue | `err_code` (uint8_t)，优先级 9 | edge: `GPIO_FAULT`, falling, 5ms |
+| `CLEAR_FAULT` | direct | - | manual |
 
-### 4.3 设计要点
+### 4.3 触发条件记录（结构化）
+
+自 C-51 Step 3 起，可以结构化地记录事件的触发条件。
+在事件编辑对话框中展开 **Trigger detail** 部分即可输入。
+
+#### 支持的 Type
+
+| Type | 用途 | 设置项 |
+|------|------|--------|
+| `manual` | 手动触发（默认） | 无 |
+| `edge` | GPIO 边沿检测 | Edge / Debounce / Source |
+| `polling` | 定期轮询 | Period / Source |
+| `timer` | 定时器到期 | Period / Auto reload / Source |
+| `call` | 函数调用 | Caller |
+| `comparison` | 条件比较 | Condition / Poll period |
+
+#### 输入示例：商品按钮
+
+1. 选择事件 `BUTTON_SENSOR` 并编辑
+2. 勾选 Trigger detail 部分
+3. Type: 选择 `edge`
+4. Source: 选择 `GPIO_BUTTON_1`（自动从中断定义候选中列出）
+5. Edge: 选择 `falling`
+6. Debounce: 输入 `20` ms
+
+生成的 XML:
+
+```xml
+<Event name="BUTTON_SENSOR" ...>
+  <Trigger type="edge" source="GPIO_BUTTON_1"
+           edge="falling" debounce_ms="20" />
+</Event>
+```
+
+#### Source 候选
+
+- `edge`: 中断定义（`GlobalDefinitions.interrupts`）中的 GPIO 名称
+- `timer` / `polling`: 定时器定义（`timer_base` / `extra_timers`）中的名称
+- `call`: 角色函数名称
+- 候选中无匹配项时，也可直接输入文本
+
+### 4.4 设计要点
 
 - **队列配送**: 传感器事件使用 `queue` 避免丢失
 - **优先级 9 的 FAULT**: 比普通事件更早处理
