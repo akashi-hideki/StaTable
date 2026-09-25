@@ -1,0 +1,4 @@
+# C-51 Step 3 / Phase 2: GUI trigger section
+add code/statable_gui/event_definition_dialog.py
+commit feat(gui): C-51 Step 3 - Trigger section with source candidates
+push origin main

@@ -1,0 +1,10 @@
+# C-51 Step 3 / Phase 3 + 4: docs + tutorial
+add code/docs/SPEC_OVERVIEW_ja.md
+add code/docs/ISSUES_v2_5.md
+add README.md
+add code/docs/tutorial/TUTORIAL_ja.md
+add code/docs/tutorial/TUTORIAL_en.md
+add code/docs/tutorial/TUTORIAL_zh.md
+add code/docs/tutorial/vending_machine.xml
+commit docs(v2.6.0): C-51 Step 3 - structured Trigger + tutorial updates
+push origin main

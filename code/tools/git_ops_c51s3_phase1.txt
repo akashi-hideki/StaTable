@@ -1,0 +1,7 @@
+# C-51 Step 3 / Phase 1: data model + XML I/O + tests + CI registration
+add code/statable/model.py
+add code/statable/xml_io.py
+add code/tests/test_v2_6_p1.py
+add .github/workflows/check.yml
+commit feat(model): C-51 Step 3 - structured EventTrigger + XML I/O + CI registration
+push origin main

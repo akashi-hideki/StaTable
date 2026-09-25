@@ -1,321 +1,210 @@
 #!/usr/bin/env python3
-# code/tools/git_runner.py
-"""Execute Git operations from a plain-text script file.
+"""git_runner.py - execute git operations from a declarative ops file.
 
-See tools/git_ops.txt for the script syntax.
+Usage (from code/ directory):
 
-Usage:
-    python tools/git_runner.py                 # uses tools/git_ops.txt
-    python tools/git_runner.py --file my.txt
-    python tools/git_runner.py --dry-run
-    python tools/git_runner.py --yes
-    python tools/git_runner.py --continue-on-error
+    # Traditional: read code/tools/git_ops.txt
+    python tools/git_runner.py
     python tools/git_runner.py --list
-"""
 
+    # Phase-based (C-51 Step 3 and later):
+    # Reads code/tools/git_ops_c51s3_phase<N>.txt
+    python tools/git_runner.py --phase 1
+    python tools/git_runner.py --phase 2
+    python tools/git_runner.py --phase 34
+
+    # Dry run (show what would be executed, no side effects):
+    python tools/git_runner.py --dry-run
+    python tools/git_runner.py --phase 1 --dry-run
+
+Ops file format (one command per line, leading # comments allowed):
+
+    add <path>
+    commit <message>
+    push [<remote> <branch>]
+
+Safety features:
+  - 'add' verifies the file exists before running git add.
+  - 'commit' is skipped if nothing is staged.
+  - 'push' is skipped if there are no new commits.
+  - --dry-run performs no side effects.
+"""
 from __future__ import annotations
 
 import argparse
-import os
-import shlex
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
-
-DEFAULT_OPS_FILE = Path(__file__).resolve().parent / "git_ops.txt"
-DEFAULT_REMOTE = "origin"
-DEFAULT_BRANCH = "main"
-
-
-# ----------------------------------------------------------------------
-# Script parser
-# ----------------------------------------------------------------------
-class Command:
-    def __init__(self, kind, args, raw_line, line_no):
-        self.kind = kind
-        self.args = args
-        self.raw_line = raw_line
-        self.line_no = line_no
+TOOLS = Path(__file__).resolve().parent
+CODE = TOOLS.parent
+REPO = CODE.parent
 
 
-def parse_script(text: str):
-    lines = text.splitlines()
-    commands = []
-    i = 0
-    while i < len(lines):
-        raw = lines[i]
-        stripped = raw.strip()
-        i += 1
+# ---------------------------------------------------------------------------
+# Ops file loading
+# ---------------------------------------------------------------------------
 
-        if not stripped or stripped.startswith("#"):
+def resolve_ops_file(args) -> Path:
+    """Return the ops file path based on CLI arguments."""
+    if args.phase:
+        return TOOLS / f"git_ops_c51s3_phase{args.phase}.txt"
+    if args.ops:
+        p = Path(args.ops)
+        return p if p.is_absolute() else TOOLS / p
+    return TOOLS / "git_ops.txt"
+
+
+def parse_ops(path: Path) -> list[tuple[str, list[str]]]:
+    """Parse ops file. Returns list of (verb, args)."""
+    if not path.exists():
+        print(f"[ERROR] ops file not found: {path}")
+        sys.exit(2)
+
+    ops: list[tuple[str, list[str]]] = []
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
             continue
-
-        if stripped == "commit-begin":
-            body_lines = []
-            start_line = i
-            while i < len(lines):
-                if lines[i].strip() == "commit-end":
-                    i += 1
-                    break
-                body_lines.append(lines[i])
-                i += 1
-            else:
-                raise ValueError(
-                    f"line {start_line}: 'commit-begin' without "
-                    f"matching 'commit-end'")
-            commands.append(Command(
-                "commit", ["\n".join(body_lines)],
-                f"commit-begin ... commit-end (line {start_line})",
-                start_line))
-            continue
-
-        parts = stripped.split(None, 1)
-        kind = parts[0]
+        parts = line.split(None, 1)
+        verb = parts[0].lower()
         rest = parts[1] if len(parts) > 1 else ""
-        commands.append(Command(kind, [rest] if rest else [],
-                                stripped, i))
-    return commands
+        if verb == "add":
+            ops.append(("add", [rest.strip()]))
+        elif verb == "commit":
+            ops.append(("commit", [rest.strip()]))
+        elif verb == "push":
+            # push may have "origin main" or be bare
+            args_ = rest.split() if rest else []
+            ops.append(("push", args_))
+        else:
+            print(f"[WARN] unknown verb skipped: {line}")
+    return ops
 
 
-# ----------------------------------------------------------------------
-# Runner
-# ----------------------------------------------------------------------
-class GitRunner:
-    def __init__(self, repo_root: Path, dry_run: bool,
-                 assume_yes: bool, continue_on_error: bool):
-        self.repo_root = repo_root
-        self.dry_run = dry_run
-        self.assume_yes = assume_yes
-        self.continue_on_error = continue_on_error
-        self.failed = 0
+# ---------------------------------------------------------------------------
+# git helpers
+# ---------------------------------------------------------------------------
 
-    def _run(self, args, show_output=True):
-        printable = "git " + " ".join(shlex.quote(a) for a in args)
-        print(f"  $ {printable}")
-        if self.dry_run:
-            return 0
-        try:
-            proc = subprocess.run(
-                ["git"] + args, cwd=str(self.repo_root),
-                text=True, encoding="utf-8", errors="replace",
-                capture_output=True)
-        except FileNotFoundError:
-            print("  [ERROR] git not found in PATH")
-            return 127
-        if proc.stdout and show_output:
-            print(proc.stdout.rstrip())
-        if proc.stderr:
-            print(proc.stderr.rstrip())
-        return proc.returncode
-
-    # ---- commands ----
-    def cmd_status(self, args):
-        return self._run(["status"])
-
-    def cmd_branch(self, args):
-        return self._run(["branch", "-vv"])
-
-    def cmd_log(self, args):
-        n = 5
-        if args and args[0].strip().isdigit():
-            n = int(args[0].strip())
-        return self._run(["log", "--oneline", f"-{n}"])
-
-    def cmd_diff(self, args):
-        extra = shlex.split(args[0]) if args else []
-        return self._run(["diff"] + extra)
-
-    def cmd_show(self, args):
-        ref = args[0].strip() if args else "HEAD"
-        return self._run(["show", "--stat", ref])
-
-    def cmd_add(self, args):
-        if not args:
-            print("  [ERROR] 'add' requires a path")
-            return 1
-        return self._run(["add"] + shlex.split(args[0]))
-
-    def cmd_add_all(self, args):
-        return self._run(["add", "-A"])
-
-    def cmd_reset(self, args):
-        if not args:
-            print("  [ERROR] 'reset' requires a path")
-            return 1
-        return self._run(["reset"] + shlex.split(args[0]))
-
-    def cmd_reset_hard(self, args):
-        ref = args[0].strip() if args else "HEAD"
-        if not self.assume_yes:
-            ans = input(
-                f"  reset --hard {ref} will DISCARD changes. "
-                f"Continue? [y/N] ").strip().lower()
-            if ans != "y":
-                print("  aborted by user")
-                return 1
-        return self._run(["reset", "--hard", ref])
-
-    def cmd_checkout(self, args):
-        if not args:
-            print("  [ERROR] 'checkout' requires a branch")
-            return 1
-        return self._run(["checkout", args[0].strip()])
-
-    def cmd_fetch(self, args):
-        return self._run(["fetch", "--all", "--prune"])
-
-    def cmd_pull(self, args):
-        remote, branch = DEFAULT_REMOTE, DEFAULT_BRANCH
-        if args:
-            parts = args[0].split()
-            if len(parts) >= 1: remote = parts[0]
-            if len(parts) >= 2: branch = parts[1]
-        return self._run(["pull", remote, branch])
-
-    def cmd_push(self, args):
-        remote, branch = DEFAULT_REMOTE, DEFAULT_BRANCH
-        if args:
-            parts = args[0].split()
-            if len(parts) >= 1: remote = parts[0]
-            if len(parts) >= 2: branch = parts[1]
-        return self._run(["push", remote, branch])
-
-    def cmd_commit_msg(self, args):
-        if not args or not args[0].strip():
-            print("  [ERROR] 'commit-msg' requires a subject")
-            return 1
-        return self._run(["commit", "-m", args[0].strip()])
-
-    def cmd_commit(self, args):
-        if not args or not args[0].strip():
-            print("  [ERROR] commit with empty message")
-            return 1
-        msg = args[0]
-        with tempfile.NamedTemporaryFile(
-            "w", encoding="utf-8", suffix=".txt",
-            delete=False, newline="\n") as f:
-            f.write(msg)
-            path = f.name
-        try:
-            return self._run(["commit", "-F", path])
-        finally:
-            try: os.unlink(path)
-            except OSError: pass
-
-    def cmd_run(self, args):
-        if not args:
-            print("  [ERROR] 'run' requires a git subcommand")
-            return 1
-        return self._run(shlex.split(args[0]))
-
-    def cmd_pause(self, args):
-        if self.dry_run:
-            return 0
-        input("  -- press Enter to continue --")
+def run_git(args: list[str], dry_run: bool = False) -> int:
+    cmd = ["git"] + args
+    print(f"  $ {' '.join(cmd)}")
+    if dry_run:
+        print("    (dry-run: skipped)")
         return 0
-
-    def cmd_abort(self, args):
-        print("  script requested abort")
-        return -1
-
-
-HANDLERS = {
-    "status": "cmd_status", "branch": "cmd_branch",
-    "log": "cmd_log", "diff": "cmd_diff", "show": "cmd_show",
-    "add": "cmd_add", "add-all": "cmd_add_all",
-    "reset": "cmd_reset", "reset-hard": "cmd_reset_hard",
-    "checkout": "cmd_checkout", "fetch": "cmd_fetch",
-    "pull": "cmd_pull", "push": "cmd_push",
-    "commit-msg": "cmd_commit_msg", "commit": "cmd_commit",
-    "run": "cmd_run", "pause": "cmd_pause", "abort": "cmd_abort",
-}
-
-
-def find_repo_root() -> Path:
-    here = Path.cwd().resolve()
-    for p in [here, *here.parents]:
-        if (p / ".git").is_dir():
-            return p
-    return here
-
-
-def main() -> int:
-    ap = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--file", default=str(DEFAULT_OPS_FILE))
-    ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--yes", action="store_true")
-    ap.add_argument("--continue-on-error", action="store_true")
-    ap.add_argument("--list", action="store_true")
-    args = ap.parse_args()
-
-    ops_path = Path(args.file).resolve()
-    if not ops_path.is_file():
-        print(f"ERROR: script not found: {ops_path}", file=sys.stderr)
-        return 2
-
-    text = ops_path.read_text(encoding="utf-8")
     try:
-        commands = parse_script(text)
-    except ValueError as e:
-        print(f"ERROR parsing script: {e}", file=sys.stderr)
-        return 2
+        return subprocess.run(cmd, cwd=str(REPO), check=True).returncode
+    except subprocess.CalledProcessError as e:
+        print(f"    [ERROR] exit code {e.returncode}")
+        return e.returncode
+
+
+def has_staged_changes() -> bool:
+    r = subprocess.run(
+        ["git", "diff", "--cached", "--quiet"],
+        cwd=str(REPO),
+        capture_output=True,
+    )
+    # exit 0 = no diff; exit 1 = has diff
+    return r.returncode == 1
+
+
+def has_unpushed_commits() -> bool:
+    r = subprocess.run(
+        ["git", "log", "@{u}..HEAD", "--oneline"],
+        cwd=str(REPO),
+        capture_output=True,
+        text=True,
+    )
+    return bool(r.stdout.strip())
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Execute git operations from a declarative ops file.",
+    )
+    parser.add_argument("--list", action="store_true",
+                        help="show planned commands without executing")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="run in dry-run mode (no git side effects)")
+    parser.add_argument("--phase",
+                        help="use git_ops_c51s3_phase<PHASE>.txt")
+    parser.add_argument("--ops",
+                        help="use a specific ops file (relative to tools/)")
+    args = parser.parse_args(argv)
+
+    ops_path = resolve_ops_file(args)
+    ops = parse_ops(ops_path)
 
     print("=" * 70)
     print("  Git Runner")
     print("=" * 70)
     print(f"  Script: {ops_path}")
-    print(f"  Repo:   {find_repo_root()}")
-    print(f"  Mode:   {'DRY-RUN' if args.dry_run else 'APPLY'}")
-    print(f"  Total:  {len(commands)} command(s)")
+    print(f"  Repo:   {REPO}")
+    print(f"  Mode:   {'LIST' if args.list else 'DRY-RUN' if args.dry_run else 'APPLY'}")
+    print(f"  Total:  {len(ops)} command(s)")
     print("=" * 70)
-    print()
 
     if args.list:
-        for i, c in enumerate(commands, 1):
-            print(f"  [{i:2d}] {c.kind:12s} {c.raw_line}")
+        for i, (verb, a) in enumerate(ops, 1):
+            print(f"  [{i:2}] {verb:8} {verb} {' '.join(a)}".rstrip())
         return 0
 
-    runner = GitRunner(
-        repo_root=find_repo_root(),
-        dry_run=args.dry_run,
-        assume_yes=args.yes,
-        continue_on_error=args.continue_on_error)
+    dry = args.dry_run
+    failures = 0
 
-    for i, cmd in enumerate(commands, 1):
+    for i, (verb, a) in enumerate(ops, 1):
         print()
         print("-" * 70)
-        print(f"  [{i}/{len(commands)}] {cmd.kind}: {cmd.raw_line}")
+        print(f"  [{i}/{len(ops)}] {verb}: {verb} {' '.join(a)}".rstrip())
         print("-" * 70)
-        handler_name = HANDLERS.get(cmd.kind)
-        if handler_name is None:
-            print(f"  [ERROR] unknown command: {cmd.kind!r}")
-            runner.failed += 1
-            if not args.continue_on_error:
-                return 1
-            continue
-        rc = getattr(runner, handler_name)(cmd.args)
-        if rc == -1:
-            print("  stop requested")
-            break
-        if rc != 0:
-            runner.failed += 1
-            if not args.continue_on_error:
-                print()
-                print(f"  [STOP] command failed (exit {rc})")
-                return 1
+
+        if verb == "add":
+            target = a[0]
+            # Normalize path: allow both "code/..." and bare filename
+            candidates = [
+                REPO / target,
+                CODE / target,
+                REPO / "code" / target,
+            ]
+            found = next((c for c in candidates if c.exists()), None)
+            if found is None:
+                print(f"    [SKIP] file not found: {target}")
+                continue
+            rc = run_git(["add", target], dry_run=dry)
+            if rc != 0:
+                failures += 1
+
+        elif verb == "commit":
+            msg = a[0]
+            if not dry and not has_staged_changes():
+                print("    [SKIP] no staged changes; commit skipped")
+                continue
+            rc = run_git(["commit", "-m", msg], dry_run=dry)
+            if rc != 0:
+                failures += 1
+
+        elif verb == "push":
+            if not dry and not has_unpushed_commits():
+                print("    [SKIP] no unpushed commits; push skipped")
+                continue
+            push_args = a if a else ["origin", "main"]
+            rc = run_git(["push"] + push_args, dry_run=dry)
+            if rc != 0:
+                failures += 1
 
     print()
     print("=" * 70)
-    if runner.failed == 0:
-        print("  DONE: all commands succeeded")
-    else:
-        print(f"  DONE: {runner.failed} command(s) failed")
+    if failures:
+        print(f"  DONE: {failures} command(s) failed")
+        return 1
+    print("  DONE: all commands succeeded" if not dry else "  DONE: dry-run complete")
     print("=" * 70)
-    return 0 if runner.failed == 0 else 1
+    return 0
 
 
 if __name__ == "__main__":
