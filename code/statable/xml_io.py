@@ -43,7 +43,7 @@ from typing import List, Tuple, Optional
 from .model import (
     State, Event, Transition, StateType, EventKind, RoleFunction,
     EventDeliveryType, EventSourceLayer,
-    ActionStep, TransitionRelation,
+    ActionStep, TransitionRelation, EventTrigger,
 )
 from .state_machine import StateMachine
 from .global_defs import (
@@ -235,6 +235,13 @@ def _state_from_element(elem: ET.Element) -> State:
     )
 
 
+def _event_trigger_from_element(elem) -> Optional["EventTrigger"]:
+    """[C-51 Step 3] Deserialize <Trigger> child element (or None)."""
+    if elem is None:
+        return None
+    return EventTrigger.from_dict(dict(elem.attrib))
+
+
 def state_machine_to_element(sm: StateMachine) -> ET.Element:
     """Convert StateMachine to XML Element."""
     logger.debug(
@@ -277,7 +284,12 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
         _trigger = getattr(event, 'trigger', '') or ''
         if _trigger:
             attrs['trigger'] = _trigger
-        ET.SubElement(events_elem, "Event", **attrs)
+        event_elem = ET.SubElement(events_elem, "Event", **attrs)
+        # [C-51 Step 3] Structured trigger detail (optional)
+        _td = getattr(event, 'trigger_detail', None)
+        if _td is not None:
+            td_attrs = {k: str(v) for k, v in _td.to_dict().items()}
+            ET.SubElement(event_elem, "Trigger", **td_attrs)
 
     # RoleFunctions
     # [v3.7] return_type / arg1_* / arg2_* are reserved fields
@@ -417,6 +429,9 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
                     title=event_elem.get("title", ""),
                     # [C-51 Step 2] Free-text trigger; missing -> ""
                     trigger=event_elem.get("trigger", ""),
+                    # [C-51 Step 3] Structured trigger detail
+                    trigger_detail=_event_trigger_from_element(
+                        event_elem.find("Trigger")),
                 ))
             except Exception as e:
                 logger.error(f"  Failed to load event: {e}", exc_info=True)

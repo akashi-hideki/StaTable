@@ -100,6 +100,73 @@ class State:
 
 
 @dataclass
+class EventTrigger:
+    """[C-51 Step 3] Structured trigger detail for an Event.
+
+    Only `type` is required; other fields are type-specific.
+
+    type:
+      "manual"     - fires by explicit user code (default)
+      "edge"       - GPIO edge detection
+      "polling"    - periodic polling
+      "timer"      - timer expiry
+      "call"       - function invocation
+      "comparison" - condition polling
+    """
+    type: str = "manual"
+    source: str = ""
+    description: str = ""
+    edge: str = ""              # edge: rising / falling / both
+    debounce_ms: int = 0        # edge
+    period_ms: int = 0          # polling / timer
+    auto_reload: bool = True    # timer
+    caller: str = ""            # call
+    condition: str = ""         # comparison
+    poll_period_ms: int = 0     # comparison
+
+    def to_dict(self) -> dict:
+        """Serialize non-empty fields only (order stable)."""
+        d = {"type": self.type}
+        if self.source:        d["source"] = self.source
+        if self.description:   d["description"] = self.description
+        if self.edge:          d["edge"] = self.edge
+        if self.debounce_ms:   d["debounce_ms"] = self.debounce_ms
+        if self.period_ms:     d["period_ms"] = self.period_ms
+        if self.type == "timer" and not self.auto_reload:
+            d["auto_reload"] = False
+        if self.caller:        d["caller"] = self.caller
+        if self.condition:     d["condition"] = self.condition
+        if self.poll_period_ms: d["poll_period_ms"] = self.poll_period_ms
+        return d
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "EventTrigger":
+        def _int(v, default=0):
+            try:
+                return int(v)
+            except (TypeError, ValueError):
+                return default
+        def _bool(v, default=True):
+            if isinstance(v, bool):
+                return v
+            if isinstance(v, str):
+                return v.lower() not in ("false", "0", "")
+            return bool(v) if v is not None else default
+        return cls(
+            type=str(d.get("type", "manual") or "manual"),
+            source=str(d.get("source", "") or ""),
+            description=str(d.get("description", "") or ""),
+            edge=str(d.get("edge", "") or ""),
+            debounce_ms=_int(d.get("debounce_ms", 0)),
+            period_ms=_int(d.get("period_ms", 0)),
+            auto_reload=_bool(d.get("auto_reload", True)),
+            caller=str(d.get("caller", "") or ""),
+            condition=str(d.get("condition", "") or ""),
+            poll_period_ms=_int(d.get("poll_period_ms", 0)),
+        )
+
+
+@dataclass
 class Event:
     """State transition event"""
     name: str
@@ -120,6 +187,9 @@ class Event:
     # by codegen.  Backward compatible (missing XML attribute
     # loads as "").
     trigger: str = ""
+    # [C-51 Step 3] Structured trigger detail. None = not specified
+    # (backward-compatible with Step 2, where only `trigger` existed).
+    trigger_detail: Optional["EventTrigger"] = None
 
     def __post_init__(self):
         if not self.title:

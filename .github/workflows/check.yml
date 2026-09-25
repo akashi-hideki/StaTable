@@ -117,6 +117,10 @@ jobs:
           python tests/test_v2_5_p10.py
           python tests/test_v2_5_p11.py
 
+      - name: Run v2.6 test suites
+        run: |
+          python tests/test_v2_6_p1.py
+
 
   # ==============================================================
   # Job 4: Generated C code verification
