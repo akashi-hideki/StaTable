@@ -4,7 +4,7 @@ P12-8 (Generated C code structural test) test suite for StaTable v2.2.5.
 
 Verifies the generated C code's structure WITHOUT a C compiler:
 
-  1. All 24 files are generated
+  1. All 30 files are generated
   2. Every file has balanced brackets
   3. Every .h has a matching include guard
   4. No `_t_t` doubled type names
@@ -187,7 +187,7 @@ FILES = None
 
 def test_file_count():
     print("\n[1] File count")
-    check("24 files generated", len(FILES) == 24, f"got {len(FILES)}")
+    check("30 files generated", len(FILES) == 30, f"got {len(FILES)}")
 
 
 def test_balanced_brackets():

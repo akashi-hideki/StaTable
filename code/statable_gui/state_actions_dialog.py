@@ -213,6 +213,32 @@ class StateActionsDialog(QDialog):
         KIND_DO: "do_actions",
     }
 
+    @staticmethod
+    def _to_pascal(name: str) -> str:
+        """Convert snake_case / lowerCamelCase to PascalCase."""
+        if not name:
+            return ""
+        # Simple heuristic: capitalize each '_'-separated segment
+        parts = [p for p in name.replace("-", "_").split("_") if p]
+        return "".join(p[:1].upper() + p[1:] for p in parts)
+
+    @classmethod
+    def _rf_call_preview(cls, layer: str, role_function: str) -> str:
+        """Build a preview-only RoleFunc_<NS>_<Name>(NULL, ctx) string."""
+        if not role_function:
+            return ""
+        rf = role_function.strip()
+        if rf.startswith("RoleFunc_"):
+            full = rf
+        elif "." in rf:
+            ns, name = rf.split(".", 1)
+            full = (f"RoleFunc_{cls._to_pascal(ns)}_"
+                    f"{cls._to_pascal(name)}")
+        else:
+            full = (f"RoleFunc_{layer}_{cls._to_pascal(rf)}"
+                    if layer else f"RoleFunc_{cls._to_pascal(rf)}")
+        return f"(void){full}(NULL, ctx)"
+
     def __init__(self, parent=None, state: Optional[State] = None,
                  state_machine: Optional[StateMachine] = None):
         super().__init__(parent)
@@ -335,7 +361,7 @@ class StateActionsDialog(QDialog):
                         call = f"FIRE_EVENT_{layer}({evt})"
                     else:
                         rf = getattr(a, "role_function", "") or ""
-                        call = f"(void)RoleFunc_{rf}(NULL, ctx)"
+                        call = self._rf_call_preview(layer, rf)
                     if cond:
                         lines.append(f"    if ({cond}) {{")
                         lines.append(f"        {call};")

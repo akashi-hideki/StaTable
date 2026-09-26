@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-943%20PASS-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-1147%20PASS-green.svg)]()
 [![MISRA](https://img.shields.io/badge/MISRA-C%3A2012-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
@@ -24,11 +24,25 @@ custom tooling from scratch.
 
 - ✅ **MISRA C:2012-aware C code generation** — validated with `cppcheck` + official MISRA addon (10 suppressed hits, all documented)
 - ✅ **Multi-layer state machines** — Driver / Middleware / Application with priority-ordered execution
+- ✅ **State actions (Entry / Exit / Do)** — per-state entry / exit / do activity with table-driven dispatch and user-code markers
 - ✅ **35 validation rules** across 11 categories with AI-assisted diagnostics
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **25 test suites, 943 PASS / 0 FAIL / 2 SKIP**
+- ✅ **30 test suites, 1147 PASS / 0 FAIL / 2 SKIP**
+
+### v2.7 Highlights
+
+- ✅ **State actions (Entry / Exit / Do)** — every state can define Entry (on enter), Exit (on leave), and Do (every super-loop iteration) actions, generated as C89-compatible dispatch tables with `NULL` guards (Phase 3)
+- ✅ **`StateActionsDialog`** — 4-tab GUI editor (Entry / Exit / Do / Preview) launched by double-clicking the **state name in the transition matrix header** or the **Name column in the SettingsPanel state list** (Phase 4)
+- ✅ **ActionStep extensions** — `condition`, `action_type` (`role` / `fire_event`), `event_name`; backward-compatible with legacy `List[str]` and `<Action name="..."/>` XML (Phase 1+2)
+- ✅ **`<Do>` XML element** — per-state do-activity persistence; legacy files load with empty list (Phase 2)
+- ✅ **`StateMachine_Process_<Layer>` calls Entry / Exit** on state change (Phase 3d)
+- ✅ **`{project}_run.c` calls `<Layer>_Do(...)`** at loop top, before event processing (Phase 3)
+- ✅ **SettingsPanel state list simplified** — 5 columns → **3 columns** (Name / Description / Type); entry / exit are edited only via `StateActionsDialog`
+- ✅ **GUI signal-wiring test suite** — `test_v2_7_p4.py` (52 PASS) covers matrix header / cell double-click, `SettingsPanel` Name-column dispatch, dialog OK/Cancel, preview generation
+- ✅ **Codegen test suite** — `test_v2_7_p3.py` (81 PASS) covers generator internals, table structure, integration, idempotency
+- ✅ **Fully backward compatible** — projects without `do_actions` load and regenerate unchanged
 
 ### v2.6 Highlights
 
@@ -69,7 +83,7 @@ diagrams, and generate production-ready C code with a single click.*
 | **Ubuntu 22.04+** | ⚠️ **Auto tests pass on CI** | GUI not yet manually verified — feedback welcome |
 | **macOS** | ⚠️ **Not tested** | Community testing welcome |
 
-**Note for Linux users**: The automated test suite (25 suites, 943 tests)
+**Note for Linux users**: The automated test suite (30 suites, 1147 tests)
 passes on Ubuntu via GitHub Actions, but the GUI has only been manually
 verified on Windows. If you try it on Linux, please report your experience
 via [GitHub Issues](https://github.com/akashi-hideki/StaTable/issues).
@@ -110,36 +124,42 @@ python gui_main.py
 ```bash
 cd code
 python tests/test_v2_2_p1.py
-# ... 11 other suites
-python tests/test_v2_3_p1.py
+# ... 28 other suites
+python tests/test_v2_7_p4.py
 ```
 
-Expected: **943 PASS / 0 FAIL / 2 SKIP** across 25 suites.
+Expected: **1147 PASS / 0 FAIL / 2 SKIP** across 30 suites.
 
 ---
 
 ## What StaTable Generates
 
-From a single state machine design, StaTable produces **14 C files**
-ready to integrate into your firmware:
+From a single state machine design, StaTable produces **C files**
+ready to integrate into your firmware.
 
-| File | Purpose |
-|------|---------|
-| `statable_types_common.h` | Common structs, enums, logging macros |
-| `statable_types.h` | Per-layer enums, `TransitionContext_<Layer>_t` |
-| `statable_transitions.h` | `StateMachine_Process_*` prototypes |
-| `statable_transitions.c` | Cell functions, transition tables |
-| `statable_role_functions.h` | Role function declarations |
-| `statable_role_functions.c` | Role function implementations + call sites |
-| `statable_init.c` | `SystemContext_Init` |
-| `statable_event_queue.c` | Event queue implementation |
-| `statable_interrupt.c` | ISR implementations |
-| `statable_timer.c` | Timer struct + `Timer_Init` / `Timer_Update` |
-| `osal.h` / `osal.c` | OS abstraction (NonRTOS / FreeRTOS / ThreadX) |
-| `statable_all.h` | Super include |
-| `{project}_run.c` | Super loop |
+**Single-layer project: 16 files. Three-layer project: 30 files.**
+
+| File | Scope | Purpose |
+|------|-------|---------|
+| `statable_types_common.h` | common | Common structs, enums, logging macros |
+| `statable_types.h` | per layer | Per-layer enums, `TransitionContext_<Layer>_t` |
+| `statable_transitions.h` | per layer | `StateMachine_Process_*` prototypes |
+| `statable_transitions.c` | per layer | Cell functions, transition tables |
+| `statable_role_functions.h` | per layer | Role function declarations |
+| `statable_role_functions.c` | per layer | Role function implementations + call sites |
+| `statable_state_actions.h` | per layer | **v2.7** Entry / Exit / Do declarations |
+| `statable_state_actions.c` | per layer | **v2.7** Entry / Exit / Do dispatch tables + user-code markers |
+| `statable_init.c` | common | `SystemContext_Init` |
+| `statable_event_queue.c` | common | Event queue implementation |
+| `statable_interrupt.c` | common | ISR implementations |
+| `statable_timer.c` | common | Timer struct + `Timer_Init` / `Timer_Update` |
+| `osal.h` / `osal.c` | common | OS abstraction (NonRTOS / FreeRTOS / ThreadX) |
+| `statable_all.h` | common | Super include |
+| `{project}_run.c` | project | Super loop (calls `<Layer>_Do` per iteration) |
 
 ### Sample Generated Code
+
+#### Cell function (event-driven)
 
 ```c
 /* Cell function for (Idle, START) */
@@ -165,6 +185,38 @@ static STATE_Driver_t t_Idle_START(
 }
 ```
 
+#### State action (Entry / Exit / Do, v2.7)
+
+```c
+/* Per-state Entry / Exit / Do functions (v2.7) */
+static void Driver_Entry_Waiting(SystemContext_t *ctx)
+{
+    /* --- GUI-edited actions (regenerated) --- */
+    (void)RoleFunc_Driver_ClearHwFault(NULL, ctx);
+    /* --- end GUI-edited actions --- */
+
+    /* --- user custom code (preserved) --- */
+    /* [[STABLE_USER_CODE_START:Driver_Entry_Waiting_custom]] */
+    (void)ctx;
+    /* [[STABLE_USER_CODE_END:Driver_Entry_Waiting_custom]] */
+}
+
+/* Super loop calls Do per iteration */
+void VendingMachineTutorial_Run(void)
+{
+    while (1) {
+        /* [v2.7.0] State actions (Do) */
+        Driver_Do(g_Driver_state, &g_ctx);
+        Middleware_Do(g_Middleware_state, &g_ctx);
+        Application_Do(g_Application_state, &g_ctx);
+
+        /* Existing event processing */
+        { EVENT_Driver_t evt = StateMachine_GetNextEvent_Driver(&g_ctx); ... }
+        ...
+    }
+}
+```
+
 ---
 
 ## Architecture
@@ -176,13 +228,15 @@ static STATE_Driver_t t_Idle_START(
 │  │                  statable_gui/                         │  │
 │  │  MainWindow / StateMachineTab / MatrixTableWidget      │  │
 │  │  transition_editor_direct/ (Drag & Drop editor)        │  │
+│  │  state_actions_dialog.py (Entry/Exit/Do editor, v2.7)  │  │
 │  │  libcntrl/ (Shared libraries)                          │  │
 │  └────────────────────────────────────────────────────────┘  │
 │                            │ calls                           │
 │                            ▼                                 │
 │  ┌────────────────────────────────────────────────────────┐  │
 │  │                    codegen/                            │  │
-│  │  CCodeGenerator + 15 sub-generators                    │  │
+│  │  CCodeGenerator + 16 sub-generators                    │  │
+│  │  state_actions_generator.py (Entry/Exit/Do, v2.7)      │  │
 │  │  validate/ subsystem (35 rules, 11 validators)         │  │
 │  └────────────────────────────────────────────────────────┘  │
 │                            │ reads                           │
@@ -190,6 +244,7 @@ static STATE_Driver_t t_Idle_START(
 │  ┌────────────────────────────────────────────────────────┐  │
 │  │                    statable/                           │  │
 │  │  StateMachine / GlobalDefinitions / XML I/O            │  │
+│  │  EventTrigger / ActionStep / State.do_actions (v2.7)   │  │
 │  └────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -213,9 +268,12 @@ StaTable/
 │   ├── statable_gui/            ← GUI layer
 │   │   ├── main_window.py
 │   │   ├── widgets.py
+│   │   ├── matrix_table.py
+│   │   ├── state_actions_dialog.py   ← v2.7
 │   │   └── ...
 │   ├── codegen/                 ← Code generation
 │   │   ├── c_code_generator.py
+│   │   ├── state_actions_generator.py   ← v2.7
 │   │   └── validate/
 │   ├── tests/                   ← Test suites
 │   ├── tools/                   ← Dev tools
@@ -268,6 +326,7 @@ Where MISRA C:2012 compliance is non-negotiable.
 | [SPEC_SCREENS_en.md](code/docs/SPEC_SCREENS_en.md) | English | GUI screen specification |
 | [SPEC_SCREENS_ja.md](code/docs/SPEC_SCREENS_ja.md) | 日本語 | 画面仕様書 |
 | [SPEC_CODEGEN_v3.md](code/docs/SPEC_CODEGEN_v3.md) | English | Code generation details |
+| [SPEC_STATE_ACTIONS_v1.md](code/docs/SPEC_STATE_ACTIONS_v1.md) | English | **v2.7** State actions (Entry/Exit/Do) specification |
 | [OSAL_PORTING_GUIDE_ja.md](code/docs/OSAL_PORTING_GUIDE_ja.md) | 日本語 | OSAL 移植ガイド（R-14） |
 | [IMPLEMENTATION_PLAN_v2_3.md](code/docs/IMPLEMENTATION_PLAN_v2_3.md) | English | v2.3 implementation plan |
 
@@ -300,9 +359,22 @@ Available macros:
 
 The queue-based API (`FIRE_EVENT_QUEUE_<Layer>`) is unchanged.
 
+**v2.7.0 is fully backward compatible with v2.6.0** — projects without
+`<Do>` elements or `do_actions` load and regenerate unchanged.
+
 ---
 
 ## Roadmap
+
+### v2.7.0 (Released 2026-09-26)
+
+- ✅ **State actions (Entry / Exit / Do)** — per-state entry / exit / do-activity with C89-compatible dispatch tables (`Phase 3`)
+- ✅ **`StateActionsDialog`** — 4-tab editor (Entry / Exit / Do / Preview) launched from the transition matrix header or the SettingsPanel Name column (`Phase 4`)
+- ✅ **`ActionStep` extensions** — `condition` / `action_type` / `event_name`; backward compatible with legacy `List[str]` and `<Action name="..."/>` (`Phase 1+2`)
+- ✅ **`<Do>` XML element** — per-state do-activity persistence
+- ✅ **SettingsPanel state list simplified** — 5 columns → 3 columns (Name / Description / Type)
+- ✅ **CI updated** — `test_v2_7_p3.py` (81 PASS), `test_v2_7_p4.py` (52 PASS), `test_v2_5_p8.py` registered
+- ✅ **1147 PASS / 0 FAIL / 2 SKIP** across 30 suites
 
 ### v2.6.0 (Released 2026-09-25)
 
@@ -449,7 +521,7 @@ python tests/test_v2_3_p1.py
 # ...
 ```
 
-All 25 suites should pass (943 PASS / 2 SKIP).
+All 30 suites should pass (1147 PASS / 2 SKIP).
 
 ---
 

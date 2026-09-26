@@ -113,6 +113,7 @@ jobs:
           python tests/test_v2_5_p4.py
           python tests/test_v2_5_p5.py
           python tests/test_v2_5_p6.py
+          python tests/test_v2_5_p8.py
           python tests/test_v2_5_p9.py
           python tests/test_v2_5_p10.py
           python tests/test_v2_5_p11.py
@@ -122,6 +123,15 @@ jobs:
           python tests/test_v2_6_p1.py
           python tests/test_v2_6_p2.py
           python tests/test_v2_6_p3.py
+
+      - name: Run v2.7 test suites
+        run: |
+          python tests/test_v2_7_p3.py
+          python tests/test_v2_7_p4.py
+
+      - name: Run README consistency test
+        run: |
+          python tests/test_readme_consistency.py
 
 
   # ==============================================================

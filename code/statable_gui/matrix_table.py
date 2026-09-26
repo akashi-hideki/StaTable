@@ -22,6 +22,7 @@ from .config import MAX_COLUMN_WIDTH, MIN_ROW_HEIGHT, MAX_ROW_HEIGHT
 from .global_defs import GlobalDefinitions
 
 from .transition_editor_direct.dialog import ActionEditorDialog
+from .state_actions_dialog import StateActionsDialog
 from .transition_editor_direct.draft import (
     ActionDraft, transition_to_flow_item, flow_item_to_transition,
 )
@@ -134,6 +135,10 @@ class MatrixTableWidget(QTableWidget):
         self.setFocusPolicy(Qt.StrongFocus)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.cellDoubleClicked.connect(self.open_transition_dialog)
+        # [v2.7.1] Horizontal header (state name) double-click
+        #          opens StateActionsDialog.
+        self.horizontalHeader().sectionDoubleClicked.connect(
+            self.open_state_actions_for_header)
         self.setFont(QFont("Consolas", 10))
 
         self.populate()
@@ -345,6 +350,34 @@ class MatrixTableWidget(QTableWidget):
                 f"relations={len(draft.cell_relations)}")
         else:
             StaTableLogger.debug("  -> D&D editor cancelled")
+
+    def open_state_actions_for_header(self, logical_index: int):
+        """[v2.7.1] Horizontal header (state name) double-click.
+
+        Opens StateActionsDialog for the state at the given column.
+        Cell double-click (existing) still opens ActionEditorDialog.
+        """
+        header_item = self.horizontalHeaderItem(logical_index)
+        if header_item is None:
+            return
+        state_name = header_item.text().strip()
+        if not state_name or state_name not in self.sm.states:
+            StaTableLogger.debug(
+                f"open_state_actions_for_header: unknown state "
+                f"'{state_name}' (col={logical_index})")
+            return
+
+        state = self.sm.states[state_name]
+        dlg = StateActionsDialog(
+            parent=self, state=state, state_machine=self.sm)
+        if dlg.exec() == QDialog.Accepted:
+            self.populate()
+            self.transition_changed.emit()
+            StaTableLogger.info(
+                f"StateActionsDialog applied for state '{state_name}' "
+                f"(entry={len(state.entry or [])}, "
+                f"exit={len(state.exit or [])}, "
+                f"do={len(state.do_actions or [])})")
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_F2):

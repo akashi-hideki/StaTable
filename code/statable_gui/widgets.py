@@ -700,9 +700,12 @@ class SettingsPanel(QWidget):
     """
     settings_changed = Signal()
 
-    # Columns whose items are edited via ActionEditDialog (not inline).
-    # State list layout: 0=Name, 1=Description, 2=entry, 3=exit, 4=Type
-    NON_INLINE_EDIT_COLS = (2, 3)
+    # [v2.7.1] State list is now 3 columns: 0=Name, 1=Description, 2=Type.
+    # Double-click on Name opens StateActionsDialog; Description / Type
+    # are edited inline.
+    STATE_COL_NAME = 0
+    STATE_COL_DESC = 1
+    STATE_COL_TYPE = 2
 
     # [v3.10] Role-function table layout: 0=Title, 1=Function name,
     #         2=Namespace, 3=Description. Only column 2 is editable.
@@ -735,10 +738,11 @@ class SettingsPanel(QWidget):
         # ---- State tab ----
         state_tab = QWidget()
         state_layout = QVBoxLayout(state_tab)
-        self.state_table = QTableWidget(0, 5)
+        # [v2.7.1] 3 columns: Name / Description / Type.
+        # entry / exit are edited only via StateActionsDialog.
+        self.state_table = QTableWidget(0, 3)
         self.state_table.setHorizontalHeaderLabels([
-            "Name", "Description",
-            "entry function", "exit function", "Type"
+            "Name", "Description", "Type"
         ])
         self.state_table.horizontalHeader().setSectionResizeMode(
             QHeaderView.Stretch)
@@ -806,10 +810,9 @@ class SettingsPanel(QWidget):
 
     @staticmethod
     def _make_state_item(text: str, col: int) -> QTableWidgetItem:
-        item = QTableWidgetItem(text)
-        if col in SettingsPanel.NON_INLINE_EDIT_COLS:
-            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-        return item
+        # [v2.7.1] All 3 columns are inline-editable; Name is also
+        # opened by double-click (see on_state_table_cell_double_clicked).
+        return QTableWidgetItem(text)
 
     # ------------------------------------------------------------------
     # Namespace choices provider (shared by delegate + dialog)
@@ -873,25 +876,16 @@ class SettingsPanel(QWidget):
         states = list(self.sm.states.values())
         self.state_table.setRowCount(len(states))
         for row, state in enumerate(states):
-            self.state_table.setItem(row, 0, QTableWidgetItem(state.name))
-            self.state_table.setItem(row, 1, QTableWidgetItem(state.description))
-
-            entry_display = _list_to_display(getattr(state, 'entry', []))
-            exit_display = _list_to_display(getattr(state, 'exit', []))
-
-            entry_item = self._make_state_item(entry_display, 2)
-            entry_item.setToolTip(
-                "Multiple functions: separate with '; '\n"
-                "Double-click to edit via action dialog")
-            self.state_table.setItem(row, 2, entry_item)
-
-            exit_item = self._make_state_item(exit_display, 3)
-            exit_item.setToolTip(
-                "Multiple functions: separate with '; '\n"
-                "Double-click to edit via action dialog")
-            self.state_table.setItem(row, 3, exit_item)
-
-            self.state_table.setItem(row, 4, QTableWidgetItem(state.type.value))
+            name_item = QTableWidgetItem(state.name)
+            name_item.setToolTip(
+                "Double-click to edit actions (Entry / Exit / Do)")
+            self.state_table.setItem(row, self.STATE_COL_NAME, name_item)
+            self.state_table.setItem(
+                row, self.STATE_COL_DESC,
+                QTableWidgetItem(state.description))
+            self.state_table.setItem(
+                row, self.STATE_COL_TYPE,
+                QTableWidgetItem(state.type.value))
 
         self.populate_role_table()
 
@@ -920,28 +914,21 @@ class SettingsPanel(QWidget):
     # State editing
     # ------------------------------------------------------------------
     def on_state_table_cell_double_clicked(self, row, col):
-        """[v2.7.0] Entry / Exit column double-click opens StateActionsDialog.
+        """[v2.7.1] Name column double-click opens StateActionsDialog.
 
-        Name column (0):     inline edit (default behavior)
-        Description (1):     inline edit (default behavior)
-        entry function (2):  StateActionsDialog (Entry tab focused)
-        exit function (3):   StateActionsDialog (Exit tab focused)
-        Type column (4):     inline edit (default behavior)
+        Name (0):        StateActionsDialog
+        Description (1): inline edit (default behavior)
+        Type (2):        inline edit (default behavior)
         """
         StaTableLogger.debug(
             f"SettingsPanel.on_state_table_cell_double_clicked: "
             f"row={row}, col={col}")
-        if col not in (2, 3):
-            return
-        self._open_state_actions(row, initial_tab=col)
+        if col == self.STATE_COL_NAME:
+            self._open_state_actions(row)
 
-    def _open_state_actions(self, row: int, initial_tab: int = 2):
-        """[v2.7.0] Open the StateActionsDialog for the given row.
-
-        initial_tab: 2 -> Entry tab, 3 -> Exit tab (visual only;
-        the dialog itself exposes all 4 tabs).
-        """
-        name_item = self.state_table.item(row, 0)
+    def _open_state_actions(self, row: int):
+        """[v2.7.1] Open the StateActionsDialog for the state in this row."""
+        name_item = self.state_table.item(row, self.STATE_COL_NAME)
         name = name_item.text().strip() if name_item else ""
         if not name or name not in self.sm.states:
             StaTableLogger.debug(
@@ -951,33 +938,18 @@ class SettingsPanel(QWidget):
         state = self.sm.states[name]
         dlg = StateActionsDialog(
             parent=self, state=state, state_machine=self.sm)
-        # [Optional] Select the tab matching the double-clicked column
-        try:
-            idx = 0 if initial_tab == 2 else 1  # Entry / Exit
-            dlg.tabs.setCurrentIndex(idx)
-        except Exception:
-            pass
-
         if dlg.exec() == QDialog.Accepted:
-            # Repopulate just this row's entry / exit columns
-            entry_display = _list_to_display(
-                [getattr(a, "role_function", "") or getattr(a, "event_name", "")
-                 for a in (state.entry or [])])
-            exit_display = _list_to_display(
-                [getattr(a, "role_function", "") or getattr(a, "event_name", "")
-                 for a in (state.exit or [])])
-            if self.state_table.item(row, 2):
-                self.state_table.item(row, 2).setText(entry_display)
-            if self.state_table.item(row, 3):
-                self.state_table.item(row, 3).setText(exit_display)
             self.settings_changed.emit()
             StaTableLogger.info(
-                f"StateActionsDialog applied for state '{name}'")
+                f"StateActionsDialog applied for state '{name}' "
+                f"(entry={len(state.entry or [])}, "
+                f"exit={len(state.exit or [])}, "
+                f"do={len(state.do_actions or [])})")
 
     def add_state(self):
         row = self.state_table.rowCount()
         self.state_table.insertRow(row)
-        defaults = ["", "", "", "", "normal"]
+        defaults = ["", "", "normal"]  # Name / Description / Type
         for col, default in enumerate(defaults):
             self.state_table.setItem(
                 row, col, self._make_state_item(default, col))
@@ -1147,29 +1119,21 @@ class SettingsPanel(QWidget):
           rebuilds the role functions accordingly.
         """
         # ---- States ----
+        # [v2.7.1] State list is 3 columns: Name / Description / Type.
+        # entry / exit are preserved on the state object (they are
+        # edited only via StateActionsDialog).
         for row in range(self.state_table.rowCount()):
-            name = (self.state_table.item(row, 0).text().strip()
-                    if self.state_table.item(row, 0) else "")
-            desc = (self.state_table.item(row, 1).text().strip()
-                    if self.state_table.item(row, 1) else "")
-
-            entry_text = (self.state_table.item(row, 2).text().strip()
-                          if self.state_table.item(row, 2) else "")
-            exit_text = (self.state_table.item(row, 3).text().strip()
-                         if self.state_table.item(row, 3) else "")
-            entry_list = _display_to_list(entry_text)
-            exit_list = _display_to_list(exit_text)
-
-            type_str = (self.state_table.item(row, 4).text().strip()
-                        if self.state_table.item(row, 4) else "normal")
+            name = (self.state_table.item(row, self.STATE_COL_NAME).text().strip()
+                    if self.state_table.item(row, self.STATE_COL_NAME) else "")
+            desc = (self.state_table.item(row, self.STATE_COL_DESC).text().strip()
+                    if self.state_table.item(row, self.STATE_COL_DESC) else "")
+            type_str = (self.state_table.item(row, self.STATE_COL_TYPE).text().strip()
+                        if self.state_table.item(row, self.STATE_COL_TYPE) else "normal")
 
             if name:
                 if name in self.sm.states:
                     st = self.sm.states[name]
                     st.description = desc
-                    # [v2.7.0] entry/exit are List[ActionStep]
-                    st.entry = _display_to_list(entry_text)
-                    st.exit = _display_to_list(exit_text)
                     try:
                         st.type = StateType(type_str)
                     except ValueError:
@@ -1177,8 +1141,6 @@ class SettingsPanel(QWidget):
                 else:
                     self.sm.add_state(State(
                         name, type=StateType(type_str), description=desc,
-                        entry=_display_to_list(entry_text),
-                        exit=_display_to_list(exit_text),
                     ))
 
         # ---- Role functions ----

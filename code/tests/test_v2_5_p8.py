@@ -75,6 +75,7 @@ def _generate_output_vending() -> Path | None:
         [sys.executable, "tools/gen_output_from_xml.py",
          "--xml", str(xml), "--out", str(out)],
         cwd=str(PROJECT_ROOT), check=True, capture_output=True,
+        encoding="utf-8", errors="replace",
     )
     return out
 
@@ -102,6 +103,7 @@ def test_script_help():
     p = subprocess.run(
         [sys.executable, str(script), "--help"],
         capture_output=True, text=True, cwd=str(PROJECT_ROOT),
+        encoding="utf-8", errors="replace",
     )
     check("--help exit 0", p.returncode == 0)
     check("--root documented", "--root" in p.stdout)
@@ -126,6 +128,7 @@ def test_link_success():
          "--root", str(out_v),
          "--out", str(PROJECT_ROOT / "verify_report" / "arm_link")],
         cwd=str(PROJECT_ROOT), capture_output=True, text=True,
+        encoding="utf-8", errors="replace",
     )
     check("link exit 0", p.returncode == 0,
           f"stderr:\n{p.stderr[-500:]}")
@@ -164,6 +167,7 @@ def test_link_detects_missing_symbol():
          "--root", str(tmp),
          "--out", str(PROJECT_ROOT / "verify_report" / "arm_link_bad_out")],
         cwd=str(PROJECT_ROOT), capture_output=True, text=True,
+        encoding="utf-8", errors="replace",
     )
     check("link exit != 0", p.returncode != 0)
 

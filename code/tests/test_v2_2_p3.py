@@ -357,47 +357,84 @@ def test_matrix_cell_label_multiple():
 # ======================================================================
 # 9. SettingsPanel entry/exit list
 # ======================================================================
-def test_settings_panel_entry_exit_list():
-    print("\n[9] SettingsPanel: entry/exit as list")
+def test_settings_panel_state_list_v271():
+    """[v2.7.1] State list is 3 columns: Name / Description / Type.
+
+    entry / exit are no longer shown as columns; they are edited
+    via StateActionsDialog (double-click on Name column).
+    """
+    print("\n[9] SettingsPanel: State list 3-column layout (v2.7.1)")
     try:
         from PySide6.QtWidgets import QApplication
     except ImportError:
-        RESULT.skip("SettingsPanel entry/exit", "PySide6 not available")
+        RESULT.skip("SettingsPanel State list", "PySide6 not available")
         return
 
     app = QApplication.instance() or QApplication(sys.argv)
 
     from statable.state_machine import StateMachine
-    from statable.model import State
+    from statable.model import State, ActionStep
     from statable_gui.widgets import SettingsPanel
     from statable_gui.global_defs import GlobalDefinitions
 
     sm = StateMachine()
+    sm.layer_name = "Driver"
     sm.add_state(State(name="Idle",
-                       entry=["Idle_Entry"],
-                       exit=["Idle_Exit"]))
+                       entry=[ActionStep(role_function="Idle_Entry")],
+                       exit=[ActionStep(role_function="Idle_Exit")]))
     sm.add_state(State(name="Active",
-                       entry=["Active_Entry1", "Active_Entry2"]))
+                       entry=[ActionStep(role_function="Active_Entry1"),
+                              ActionStep(role_function="Active_Entry2")]))
 
     panel = SettingsPanel(sm, global_defs=GlobalDefinitions())
 
-    # The entry column (index 2) should display the joined list
-    # e.g. "Idle_Entry" for single, "Active_Entry1; Active_Entry2" for multiple
-    entry_cell_idle = panel.state_table.item(0, 2).text() if panel.state_table.item(0, 2) else ""
-    exit_cell_idle = panel.state_table.item(0, 3).text() if panel.state_table.item(0, 3) else ""
+    # ---- Column structure ----
+    check("State list has 3 columns",
+          panel.state_table.columnCount() == 3,
+          f"got {panel.state_table.columnCount()}")
 
-    check("Idle entry displays single item",
-          "Idle_Entry" in entry_cell_idle,
-          f"got {entry_cell_idle!r}")
-    check("Idle exit displays single item",
-          "Idle_Exit" in exit_cell_idle,
-          f"got {exit_cell_idle!r}")
+    headers = [panel.state_table.horizontalHeaderItem(i).text()
+               for i in range(panel.state_table.columnCount())]
+    check("Column 0 is 'Name'", headers[0] == "Name",
+          f"got {headers!r}")
+    check("Column 1 is 'Description'", headers[1] == "Description")
+    check("Column 2 is 'Type'", headers[2] == "Type")
 
-    entry_cell_active = panel.state_table.item(1, 2).text() if panel.state_table.item(1, 2) else ""
-    check("Active entry displays multiple items",
-          "Active_Entry1" in entry_cell_active
-          and "Active_Entry2" in entry_cell_active,
-          f"got {entry_cell_active!r}")
+    # ---- Row content (Name / Type) ----
+    name0 = panel.state_table.item(0, 0).text() if panel.state_table.item(0, 0) else ""
+    check("Row 0 Name == 'Idle'", name0 == "Idle",
+          f"got {name0!r}")
+
+    type0 = panel.state_table.item(0, 2).text() if panel.state_table.item(0, 2) else ""
+    check("Row 0 Type == 'normal'", type0 == "normal",
+          f"got {type0!r}")
+
+    name1 = panel.state_table.item(1, 0).text() if panel.state_table.item(1, 0) else ""
+    check("Row 1 Name == 'Active'", name1 == "Active",
+          f"got {name1!r}")
+
+    # ---- Model-side entry/exit preservation ----
+    check("Idle entry preserved on model (1 item)",
+          len(sm.states["Idle"].entry) == 1,
+          f"got {len(sm.states['Idle'].entry)}")
+    check("Idle exit preserved on model (1 item)",
+          len(sm.states["Idle"].exit) == 1)
+    check("Active entry preserved on model (2 items)",
+          len(sm.states["Active"].entry) == 2)
+
+    check("Idle entry role_function",
+          sm.states["Idle"].entry[0].role_function == "Idle_Entry")
+    check("Active entry[0] role_function",
+          sm.states["Active"].entry[0].role_function == "Active_Entry1")
+    check("Active entry[1] role_function",
+          sm.states["Active"].entry[1].role_function == "Active_Entry2")
+
+    # ---- apply_changes preserves entry/exit ----
+    panel.apply_changes()
+    check("apply_changes: Idle entry preserved",
+          len(sm.states["Idle"].entry) == 1)
+    check("apply_changes: Active entry preserved",
+          len(sm.states["Active"].entry) == 2)
 
 
 # ======================================================================
@@ -528,7 +565,7 @@ def main():
     test_matrix_cell_label_single()
     test_matrix_cell_label_multiple()
 
-    test_settings_panel_entry_exit_list()
+    test_settings_panel_state_list_v271()
     test_transition_list_dialog_mode()
 
     test_full_display_pipeline()
