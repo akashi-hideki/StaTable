@@ -103,7 +103,7 @@ else:
     QWebEngineSettings = None
     QWebEnginePage = None
 
-from statable.model import State, Event, Transition, StateType, EventKind, RoleFunction
+from statable.model import State, Event, Transition, StateType, EventKind, RoleFunction, ActionStep
 from statable.state_machine import StateMachine
 from statable.mermaid_gen import generate_mermaid
 
@@ -115,6 +115,7 @@ from .config import (
 from .matrix_table import MatrixTableWidget
 from .role_function_dialog import RoleFunctionDialog
 from .action_edit_dialog import ActionEditDialog
+from .state_actions_dialog import StateActionsDialog
 from .global_defs import GlobalDefinitions
 from .event_definition_dialog import EventDefinitionDialog
 
@@ -129,25 +130,56 @@ _ENTRY_EXIT_SEP = "; "
 _MERMAID_BG = "#fafafa"
 
 
+def _extract_action_name(action) -> str:
+    """[v2.7.0] Extract display name from ActionStep or str.
+
+    For ActionStep:
+      - action_type="role"       -> role_function
+      - action_type="fire_event" -> event_name
+      - custom                   -> ""
+    """
+    if action is None:
+        return ""
+    if isinstance(action, str):
+        return action.strip()
+    atype = getattr(action, "action_type", "role") or "role"
+    if atype == "fire_event":
+        return (getattr(action, "event_name", "") or "").strip()
+    if atype == "custom":
+        return ""
+    return (getattr(action, "role_function", "") or "").strip()
+
+
 def _list_to_display(items) -> str:
-    """Convert List[str] to a display string ('A; B; C')."""
+    """[v2.7.0] Convert List[ActionStep] (or List[str]) to display string."""
     if items is None:
         return ""
     if isinstance(items, str):
         return items
     if isinstance(items, list):
-        return _ENTRY_EXIT_SEP.join(str(x) for x in items if str(x).strip())
+        names = [_extract_action_name(x) for x in items]
+        return _ENTRY_EXIT_SEP.join(n for n in names if n)
     return str(items)
 
 
-def _display_to_list(text: str) -> List[str]:
-    """Parse a display string ('A; B; C') into List[str]."""
+def _display_to_list(text) -> List[ActionStep]:
+    """[v2.7.0] Parse a display string ('A; B; C') into List[ActionStep].
+
+    Legacy List[str] input is also accepted and converted.
+    """
     if not text:
         return []
     if isinstance(text, list):
-        return [str(x) for x in text if str(x).strip()]
+        result = []
+        for x in text:
+            if isinstance(x, ActionStep):
+                result.append(x)
+            elif isinstance(x, str) and x.strip():
+                result.append(ActionStep(role_function=x.strip()))
+        return result
     parts = str(text).split(';')
-    return [p.strip() for p in parts if p.strip()]
+    return [ActionStep(role_function=p.strip())
+            for p in parts if p.strip()]
 
 
 # ======================================================================
@@ -888,29 +920,59 @@ class SettingsPanel(QWidget):
     # State editing
     # ------------------------------------------------------------------
     def on_state_table_cell_double_clicked(self, row, col):
+        """[v2.7.0] Entry / Exit column double-click opens StateActionsDialog.
+
+        Name column (0):     inline edit (default behavior)
+        Description (1):     inline edit (default behavior)
+        entry function (2):  StateActionsDialog (Entry tab focused)
+        exit function (3):   StateActionsDialog (Exit tab focused)
+        Type column (4):     inline edit (default behavior)
+        """
         StaTableLogger.debug(
             f"SettingsPanel.on_state_table_cell_double_clicked: "
             f"row={row}, col={col}")
         if col not in (2, 3):
             return
+        self._open_state_actions(row, initial_tab=col)
 
-        item = self.state_table.item(row, col)
-        current_text = item.text() if item else ""
+    def _open_state_actions(self, row: int, initial_tab: int = 2):
+        """[v2.7.0] Open the StateActionsDialog for the given row.
 
-        dlg = ActionEditDialog(
-            self,
-            action_text=current_text,
-            role_functions=self.sm.role_functions,
-            global_defs=self.global_defs
-        )
+        initial_tab: 2 -> Entry tab, 3 -> Exit tab (visual only;
+        the dialog itself exposes all 4 tabs).
+        """
+        name_item = self.state_table.item(row, 0)
+        name = name_item.text().strip() if name_item else ""
+        if not name or name not in self.sm.states:
+            StaTableLogger.debug(
+                f"_open_state_actions: unknown state '{name}'")
+            return
+
+        state = self.sm.states[name]
+        dlg = StateActionsDialog(
+            parent=self, state=state, state_machine=self.sm)
+        # [Optional] Select the tab matching the double-clicked column
+        try:
+            idx = 0 if initial_tab == 2 else 1  # Entry / Exit
+            dlg.tabs.setCurrentIndex(idx)
+        except Exception:
+            pass
+
         if dlg.exec() == QDialog.Accepted:
-            new_text = dlg.get_action_text()
-            if item:
-                item.setText(new_text)
-            else:
-                item = self._make_state_item(new_text, col)
-                self.state_table.setItem(row, col, item)
+            # Repopulate just this row's entry / exit columns
+            entry_display = _list_to_display(
+                [getattr(a, "role_function", "") or getattr(a, "event_name", "")
+                 for a in (state.entry or [])])
+            exit_display = _list_to_display(
+                [getattr(a, "role_function", "") or getattr(a, "event_name", "")
+                 for a in (state.exit or [])])
+            if self.state_table.item(row, 2):
+                self.state_table.item(row, 2).setText(entry_display)
+            if self.state_table.item(row, 3):
+                self.state_table.item(row, 3).setText(exit_display)
             self.settings_changed.emit()
+            StaTableLogger.info(
+                f"StateActionsDialog applied for state '{name}'")
 
     def add_state(self):
         row = self.state_table.rowCount()
@@ -1105,8 +1167,9 @@ class SettingsPanel(QWidget):
                 if name in self.sm.states:
                     st = self.sm.states[name]
                     st.description = desc
-                    st.entry = entry_list
-                    st.exit = exit_list
+                    # [v2.7.0] entry/exit are List[ActionStep]
+                    st.entry = _display_to_list(entry_text)
+                    st.exit = _display_to_list(exit_text)
                     try:
                         st.type = StateType(type_str)
                     except ValueError:
@@ -1114,7 +1177,8 @@ class SettingsPanel(QWidget):
                 else:
                     self.sm.add_state(State(
                         name, type=StateType(type_str), description=desc,
-                        entry=entry_list, exit=exit_list,
+                        entry=_display_to_list(entry_text),
+                        exit=_display_to_list(exit_text),
                     ))
 
         # ---- Role functions ----
