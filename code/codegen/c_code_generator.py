@@ -45,6 +45,7 @@ try:
     from .interrupt_generator import InterruptGenerator
     from .timer_generator import TimerGenerator
     from .osal_generator import OSALGenerator
+    from .state_actions_generator import StateActionsGenerator
     from .code_templates import CodeTemplates
     from .code_merger import CodeMerger
     from .config import CodeGenerationConfig, ConfigManager
@@ -193,6 +194,27 @@ class CCodeGenerator:
             {'action': 'blank'},
             {'action': 'role_impls'},
         ],
+        'statable_state_actions.h': [
+            {'action': 'file_header',
+             'filename': 'statable_state_actions.h'},
+            {'action': 'blank'},
+            {'action': 'guard_start'},
+            {'action': 'include_section', 'key': 'state_actions_h'},
+            {'action': 'section_header', 'key': 'state_actions'},
+            {'action': 'blank'},
+            {'action': 'state_actions_decls'},
+            {'action': 'blank'},
+            {'action': 'guard_end'},
+        ],
+        'statable_state_actions.c': [
+            {'action': 'file_header',
+             'filename': 'statable_state_actions.c'},
+            {'action': 'blank'},
+            {'action': 'include_section', 'key': 'state_actions_c'},
+            {'action': 'section_header', 'key': 'state_actions'},
+            {'action': 'blank'},
+            {'action': 'state_actions_impls'},
+        ],
         'statable_init.c': [
             {'action': 'file_header',
              'filename': 'statable_init.c'},
@@ -294,6 +316,8 @@ class CCodeGenerator:
         'statable_transitions.c':     '_generate_transitions_source',
         'statable_role_functions.h':  '_generate_role_functions_header',
         'statable_role_functions.c':  '_generate_role_functions_source',
+        'statable_state_actions.h':   '_generate_state_actions_header',
+        'statable_state_actions.c':   '_generate_state_actions_source',
         'statable_init.c':            '_generate_init_source',
         'statable_event_queue.c':     '_generate_event_queue_source',
         'statable_interrupt.c':       '_generate_interrupt_source',
@@ -308,6 +332,8 @@ class CCodeGenerator:
         'statable_types.h':          'include',
         'statable_transitions.h':    'include',
         'statable_role_functions.h': 'include',
+        'statable_state_actions.h':  'include',
+        'statable_state_actions.c':  'src',
         'statable_transitions.c':    'src',
         'statable_role_functions.c': 'src',
         'statable_init.c':           'src',
@@ -330,6 +356,8 @@ class CCodeGenerator:
         'statable_transitions.c',
         'statable_role_functions.h',
         'statable_role_functions.c',
+        'statable_state_actions.h',
+        'statable_state_actions.c',
     }
 
     COMMON_FILES = {
@@ -356,6 +384,7 @@ class CCodeGenerator:
         self.interrupt_gen = InterruptGenerator()
         self.timer_gen = TimerGenerator()
         self.osal_gen = OSALGenerator()
+        self.state_actions_gen = StateActionsGenerator()
         self.templates = CodeTemplates()
         self.strings = self.templates.STRINGS
         self.formats = self.templates.FORMATS
@@ -426,6 +455,14 @@ class CCodeGenerator:
                 'description': 'Role function implementations',
                 'guard_name': None,
             },
+            'statable_state_actions.h': {
+                'description': 'State actions (Entry / Exit / Do) declarations',
+                'guard_name': 'STATABLE_STATE_ACTIONS_H',
+            },
+            'statable_state_actions.c': {
+                'description': 'State actions (Entry / Exit / Do) implementations',
+                'guard_name': None,
+            },
             'statable_init.c': {
                 'description': 'Initialization processing',
                 'guard_name': None,
@@ -477,6 +514,7 @@ class CCodeGenerator:
             'transitions_c': [
                 '#include "statable_transitions{layer_suffix}.h"',
                 '#include "statable_role_functions{layer_suffix}.h"',
+                '#include "statable_state_actions{layer_suffix}.h"',
                 '#include "statable_types_common.h"',
             ],
             'role_functions_h': [
@@ -484,6 +522,15 @@ class CCodeGenerator:
             ],
             'role_functions_c': [
                 '#include "statable_role_functions{layer_suffix}.h"',
+            ],
+            'state_actions_h': [
+                '#include "statable_types_common.h"',
+                '#include "statable_types{layer_suffix}.h"',
+            ],
+            'state_actions_c': [
+                '#include "statable_state_actions{layer_suffix}.h"',
+                '#include "statable_role_functions{layer_suffix}.h"',
+                '#include "statable_types_common.h"',
             ],
             'init_c': ['#include "statable_types_common.h"'],
             'event_queue_c': ['#include "statable_types_common.h"'],
@@ -516,6 +563,8 @@ class CCodeGenerator:
             'get_next_event':     self._step_get_next_event,
             'role_decls':         self._step_role_decls,
             'role_impls':         self._step_role_impls,
+            'state_actions_decls': self._step_state_actions_decls,
+            'state_actions_impls': self._step_state_actions_impls,
             'init_func':          self._step_init_func,
             'init_queues':        self._step_init_queues,
             'event_queues':       self._step_event_queues,
@@ -659,6 +708,7 @@ class CCodeGenerator:
             ('enum_gen',       self.enum_gen),
             ('transition_gen', self.transition_gen),
             ('role_func_gen',  self.role_func_gen),
+            ('state_actions_gen', self.state_actions_gen),
             ('struct_gen',     self.struct_gen),
             ('interrupt_gen',  self.interrupt_gen),
         ]:
@@ -817,7 +867,8 @@ class CCodeGenerator:
 
             if (structure == 'by_layer'
                     and filename in ('statable_transitions.c',
-                                     'statable_role_functions.c')):
+                                     'statable_role_functions.c',
+                                     'statable_state_actions.c')):
                 lines = [self._generate_section_header('include'), ""]
                 for header in self.include_headers.get(key, []):
                     header = header.replace('{layer_suffix}', suffix)
@@ -1097,6 +1148,69 @@ class CCodeGenerator:
                 results.append(decls)
         return ['\n'.join(results)] if results else ['']
 
+    def _step_state_actions_decls(self, step, ctx):
+        """[v2.7.0] Emit declarations for statable_state_actions_<Layer>.h."""
+        layers = ctx['layers']
+        results = []
+        for layer_name, sm in layers:
+            layer = self._get_layer_name(sm) or layer_name
+            if not layer:
+                continue
+            self.state_actions_gen.set_layer(layer)
+            decls = (
+                f"void {layer}_Entry(STATE_{layer}_t state, SystemContext_t *ctx);\n"
+                f"void {layer}_Exit (STATE_{layer}_t state, SystemContext_t *ctx);\n"
+                f"void {layer}_Do   (STATE_{layer}_t state, SystemContext_t *ctx);"
+            )
+            results.append(decls)
+        return ['\n'.join(results)] if results else ['']
+
+    def _step_state_actions_impls(self, step, ctx):
+        """[v2.7.0] Emit implementations for statable_state_actions_<Layer>.c."""
+        layers = ctx['layers']
+        results = []
+        for layer_name, sm in layers:
+            layer = self._get_layer_name(sm) or layer_name
+            if not layer:
+                continue
+            self.state_actions_gen.set_layer(layer)
+            body = self._generate_state_actions_body(sm, layer)
+            results.append(body)
+        return ['\n'.join(results)] if results else ['']
+
+    def _generate_state_actions_body(self, sm, layer: str) -> str:
+        """Body of statable_state_actions_<Layer>.c (no header/include)."""
+        gen = self.state_actions_gen
+        parts = []
+        parts.append(f"typedef void (*{layer}_StateFunc_t)(SystemContext_t *ctx);")
+        parts.append("")
+        parts.append(gen._generate_forward_decls(sm))
+        parts.append("")
+        for kind in ("Entry", "Exit", "Do"):
+            parts.append(f"/* ---- {kind} dispatch table ---- */")
+            parts.append(gen._generate_table(kind, sm))
+            parts.append("")
+        for kind in ("Entry", "Exit", "Do"):
+            parts.append(f"/* ---- {kind} dispatcher ---- */")
+            parts.append(gen._generate_dispatcher(kind, sm))
+            parts.append("")
+        for kind in ("Entry", "Exit", "Do"):
+            actions_by_state = gen._collect_actions_by_kind(sm, kind)
+            parts.append(f"/* ---- {kind} functions (user-editable) ---- */")
+            for state in sm.states.values():
+                parts.append(gen._generate_state_func(
+                    kind, state, actions_by_state.get(state.name, [])))
+                parts.append("")
+        return "\n".join(parts)
+
+    def _generate_state_actions_header(self, sm, gd):
+        """[v2.7.0] statable_state_actions_<Layer>.h generation."""
+        return self._run_steps('statable_state_actions.h', sm, gd)
+
+    def _generate_state_actions_source(self, sm, gd):
+        """[v2.7.0] statable_state_actions_<Layer>.c generation."""
+        return self._run_steps('statable_state_actions.c', sm, gd)
+
     def _step_role_impls(self, step, ctx):
         layers = ctx['layers']
         results = []
@@ -1260,9 +1374,14 @@ class CCodeGenerator:
                         f'#include "{layer}/'
                         f'statable_role_functions_{layer}.h"'
                     )
+                    parts.append(
+                        f'#include "{layer}/'
+                        f'statable_state_actions_{layer}.h"'
+                    )
         else:
             parts.append('#include "statable_transitions.h"')
             parts.append('#include "statable_role_functions.h"')
+            parts.append('#include "statable_state_actions.h"')
         return parts
 
     def _step_super_include_project(self, step, ctx):
@@ -1386,6 +1505,16 @@ class CCodeGenerator:
             T['run_func_open'],
             T['run_while'],
         ]
+        # [v2.7.0] State actions (Entry / Exit / Do) - Do at loop top
+        parts.append("        /* [v2.7.0] State actions (Do) */")
+        for layer_name, sm in layers:
+            layer = self._get_layer_name(sm)
+            if layer:
+                parts.append(
+                    f"        {layer}_Do(g_{layer}_state, &g_ctx);"
+                )
+        parts.append("")
+
         for layer_name, sm in layers:
             layer = self._get_layer_name(sm)
             priority = getattr(sm, 'layer_priority', 5)

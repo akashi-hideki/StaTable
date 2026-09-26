@@ -194,10 +194,16 @@ class TransitionGenerator:
             '        .event = event,\n'
             '    };\n'
             '    $func_type func = $table_name[current_state][event];\n'
+            '    $state_type next_state = current_state;\n'
             '    if (func != NULL) {\n'
-            '        return func(&transition, ctx);\n'
+            '        next_state = func(&transition, ctx);\n'
             '    }\n'
-            '    return current_state;\n'
+            '    /* [v2.7.0] State actions: Exit(old) / Entry(new) */\n'
+            '    if (next_state != current_state) {\n'
+            '        ${layer}_Exit(current_state, ctx);\n'
+            '        ${layer}_Entry(next_state, ctx);\n'
+            '    }\n'
+            '    return next_state;\n'
             '}\n'
         ),
     }
@@ -851,6 +857,8 @@ class TransitionGenerator:
             context_type=self._context_type(),
             func_type=self._func_type(),
             table_name=self._table_name(),
+            state_type=self._state_type(),
+            layer=self.layer_name or "System",
         ))
         return ''.join(parts)
 
