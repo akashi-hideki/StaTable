@@ -92,6 +92,9 @@
                     <Entry>
                         <Action name="Driver.StartMotor" />
                     </Entry>
+                    <Do>
+                        <Action action_type="fire_event" event_name="Driver.MOTOR_COMPLETE" condition="RoleFunc_Driver_CheckMotorStatus(NULL, ctx) == 0" />
+                    </Do>
                 </State>
                 <State name="HardwareFault" type="normal" parent="" do="" description="Hardware fault">
                     <Entry>
@@ -253,6 +256,9 @@
                     <Entry>
                         <Action name="Vending.ShowBalance" />
                     </Entry>
+                    <Do>
+                        <Action role_function="Vending.ShowBalance" condition="ctx-&gt;data.balance &gt; 0" />
+                    </Do>
                 </State>
                 <State name="Dispensing" type="normal" parent="" do="" description="Dispensing">
                     <Entry>

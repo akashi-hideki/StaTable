@@ -150,7 +150,14 @@ class StateActionsGenerator:
         return f"(void){full}(NULL, ctx)"
 
     def _fire_event_call(self, event_name: str) -> str:
-        """Generate FIRE_EVENT_<Layer>(<EVENT>) or fallback comment."""
+        """Generate FIRE_EVENT_<Layer>(ctx, EVENT_<Layer>_<EVT>).
+
+        The FIRE_EVENT_<Layer> macro is defined as:
+            #define FIRE_EVENT_Driver(ctx, evt) ...
+        so `ctx` must be passed explicitly.
+
+        The event enum is named EVENT_<Layer>_<UPPER_SNAKE>.
+        """
         if not event_name:
             return ""
         # event_name is expected to be "Layer.EVENT" or "EVENT"
@@ -159,7 +166,7 @@ class StateActionsGenerator:
         else:
             layer, evt = self.layer_name, event_name
         evt_upper = self.naming.to_upper_snake(evt)
-        return f"FIRE_EVENT_{layer}({layer.upper()}_{evt_upper})"
+        return f"FIRE_EVENT_{layer}(ctx, EVENT_{layer}_{evt_upper})"
 
     # ------------------------------------------------------------------
     # Per-action code emission

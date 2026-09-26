@@ -358,7 +358,15 @@ class StateActionsDialog(QDialog):
                     cond = (getattr(a, "condition", "") or "").strip()
                     if atype == "fire_event":
                         evt = getattr(a, "event_name", "") or ""
-                        call = f"FIRE_EVENT_{layer}({evt})"
+                        # Mirror the codegen: FIRE_EVENT_<Layer>(ctx,
+                        # EVENT_<Layer>_<UPPER_SNAKE>)
+                        if "." in evt:
+                            evt_layer, evt_name = evt.split(".", 1)
+                        else:
+                            evt_layer, evt_name = layer, evt
+                        evt_upper = evt_name.upper().replace(" ", "_")
+                        call = (f"FIRE_EVENT_{evt_layer}(ctx, "
+                                f"EVENT_{evt_layer}_{evt_upper})")
                     else:
                         rf = getattr(a, "role_function", "") or ""
                         call = self._rf_call_preview(layer, rf)

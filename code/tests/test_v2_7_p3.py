@@ -165,7 +165,7 @@ def test_role_and_event_calls():
 
     check("_fire_event_call(Driver.TICK)",
           g._fire_event_call("Driver.TICK") ==
-          "FIRE_EVENT_Driver(DRIVER_TICK)")
+          "FIRE_EVENT_Driver(ctx, EVENT_Driver_TICK)")
     check("_fire_event_call(empty)",
           g._fire_event_call("") == "")
 
@@ -199,7 +199,7 @@ def test_action_line():
     a3 = ActionStep(action_type="fire_event", event_name="Driver.TICK")
     line3 = g._action_line(a3)
     check("fire_event call",
-          "FIRE_EVENT_Driver(DRIVER_TICK)" in line3)
+          "FIRE_EVENT_Driver(ctx, EVENT_Driver_TICK)" in line3)
 
     # custom -> skipped
     a4 = ActionStep(action_type="custom")
