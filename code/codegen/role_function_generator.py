@@ -65,6 +65,19 @@ def ensure_list(value) -> List[str]:
     return [str(value)]
 
 
+def _extract_rf_name(action) -> str:
+    """[v2.7.0] Extract role function name from ActionStep or str.
+
+    State.entry / state.exit are List[ActionStep] since v2.7.0,
+    but may still hold plain strings from legacy data.
+    """
+    if action is None:
+        return ""
+    if isinstance(action, str):
+        return action
+    return getattr(action, "role_function", "") or ""
+
+
 _C_KEYWORDS = {
     'auto', 'break', 'case', 'char', 'const', 'continue',
     'default', 'do', 'double', 'else', 'enum', 'extern',
@@ -600,9 +613,13 @@ class RoleFunctionGenerator:
                             else_target or target,
                         ))
 
-        # ---- 2. v2.2.5: State entry / exit refs ----
+        # ---- 2. v2.7.0 fix: State entry / exit refs ----
+        # state.entry / state.exit are List[ActionStep]; extract role_function
         for state in state_machine.states.values():
-            for fname in ensure_list(getattr(state, 'entry', [])):
+            for action in (getattr(state, 'entry', []) or []):
+                fname = _extract_rf_name(action)
+                if not fname:
+                    continue
                 norm = self._normalize_func_ref(fname)
                 if not norm:
                     continue
@@ -613,7 +630,10 @@ class RoleFunctionGenerator:
                 call_map.setdefault(norm, []).append(RoleFuncCallSite(
                     norm, 'state_entry', state.name, '', state.name,
                 ))
-            for fname in ensure_list(getattr(state, 'exit', [])):
+            for action in (getattr(state, 'exit', []) or []):
+                fname = _extract_rf_name(action)
+                if not fname:
+                    continue
                 norm = self._normalize_func_ref(fname)
                 if not norm:
                     continue

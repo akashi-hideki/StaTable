@@ -176,19 +176,52 @@ def _state_to_element(state: State) -> ET.Element:
     }
     elem = ET.Element("State", **attrs)
 
-    entry_list = _normalize_str_list(getattr(state, 'entry', []))
-    if entry_list:
-        entry_elem = ET.SubElement(elem, "Entry")
-        for a in entry_list:
-            ET.SubElement(entry_elem, "Action", name=str(a))
-
-    exit_list = _normalize_str_list(getattr(state, 'exit', []))
-    if exit_list:
-        exit_elem = ET.SubElement(elem, "Exit")
-        for a in exit_list:
-            ET.SubElement(exit_elem, "Action", name=str(a))
+    # [v2.7.0] entry / exit / do_actions are List[ActionStep]
+    _action_list_to_subelement(elem, "Entry",
+                               getattr(state, 'entry', []) or [])
+    _action_list_to_subelement(elem, "Exit",
+                               getattr(state, 'exit', []) or [])
+    _action_list_to_subelement(elem, "Do",
+                               getattr(state, 'do_actions', []) or [])
 
     return elem
+
+
+def _action_list_to_subelement(parent, tag: str, actions) -> None:
+    """[v2.7.0] Serialize List[ActionStep] to <Entry>/<Exit>/<Do>.
+
+    Only emits the container when non-empty. ActionStep fields are
+    stored as XML attributes (role_function / condition / action_type
+    / event_name / title). Empty/default values are omitted to keep
+    canonical XML compact.
+    """
+    if not actions:
+        return
+    container = ET.SubElement(parent, tag)
+    for a in actions:
+        attrs = {}
+        role = getattr(a, 'role_function', '') or ''
+        cond = getattr(a, 'condition', '') or ''
+        atype = getattr(a, 'action_type', 'role') or 'role'
+        ename = getattr(a, 'event_name', '') or ''
+        title = getattr(a, 'title', '') or ''
+        # [v2.7.0 backward-compat] Simple role-only actions emit
+        # legacy <Action name="X"/> to keep canonical XML identical
+        # for pre-v2.7 project files.
+        is_simple = (role and not cond and not ename and atype == 'role')
+        if is_simple:
+            attrs['name'] = role
+        else:
+            if role:
+                attrs['role_function'] = role
+            if atype and atype != 'role':
+                attrs['action_type'] = atype
+            if ename:
+                attrs['event_name'] = ename
+            if cond:
+                attrs['condition'] = cond
+        # title is auto-generated; skip to keep XML compact
+        ET.SubElement(container, "Action", **attrs)
 
 
 def _state_from_element(elem: ET.Element) -> State:
@@ -198,30 +231,12 @@ def _state_from_element(elem: ET.Element) -> State:
     that old projects round-trip without data loss, even though the
     GUI does not expose it.
     """
-    entry_list: List[str] = []
-    exit_list: List[str] = []
-
-    entry_elem = elem.find("Entry")
-    if entry_elem is not None:
-        for action_elem in entry_elem.findall("Action"):
-            n = action_elem.get("name", "")
-            if n:
-                entry_list.append(n)
-    else:
-        old_entry = elem.get("entry", "")
-        if old_entry:
-            entry_list = _normalize_str_list(old_entry)
-
-    exit_elem = elem.find("Exit")
-    if exit_elem is not None:
-        for action_elem in exit_elem.findall("Action"):
-            n = action_elem.get("name", "")
-            if n:
-                exit_list.append(n)
-    else:
-        old_exit = elem.get("exit", "")
-        if old_exit:
-            exit_list = _normalize_str_list(old_exit)
+    # [v2.7.0] entry / exit / do_actions as List[ActionStep]
+    entry_list = _actions_from_subelement(
+        elem.find("Entry"), elem.get("entry", ""))
+    exit_list = _actions_from_subelement(
+        elem.find("Exit"), elem.get("exit", ""))
+    do_actions_list = _actions_from_subelement(elem.find("Do"), "")
 
     return State(
         name=elem.get("name", ""),
@@ -229,10 +244,47 @@ def _state_from_element(elem: ET.Element) -> State:
         parent=elem.get("parent") or None,
         entry=entry_list,
         exit=exit_list,
+        do_actions=do_actions_list,
         # [Reserved] preserved through XML I/O for backward compatibility.
         do=elem.get("do", ""),
         description=elem.get("description", ""),
     )
+
+
+def _actions_from_subelement(container, legacy_csv: str) -> List[ActionStep]:
+    """[v2.7.0] Deserialize <Entry>/<Exit>/<Do> to List[ActionStep].
+
+    Supports:
+      1. New format: <Action role_function="..." condition="..."
+                     action_type="..." event_name="..." />
+      2. Legacy format (entry/exit only): <Action name="..." />
+      3. Legacy attribute (entry/exit only): <State entry="A,B" />
+    """
+    result: List[ActionStep] = []
+    if container is not None:
+        for a_elem in container.findall("Action"):
+            # New format uses role_function; legacy uses name
+            role = a_elem.get("role_function", "") or a_elem.get("name", "")
+            cond = a_elem.get("condition", "")
+            atype = a_elem.get("action_type", "role") or "role"
+            ename = a_elem.get("event_name", "")
+            title = a_elem.get("title", "")
+            if not role and not ename:
+                continue
+            result.append(ActionStep(
+                role_function=role,
+                condition=cond,
+                action_type=atype,
+                event_name=ename,
+                title=title,
+            ))
+        return result
+
+    # Legacy: <State entry="A,B" /> — comma-separated
+    if legacy_csv:
+        for name in _split_csv(legacy_csv):
+            result.append(ActionStep(role_function=name))
+    return result
 
 
 def _event_trigger_from_element(elem) -> Optional["EventTrigger"]:

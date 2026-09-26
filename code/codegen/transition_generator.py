@@ -351,6 +351,18 @@ class TransitionGenerator:
     def _role_func_call_bare(self, func_name: str) -> str:
         return self._resolve_role_func_name(func_name)
 
+    def _extract_rf_name(self, action) -> str:
+        """[v2.7.0] Extract role function name from ActionStep or str.
+
+        state.entry / state.exit are List[ActionStep] since v2.7.0,
+        but may still hold plain strings from legacy data.
+        """
+        if action is None:
+            return ""
+        if isinstance(action, str):
+            return action
+        return getattr(action, "role_function", "") or ""
+
     def _role_func_call(self, func_name: str) -> str:
         return self._role_func_call_action(func_name)
 
@@ -363,11 +375,15 @@ class TransitionGenerator:
         state = self._current_state_machine.states.get(state_name)
         if state is None:
             return ''
-        exit_list = ensure_list(getattr(state, 'exit', []))
+        # [v2.7.0] state.exit is List[ActionStep]; extract role_function
+        exit_list = getattr(state, 'exit', []) or []
         if not exit_list:
             return ''
         lines = []
-        for fn in exit_list:
+        for action in exit_list:
+            fn = self._extract_rf_name(action)
+            if not fn:
+                continue
             call = self._role_func_call_action(fn)
             if call.startswith("/*"):
                 continue
@@ -380,11 +396,15 @@ class TransitionGenerator:
         state = self._current_state_machine.states.get(state_name)
         if state is None:
             return ''
-        entry_list = ensure_list(getattr(state, 'entry', []))
+        # [v2.7.0] state.entry is List[ActionStep]; extract role_function
+        entry_list = getattr(state, 'entry', []) or []
         if not entry_list:
             return ''
         lines = []
-        for fn in entry_list:
+        for action in entry_list:
+            fn = self._extract_rf_name(action)
+            if not fn:
+                continue
             call = self._role_func_call_action(fn)
             if call.startswith("/*"):
                 continue

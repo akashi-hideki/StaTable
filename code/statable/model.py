@@ -24,6 +24,8 @@ v3.8     - RoleFunction: added used_global_vars / used_events /
            XML (xml_io.py v3.8); not consumed by the code generator.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, List
@@ -59,6 +61,34 @@ class EventSourceLayer(Enum):
     MIDDLEWARE = "middleware"
 
 
+def _normalize_action_list(value) -> list:
+    """[v2.7.0] Normalize a legacy action list to List[ActionStep].
+
+    Accepts:
+      - None                    -> []
+      - str                     -> [ActionStep(role_function=str)]
+      - list of str             -> [ActionStep(role_function=s) ...]
+      - list of ActionStep      -> as-is
+      - list of dict            -> [ActionStep.from_dict(d) ...]
+    """
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [ActionStep(role_function=value)] if value.strip() else []
+    if isinstance(value, list):
+        result = []
+        for item in value:
+            if isinstance(item, str):
+                if item.strip():
+                    result.append(ActionStep(role_function=item))
+            elif isinstance(item, ActionStep):
+                result.append(item)
+            elif isinstance(item, dict):
+                result.append(ActionStep.from_dict(item))
+        return result
+    return []
+
+
 @dataclass
 class State:
     """State definition.
@@ -79,24 +109,22 @@ class State:
     name: str
     type: StateType = StateType.NORMAL
     parent: Optional[str] = None
-    entry: List[str] = field(default_factory=list)
-    exit: List[str] = field(default_factory=list)
+    # [v2.7.0] List[str] -> List[ActionStep]. Legacy str / list-of-str
+    # values are auto-normalized in __post_init__.
+    entry: List[ActionStep] = field(default_factory=list)
+    exit: List[ActionStep] = field(default_factory=list)
+    # [v2.7.0] do activity: executed every loop while the state is active.
+    do_actions: List[ActionStep] = field(default_factory=list)
     # [Reserved] Not exposed in UI / not used by codegen.
     # Persisted in XML for backward compatibility only.
     do: str = ""
     description: str = ""
 
     def __post_init__(self):
-        # v2.2: defensive normalization
-        if self.entry is None:
-            self.entry = []
-        elif isinstance(self.entry, str):
-            self.entry = [self.entry] if self.entry.strip() else []
-
-        if self.exit is None:
-            self.exit = []
-        elif isinstance(self.exit, str):
-            self.exit = [self.exit] if self.exit.strip() else []
+        # v2.2 + v2.7.0: defensive normalization to List[ActionStep]
+        self.entry = _normalize_action_list(self.entry)
+        self.exit = _normalize_action_list(self.exit)
+        self.do_actions = _normalize_action_list(self.do_actions)
 
 
 @dataclass
@@ -251,10 +279,40 @@ class ActionStep:
     role_function: str = ""
     trigger: str = "before_transitions"
     title: str = ""
+    # [v2.7.0] State action extensions
+    condition: str = ""          # execution condition (C expression)
+    action_type: str = "role"    # "role" | "fire_event" | "custom"
+    event_name: str = ""         # action_type="fire_event"
 
     def __post_init__(self):
         if not self.title:
             self.title = self.role_function or "(untitled action)"
+
+    def to_dict(self) -> dict:
+        """[v2.7.0] Serialize non-empty fields only (order stable)."""
+        d = {}
+        if self.role_function: d["role_function"] = self.role_function
+        if self.trigger and self.trigger != "before_transitions":
+            d["trigger"] = self.trigger
+        if self.title:         d["title"] = self.title
+        if self.condition:     d["condition"] = self.condition
+        if self.action_type and self.action_type != "role":
+            d["action_type"] = self.action_type
+        if self.event_name:    d["event_name"] = self.event_name
+        return d
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "ActionStep":
+        """[v2.7.0] Deserialize; tolerant of legacy `name` attribute."""
+        role = str(d.get("role_function", "") or d.get("name", "") or "")
+        return cls(
+            role_function=role,
+            trigger=str(d.get("trigger", "before_transitions") or "before_transitions"),
+            title=str(d.get("title", "") or ""),
+            condition=str(d.get("condition", "") or ""),
+            action_type=str(d.get("action_type", "role") or "role"),
+            event_name=str(d.get("event_name", "") or ""),
+        )
 
 
 @dataclass(kw_only=True)

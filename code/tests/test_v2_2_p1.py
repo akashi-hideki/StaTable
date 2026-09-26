@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-P1 (Data layer) test suite for StaTable v2.2.
+P1 (Data layer) test suite for StaTable v2.2 / v2.7.0.
 
 Verifies:
-  1. State.entry / exit: List[str]
+  1. State.entry / exit: List[ActionStep]  (v2.7.0: was List[str])
   2. Transition.early_return / label
   3. ActionStep / TransitionRelation classes
   4. StateMachine.cell_actions / cell_relations accessors
@@ -75,6 +75,15 @@ def check(name, condition, msg=""):
     return condition
 
 
+def _names(actions):
+    """[v2.7.0] Extract role_function names from a list of ActionStep.
+
+    Supports both ActionStep instances and plain strings, so that
+    the same helper works in legacy and new comparisons.
+    """
+    return [getattr(a, "role_function", a) for a in actions]
+
+
 # ======================================================================
 # 1. Data model tests
 # ======================================================================
@@ -91,8 +100,11 @@ def test_state_entry_exit_is_list():
     check("default exit is empty", s1.exit == [])
 
     s2 = State(name="Active", entry=["A", "B"], exit=["C"])
-    check("entry stored as list", s2.entry == ["A", "B"])
-    check("exit stored as list", s2.exit == ["C"])
+    # [v2.7.0] entry / exit are List[ActionStep]; compare via _names()
+    check("entry stored as list", _names(s2.entry) == ["A", "B"],
+          f"got {_names(s2.entry)}")
+    check("exit stored as list", _names(s2.exit) == ["C"],
+          f"got {_names(s2.exit)}")
 
 
 def test_transition_early_return_and_label():
@@ -129,6 +141,37 @@ def test_action_step():
           a2.trigger == "after_transitions")
     check("title auto-filled",
           a2.title == "Driver.PreCheck")
+
+
+def test_action_step_v27_extensions():
+    """[v2.7.0] New ActionStep fields: condition / action_type / event_name."""
+    print("\n[3b] ActionStep v2.7.0 extensions")
+    from statable.model import ActionStep
+
+    a1 = ActionStep(role_function="X")
+    check("default condition is empty", a1.condition == "")
+    check("default action_type is 'role'", a1.action_type == "role")
+    check("default event_name is empty", a1.event_name == "")
+
+    a2 = ActionStep(role_function="X", condition="ctx->x > 0")
+    check("condition stored", a2.condition == "ctx->x > 0")
+
+    a3 = ActionStep(action_type="fire_event",
+                    event_name="Driver.TICK")
+    check("action_type=fire_event", a3.action_type == "fire_event")
+    check("event_name stored", a3.event_name == "Driver.TICK")
+
+    # to_dict / from_dict round-trip
+    d = a2.to_dict()
+    check("to_dict has role_function", d.get("role_function") == "X")
+    check("to_dict has condition", d.get("condition") == "ctx->x > 0")
+    a2b = ActionStep.from_dict(d)
+    check("from_dict round-trip role", a2b.role_function == "X")
+    check("from_dict round-trip condition", a2b.condition == "ctx->x > 0")
+
+    # legacy 'name' attribute support
+    a4 = ActionStep.from_dict({"name": "Legacy"})
+    check("from_dict legacy name", a4.role_function == "Legacy")
 
 
 def test_transition_relation():
@@ -306,10 +349,11 @@ def test_xml_roundtrip_new_format():
     # Verify states
     idle = sm2.states.get("Idle")
     check("state entry round-trip",
-          idle is not None and idle.entry == ["EntryA", "EntryB"],
-          f"got {idle.entry if idle else 'None'}")
+          idle is not None and _names(idle.entry) == ["EntryA", "EntryB"],
+          f"got {_names(idle.entry) if idle else 'None'}")
     check("state exit round-trip",
-          idle is not None and idle.exit == ["ExitA"])
+          idle is not None and _names(idle.exit) == ["ExitA"],
+          f"got {_names(idle.exit) if idle else 'None'}")
 
     # Verify transitions
     check("2 transitions loaded",
@@ -389,14 +433,76 @@ def test_backward_compat_old_state_format():
 
     idle = sm.states.get("Idle")
     check("old entry migrated to list",
-          idle is not None and idle.entry == ["Idle_entry"],
-          f"got {idle.entry if idle else 'None'}")
+          idle is not None and _names(idle.entry) == ["Idle_entry"],
+          f"got {_names(idle.entry) if idle else 'None'}")
     check("old exit migrated to list",
-          idle is not None and idle.exit == ["Idle_exit"])
+          idle is not None and _names(idle.exit) == ["Idle_exit"],
+          f"got {_names(idle.exit) if idle else 'None'}")
 
     active = sm.states.get("Active")
     check("old empty entry -> []",
           active is not None and active.entry == [])
+
+
+def test_backward_compat_old_state_format_comma():
+    """[v2.7.0] Legacy 'entry=A,B' attribute splits on commas."""
+    print("\n[8b] Backward compat: legacy entry='A,B' comma split")
+    from statable.xml_io import state_machine_from_element
+
+    old_xml = """<?xml version="1.0"?>
+<StateMachine initial="Idle" layer_name="Driver">
+  <States>
+    <State name="Idle" type="normal" entry="Driver.A,Driver.B" exit="Driver.C" do="" description=""/>
+  </States>
+  <Events/>
+  <RoleFunctions/>
+  <Transitions/>
+</StateMachine>"""
+
+    elem = ET.fromstring(old_xml)
+    sm = state_machine_from_element(elem)
+    idle = sm.states.get("Idle")
+    check("comma-split entry len",
+          idle is not None and len(idle.entry) == 2,
+          f"got {_names(idle.entry) if idle else 'None'}")
+    check("comma-split entry names",
+          idle is not None and _names(idle.entry) == ["Driver.A", "Driver.B"])
+    check("comma-split exit",
+          idle is not None and _names(idle.exit) == ["Driver.C"])
+
+
+def test_backward_compat_old_state_format_legacy_action_tag():
+    """[v2.7.0] Legacy <Entry><Action name='X'/></Entry> is normalized."""
+    print("\n[8c] Backward compat: legacy <Action name='X'/>")
+    from statable.xml_io import state_machine_from_element
+
+    old_xml = """<?xml version="1.0"?>
+<StateMachine initial="Idle" layer_name="Driver">
+  <States>
+    <State name="Idle" type="normal" do="" description="">
+      <Entry>
+        <Action name="Driver.X"/>
+        <Action name="Driver.Y"/>
+      </Entry>
+      <Exit>
+        <Action name="Driver.Z"/>
+      </Exit>
+    </State>
+  </States>
+  <Events/>
+  <RoleFunctions/>
+  <Transitions/>
+</StateMachine>"""
+
+    elem = ET.fromstring(old_xml)
+    sm = state_machine_from_element(elem)
+    idle = sm.states.get("Idle")
+    check("legacy <Action name> entry len",
+          idle is not None and len(idle.entry) == 2)
+    check("legacy <Action name> entry names",
+          idle is not None and _names(idle.entry) == ["Driver.X", "Driver.Y"])
+    check("legacy <Action name> exit names",
+          idle is not None and _names(idle.exit) == ["Driver.Z"])
 
 
 def test_backward_compat_no_early_return():
@@ -628,12 +734,14 @@ def test_realistic_cell_workflow():
 # 8. State defensive normalization
 # ======================================================================
 def test_state_defensive_normalization():
-    print("\n[14] State defensive normalization (str -> List[str])")
+    print("\n[14] State defensive normalization (str -> List[ActionStep])")
     from statable.model import State
 
     s1 = State(name="A", entry="Foo", exit="Bar")
-    check("str entry -> list", s1.entry == ["Foo"], f"got {s1.entry}")
-    check("str exit -> list", s1.exit == ["Bar"], f"got {s1.exit}")
+    check("str entry -> list", _names(s1.entry) == ["Foo"],
+          f"got {_names(s1.entry)}")
+    check("str exit -> list", _names(s1.exit) == ["Bar"],
+          f"got {_names(s1.exit)}")
 
     s2 = State(name="B", entry=None, exit=None)
     check("None entry -> []", s2.entry == [])
@@ -644,8 +752,15 @@ def test_state_defensive_normalization():
     check("empty str exit -> []", s3.exit == [])
 
     s4 = State(name="D", entry=["A", "B"], exit=["C"])
-    check("list entry preserved", s4.entry == ["A", "B"])
-    check("list exit preserved", s4.exit == ["C"])
+    check("list entry preserved", _names(s4.entry) == ["A", "B"],
+          f"got {_names(s4.entry)}")
+    check("list exit preserved", _names(s4.exit) == ["C"],
+          f"got {_names(s4.exit)}")
+
+    # v2.7.0: do_actions
+    s5 = State(name="E", do_actions=["Driver.Poll"])
+    check("do_actions normalized",
+          _names(s5.do_actions) == ["Driver.Poll"])
 
 
 # ======================================================================
@@ -653,12 +768,13 @@ def test_state_defensive_normalization():
 # ======================================================================
 def main():
     print("=" * 70)
-    print("  StaTable v2.2 P1 (Data layer) test suite")
+    print("  StaTable v2.2 P1 (Data layer) test suite  [v2.7.0 updated]")
     print("=" * 70)
 
     test_state_entry_exit_is_list()
     test_transition_early_return_and_label()
     test_action_step()
+    test_action_step_v27_extensions()
     test_transition_relation()
 
     test_statemachine_cell_accessors()
@@ -666,6 +782,8 @@ def main():
 
     test_xml_roundtrip_new_format()
     test_backward_compat_old_state_format()
+    test_backward_compat_old_state_format_comma()
+    test_backward_compat_old_state_format_legacy_action_tag()
     test_backward_compat_no_early_return()
     test_backward_compat_no_cells()
 
