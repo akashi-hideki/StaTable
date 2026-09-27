@@ -441,6 +441,36 @@ or validation failure, please capture:
 These will drive the next iteration of the prompt and validator.
 
 ## Roadmap
+### v2.8.0 — AI Diagnosis Refresh ✅ Released (2026-09-27)
+
+**Status:** Released
+
+Complete refresh of the AI diagnosis workflow in `codegen/validate/`.
+
+**Highlights**
+
+- **Prompt**: XML-tagged structure (10 sections) replacing the legacy
+  `[Task]` / `[Output format]` text. `<context>` now includes
+  role_functions, cells, and global_definitions.
+- **Schema**: `ChangeRequest` extended with `id` / `evidence` /
+  `priority` / `confidence`. Round-trip safe.
+- **Parser**: `<response>...</response>` marker is the primary
+  extraction path. All 17 actions (10 legacy + 7 cell-level) covered.
+- **Validator** (`response_validator.py`, new): schema / params /
+  references checks before application.
+- **GUI**: `ValidationDialog` change list extended to 7 columns
+  (Selection / Action / Parameter / Reason / Priority / Confidence /
+  Status). Excluded rows show `EXCLUDED: <reason>` and are non-checkable.
+- **Tests**: 4 new suites (P1-P4, +311 assertions), all green in CI.
+- **CI**: `.github/workflows/check.yml` registers the 4 new suites.
+
+**⚠️ Operational testing pending**
+
+The AI features are design- and unit-test complete, but end-to-end
+operational testing with a real LLM has not yet been performed.
+Until OT is complete, AI proposals should be treated as review aids
+only. See the `## v2.8.0` section above for details.
+
 
 ### v2.7.0 (Released 2026-09-26)
 
