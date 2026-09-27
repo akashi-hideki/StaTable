@@ -68,19 +68,38 @@ class TimerValidator(BaseValidator):
         return timer_vars
     
     def _check_duplicate_variables(self, context):
+        """[v2.7.2 fix] Skip when the conflicting SystemVariable is group='Timer'.
+
+        The TUTORIAL declares 'g_system_tick' in both:
+          - <SystemVariables> with group="Timer"
+          - <TimerBase variable_name="g_system_tick">
+        This is the intended pattern (timer base names its counter
+        variable, which is also a shared SystemVariable). Only flag:
+          - two timer bases using the same variable_name
+          - timer name conflicting with a non-Timer SystemVariable
+        """
         issues = []
-        existing = set(getattr(v, 'name', '') for v in context.variables)
+        var_groups = {}
+        for v in context.variables:
+            name = getattr(v, 'name', '')
+            group = getattr(v, 'group', '')
+            var_groups[name] = group
         timer_vars = self._get_all_timer_variables(context)
         seen = set()
         for var_name in timer_vars:
             if not var_name:
                 continue
             if var_name in seen:
-                issues.append(self._create_issue('TIMER_DUPLICATE_VARIABLE', name=var_name))
-            elif var_name in existing:
-                issues.append(self._create_issue('TIMER_DUPLICATE_VARIABLE', name=var_name))
-            else:
-                seen.add(var_name)
+                issues.append(self._create_issue(
+                    'TIMER_DUPLICATE_VARIABLE', name=var_name))
+                continue
+            if var_name in var_groups:
+                if var_groups[var_name] == 'Timer':
+                    pass  # expected: shared SystemVariable + TimerBase
+                else:
+                    issues.append(self._create_issue(
+                        'TIMER_DUPLICATE_VARIABLE', name=var_name))
+            seen.add(var_name)
         return issues
     
     def _check_invalid_multiplier(self, context):

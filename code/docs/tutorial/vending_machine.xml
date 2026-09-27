@@ -138,6 +138,7 @@
                 <Transition source="MotorRunning" event="HW_FAULT" condition="" action="" target="HardwareFault" transition_type="external" title="Fault (motor)" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="HardwareFault" event="CLEAR_FAULT" condition="" action="" target="Waiting" transition_type="external" title="Fault cleared" has_else="false" else_target="" early_return="true" label="T1">
                     <PreAction action="Driver.ClearHwFault" />
+                    <PreAction action="Driver.StartCoinReturn" />
                 </Transition>
                 <Transition source="CoinPulse" event="MOTOR_COMPLETE" condition="" action="" target="Waiting" transition_type="external" title="Return from coin pulse" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="ButtonPressed" event="MOTOR_COMPLETE" condition="" action="" target="Waiting" transition_type="external" title="Return from button" has_else="false" else_target="" early_return="true" label="T1" />
@@ -197,7 +198,9 @@
             <Transitions>
                 <Transition source="Waiting" event="PAYMENT_ADD" condition="" action="" target="Accumulating" transition_type="external" title="First coin" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="Accumulating" event="PAYMENT_ADD" condition="" action="" target="Accumulating" transition_type="external" title="More coins" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="Accumulating" event="ITEM_SELECT" condition="ctx-&gt;data.balance &gt;= ctx-&gt;data.price" action="" target="CheckingStock" transition_type="external" title="Enough balance" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Accumulating" event="ITEM_SELECT" condition="ctx-&gt;data.balance &gt;= ctx-&gt;data.price" action="" target="CheckingStock" transition_type="external" title="Enough balance" has_else="false" else_target="" early_return="true" label="T1">
+                    <PreAction action="Middleware.ValidateRequest" />
+                </Transition>
                 <Transition source="Accumulating" event="ITEM_SELECT" condition="ctx-&gt;data.balance &lt; ctx-&gt;data.price" action="" target="Accumulating" transition_type="external" title="Insufficient" has_else="false" else_target="" early_return="false" label="T2" />
                 <Transition source="CheckingStock" event="RELEASE_DONE" condition="RoleFunc_Middleware_CheckStock(transition, ctx) != 0" action="" target="Releasing" transition_type="external" title="Stock available" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="CheckingStock" event="STOCK_EMPTY" condition="" action="" target="MwError" transition_type="external" title="Out of stock" has_else="false" else_target="" early_return="true" label="T1" />

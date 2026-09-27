@@ -76,15 +76,100 @@ class RoleFunctionValidator(BaseValidator):
                 issues.append(self._create_issue('ROLE_FUNC_ARG_MISMATCH', name=name))
         return issues
     
-    def _check_unused_functions(self, context):
-        issues = []
+    def _collect_referenced_names(self, context):
+        """[v2.7.2 fix] Collect every name that references a role function.
+
+        Sources:
+          - Transition.action / .pre_actions / .else_actions
+          - Transition.condition (parsed for RoleFunc_X / NS.Name)
+          - State.entry / exit / do_actions
+          - Cell actions (via state_machine.get_actions_for_cell)
+          - Event.trigger_detail.caller
+        """
+        import re
         used = set()
-        for t in context.transitions:
-            if getattr(t, 'action', ''):
-                used.add(t.action)
-            if getattr(t, 'condition', ''):
-                used.add(t.condition)
-        for name in context.role_functions.keys():
-            if name not in used:
-                issues.append(self._create_issue('ROLE_FUNC_UNUSED', name=name))
+
+        def add(ref):
+            if not ref:
+                return
+            ref = str(ref).strip()
+            if not ref:
+                return
+            used.add(ref)
+            if '.' in ref:
+                used.add(ref.split('.', 1)[1])
+
+        def add_text(text):
+            if not text:
+                return
+            text = str(text)
+            # RoleFunc_<NS>_<Name> pattern
+            for m in re.finditer(r'RoleFunc_(\w+)', text):
+                used.add(m.group(0))
+                used.add(m.group(1))
+            # NS.Name pattern
+            for m in re.finditer(r'([A-Z]\w*)\.([A-Za-z_]\w*)', text):
+                used.add(f"{m.group(1)}.{m.group(2)}")
+                used.add(m.group(2))
+
+        # 1. Transitions
+        for t in getattr(context, 'transitions', []) or []:
+            add(getattr(t, 'action', ''))
+            add_text(getattr(t, 'condition', ''))
+            for a in (getattr(t, 'pre_actions', []) or []):
+                add(a)
+            for a in (getattr(t, 'else_actions', []) or []):
+                add(a)
+
+        # 2. Via state_machine (defensive)
+        sm = (getattr(context, 'state_machine', None)
+              or getattr(context, 'sm', None))
+        if sm is not None:
+            for state in (getattr(sm, 'states', {}) or {}).values():
+                for attr in ('entry', 'exit', 'do_actions'):
+                    for a in (getattr(state, attr, []) or []):
+                        rf = getattr(a, 'role_function', None)
+                        if rf:
+                            add(rf)
+                        elif isinstance(a, str):
+                            add(a)
+            for ev in (getattr(sm, 'events', {}) or {}).values():
+                td = getattr(ev, 'trigger_detail', None)
+                if td is not None:
+                    add(getattr(td, 'caller', ''))
+            try:
+                for key in sm.get_cell_keys():
+                    for a in sm.get_actions_for_cell(*key):
+                        rf = getattr(a, 'role_function', None)
+                        if rf:
+                            add(rf)
+            except Exception:
+                pass
+
+        # 3. Fallback: context.states
+        for state in (getattr(context, 'states', {}) or {}).values():
+            for attr in ('entry', 'exit', 'do_actions'):
+                for a in (getattr(state, attr, []) or []):
+                    rf = getattr(a, 'role_function', None)
+                    if rf:
+                        add(rf)
+                    elif isinstance(a, str):
+                        add(a)
+
+        return used
+
+    def _check_unused_functions(self, context):
+        """[v2.7.2 fix] Match refs via bare / qualified / RoleFunc_ aliases."""
+        issues = []
+        used = self._collect_referenced_names(context)
+        for name, func in context.role_functions.items():
+            aliases = {name}
+            ns = getattr(func, 'namespace', '') or ''
+            if ns:
+                aliases.add(f"{ns}.{name}")
+                aliases.add(f"RoleFunc_{ns}_{name}")
+            aliases.add(f"RoleFunc_{name}")
+            if aliases & used:
+                continue
+            issues.append(self._create_issue('ROLE_FUNC_UNUSED', name=name))
         return issues

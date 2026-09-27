@@ -65,16 +65,61 @@ class VariableValidator(BaseValidator):
         return issues
     
     def _check_invalid_type(self, context):
+        """[v2.7.2 fix] Accept stdint.h types and strip qualifiers.
+
+        Previous behavior:
+          - 'uint32_t' / 'uint8_t' were flagged (only legacy aliases
+            'uint32' / 'uint8' were in the set)
+          - 'volatile uint32_t' was flagged
+        """
         issues = []
-        basic_types = {'int', 'int8', 'int16', 'int32', 'int64',
-                      'uint', 'uint8', 'uint16', 'uint32', 'uint64',
-                      'float', 'double', 'bool', 'char', 'string', 'void'}
-        custom_type_names = {getattr(ct, 'name', '') for ct in context.custom_types}
+        basic_types = {
+            # Plain C
+            'int', 'short', 'long', 'unsigned', 'signed',
+            'float', 'double', 'bool', 'char', 'string', 'void',
+            # stdint.h (C99)
+            'int8_t', 'int16_t', 'int32_t', 'int64_t',
+            'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t',
+            'intptr_t', 'uintptr_t', 'size_t',
+            # Legacy aliases (without _t)
+            'int8', 'int16', 'int32', 'int64',
+            'uint', 'uint8', 'uint16', 'uint32', 'uint64',
+        }
+        qualifiers = {
+            'volatile', 'const', 'static', 'register',
+            'extern', 'inline', 'unsigned', 'signed',
+            'long', 'short',
+        }
+
+        def normalize(t: str) -> str:
+            parts = (t or '').strip().split()
+            base = [p for p in parts if p not in qualifiers]
+            return ' '.join(base) if base else (t or '').strip()
+
+        def strip_extras(t: str) -> str:
+            t = t.rstrip('*').strip()
+            t = t.split('[')[0].strip()
+            return t
+
+        custom_type_names = {
+            getattr(ct, 'name', '') for ct in context.custom_types
+        }
         for var in context.variables:
-            var_type = getattr(var, 'type', '')
+            var_type = getattr(var, 'type', '') or ''
             name = getattr(var, 'name', '')
-            if var_type and var_type not in basic_types and var_type not in custom_type_names:
-                issues.append(self._create_issue('VAR_INVALID_TYPE', name=name, type=var_type))
+            if not var_type:
+                continue
+            normalized = normalize(var_type)
+            candidates = {
+                var_type, normalized,
+                strip_extras(var_type), strip_extras(normalized),
+            }
+            if candidates & basic_types:
+                continue
+            if candidates & custom_type_names:
+                continue
+            issues.append(self._create_issue(
+                'VAR_INVALID_TYPE', name=name, type=var_type))
         return issues
     
     def _check_invalid_array_size(self, context):
