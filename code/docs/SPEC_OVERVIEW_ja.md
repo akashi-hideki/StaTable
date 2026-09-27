@@ -1,10 +1,10 @@
-# `docs/SPEC_OVERVIEW_ja.md` v2.5
+# `docs/SPEC_OVERVIEW_ja.md` v2.7
 
 ```markdown
-# StaTable 全体仕様書 v2.5（日本語、詳細版）
+# StaTable 全体仕様書 v2.7（日本語、詳細版）
 
-Version: 2.5
-Date: 2026-09-22
+Version: 2.7
+Date: 2026-09-27
 Scope: StaTable プロジェクト全体
 Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`、`codegen/`）
 
@@ -64,6 +64,7 @@ Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`�
 | F-14 | セル単位 AI アクション | v2.2：17種の変更アクション（legacy 10 + cell-level 7） |
 | F-15 | 新規プロジェクト | v2.3：サンプルを消去し空の Application 層から開始（Ctrl+N） |
 | F-16 | セル編集中のロール関数管理 | v2.5：ActionEditorDialog 内で Role 関数を新規作成・編集・削除 |
+| F-17 | 状態アクション（Entry / Exit / Do） | v2.7：状態ごとの Entry / Exit / Do アクションを C89 互換のディスパッチテーブルで生成 |
 
 ### 1.4 非機能要件
 
@@ -75,7 +76,7 @@ Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`�
 | I/O | XML（UTF-8）、C ソース（UTF-8） |
 | 依存関係 | PySide6、pycparser（テストのみ） |
 | 生成コード | C99 準拠、`static` 関数を多用 |
-| テスト | 15スイート（`tests/test_v2_2_p*.py` + `tests/test_v2_3_p1.py` + `tests/test_v2_4_p1_merge.py` + `tests/test_v2_5_p1.py`）、651 PASS / 2 SKIP |
+| テスト | 30スイート（`tests/test_v2_*.py`）、1147 PASS / 0 FAIL / 2 SKIP |
 | CI | GitHub Actions、`ubuntu-latest` |
 | MISRA | cppcheck 2.x + MISRA addon（情報提供のみ） |
 
@@ -104,6 +105,8 @@ Prerequisite: ソースツリーが利用可能（`statable/`、`statable_gui/`�
 | `dataModified` | v2.3：`StateMachineTab` の変更通知シグナル |
 | `_find_rf_by_display` | v2.5：`_ActionGroup` のヘルパー。qualified_name から `RoleFunction` オブジェクトを逆引き |
 | `_dump_sm_roles` | v2.5：`_ActionGroup` のデバッグヘルパー。`state_machine.role_functions` の内容をログ出力 |
+| StateActionsDialog | v2.7：状態アクション（Entry / Exit / Do）編集用の 4 タブダイアログ |
+| `do_actions` | v2.7：`State.do_actions: List[ActionStep]`。状態滞在中の毎ループ処理 |
 
 ---
 
@@ -340,9 +343,10 @@ class EventSourceLayer(Enum):
 | `name` | str | – | 状態名 |
 | `type` | StateType | NORMAL | 状態種別 |
 | `parent` | Optional[str] | None | 親状態（階層化用） |
-| `entry` | List[str] | [] | エントリ時アクション（v2.2） |
-| `exit` | List[str] | [] | エグジット時アクション（v2.2） |
-| `do` | str | "" | do アクション |
+| `entry` | List[ActionStep] | [] | エントリ時アクション（v2.7：List[str] → List[ActionStep]） |
+| `exit` | List[ActionStep] | [] | エグジット時アクション（v2.7：同上） |
+| `do_actions` | List[ActionStep] | [] | v2.7：状態滞在中に毎ループ実行する do アクティビティ |
+| `do` | str | "" | [予約] 後方互換用 |
 | `description` | str | "" | 説明 |
 
 **v2.2 変更**：`entry` / `exit` は `List[str]`。旧 `str` / `None` は `__post_init__` で自動正規化。
@@ -362,6 +366,31 @@ class EventSourceLayer(Enum):
 | `data_type` | str | "" | 付随データ型 |
 | `data_name` | str | "" | 付随データ名 |
 | `title` | str | "" | 表示名（未設定時は自動生成） |
+| `trigger` | str | "" | v2.5.4（C-51 Step 2）：発生条件の自由記述（メタデータのみ） |
+| `trigger_detail` | Optional[EventTrigger] | None | v2.6.0（C-51 Step 3）：構造化トリガ。None = 未指定 |
+
+#### 3.2.3.1 `EventTrigger`（v2.6.0 / C-51 Step 3）
+
+`Event.trigger_detail` に付随する構造化トリガ。`type` のみ必須で、他はタイプ別。
+
+| フィールド | 型 | デフォルト | 説明 |
+|-----------|-----|-----------|------|
+| `type` | str | "manual" | manual / edge / polling / timer / call / comparison |
+| `source` | str | "" | ソース（GPIO / タイマ / ロール関数） |
+| `description` | str | "" | 自由記述 |
+| `edge` | str | "" | edge：rising / falling / both |
+| `debounce_ms` | int | 0 | edge：デバウンス (ms) |
+| `period_ms` | int | 0 | polling / timer：周期 (ms) |
+| `auto_reload` | bool | True | timer：自動リロード |
+| `caller` | str | "" | call：呼出元 |
+| `condition` | str | "" | comparison：条件式 |
+| `poll_period_ms` | int | 0 | comparison：ポーリング周期 (ms) |
+
+**XML**：`<Trigger>` 子要素として出力（`trigger_detail is not None` 時のみ）。
+後方互換：`<Trigger>` なしは `trigger_detail=None` で読込。
+
+**GUI**：`event_definition_dialog.py` の `EventEditDialog` が折りたたみ `QGroupBox` を提供。
+`_populate_source_choices()` が `GlobalDefinitions` から候補生成。
 
 #### 3.2.4 `Transition`（v2.2）
 
@@ -391,6 +420,9 @@ class EventSourceLayer(Enum):
 | `role_function` | str | "" | ロール関数の qualified_name |
 | `trigger` | str | "before_transitions" | 実行タイミング（`before_transitions` / `after_transitions`） |
 | `title` | str | "" | 表示名 |
+| `condition` | str | "" | v2.7：実行条件（C 式、空 = 無条件） |
+| `action_type` | str | "role" | v2.7："role" / "fire_event" / "custom" |
+| `event_name` | str | "" | v2.7：action_type="fire_event" 時のイベント名 |
 
 **v2.2.4 変更**：`kw_only=True`。旧 `"always"` はロード時に `"before_transitions"` にマッピング。
 
@@ -614,9 +646,26 @@ v3.1 以降で**オプトイン**機能として提供予定。ただし、上�
           <Exit>
             <Action name="Driver.IdleExit"/>
           </Exit>
+          <Do>
+            <Action role_function="Driver.PollSensor"
+                    condition="ctx->data.sensor_dirty"/>
+            <Action action_type="fire_event"
+                    event_name="Driver.MOTOR_COMPLETE"
+                    condition="RoleFunc_Driver_CheckMotorStatus(NULL, ctx) == 0"/>
+          </Do>
         </State>
       </States>
-      <Events>...</Events>
+      <Events>
+        <Event name="BUTTON_SENSOR" kind="signal" ...>
+          <Trigger type="edge" source="GPIO_BUTTON_1"
+                   edge="falling" debounce_ms="20"
+                   description="Product button edge detection"/>
+        </Event>
+        <Event name="SELECT_ITEM" kind="signal" ...>
+          <Trigger type="manual"
+                   description="Fired by Middleware after validation"/>
+        </Event>
+      </Events>
       <RoleFunctions>
         <RoleFunction name="Init" namespace="Driver" .../>
       </RoleFunctions>
@@ -726,6 +775,7 @@ stateDiagram-v2
 | 21 | `event_queue_dialog.py` | `EventQueueDefsDialog` | イベントキュー編集 |
 | 22 | `symbol_picker.py` | `SymbolPickerWidget` | シンボルピッカー |
 | 23 | `condition_edit_dialog.py` | `ConditionEditDialog` | 条件編集 |
+| 24 | `state_actions_dialog.py` | `StateActionsDialog`, `_ActionListWidget` | v2.7：状態アクション（Entry / Exit / Do）編集 |
 
 ### 4.2 `MainWindow`
 
@@ -819,17 +869,34 @@ self.settings.settings_changed.connect(self.dataModified)
 - セルラベルに複数ターゲット、Commit/Tentative マーカーを表示
 - イベントヘッダに `[Q]` / `[D]` プレフィックス（`QUEUE` / `DOUBLE` 配送）
 
+**v2.7 追加**：
+- **横ヘッダ（状態名）ダブルクリック** → `StateActionsDialog` 起動（`open_state_actions_for_header`）
+- セルダブルクリックは従来どおり `ActionEditorDialog`（遷移編集）を起動
+- `horizontalHeader().sectionDoubleClicked` シグナルに接続
+
 **シグナル**：
 - `transition_changed = Signal()`：遷移編集確定時に発火（`open_transition_dialog` と `keyPressEvent` の2箇所）
 
-### 4.6 `SettingsPanel`（v2.2）
+### 4.6 `SettingsPanel`（v2.7）
 
 | タブ名 | 列 |
 |--------|-----|
-| `State list` | Name / Description / entry function / exit function / do function / Type |
-| `Role function` | Title / Function name / **Namespace** / Description / Return type / Arg 1 type / Arg 1 name / Arg 2 type / Arg 2 name |
+| `State list` | Name / Description / Type（**3列**、v2.7） |
+| `Role function` | Title / Function name / **Namespace** / Description（**4列**、v2.4） |
 
-`State.entry` と `State.exit` は `List[str]`。UI は `"; "` で結合・分割。
+**v2.7 変更**：
+- `State list`：**5列 → 3列**。`entry function` / `exit function` 列を削除。
+  entry / exit は **StateActionsDialog 経由でのみ編集**（Name 列ダブルクリックで起動）。
+- `State.entry` / `State.exit` は `List[ActionStep]`（v2.7）。UI 表示は `"; "` 結合。
+- **v2.4 変更**：`Role function` の予約フィールド列（Return type / Arg 1-2）を削除（4列）。
+  Namespace は inline combo box（`layer_names_provider` で全タブ名を候補に）。
+
+**起動導線（v2.7）**：
+- **Name 列ダブルクリック** → `StateActionsDialog`
+- Description / Type 列 → インライン編集（従来どおり）
+
+**シグナル**：
+- `settings_changed = Signal()`：状態/ロール関数テーブルの編集確定時に発火（`_emit_settings_changed`、`on_state_table_cell_double_clicked`、`delete_state`、`add_role_function`、`delete_role_function` から emit）
 
 **シグナル**：
 - `settings_changed = Signal()`：状態/ロール関数テーブルの編集確定時に発火（`_emit_settings_changed`、`on_state_table_cell_double_clicked`、`delete_state`、`add_role_function`、`delete_role_function` から emit）
@@ -853,6 +920,45 @@ self.settings.settings_changed.connect(self.dataModified)
 - Output settings（出力先、フォルダ構成、スーパーinclude、マージ）
 
 **注意**：`generation_style` と `table_type` は **強制的に** `table_driven` / `array` に設定（v2.2 C-01/C-02/C-03/C-04）。
+
+### 4.9 `StateActionsDialog`（v2.7 新規）
+
+**ファイル**：`statable_gui/state_actions_dialog.py`
+
+状態アクション（Entry / Exit / Do）編集用の 4 タブダイアログ。
+
+**タブ構成**：
+
+| # | タブ | 内容 |
+|---|------|------|
+| 1 | Entry | 状態に入った瞬間のアクション |
+| 2 | Exit | 状態から出る瞬間のアクション |
+| 3 | Do | 状態滞在中の毎ループアクション |
+| 4 | Preview | 生成コードプレビュー |
+
+**起動導線**：
+- `MatrixTableWidget` の **横ヘッダ（状態名）ダブルクリック**
+- `SettingsPanel` の **State list Name 列ダブルクリック**
+
+**内部クラス `_ActionListWidget`**：
+- 列：Type / Target / Condition
+- `Type`: `role` または `fire_event`
+- `Target`: RoleFunc 名 または イベント名
+- `Condition`: C 式（空 = 無条件）
+- `set_actions` / `get_actions` で `List[ActionStep]` と相互変換
+
+**OK 時の動作**：
+- `State.entry` / `State.exit` / `State.do_actions` を更新
+- 空 Target の行は破棄
+
+**Preview の生成コード**：
+- `RoleFunc_...` 呼び出し：`(void)RoleFunc_<NS>_<Name>(NULL, ctx);`
+- `fire_event`：`FIRE_EVENT_<Layer>(ctx, EVENT_<Layer>_<EVT>);`
+
+### 4.10 `StateMachineTab` の Entry / Exit / Do 統合
+
+（本セクションは §4.3 の v2.7 補足。`SettingsPanel` と `MatrixTableWidget` が
+それぞれ `StateActionsDialog` を起動する導線を提供。）
 
 ---
 
@@ -951,6 +1057,9 @@ self.settings.settings_changed.connect(self.dataModified)
 
 ### 6.2 `ActionEditorDialog`（v2.5：5タブ + ロール関数管理）
 
+**v2.7 変更**：本ダイアログは **セル（状態×イベント）ダブルクリック** からのみ起動。
+状態名のダブルクリックは `StateActionsDialog`（§4.9）を起動するようになった。
+
 | タブ | 内容 | v2.5 追加ボタン |
 |------|------|----------------|
 | Transitions | `TransitionsTab` | `+ New Role Function` |
@@ -1009,8 +1118,13 @@ self.settings.settings_changed.connect(self.dataModified)
 | 15 | `config.py` | `CodeGenerationConfig` / `ConfigManager` | – |
 | 16 | `sample_data.py` | 生成用デモデータ | – |
 | 17 | `validate/` | 検証サブシステム（§7.5 参照） | v2.2 |
+| 18 | `state_actions_generator.py` | 状態アクション（Entry / Exit / Do）の C89 互換テーブル生成 | v2.7 |
 
-### 7.2 出力ファイル（14）
+### 7.2 出力ファイル
+
+**単層プロジェクト：16 ファイル、3層プロジェクト：30 ファイル。**
+
+v2.7 で `<Layer>/statable_state_actions_<Layer>.h/.c` が追加された（層ごと +2）。
 
 | # | ファイル | 種別 | 用途 |
 |---|---------|------|------|
@@ -1291,7 +1405,7 @@ python tools/analyze_misra_impact.py \
 
 ## 11. テスト方針
 
-### 11.1 テストスイート（15）
+### 11.1 テストスイート（30）
 
 | ファイル | 対象 | 期待結果 |
 |---------|------|---------|
@@ -1310,8 +1424,17 @@ python tools/analyze_misra_impact.py \
 | `test_v2_3_p1.py` | 新規プロジェクト（v2.3） | 14 PASS / 0 FAIL |
 | `test_v2_4_p1_merge.py` | コードマージ（v2.4.1） | 25 PASS / 0 FAIL |
 | `test_v2_5_p1.py` | ActionEditorDialog ロール関数管理（v2.5） | 75 PASS / 0 FAIL |
+| `test_v2_5_p2.py` | C-50 解消（namespace 前方一致）（v2.5.1） | 16 PASS / 0 FAIL |
+| `test_v2_5_p3.py` | (void) 抑制のユーザー領域移動（v2.5.2） | 25 PASS / 0 FAIL |
+| `test_v2_5_p8.py` | ARM link 検証（R-13B） | 11 PASS / 0 FAIL |
+| `test_v2_6_p1.py` | EventTrigger（C-51 Step 3） | 62 PASS / 0 FAIL |
+| `test_v2_6_p2.py` | GUI Trigger セクション | 35 PASS / 0 FAIL |
+| `test_v2_6_p3.py` | GUI 統合（v2.6.0） | 50 assertions PASS |
+| `test_v2_7_p3.py` | 状態アクション codegen（v2.7.0） | 81 PASS / 0 FAIL |
+| `test_v2_7_p4.py` | GUI シグナル配線（v2.7.1） | 52 PASS / 0 FAIL |
+| `test_readme_consistency.py` | README 整合性（v2.7.1） | 31 PASS / 0 FAIL |
 
-**合計**：**651 PASS / 0 FAIL / 2 SKIP**
+**合計**：**1147 PASS / 0 FAIL / 2 SKIP**（30スイート）
 
 ### 11.2 `test_v2_2_p2.py` 更新履歴
 
@@ -1459,6 +1582,8 @@ UI には **qualified_name**（`namespace.name`）を表示します。v2.5 実�
 | C-49 | XML の `Tab name` / `layer_name` / `RoleFunction.namespace` が不一致の場合、Namespace コンボに複数候補が出る | **データ起因** | 例：`Tab name="Application"` で `namespace="App"` の場合、両方が候補に。正しい XML なら発生しない（§3.2.7 / C-11 参照） |
 | C-50 | RoleFunction の namespace は layer_name と「完全一致 or 3文字以上の前方一致」または呼び出し元層から呼ばれていること | **v2.5.1 で解消** | `role_function_generator` の `_should_declare_here` / `_should_emit_implementation` が `namespace == layer_name` または `layer_name.startswith(namespace)` / `namespace.startswith(layer_name)`（min 3 文字）を要求。不一致の場合、宣言が欠落し `implicit declaration` エラー。呼び出し側（`transition_generator._generate_role_func_call`）は namespace をそのまま使うため非対称 （v2.5 TUTORIAL 作成時に発見、`App` ↔ `Application` は可、`Vending` ↔ `Application` は不可） |
 | C-51 | イベントの「発生条件」を XML で定義できない | **✅ Step 2/3 実装済み（v2.5.4 / v2.6.0）** | Step 2: `Event.trigger` 自由記述フィールドを追加。Step 3: `EventTrigger` dataclass と `<Trigger>` 子要素で構造化（type: manual/edge/polling/timer/call/comparison）。GUI は折りたたみセクションで Source を候補選択。後方互換（`<Trigger>` なしは `None`）。→ ISSUES_v2_5.md 候補7 |
+| C-56 | 定常処理（UML do アクティビティ）の XML 表現 | **✅ 実装済み（v2.7.0）** | `State.do_actions: List[ActionStep]` と `<Do>` 子要素で状態滞在中の毎ループ処理を表現。`{project}_run.c` のループ先頭で `<Layer>_Do(...)` を呼ぶ。C89 互換の順序指定テーブル。GUI は StateActionsDialog の Do タブで編集 |
+| C-57 | 状態アクション（Entry / Exit / Do）の GUI 編集 | **✅ 実装済み（v2.7.0）** | `StateActionsDialog`（4タブ：Entry / Exit / Do / Preview）。マトリクス横ヘッダ or SettingsPanel Name 列ダブルクリックで起動。SettingsPanel State list を 5列→3列に簡素化。FIRE_EVENT_<Layer>(ctx, EVENT_...) 形式で発火 |
 | C-52 | EventQueue 基盤が未統合 | **✅ 実装済み（v2.5.4）** | `SystemContext_t` に層別 `EventQueueState_t queue_<Layer>` を追加。`FIRE_EVENT_QUEUE_<Layer>` / `INIT_EVENT_QUEUE_<Layer>` マクロ、`SystemContext_InitQueues()`、`GetNextEvent_<Layer>` のキュー排出を実装。C-54 で ISR 安全性を強化 |
 | C-53 | 層間 Event ID 衝突の可能性 | **✅ 解決（v2.5.4 / C-52）** | 層別キュー `queue_<Layer>` を導入。`delivery_type="queue"` イベントは層別バッファで衝突しない。`delivery_type="direct"` の `pending_event` は依然共有だが、QUEUE 配送を推奨。C-54 で ISR 競合対策も実施 |
 | C-54 | ISR コンテキストでのキュー競合と API 選択 | **✅ 実装済み（v2.5.5、F-2/F-3 は v2.5.6 で完全解決）** | F-1: `count` の read-modify-write 競合 → `STATABLE_ENTER/EXIT_CRITICAL` フックで保護。F-2: `FIRE_EVENT` の層誤配送 → v2.5.5 では `FIRE_EVENT_QUEUE_<Layer>` を推奨 API として文書化、v2.5.6 で層別 `pending_event_<Layer>` に移行し完全解決（C-55）。F-4: サイレントドロップ → `EventQueueState_t.dropped` カウンタで可視化 |
@@ -1680,6 +1805,20 @@ StaTable/
 
 | バージョン | 日付 | 内容 |
 |-----------|------|------|
+| 2.7.1 | 2026-09-27 | FIRE_EVENT 呼び出し修正： |
+| | | - `FIRE_EVENT_<Layer>(ctx, EVENT_<Layer>_<EVT>)` 形式に修正（旧：引数不足 + enum 名不正） |
+| | | - TUTORIAL XML に Do アクション例（fire_event / condition）追加 |
+| | | - `test_readme_consistency.py` 追加（README 整合性テスト） |
+| | | - `test_v2_5_p8.py` の encoding 修正（flaky 解消） |
+| 2.7.0 | 2026-09-26 | 状態アクション（Entry / Exit / Do）： |
+| | | - `ActionStep` 拡張：condition / action_type / event_name（Phase 1） |
+| | | - `State.do_actions: List[ActionStep]` 新規、entry/exit を List[ActionStep] 化（Phase 1） |
+| | | - `<Do>` / `<Entry>` / `<Exit>` XML I/O、後方互換（Phase 2） |
+| | | - `state_actions_generator.py` 新規、C89 互換順序指定テーブル（Phase 3） |
+| | | - `{project}_run.c` で `<Layer>_Do(...)` 呼び出し（Phase 3） |
+| | | - `StateMachine_Process_<Layer>` で Entry/Exit 呼び出し（Phase 3d） |
+| | | - `StateActionsDialog`（4タブ）新規、SettingsPanel 3列化、マトリクスヘッダ起動（Phase 4） |
+| | | - `SPEC_STATE_ACTIONS_v1.md` 追加 |
 | 2.6.0 | 2026-09-25 | C-51 Step 3（構造化 `<Trigger>`）： |
 | | | - §12：C-51 を Step 3 完了に更新 |
 | | | - `EventTrigger` dataclass（type: manual/edge/polling/timer/call/comparison）追加 |
