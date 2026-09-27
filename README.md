@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-1168%20PASS-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-1479%20PASS-green.svg)]()
 [![MISRA](https://img.shields.io/badge/MISRA-C%3A2012-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
@@ -29,7 +29,7 @@ custom tooling from scratch.
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **31 test suites, 1168 PASS / 0 FAIL / 2 SKIP**
+- ✅ **35 test suites, 1479 PASS / 0 FAIL / 2 SKIP**
 
 ### v2.7 Highlights
 
@@ -83,7 +83,7 @@ diagrams, and generate production-ready C code with a single click.*
 | **Ubuntu 22.04+** | ⚠️ **Auto tests pass on CI** | GUI not yet manually verified — feedback welcome |
 | **macOS** | ⚠️ **Not tested** | Community testing welcome |
 
-**Note for Linux users**: The automated test suite (31 suites, 1168 tests)
+**Note for Linux users**: The automated test suite (35 suites, 1168 tests)
 passes on Ubuntu via GitHub Actions, but the GUI has only been manually
 verified on Windows. If you try it on Linux, please report your experience
 via [GitHub Issues](https://github.com/akashi-hideki/StaTable/issues).
@@ -128,7 +128,7 @@ python tests/test_v2_2_p1.py
 python tests/test_v2_7_p4.py
 ```
 
-Expected: **1168 PASS / 0 FAIL / 2 SKIP** across 31 suites.
+Expected: **1479 PASS / 0 FAIL / 2 SKIP** across 35 suites.
 
 ---
 
@@ -364,6 +364,82 @@ The queue-based API (`FIRE_EVENT_QUEUE_<Layer>`) is unchanged.
 
 ---
 
+## v2.8.0 — AI Diagnosis Refresh (design + unit-test complete, operational testing pending)
+
+### Summary
+
+The AI diagnosis workflow in `codegen/validate/` has been substantially
+rewritten. The old `[Task]` / `[Output format]` prompt has been replaced
+by a full XML-tagged specification (`SPEC_AI_PROMPT_v1.1`) with a
+matching response schema, a stricter parser, and a new validation layer
+between parsing and application.
+
+### What changed
+
+| Area | Before | After |
+|------|--------|-------|
+| Prompt structure | Flat `[Task]` text | 10 XML sections (`<system>`, `<workflow>`, `<task>`, `<output_schema>`, `<examples>`, `<constraints>`, `<context>`, `<validation>`, `<actions>`, `<response_format>`) |
+| Context sent to AI | States / events / transitions only | + role_functions / cells / global_definitions, full ActionStep detail, EventTrigger |
+| Output schema | Undefined | `version` / `summary` / `changes[]` with `id` / `evidence` / `priority` / `confidence` |
+| Response extraction | Fragile brace matching | `<response>...</response>` marker first, `<json>...` legacy fallback |
+| Action coverage | 10 legacy actions | All 17 actions (10 legacy + 7 cell-level) |
+| Pre-apply validation | None | `ResponseValidator` (schema / params / references) |
+| GUI change list | 4 columns | 7 columns (Selection / Action / Parameter / Reason / Priority / Confidence / Status), excluded rows shown as `EXCLUDED: <reason>` |
+
+### New / updated files
+
+| File | Status |
+|------|--------|
+| `codegen/validate/data/prompt_templates.py` | Rewritten |
+| `codegen/validate/prompt_generator.py` | Rewritten (`_format_data`, `_format_validation`, `_format_actions` extended) |
+| `codegen/validate/change_actions.py` | `ChangeRequest` extended (id / evidence / priority / confidence) |
+| `codegen/validate/response_parser.py` | `<response>` marker priority, 17-action mapping |
+| `codegen/validate/response_validator.py` | **New** |
+| `codegen/validate/validation_dialog.py` | ResponseValidator integration, 7-column change tree |
+| `tests/test_v2_8_p1_ai_prompt.py` | **New** (123 assertions) |
+| `tests/test_v2_8_p2_response_parser.py` | **New** (106 assertions) |
+| `tests/test_v2_8_p3_response_validator.py` | **New** (56 assertions) |
+| `tests/test_v2_8_p4_gui_integration.py` | **New** (26 assertions) |
+| `docs/SPEC_AI_PROMPT_v1.md` | **New** (v1.1, design spec) |
+| `tools/gui_smoke_v2_8.py` | **New** (headless GUI smoke test) |
+
+### Test status
+
+| Suite | Result |
+|-------|:------:|
+| `test_v2_8_p1_ai_prompt.py` | 123 assertions |
+| `test_v2_8_p2_response_parser.py` | 106 assertions |
+| `test_v2_8_p3_response_validator.py` | 56 assertions |
+| `test_v2_8_p4_gui_integration.py` | 26 assertions |
+| Regression `test_v2_2_p12_6.py` | 55 assertions |
+
+### ⚠️ Operational testing status of the AI features
+
+The AI diagnosis workflow has been **designed, implemented, and
+unit-tested**, but **end-to-end operational testing with a real
+LLM is still pending**. In particular:
+
+- The prompt has not yet been validated against a wide variety of
+  LLM providers / models in real sessions.
+- The `evidence` / `priority` / `confidence` fields are advisory;
+  they have not been calibrated against measured outcomes.
+- The GUI change-list integration is unit-tested but has not been
+  exercised in a sustained multi-user workflow.
+- The few-shot examples shipped in `prompt_templates.py` reflect
+  the intended response shape but have not been tuned on
+  production-scale designs.
+
+Until operational testing is complete, **AI proposals should be
+treated as review aids only** and every proposed change should be
+examined by a human before applying it. If you observe a parsing
+or validation failure, please capture:
+
+- the raw AI reply,
+- the entries shown in the `Change list / apply` tab,
+- the log lines from `logs/validate_*.log`.
+
+These will drive the next iteration of the prompt and validator.
+
 ## Roadmap
 
 ### v2.7.0 (Released 2026-09-26)
@@ -521,7 +597,7 @@ python tests/test_v2_3_p1.py
 # ...
 ```
 
-All 31 suites should pass (1168 PASS / 2 SKIP).
+All 35 suites should pass (1479 PASS / 2 SKIP).
 
 ---
 

@@ -12,7 +12,7 @@ Change action definitions.
 
 from enum import Enum
 from dataclasses import dataclass, field
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 
 class ChangeActionType(Enum):
@@ -50,22 +50,39 @@ class ChangeRequest:
     params: Dict[str, Any] = field(default_factory=dict)
     reason: str = ""
     source: str = "ai"
+    # [v2.8.0 Phase B] extended fields
+    id: str = ""
+    evidence: List[str] = field(default_factory=list)
+    priority: str = "medium"
+    confidence: float = 1.0
 
     def to_dict(self) -> Dict:
         return {
+            'id': self.id,
             'action': self.action.value,
             'params': self.params,
             'reason': self.reason,
             'source': self.source,
+            'evidence': list(self.evidence),
+            'priority': self.priority,
+            'confidence': self.confidence,
         }
 
     @classmethod
     def from_dict(cls, data: Dict) -> 'ChangeRequest':
+        try:
+            confidence = float(data.get('confidence', 1.0))
+        except (TypeError, ValueError):
+            confidence = 1.0
         return cls(
             action=ChangeActionType(data['action']),
             params=data.get('params', {}),
             reason=data.get('reason', ''),
             source=data.get('source', 'ai'),
+            id=str(data.get('id', '') or ''),
+            evidence=list(data.get('evidence', []) or []),
+            priority=str(data.get('priority', 'medium') or 'medium'),
+            confidence=confidence,
         )
 
     def __str__(self) -> str:

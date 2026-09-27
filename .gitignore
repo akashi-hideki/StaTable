@@ -76,3 +76,27 @@ code/tools/git_ops.txt
 
 # Local MISRA reports
 code/misra_report_*/
+
+# Backups (project-wide, v2.8)
+# -------------------------------------------------------------------
+*.bak
+*.bak2
+*.bak3
+*.bak_*
+*.bak-*
+*.repair.bak
+*.legacy*.bak
+*.legacy_*.bak
+*.v2*bak
+*.v27*bak
+*.v28*bak
+
+# -------------------------------------------------------------------
+# Runtime artifacts (not part of the source tree)
+# -------------------------------------------------------------------
+code/logs/
+code/output/
+code/output_vending/
+code/misra_report/
+code/misra_report_vending/
+code/verify_report/

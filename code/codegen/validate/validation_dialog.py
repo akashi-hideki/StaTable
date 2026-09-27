@@ -22,6 +22,7 @@ from .prompt_generator import AIPromptGenerator
 from .response_parser import AIResponseParser
 from .change_applier import ChangeApplier
 from .clipboard_manager import ClipboardManager
+from .response_validator import ResponseValidator
 from .models import ValidationResult
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -38,9 +39,11 @@ class ValidationDialog(QDialog):
         self.validator = CodeGenerationValidator()
         self.prompt_generator = AIPromptGenerator()
         self.response_parser = AIResponseParser()
+        self.response_validator = ResponseValidator()
         self.clipboard = ClipboardManager()
         self.validation_result = None
         self.parsed_changes = []
+        self.validation_outcome = None
         
         self.setWindowTitle("Pre-generation validation / AI diagnosis")
         self.setMinimumSize(900, 700)
@@ -158,11 +161,17 @@ class ValidationDialog(QDialog):
         
         # Change list
         self.change_tree = QTreeWidget()
-        self.change_tree.setHeaderLabels(["Selection", "Action", "Parameter", "Reason"])
+        self.change_tree.setHeaderLabels([
+            "Selection", "Action", "Parameter", "Reason",
+            "Priority", "Confidence", "Status",
+        ])
         self.change_tree.setColumnWidth(0, 50)
         self.change_tree.setColumnWidth(1, 150)
         self.change_tree.setColumnWidth(2, 400)
         self.change_tree.setColumnWidth(3, 250)
+        self.change_tree.setColumnWidth(4, 80)
+        self.change_tree.setColumnWidth(5, 80)
+        self.change_tree.setColumnWidth(6, 240)
         layout.addWidget(self.change_tree)
         
         # Apply button
@@ -237,9 +246,13 @@ class ValidationDialog(QDialog):
             QMessageBox.warning(self, "Warning", "AI answer is empty.")
             return
         
-        self.parsed_changes = self.response_parser.parse(text)
+        parsed = self.response_parser.parse(text)
+        self.validation_outcome = self.response_validator.validate(
+            parsed, self.sm, self.gd)
+        outcome = self.validation_outcome
+        self.parsed_changes = list(outcome.valid_requests)
         
-        # Show change list
+        # Show change list (valid requests only)
         self.change_tree.clear()
         for change in self.parsed_changes:
             item = QTreeWidgetItem()
@@ -248,13 +261,37 @@ class ValidationDialog(QDialog):
             item.setText(1, change.action.value)
             item.setText(2, json.dumps(change.params, ensure_ascii=False))
             item.setText(3, change.reason)
+            item.setText(4, change.priority)
+            item.setText(5, f"{change.confidence:.2f}")
+            item.setText(6, "OK")
+            self.change_tree.addTopLevelItem(item)
+        
+        # Append invalid requests as unchecked, disabled rows
+        for req, reason in outcome.invalid_requests:
+            item = QTreeWidgetItem()
+            # Non-checkable, non-selectable: an excluded
+            # proposal must not participate in 'apply selected'.
+            item.setFlags(Qt.ItemIsEnabled)
+            item.setText(0, "")
+            item.setText(1, req.action.value)
+            item.setText(2, json.dumps(req.params, ensure_ascii=False))
+            item.setText(3, req.reason)
+            item.setText(4, req.priority)
+            item.setText(5, f"{req.confidence:.2f}")
+            item.setText(6, f"EXCLUDED: {reason}")
             self.change_tree.addTopLevelItem(item)
         
         # Switch the tab to the change list
         self.tab_widget.setCurrentIndex(3)
         
-        QMessageBox.information(self, "Parse complete",
-            f"{len(self.parsed_changes)} change(s) extracted.")
+        n_ok = len(outcome.valid_requests)
+        n_ng = len(outcome.invalid_requests)
+        msg = f"Parsed {len(parsed)} change(s).\n"
+        msg += f"Valid: {n_ok}   Excluded: {n_ng}\n"
+        if outcome.warnings:
+            msg += "\nWarnings:\n" + "\n".join(
+                f"  * {w}" for w in outcome.warnings)
+        QMessageBox.information(self, "Parse complete", msg)
     
     def _apply_changes(self):
         """Apply selected changes"""

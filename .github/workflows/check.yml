@@ -130,6 +130,13 @@ jobs:
           python tests/test_v2_7_p4.py
           python tests/test_v2_7_p5_validation.py
 
+      - name: Run v2.8 test suites
+        run: |
+          python tests/test_v2_8_p1_ai_prompt.py
+          python tests/test_v2_8_p2_response_parser.py
+          python tests/test_v2_8_p3_response_validator.py
+          python tests/test_v2_8_p4_gui_integration.py
+
       - name: Run README consistency test
         run: |
           python tests/test_readme_consistency.py
