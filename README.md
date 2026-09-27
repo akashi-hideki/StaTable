@@ -10,6 +10,30 @@
 
 ---
 
+## What's New in v2.8.0
+
+> **AI Diagnosis Refresh** — Released 2026-09-27
+> See the [full release notes](https://github.com/akashi-hideki/StaTable/releases/tag/v2.8.0).
+
+The AI diagnosis workflow in `codegen/validate/` has been completely
+rewritten for reliability and transparency.
+
+| Area | Before | After |
+|------|--------|-------|
+| **Prompt** | Flat `[Task]` text | 10 XML sections, full `<context>` (role_functions / cells / global_definitions) |
+| **Response** | Undefined schema | `id` / `evidence` / `priority` / `confidence` fields |
+| **Parser** | Fragile brace matching | `<response>...</response>` marker, all **17 actions** |
+| **Validation** | None | `ResponseValidator` — schema / params / references checked **before** applying |
+| **GUI** | 4-column list | **7-column** list with Priority, Confidence, Status; excluded rows clearly marked |
+
+**Test status:** 4 new suites (+311 assertions), CI green.
+
+**⚠️ Operational testing pending.** The AI features are design- and
+unit-test complete, but end-to-end testing with a real LLM has not
+been performed yet. AI proposals should be treated as review aids
+only until OT completes. See the [v2.8.0 section](#v280--ai-diagnosis-refresh-design--unit-test-complete-operational-testing-pending)
+below for details.
+
 ## Why StaTable?
 
 Most open-source state machine tools ignore **MISRA C:2012** compliance,
