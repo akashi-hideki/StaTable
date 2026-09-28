@@ -8,6 +8,8 @@ StaTable code generation layer
     so it is not re-exported at top level (to reduce startup time)
 """
 
+__version__ = "3.0.0"
+
 __all__ = [
     'CCodeGenerator',
     'CodeGenerationConfig',
