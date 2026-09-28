@@ -14,6 +14,10 @@ from .response_parser import AIResponseParser
 from .change_actions import ChangeRequest, ChangeActionType
 from .change_applier import ChangeApplier
 from .clipboard_manager import ClipboardManager
+from .response_validator import (
+    ResponseValidator,
+    ResponseValidationResult,
+)
 
 __all__ = [
     'logger',
@@ -29,4 +33,6 @@ __all__ = [
     'ChangeActionType',
     'ChangeApplier',
     'ClipboardManager',
+    'ResponseValidator',
+    'ResponseValidationResult',
 ]

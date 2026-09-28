@@ -14,6 +14,8 @@ __all__ = [
     'CCodeGenerator',
     'CodeGenerationConfig',
     'ConfigManager',
+    'validate',
+    '__version__',
 ]
 
 
@@ -28,6 +30,9 @@ def __getattr__(name):
     if name == 'ConfigManager':
         from .config import ConfigManager
         return ConfigManager
+    if name == 'validate':
+        import importlib
+        return importlib.import_module('.validate', __name__)
     raise AttributeError(
         f"module 'codegen' has no attribute {name!r}"
     )

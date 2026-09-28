@@ -66,4 +66,6 @@ __all__ = [
     'EventQueueDef',
     'CustomTypeDef',
     'StructMemberDef',
+    # version
+    '__version__',
 ]
