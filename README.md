@@ -329,6 +329,7 @@ StaTable's architecture is modular and can be integrated as a library.
 
 - Python API for code generation
 - Customizable templates
+- **Eclipse External Tools integration** ([guide](code/docs/ECLIPSE_INTEGRATION_ja.md))
 - **Commercial / OEM licenses available** (see Contact)
 
 ### Automotive / Industrial / Medical
@@ -353,6 +354,7 @@ Where MISRA C:2012 compliance is non-negotiable.
 | [SPEC_STATE_ACTIONS_v1.md](code/docs/SPEC_STATE_ACTIONS_v1.md) | English | **v2.7** State actions (Entry/Exit/Do) specification |
 | [OSAL_PORTING_GUIDE_ja.md](code/docs/OSAL_PORTING_GUIDE_ja.md) | 日本語 | OSAL 移植ガイド（R-14） |
 | [IMPLEMENTATION_PLAN_v2_3.md](code/docs/IMPLEMENTATION_PLAN_v2_3.md) | English | v2.3 implementation plan |
+| [ECLIPSE_INTEGRATION_ja.md](code/docs/ECLIPSE_INTEGRATION_ja.md) | 日本語 | Eclipse External Tools 連携ガイド |
 
 ---
 
