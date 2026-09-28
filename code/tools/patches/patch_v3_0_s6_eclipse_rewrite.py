@@ -1,4 +1,25 @@
-# Eclipse External Tools 連携ガイド
+﻿# code/tools/patches/patch_v3_0_s6_eclipse_rewrite.py
+r"""
+v3.0 fix: rewrite Eclipse guide with correct paths.
+
+- Method A (recommended): python -m statable.cli (PATH-independent)
+- Method B: statable-cli.exe (user-install path %APPDATA%)
+
+Usage:
+    cd code
+    python tools\patches\patch_v3_0_s6_eclipse_rewrite.py
+    python tools\patches\patch_v3_0_s6_eclipse_rewrite.py --apply
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+CODE = Path(__file__).resolve().parent.parent.parent
+TARGET = CODE / "docs" / "ECLIPSE_INTEGRATION_ja.md"
+
+GUIDE = r"""# Eclipse External Tools 連携ガイド
 
 Eclipse IDE の **External Tools** 機能から StaTable の CLI を呼び出し、
 GUI を起動せずに設計 XML から C コードを生成する手順です。
@@ -131,3 +152,46 @@ PATH が通っている、またはフルパス指定で使う場合の方法で
 |------|----|------|
 | 2026-09-29 | 1.0 | 初版（v3.0 Phase S-5） |
 | 2026-09-29 | 1.1 | 方法 A/B を実環境に合わせて修正、PATH 非依存化 |
+"""
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--apply", action="store_true")
+    args = parser.parse_args(argv)
+
+    mode = "APPLY" if args.apply else "DRY-RUN"
+    print("=" * 70)
+    print(f"  patch_v3_0_s6_eclipse_rewrite  [{mode}]")
+    print("=" * 70)
+
+    if TARGET.exists():
+        old = TARGET.read_text(encoding="utf-8")
+        if "python -m statable.cli generate" in old and \
+           "%APPDATA%" in old:
+            print("[SKIP] already rewritten")
+            return 0
+        print(f"[APPLY] backup and rewrite {TARGET.name}")
+        if not args.apply:
+            print()
+            print("[DRY-RUN] no file written; pass --apply to execute.")
+            return 0
+        bak = TARGET.with_suffix(TARGET.suffix + ".bak_s6")
+        if not bak.exists():
+            bak.write_text(old, encoding="utf-8")
+            print(f"  Backup: {bak.name}")
+    else:
+        print(f"[APPLY] create {TARGET.name}")
+        if not args.apply:
+            print()
+            print("[DRY-RUN] no file written; pass --apply to execute.")
+            return 0
+
+    TARGET.parent.mkdir(parents=True, exist_ok=True)
+    TARGET.write_text(GUIDE, encoding="utf-8")
+    print(f"[DONE] {TARGET.name} written ({len(GUIDE)} chars)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -8,7 +8,6 @@ build-backend = "setuptools.build_meta"
 name = "statable"
 version = "3.0.0"
 description = "MISRA C:2012-aware state machine design and C code generation for embedded systems"
-readme = { file = "../README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Hideki Akashi" }]
