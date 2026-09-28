@@ -100,3 +100,7 @@ code/output_vending/
 code/misra_report/
 code/misra_report_vending/
 code/verify_report/
+
+
+# v3.0: examples/ runtime output
+code/examples/_output/

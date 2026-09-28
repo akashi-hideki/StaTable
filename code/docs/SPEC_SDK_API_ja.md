@@ -198,6 +198,41 @@ files = dialog.get_generated_files()
 
 ---
 
+### 2.6 CLI 使用法
+
+`statable-cli` コマンドで GUI なしで実行できます。
+
+**インストール**
+
+    pip install statable          # SDK + CLI
+    pip install "statable[gui]"   # GUI も含む
+
+**バージョン確認**
+
+    statable-cli version
+
+**コード生成**
+
+    statable-cli generate --xml design.xml --out generated/ --format json
+
+**検証**
+
+    statable-cli validate --xml design.xml --format json --exit-on-error
+
+**終了コード**
+
+| コード | 意味 |
+|:---:|------|
+| 0 | 成功 |
+| 1 | 検証エラー |
+| 2 | 内部エラー |
+
+**出力形式**
+
+- `--format json`（デフォルト）: stdout に JSON
+- `--format text`: 人間可読テキスト
+- ログ・エラーは stderr に出力
+
 ## 3. データモデル（コアAPI）
 
 ### 3.1 列挙型

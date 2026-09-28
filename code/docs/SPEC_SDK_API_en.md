@@ -203,6 +203,41 @@ files = dialog.get_generated_files()
 
 ---
 
+### 2.6 CLI Usage
+
+The `statable-cli` command runs without the GUI.
+
+**Installation**
+
+    pip install statable
+    pip install "statable[gui]"
+
+**Version**
+
+    statable-cli version
+
+**Code generation**
+
+    statable-cli generate --xml design.xml --out generated/ --format json
+
+**Validation**
+
+    statable-cli validate --xml design.xml --format json --exit-on-error
+
+**Exit codes**
+
+| Code | Meaning |
+|:---:|------|
+| 0 | Success |
+| 1 | Validation error |
+| 2 | Internal error |
+
+**Output**
+
+- `--format json`: JSON on stdout (default)
+- `--format text`: human-readable
+- Logs go to stderr
+
 ## 3. Data Model (Core API)
 
 ### 3.1 Enums
