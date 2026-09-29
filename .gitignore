@@ -104,3 +104,9 @@ code/verify_report/
 
 # v3.0: examples/ runtime output
 code/examples/_output/
+
+
+# v3.0: Eclipse artifacts + External Tools output
+.project
+.settings/
+generated/
