@@ -53,7 +53,7 @@ custom tooling from scratch.
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **39 test suites, 1479 PASS / 0 FAIL / 2 SKIP**
+- ✅ **40 test suites, 1479 PASS / 0 FAIL / 2 SKIP**
 
 ### v2.7 Highlights
 
@@ -107,7 +107,7 @@ diagrams, and generate production-ready C code with a single click.*
 | **Ubuntu 22.04+** | ⚠️ **Auto tests pass on CI** | GUI not yet manually verified — feedback welcome |
 | **macOS** | ⚠️ **Not tested** | Community testing welcome |
 
-**Note for Linux users**: The automated test suite (39 suites, 1168 tests)
+**Note for Linux users**: The automated test suite (40 suites, 1168 tests)
 passes on Ubuntu via GitHub Actions, but the GUI has only been manually
 verified on Windows. If you try it on Linux, please report your experience
 via [GitHub Issues](https://github.com/akashi-hideki/StaTable/issues).
@@ -152,7 +152,7 @@ python tests/test_v2_2_p1.py
 python tests/test_v2_7_p4.py
 ```
 
-Expected: **1479 PASS / 0 FAIL / 2 SKIP** across 39 suites.
+Expected: **1479 PASS / 0 FAIL / 2 SKIP** across 40 suites.
 
 ---
 
@@ -653,7 +653,7 @@ python tests/test_v2_3_p1.py
 # ...
 ```
 
-All 39 suites should pass (1479 PASS / 2 SKIP).
+All 40 suites should pass (1479 PASS / 2 SKIP).
 
 ---
 

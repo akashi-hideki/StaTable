@@ -56,11 +56,11 @@ from .global_defs import (
 logger = logging.getLogger("statable.xml_io")
 
 try:
-    from statable_gui.libcntrl.role_function_library import (
+    from statable.shared.role_function_library import (
         RoleFunctionLibrary, RoleFunction as LibRoleFunction)
-    from statable_gui.libcntrl.condition_library import (
+    from statable.shared.condition_library import (
         ConditionLibrary, ConditionTemplate)
-    from statable_gui.libcntrl.literal_library import (
+    from statable.shared.literal_library import (
         LiteralLibrary, LiteralDefinition)
 except ImportError:
     RoleFunctionLibrary = ConditionLibrary = LiteralLibrary = None

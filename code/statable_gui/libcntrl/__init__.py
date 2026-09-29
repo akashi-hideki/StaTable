@@ -1,15 +1,23 @@
-# statable_gui/libcntrl/__init__.py
-"""\nShared library management package\n"""
+"""[v3.0 / G-1a] Backward-compat shim for statable_gui.libcntrl.
 
-from .role_function_library import RoleFunctionLibrary, RoleFunction
-from .condition_library import ConditionLibrary, ConditionTemplate
-from .literal_library import LiteralLibrary, LiteralDefinition
+All shared library classes now live in ``statable.shared``.
+This package re-exports them for backward compatibility.
+"""
+
+from statable.shared import (  # noqa: F401
+    RoleFunctionLibrary,
+    RoleFunction,
+    ConditionLibrary,
+    ConditionTemplate,
+    LiteralLibrary,
+    LiteralDefinition,
+)
 
 __all__ = [
-    'RoleFunctionLibrary',
-    'RoleFunction',
-    'ConditionLibrary',
-    'ConditionTemplate',
-    'LiteralLibrary',
-    'LiteralDefinition',
+    "RoleFunctionLibrary",
+    "RoleFunction",
+    "ConditionLibrary",
+    "ConditionTemplate",
+    "LiteralLibrary",
+    "LiteralDefinition",
 ]
