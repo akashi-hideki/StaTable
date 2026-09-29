@@ -20,7 +20,7 @@ class ActionEditDialog(QDialog):
     def __init__(self, parent=None, action_text="", title="",
                  role_functions=None, global_defs=None):
         super().__init__(parent)
-        self.setWindowTitle("ActionEdit")
+        self.setWindowTitle(self.tr("ActionEdit"))
         self.setMinimumSize(900, 650)
         self.role_functions = role_functions if role_functions is not None else {}
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
@@ -38,14 +38,14 @@ class ActionEditDialog(QDialog):
         main_layout.addWidget(self.title_widget)
 
         role_bar = QHBoxLayout()
-        role_bar.addWidget(QLabel("Role function:"))
+        role_bar.addWidget(QLabel(self.tr("Role function:")))
         self.role_combo = QComboBox()
         self.refresh_role_combo()
         role_bar.addWidget(self.role_combo)
-        insert_role_btn = QPushButton("Insert")
+        insert_role_btn = QPushButton(self.tr("Insert"))
         insert_role_btn.clicked.connect(self.insert_role_function)
         role_bar.addWidget(insert_role_btn)
-        new_role_btn = QPushButton("New role function...")
+        new_role_btn = QPushButton(self.tr("New role function..."))
         new_role_btn.clicked.connect(self.add_new_role_function)
         role_bar.addWidget(new_role_btn)
         main_layout.addLayout(role_bar)
@@ -67,7 +67,7 @@ class ActionEditDialog(QDialog):
 
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
-        right_layout.addWidget(QLabel("Action code:"))
+        right_layout.addWidget(QLabel(self.tr("Action code:")))
         self.action_edit = QTextEdit()
         self.action_edit.setAcceptRichText(False)
         self.action_edit.setPlainText(action_text)
@@ -143,7 +143,11 @@ class ActionEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             rf = dlg.get_role_function()
             if rf.name in self.role_functions:
-                QMessageBox.warning(self, "Warning", "A role function with the same name already exists.")
+                QMessageBox.warning(
+                self,
+                self.tr("Warning"),
+                self.tr("A role function with the same name already exists."),
+            )
                 return
             self.role_functions[rf.name] = rf
             self.refresh_role_combo()
@@ -157,8 +161,12 @@ class ActionEditDialog(QDialog):
         if not selected_text:
             return
         menu = QMenu(self)
-        add_var_action = menu.addAction(f"'{selected_text}' as global variable")
-        add_flag_action = menu.addAction(f"'{selected_text}' as event flag")
+        add_var_action = menu.addAction(
+            self.tr("'{0}' as global variable").format(selected_text)
+        )
+        add_flag_action = menu.addAction(
+            self.tr("'{0}' as event flag").format(selected_text)
+        )
         chosen = menu.exec(self.action_edit.viewport().mapToGlobal(pos))
         if chosen == add_var_action:
             self.register_selected_as_variable(selected_text)
@@ -195,7 +203,7 @@ class ActionEditDialog(QDialog):
             first_line = action_text.split('\n')[0].strip()
             auto_title = first_line[:20] + ("..." if len(first_line) > 20 else "")
         else:
-            auto_title = "(untitled action)"
+            auto_title = self.tr("(untitled action)")
         self.title_widget.ensure_title(auto_title)
         self.accept()
 
