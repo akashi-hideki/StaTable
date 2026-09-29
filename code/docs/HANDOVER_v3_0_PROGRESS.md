@@ -104,3 +104,51 @@ SDK 単体（`pip install statable`）では GUI 依存を入れない。
 | 日付 | 内容 |
 |------|------|
 | 2026-09-29 | 初版（S-6 スキップ + Eclipse 検証記録） |
+
+---
+
+## v3.0 正式リリース完了（2026-09-29）
+
+### タグ & Release
+
+- **Tag**: `v3.0` (annotated)
+  - commit: `59c552a7dcd85fb0923762b30f08c1acaee4b979`
+  - tag object: `86fcaf0390df92ed0fa70e57945af60f8550d597`
+- **Release**: GitHub Release 作成済み（Web UI 経由）
+  - URL: https://github.com/akashi-hideki/StaTable/releases/tag/v3.0
+  - Title: v3.0 - SDK Foundation
+
+### 最終コミット履歴（v2.8.0..v3.0）
+
+| # | commit | 種別 | 内容 |
+|---|--------|------|------|
+| 1 | c150be0 | feat | S-1 packaging foundation |
+| 2 | 3897c6b | feat | S-2 public API definition |
+| 3 | aa2f55b | feat | S-3 CLI implementation |
+| 4 | a7bbb29 | feat | S-4 SDK documentation + examples |
+| 5 | f124ef0 | docs | S-5 Eclipse External Tools guide |
+| 6 | b4a288d | fix | pyproject readme + Eclipse PATH |
+| 7 | 598d065 | docs | S-6 skip + Eclipse verification |
+| 8 | 52e1ab8 | feat | G-1+G-2 shared libraries migration |
+| 9 | 59c552a | chore | Eclipse artifacts + generated/ ignore |
+
+### Eclipse 実機検証（2026-09-29 実施）
+
+- **環境**: Eclipse IDE (Embedded C/C++), Python 3.13.7, PySide6 6.10.2
+- **方法**: External Tools 経由で `python -m statable.cli generate` を実行
+- **結果**: 16ファイル生成、`generated/` に正常出力、日本語パス対応確認
+- **副次**: 生成物を `.gitignore` に追加
+
+### 完了後の状態
+
+- 作業ツリー: clean
+- CI: 40 suites, all green
+- pip install: `pip install -e .` 成功
+- CLI: `statable-cli` / `python -m statable.cli` 両方動作
+
+### 将来のタスク（v3.x 以降）
+
+- PyPI 正式公開（test.pypi.org → pypi.org）
+- SmartConfig 連携（Renesas 対応時）
+- B2B ライセンス販売の仕組み
+- CI での SDK-only テスト追加
