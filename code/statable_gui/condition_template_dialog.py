@@ -18,7 +18,7 @@ class NewConditionTemplateDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("New Condition Template")
+        self.setWindowTitle(self.tr("New Condition Template"))
         self.setMinimumWidth(500)
 
         layout = QVBoxLayout(self)
@@ -27,7 +27,7 @@ class NewConditionTemplateDialog(QDialog):
         self.name_edit = QLineEdit()
         self.condition_edit = QLineEdit()
         self.condition_edit.setPlaceholderText(
-            "Example: err_code != 0")
+            self.tr("Example: err_code != 0"))
         self.desc_edit = QLineEdit()
 
         form.addRow("Name:", self.name_edit)

@@ -105,7 +105,7 @@ class CodeGenerationDialog(QDialog):
 
         self._load_saved_settings()
 
-        self.setWindowTitle("CCode generation")
+        self.setWindowTitle(self.tr("CCode generation"))
         self.setMinimumSize(800, 600)
 
         self._setup_ui()
@@ -165,16 +165,16 @@ class CodeGenerationDialog(QDialog):
         main_layout = QVBoxLayout(self)
         
         # Settings info group
-        info_group = QGroupBox("Generation settingsInfo")
+        info_group = QGroupBox(self.tr("Generation settingsInfo"))
         info_layout = QFormLayout(info_group)
         
         # Output destination
         self.output_dir_edit = QLineEdit()
         self.output_dir_edit.setPlaceholderText(
-            "Select output directory")
+            self.tr("Select output directory"))
         self.output_dir_edit.textChanged.connect(
             self._on_output_dir_changed)
-        self.output_dir_btn = QPushButton("Browse...")
+        self.output_dir_btn = QPushButton(self.tr("Browse..."))
         self.output_dir_btn.clicked.connect(
             self._select_output_dir)
 
@@ -186,23 +186,23 @@ class CodeGenerationDialog(QDialog):
         # Generation style
         self.style_combo = QComboBox()
         self.style_combo.addItem(
-            "Table-driven style", "table_driven")
+            self.tr("Table-driven style"), "table_driven")
         self.style_combo.addItem(
-            "switch-case style", "switch_case")
+            self.tr("switch-case style"), "switch_case")
         self.style_combo.currentIndexChanged.connect(
             self._on_style_changed)
         info_layout.addRow("Generation style:", self.style_combo)
         
         # OS type label
-        self.os_label = QLabel("NonRTOS")
+        self.os_label = QLabel(self.tr("NonRTOS"))
         info_layout.addRow("OS type:", self.os_label)
         
         # Merge settings label
-        self.merge_label = QLabel("Enabled")
+        self.merge_label = QLabel(self.tr("Enabled"))
         info_layout.addRow("Merge:", self.merge_label)
         
         # Advanced settings button
-        self.settings_btn = QPushButton("Advanced settings...")
+        self.settings_btn = QPushButton(self.tr("Advanced settings..."))
         self.settings_btn.clicked.connect(
             self._open_settings_dialog)
         info_layout.addRow("", self.settings_btn)
@@ -212,24 +212,24 @@ class CodeGenerationDialog(QDialog):
         # Action buttons
         button_layout = QHBoxLayout()
 
-        self.generate_btn = QPushButton("Code generation")
+        self.generate_btn = QPushButton(self.tr("Code generation"))
         self.generate_btn.clicked.connect(
             self._generate_code)
         button_layout.addWidget(self.generate_btn)
 
-        self.save_btn = QPushButton("Save")
+        self.save_btn = QPushButton(self.tr("Save"))
         self.save_btn.setEnabled(False)
         self.save_btn.clicked.connect(self._save_code)
         button_layout.addWidget(self.save_btn)
 
-        self.close_btn = QPushButton("Close")
+        self.close_btn = QPushButton(self.tr("Close"))
         self.close_btn.clicked.connect(self._on_close)
         button_layout.addWidget(self.close_btn)
 
         main_layout.addLayout(button_layout)
         
         # Preview area
-        preview_label = QLabel("Generated code preview:")
+        preview_label = QLabel(self.tr("Generated code preview:"))
         main_layout.addWidget(preview_label)
 
         self.preview_tabs = QComboBox()

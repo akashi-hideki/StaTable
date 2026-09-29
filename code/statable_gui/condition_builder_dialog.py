@@ -54,7 +54,7 @@ class ConditionBuilderDialog(QDialog):
                  condition_library: ConditionLibrary = None,
                  parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Transition condition builder")
+        self.setWindowTitle(self.tr("Transition condition builder"))
         self.setMinimumSize(1000, 700)
 
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
@@ -86,23 +86,23 @@ class ConditionBuilderDialog(QDialog):
         main_layout.setSpacing(4)
 
         event_layout = QHBoxLayout()
-        event_layout.addWidget(QLabel("Event name:"))
+        event_layout.addWidget(QLabel(self.tr("Event name:")))
         self.event_name_edit = QLineEdit()
         event_layout.addWidget(self.event_name_edit)
         main_layout.addLayout(event_layout)
 
         target_layout = QHBoxLayout()
-        target_layout.addWidget(QLabel("Target:"))
+        target_layout.addWidget(QLabel(self.tr("Target:")))
         self.target_combo = QComboBox()
-        self.target_combo.addItem("")
+        self.target_combo.addItem(self.tr(""))
         self.target_combo.addItems(self.states)
         target_layout.addWidget(self.target_combo)
         main_layout.addLayout(target_layout)
 
         else_target_layout = QHBoxLayout()
-        else_target_layout.addWidget(QLabel("else target:"))
+        else_target_layout.addWidget(QLabel(self.tr("else target:")))
         self.else_target_combo = QComboBox()
-        self.else_target_combo.addItem("")
+        self.else_target_combo.addItem(self.tr(""))
         self.else_target_combo.addItems(self.states)
         else_target_layout.addWidget(self.else_target_combo)
         main_layout.addLayout(else_target_layout)
@@ -110,7 +110,7 @@ class ConditionBuilderDialog(QDialog):
         main_splitter = QSplitter(Qt.Horizontal)
 
         # Left pane
-        left_widget = QGroupBox("Symbol to insert")
+        left_widget = QGroupBox(self.tr("Symbol to insert"))
         left_layout = QVBoxLayout(left_widget)
         left_layout.setContentsMargins(4, 4, 4, 4)
         left_layout.setSpacing(2)
@@ -122,8 +122,8 @@ class ConditionBuilderDialog(QDialog):
 
         num_layout = QHBoxLayout()
         self.num_input = QLineEdit()
-        self.num_input.setPlaceholderText("Numeric literal")
-        num_insert_btn = QPushButton("Insert")
+        self.num_input.setPlaceholderText(self.tr("Numeric literal"))
+        num_insert_btn = QPushButton(self.tr("Insert"))
         num_insert_btn.clicked.connect(self._insert_number)
         num_layout.addWidget(self.num_input)
         num_layout.addWidget(num_insert_btn)
@@ -131,26 +131,26 @@ class ConditionBuilderDialog(QDialog):
 
         # [R-8] "+ New Template" button (only when library available)
         if self.condition_library is not None:
-            self.new_template_btn = QPushButton("+ New Template")
+            self.new_template_btn = QPushButton(self.tr("+ New Template"))
             self.new_template_btn.setToolTip(
-                "Create a new condition template and add it to the tree")
+                self.tr("Create a new condition template and add it to the tree"))
             self.new_template_btn.clicked.connect(self._on_new_template)
             left_layout.addWidget(self.new_template_btn)
 
         main_splitter.addWidget(left_widget)
 
         # Right pane
-        right_widget = QGroupBox("Condition expression (symbol names)")
+        right_widget = QGroupBox(self.tr("Condition expression (symbol names)"))
         right_layout = QVBoxLayout(right_widget)
         right_layout.setContentsMargins(4, 4, 4, 4)
         right_layout.setSpacing(2)
 
-        literal_btn = QPushButton("Literalize")
+        literal_btn = QPushButton(self.tr("Literalize"))
         literal_btn.clicked.connect(self._open_literalization)
         right_layout.addWidget(literal_btn, alignment=Qt.AlignLeft)
 
         self.condition_edit = QPlainTextEdit()
-        self.condition_edit.setPlaceholderText("Example: battery_voltage > 3000")
+        self.condition_edit.setPlaceholderText(self.tr("Example: battery_voltage > 3000"))
         self.condition_edit.setFrameStyle(QFrame.NoFrame)
         self.condition_edit.setStyleSheet(
             "QPlainTextEdit { padding: 0px; color: black; background: white; }")
@@ -163,7 +163,7 @@ class ConditionBuilderDialog(QDialog):
         self.condition_edit.textChanged.connect(self._update_c_code_view)
         right_layout.addWidget(self.condition_edit, 1)
 
-        clear_btn = QPushButton("Clear")
+        clear_btn = QPushButton(self.tr("Clear"))
         clear_btn.clicked.connect(self._clear_condition)
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
@@ -174,7 +174,7 @@ class ConditionBuilderDialog(QDialog):
         main_splitter.setSizes([300, 700])
         main_layout.addWidget(main_splitter)
 
-        bottom_widget = QGroupBox("Generated C code (ctx-> form)")
+        bottom_widget = QGroupBox(self.tr("Generated C code (ctx-> form)"))
         bottom_layout = QVBoxLayout(bottom_widget)
         bottom_layout.setContentsMargins(4, 4, 4, 4)
         bottom_layout.setSpacing(2)
@@ -433,7 +433,7 @@ class LiteralizationDialog(QDialog):
         self.literal_library = literal_library
         self.updated_condition_text = condition_text
 
-        self.setWindowTitle("Literalize")
+        self.setWindowTitle(self.tr("Literalize"))
         self.setMinimumSize(600, 400)
 
         self._setup_ui()
@@ -442,8 +442,8 @@ class LiteralizationDialog(QDialog):
     def _setup_ui(self):
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel(
-            "Literalize numeric values in the condition expression. "
-            "Give each value a name."))
+            self.tr("Literalize numeric values in the condition expression. "
+            "Give each value a name.")))
 
         self.table = QTableWidget(0, 3)
         self.table.setHorizontalHeaderLabels(["Row", "Numeric", "Literal name"])

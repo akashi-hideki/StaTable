@@ -37,13 +37,13 @@ class EventDeliverySettingsDialog(QDialog):
         self.global_defs = global_defs
         self.auto_convert = auto_convert
 
-        self.setWindowTitle("Event delivery settings")
+        self.setWindowTitle(self.tr("Event delivery settings"))
         self.setMinimumSize(900, 500)
 
         layout = QVBoxLayout(self)
 
         #Global settings checkbox
-        self.auto_convert_check = QCheckBox("Automatically convert DIRECT events used in ISR to DOUBLE")
+        self.auto_convert_check = QCheckBox(self.tr("Automatically convert DIRECT events used in ISR to DOUBLE"))
         self.auto_convert_check.setChecked(self.auto_convert)
         layout.addWidget(self.auto_convert_check)
 
@@ -56,8 +56,8 @@ class EventDeliverySettingsDialog(QDialog):
 
         # Help
         help_label = QLabel(
-            "If a DIRECT event is notified from an ISR, it is automatically converted to DOUBLE.\n"
-            "Select QUEUE if you need event counts or data."
+            self.tr("If a DIRECT event is notified from an ISR, it is automatically converted to DOUBLE.\n"
+            "Select QUEUE if you need event counts or data.")
         )
         help_label.setStyleSheet("color: gray;")
         layout.addWidget(help_label)
@@ -97,9 +97,9 @@ class EventDeliverySettingsDialog(QDialog):
 
             # Delivery type combo
             combo = QComboBox()
-            combo.addItem("DIRECT", EventDeliveryType.DIRECT)
-            combo.addItem("QUEUE", EventDeliveryType.QUEUE)
-            combo.addItem("DOUBLE", EventDeliveryType.DOUBLE)
+            combo.addItem(self.tr("DIRECT"), EventDeliveryType.DIRECT)
+            combo.addItem(self.tr("QUEUE"), EventDeliveryType.QUEUE)
+            combo.addItem(self.tr("DOUBLE"), EventDeliveryType.DOUBLE)
             idx = combo.findData(event.delivery_type)
             if idx >= 0:
                 combo.setCurrentIndex(idx)

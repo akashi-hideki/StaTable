@@ -17,7 +17,7 @@ class ConditionEditDialog(QDialog):
 
     def __init__(self, parent=None, condition_text="", title="", global_defs=None, role_functions=None):
         super().__init__(parent)
-        self.setWindowTitle("State transition conditionEdit")
+        self.setWindowTitle(self.tr("State transition conditionEdit"))
         self.setMinimumSize(900, 650)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.role_functions = role_functions if role_functions is not None else {}
@@ -35,11 +35,11 @@ class ConditionEditDialog(QDialog):
 
         # Role function select / insert bar
         role_bar = QHBoxLayout()
-        role_bar.addWidget(QLabel("Role function:"))
+        role_bar.addWidget(QLabel(self.tr("Role function:")))
         self.role_combo = QComboBox()
         self.refresh_role_combo()
         role_bar.addWidget(self.role_combo)
-        insert_role_btn = QPushButton("Insert")
+        insert_role_btn = QPushButton(self.tr("Insert"))
         insert_role_btn.clicked.connect(self.insert_role_function)
         role_bar.addWidget(insert_role_btn)
         main_layout.addLayout(role_bar)
@@ -59,7 +59,7 @@ class ConditionEditDialog(QDialog):
         # Right pane: condition expression edit
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
-        right_layout.addWidget(QLabel("Condition:"))
+        right_layout.addWidget(QLabel(self.tr("Condition:")))
         self.condition_edit = QPlainTextEdit()
         self.condition_edit.setPlainText(condition_text)
         self.condition_edit.setFont(QFont("Consolas", 10))
@@ -68,7 +68,7 @@ class ConditionEditDialog(QDialog):
 
         # Logical operator combo
         op_layout = QHBoxLayout()
-        op_layout.addWidget(QLabel("Logical operator:"))
+        op_layout.addWidget(QLabel(self.tr("Logical operator:")))
         self.op_combo = QComboBox()
         self.op_combo.addItems(["AND", "OR", "XOR", "NAND", "NOR"])
         op_layout.addWidget(self.op_combo)

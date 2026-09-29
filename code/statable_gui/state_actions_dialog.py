@@ -83,13 +83,13 @@ class _ActionListWidget(QWidget):
         layout.addWidget(self.table)
 
         btn_row = QHBoxLayout()
-        self.add_btn = QPushButton("+ Add")
+        self.add_btn = QPushButton(self.tr("+ Add"))
         self.add_btn.clicked.connect(self._on_add)
-        self.del_btn = QPushButton("Delete")
+        self.del_btn = QPushButton(self.tr("Delete"))
         self.del_btn.clicked.connect(self._on_delete)
-        self.up_btn = QPushButton("Up")
+        self.up_btn = QPushButton(self.tr("Up"))
         self.up_btn.clicked.connect(self._on_up)
-        self.down_btn = QPushButton("Down")
+        self.down_btn = QPushButton(self.tr("Down"))
         self.down_btn.clicked.connect(self._on_down)
         btn_row.addWidget(self.add_btn)
         btn_row.addWidget(self.del_btn)
@@ -262,9 +262,9 @@ class StateActionsDialog(QDialog):
 
         # Info label
         info = QLabel(
-            "Entry / Exit / Do actions for this state.\n"
+            self.tr("Entry / Exit / Do actions for this state.\n"
             "Custom C code can be edited in the generated file "
-            "([[STABLE_USER_CODE_..._custom]] marker)."
+            "([[STABLE_USER_CODE_..._custom]] marker).")
         )
         info.setWordWrap(True)
         layout.addWidget(info)
@@ -286,10 +286,10 @@ class StateActionsDialog(QDialog):
         self.preview_widget.setReadOnly(True)
         self.preview_widget.setFont(QFont("Consolas", 10))
         self.preview_widget.setPlaceholderText(
-            "Click 'Refresh' to preview the generated C code.")
+            self.tr("Click 'Refresh' to preview the generated C code."))
         preview_container = QWidget()
         preview_layout = QVBoxLayout(preview_container)
-        refresh_btn = QPushButton("Refresh preview")
+        refresh_btn = QPushButton(self.tr("Refresh preview"))
         refresh_btn.clicked.connect(self._refresh_preview)
         preview_layout.addWidget(refresh_btn)
         preview_layout.addWidget(self.preview_widget)

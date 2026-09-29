@@ -23,15 +23,15 @@ class SymbolPickerWidget(QWidget):
         layout = QVBoxLayout(self)
 
         # Title
-        title = QLabel("Global variables, event flags, and return values")
+        title = QLabel(self.tr("Global variables, event flags, and return values"))
         title.setFont(QFont("sans-serif", 10, QFont.Bold))
         layout.addWidget(title)
 
         # Search
-        search_label = QLabel("Search (prefix match):")
+        search_label = QLabel(self.tr("Search (prefix match):"))
         layout.addWidget(search_label)
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Enter title, member name, and group name")
+        self.search_edit.setPlaceholderText(self.tr("Enter title, member name, and group name"))
         self.search_edit.textChanged.connect(self.refresh_list)
         layout.addWidget(self.search_edit)
 
@@ -42,17 +42,17 @@ class SymbolPickerWidget(QWidget):
 
         # Register button
         btn_layout = QHBoxLayout()
-        add_var_btn = QPushButton("Register variable...")
+        add_var_btn = QPushButton(self.tr("Register variable..."))
         add_var_btn.clicked.connect(self.register_variable)
         btn_layout.addWidget(add_var_btn)
 
-        add_flag_btn = QPushButton("Register flag...")
+        add_flag_btn = QPushButton(self.tr("Register flag..."))
         add_flag_btn.clicked.connect(self.register_flag)
         btn_layout.addWidget(add_flag_btn)
         layout.addLayout(btn_layout)
 
         # Open global definitions
-        open_defs_btn = QPushButton("Open global definitions...")
+        open_defs_btn = QPushButton(self.tr("Open global definitions..."))
         open_defs_btn.clicked.connect(self.open_global_definitions)
         layout.addWidget(open_defs_btn)
 

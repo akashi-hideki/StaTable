@@ -36,7 +36,7 @@ class EventQueueEditDialog(QDialog):
         super().__init__(parent)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.event_names = event_names or []
-        self.setWindowTitle("EventQueueEdit")
+        self.setWindowTitle(self.tr("EventQueueEdit"))
         self.setMinimumWidth(500)
 
         layout = QVBoxLayout(self)
@@ -129,16 +129,16 @@ class EventQueueDefsDialog(QDialog):
         super().__init__(parent)
         self.global_defs = global_defs
         self.event_names = event_names or []
-        self.setWindowTitle("Event queue definition")
+        self.setWindowTitle(self.tr("Event queue definition"))
         self.setMinimumSize(1100, 600)
 
         layout = QVBoxLayout(self)
 
         # Search
         search_layout = QHBoxLayout()
-        search_layout.addWidget(QLabel("Search (prefix match):"))
+        search_layout.addWidget(QLabel(self.tr("Search (prefix match):")))
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Title, queue name, description")
+        self.search_edit.setPlaceholderText(self.tr("Title, queue name, description"))
         self.search_edit.textChanged.connect(self.refresh_table)
         search_layout.addWidget(self.search_edit)
         layout.addLayout(search_layout)
@@ -153,9 +153,9 @@ class EventQueueDefsDialog(QDialog):
 
         # Buttons
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Add")
+        add_btn = QPushButton(self.tr("Add"))
         add_btn.clicked.connect(self.add_queue)
-        del_btn = QPushButton("Delete")
+        del_btn = QPushButton(self.tr("Delete"))
         del_btn.clicked.connect(self.delete_queue)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
@@ -163,7 +163,7 @@ class EventQueueDefsDialog(QDialog):
         layout.addLayout(btn_layout)
 
         # Close
-        close_btn = QPushButton("Close")
+        close_btn = QPushButton(self.tr("Close"))
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn, alignment=Qt.AlignRight)
 
@@ -180,7 +180,7 @@ class EventQueueDefsDialog(QDialog):
             self.table.insertRow(row)
 
             title_item = QTableWidgetItem(q.title)
-            title_item.setToolTip("Title of this queue. Can be edited directly.")
+            title_item.setToolTip(self.tr("Title of this queue. Can be edited directly."))
             self.table.setItem(row, 0, title_item)
 
             self.table.setItem(row, 1, QTableWidgetItem(q.name))

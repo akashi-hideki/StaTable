@@ -228,7 +228,7 @@ class _NamespaceDelegate(QStyledItemDelegate):
         combo.setEditable(True)
         combo.setInsertPolicy(QComboBox.NoInsert)
         # First entry: empty namespace (no layer)
-        combo.addItem("")
+        combo.addItem(self.tr(""))
         try:
             for ns in (self._choices_provider() or []):
                 ns = (ns or "").strip()
@@ -296,7 +296,7 @@ class MermaidWidget(QWidget):
         )
 
         if self._disabled:
-            placeholder = QLabel("Mermaid rendering disabled (test mode)")
+            placeholder = QLabel(self.tr("Mermaid rendering disabled (test mode)"))
             placeholder.setAlignment(Qt.AlignCenter)
             layout.addWidget(placeholder)
             StaTableLogger.debug(
@@ -749,9 +749,9 @@ class SettingsPanel(QWidget):
         self.state_table.setFont(QFont("Consolas", 10))
         state_layout.addWidget(self.state_table)
         btn_state = QHBoxLayout()
-        add_state_btn = QPushButton("Add")
+        add_state_btn = QPushButton(self.tr("Add"))
         add_state_btn.clicked.connect(self.add_state)
-        del_state_btn = QPushButton("Delete")
+        del_state_btn = QPushButton(self.tr("Delete"))
         del_state_btn.clicked.connect(self.delete_state)
         btn_state.addWidget(add_state_btn)
         btn_state.addWidget(del_state_btn)
@@ -777,18 +777,18 @@ class SettingsPanel(QWidget):
 
         role_layout.addWidget(self.role_table)
         btn_role = QHBoxLayout()
-        add_role_btn = QPushButton("Add")
+        add_role_btn = QPushButton(self.tr("Add"))
         add_role_btn.clicked.connect(self.add_role_function)
-        edit_role_btn = QPushButton("Edit")
+        edit_role_btn = QPushButton(self.tr("Edit"))
         edit_role_btn.clicked.connect(self.edit_role_function)
-        del_role_btn = QPushButton("Delete")
+        del_role_btn = QPushButton(self.tr("Delete"))
         del_role_btn.clicked.connect(self.delete_role_function)
         btn_role.addWidget(add_role_btn)
         btn_role.addWidget(edit_role_btn)
         btn_role.addWidget(del_role_btn)
         role_layout.addLayout(btn_role)
 
-        event_btn = QPushButton("Event definitions...")
+        event_btn = QPushButton(self.tr("Event definitions..."))
         event_btn.clicked.connect(self.open_event_definition)
         role_layout.addWidget(event_btn)
 
@@ -878,7 +878,7 @@ class SettingsPanel(QWidget):
         for row, state in enumerate(states):
             name_item = QTableWidgetItem(state.name)
             name_item.setToolTip(
-                "Double-click to edit actions (Entry / Exit / Do)")
+                self.tr("Double-click to edit actions (Entry / Exit / Do)"))
             self.state_table.setItem(row, self.STATE_COL_NAME, name_item)
             self.state_table.setItem(
                 row, self.STATE_COL_DESC,

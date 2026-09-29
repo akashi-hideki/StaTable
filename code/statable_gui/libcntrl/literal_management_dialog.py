@@ -20,7 +20,7 @@ class LiteralManagementDialog(QDialog):
         super().__init__(parent)
         self.literal_library = literal_library
 
-        self.setWindowTitle("Literal management")
+        self.setWindowTitle(self.tr("Literal management"))
         self.setMinimumSize(600, 400)
 
         self._setup_ui()
@@ -38,18 +38,18 @@ class LiteralManagementDialog(QDialog):
         main_layout.addWidget(self.table)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Add")
+        add_btn = QPushButton(self.tr("Add"))
         add_btn.clicked.connect(self._add_literal)
-        edit_btn = QPushButton("Edit")
+        edit_btn = QPushButton(self.tr("Edit"))
         edit_btn.clicked.connect(self._edit_literal)
-        delete_btn = QPushButton("Delete")
+        delete_btn = QPushButton(self.tr("Delete"))
         delete_btn.clicked.connect(self._delete_literal)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(edit_btn)
         btn_layout.addWidget(delete_btn)
         main_layout.addLayout(btn_layout)
 
-        close_btn = QPushButton("Close")
+        close_btn = QPushButton(self.tr("Close"))
         close_btn.clicked.connect(self.accept)
         main_layout.addWidget(close_btn)
 

@@ -28,7 +28,7 @@ class LayerSettingsDialog(QDialog):
         super().__init__(parent)
         self.layers = layers
 
-        self.setWindowTitle("Layer settings")
+        self.setWindowTitle(self.tr("Layer settings"))
         self.setMinimumSize(640, 420)
 
         self._setup_ui()
@@ -38,15 +38,15 @@ class LayerSettingsDialog(QDialog):
         layout = QVBoxLayout(self)
 
         # description
-        info_group = QGroupBox("About settings items")
+        info_group = QGroupBox(self.tr("About settings items"))
         info_layout = QVBoxLayout(info_group)
 
         info_label = QLabel(
-            "- Layer name: used in generated code identifiers (e.g., Driver -> "
+            self.tr("- Layer name: used in generated code identifiers (e.g., Driver -> "
             "STATE_Driver_Idle).\n"
             "  Leaving it empty generates a version without a layer name (STATE_Idle).\n"
             "- Priority: range 1-9. 1 (low) runs / initializes first.\n"
-            "- Tab name: display name (change via the tab rename menu)."
+            "- Tab name: display name (change via the tab rename menu).")
         )
         info_label.setStyleSheet("color: gray;")
         info_layout.addWidget(info_label)
@@ -79,11 +79,11 @@ class LayerSettingsDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton(self.tr("Cancel"))
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
 
-        ok_btn = QPushButton("OK")
+        ok_btn = QPushButton(self.tr("OK"))
         ok_btn.clicked.connect(self._on_ok)
         button_layout.addWidget(ok_btn)
 

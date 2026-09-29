@@ -44,7 +44,7 @@ class EventEditDialog(QDialog):
         super().__init__(parent)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.state_machine = state_machine
-        self.setWindowTitle("Edit state transition event")
+        self.setWindowTitle(self.tr("Edit state transition event"))
         self.setMinimumWidth(500)
 
         layout = QVBoxLayout(self)
@@ -81,8 +81,8 @@ class EventEditDialog(QDialog):
         form.addRow("Event kind", self.kind_combo)
 
         # Source layer
-        self.layer_driver = QRadioButton("Driver layer")
-        self.layer_middleware = QRadioButton("Middle layer")
+        self.layer_driver = QRadioButton(self.tr("Driver layer"))
+        self.layer_middleware = QRadioButton(self.tr("Middle layer"))
         group = QButtonGroup(self)
         group.addButton(self.layer_driver)
         group.addButton(self.layer_middleware)
@@ -98,9 +98,9 @@ class EventEditDialog(QDialog):
 
         # Delivery type
         self.delivery_combo = QComboBox()
-        self.delivery_combo.addItem("DIRECT", EventDeliveryType.DIRECT)
-        self.delivery_combo.addItem("QUEUE", EventDeliveryType.QUEUE)
-        self.delivery_combo.addItem("DOUBLE", EventDeliveryType.DOUBLE)
+        self.delivery_combo.addItem(self.tr("DIRECT"), EventDeliveryType.DIRECT)
+        self.delivery_combo.addItem(self.tr("QUEUE"), EventDeliveryType.QUEUE)
+        self.delivery_combo.addItem(self.tr("DOUBLE"), EventDeliveryType.DOUBLE)
         if event:
             idx = self.delivery_combo.findData(event.delivery_type)
             if idx >= 0:
@@ -108,7 +108,7 @@ class EventEditDialog(QDialog):
         form.addRow("Delivery type", self.delivery_combo)
 
         # Attached data
-        self.data_check = QCheckBox("Use attached data")
+        self.data_check = QCheckBox(self.tr("Use attached data"))
         self.data_check.setChecked(bool(event.data_type if event else False))
         form.addRow("", self.data_check)
 
@@ -129,16 +129,16 @@ class EventEditDialog(QDialog):
         self.trigger_edit = QLineEdit(
             getattr(event, 'trigger', '') if event else "")
         self.trigger_edit.setPlaceholderText(
-            "e.g. GPIO edge (ISR), debounce 5ms / "
-            "periodic timer 10ms / direct call from Application")
+            self.tr("e.g. GPIO edge (ISR), debounce 5ms / "
+            "periodic timer 10ms / direct call from Application"))
         self.trigger_edit.setToolTip(
-            "Free-text description of when / from where this event fires.\n"
+            self.tr("Free-text description of when / from where this event fires.\n"
             "Examples:\n"
             "  signal: GPIO edge (ISR), debounce 5ms\n"
             "  signal: from Application layer via OSAL queue\n"
             "  call:   direct call from Middleware\n"
             "  time:   periodic timer (10ms)\n"
-            "Not used for kind=change (use transition condition).")
+            "Not used for kind=change (use transition condition)."))
         form.addRow("Trigger", self.trigger_edit)
         # [C-51 Step 3] Structured trigger detail section
         self._build_trigger_detail_section(layout, event)
@@ -168,8 +168,8 @@ class EventEditDialog(QDialog):
         self.trigger_edit.setEnabled(enabled)
         if not enabled:
             self.trigger_edit.setToolTip(
-                "kind=change fires via the transition condition; "
-                "trigger is not used.")
+                self.tr("kind=change fires via the transition condition; "
+                "trigger is not used."))
         # [C-51 Step 3] keep the structured trigger section in sync
         trig_group = getattr(self, 'trig_group', None)
         if trig_group is not None:
@@ -180,7 +180,7 @@ class EventEditDialog(QDialog):
     # ------------------------------------------------------------------
     def _build_trigger_detail_section(self, parent_layout, event):
         """Add collapsible Trigger detail QGroupBox."""
-        group = QGroupBox("Trigger detail (structured)")
+        group = QGroupBox(self.tr("Trigger detail (structured)"))
         group.setCheckable(True)
         group_layout = QFormLayout(group)
 
@@ -236,7 +236,7 @@ class EventEditDialog(QDialog):
             group_layout, "Period", self.trig_period_spin)
 
         # Auto reload (timer)
-        self.trig_autoreload_check = QCheckBox("Auto reload")
+        self.trig_autoreload_check = QCheckBox(self.tr("Auto reload"))
         self.trig_autoreload_check.setChecked(
             td.auto_reload if td is not None else True)
         self.trig_autoreload_row = self._register_row(
@@ -253,7 +253,7 @@ class EventEditDialog(QDialog):
 
         # Condition + Build (comparison)
         self.trig_condition_edit = QLineEdit()
-        self.trig_condition_build_btn = QPushButton("Build...")
+        self.trig_condition_build_btn = QPushButton(self.tr("Build..."))
         self.trig_condition_build_btn.clicked.connect(
             self._open_trigger_condition_builder)
         cond_widget = QWidget()
@@ -324,7 +324,7 @@ class EventEditDialog(QDialog):
         current = self.trig_source_combo.currentText().strip()
         self.trig_source_combo.blockSignals(True)
         self.trig_source_combo.clear()
-        self.trig_source_combo.addItem("")
+        self.trig_source_combo.addItem(self.tr(""))
 
         candidates = []
         if trigger_type == "edge":
@@ -435,16 +435,16 @@ class EventDefinitionDialog(QDialog):
         super().__init__(parent)
         self.sm = sm
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
-        self.setWindowTitle("StateTransitionEvent definitions")
+        self.setWindowTitle(self.tr("StateTransitionEvent definitions"))
         self.setMinimumSize(1100, 650)
 
         layout = QVBoxLayout(self)
 
         # Search
         search_layout = QHBoxLayout()
-        search_layout.addWidget(QLabel("Search (prefix match):"))
+        search_layout.addWidget(QLabel(self.tr("Search (prefix match):")))
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Title, event name, description")
+        self.search_edit.setPlaceholderText(self.tr("Title, event name, description"))
         self.search_edit.textChanged.connect(self.refresh_table)
         search_layout.addWidget(self.search_edit)
         layout.addLayout(search_layout)
@@ -460,9 +460,9 @@ class EventDefinitionDialog(QDialog):
 
         # Buttons
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Add")
+        add_btn = QPushButton(self.tr("Add"))
         add_btn.clicked.connect(self.add_event)
-        del_btn = QPushButton("Delete")
+        del_btn = QPushButton(self.tr("Delete"))
         del_btn.clicked.connect(self.delete_event)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
@@ -470,7 +470,7 @@ class EventDefinitionDialog(QDialog):
         layout.addLayout(btn_layout)
 
         # Close
-        close_btn = QPushButton("Close")
+        close_btn = QPushButton(self.tr("Close"))
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn, alignment=Qt.AlignRight)
 
@@ -491,7 +491,7 @@ class EventDefinitionDialog(QDialog):
 
             # Title (directly editable)
             title_item = QTableWidgetItem(title)
-            title_item.setToolTip("Title of this event. Can be edited directly.")
+            title_item.setToolTip(self.tr("Title of this event. Can be edited directly."))
             self.table.setItem(row, 0, title_item)
 
             self.table.setItem(row, 1, QTableWidgetItem(name))

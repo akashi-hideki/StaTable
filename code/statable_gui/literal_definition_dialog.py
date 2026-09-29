@@ -20,7 +20,7 @@ class NewLiteralDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("New Literal")
+        self.setWindowTitle(self.tr("New Literal"))
         self.setMinimumWidth(400)
 
         layout = QVBoxLayout(self)

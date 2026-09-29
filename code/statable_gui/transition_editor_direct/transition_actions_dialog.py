@@ -38,7 +38,7 @@ class TransitionActionsDialog(QDialog):
             "Set role functions executed before / after the transition."))
 
         # ---- Pre-actions group ----
-        pre_group = QGroupBox("Pre-actions (executed before next_state assignment)")
+        pre_group = QGroupBox(self.tr("Pre-actions (executed before next_state assignment)"))
         pre_layout = QVBoxLayout(pre_group)
         self.pre_list = QListWidget()
         for a in (pre_actions or []):
@@ -50,17 +50,17 @@ class TransitionActionsDialog(QDialog):
         self.pre_combo.setEditable(True)
         self.pre_combo.addItems(self.role_functions)
         pre_btn.addWidget(self.pre_combo, stretch=1)
-        pre_add = QPushButton("+ Add")
+        pre_add = QPushButton(self.tr("+ Add"))
         pre_add.clicked.connect(lambda: self._add(self.pre_list, self.pre_combo))
         pre_btn.addWidget(pre_add)
-        pre_del = QPushButton("Delete")
+        pre_del = QPushButton(self.tr("Delete"))
         pre_del.clicked.connect(lambda: self._del(self.pre_list))
         pre_btn.addWidget(pre_del)
         pre_layout.addLayout(pre_btn)
         layout.addWidget(pre_group)
 
         # ---- Else-actions group ----
-        else_group = QGroupBox("Else-actions (executed in the else branch)")
+        else_group = QGroupBox(self.tr("Else-actions (executed in the else branch)"))
         else_layout = QVBoxLayout(else_group)
         self.else_list = QListWidget()
         for a in (else_actions or []):
@@ -72,10 +72,10 @@ class TransitionActionsDialog(QDialog):
         self.else_combo.setEditable(True)
         self.else_combo.addItems(self.role_functions)
         else_btn.addWidget(self.else_combo, stretch=1)
-        else_add = QPushButton("+ Add")
+        else_add = QPushButton(self.tr("+ Add"))
         else_add.clicked.connect(lambda: self._add(self.else_list, self.else_combo))
         else_btn.addWidget(else_add)
-        else_del = QPushButton("Delete")
+        else_del = QPushButton(self.tr("Delete"))
         else_del.clicked.connect(lambda: self._del(self.else_list))
         else_btn.addWidget(else_del)
         else_layout.addLayout(else_btn)

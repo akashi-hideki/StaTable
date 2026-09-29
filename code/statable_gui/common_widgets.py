@@ -23,14 +23,14 @@ class TitleEditWidget(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.label = QLabel("Title *")
+        self.label = QLabel(self.tr("Title *"))
         self.label.setFont(QFont("sans-serif", 10, QFont.Bold))
         layout.addWidget(self.label)
 
         self.edit = QLineEdit()
         self.edit.setText(title)
         self.edit.setPlaceholderText(placeholder)
-        self.edit.setToolTip("Enter the title of this item. If empty, a provisional title is set automatically.")
+        self.edit.setToolTip(self.tr("Enter the title of this item. If empty, a provisional title is set automatically."))
         layout.addWidget(self.edit, stretch=1)
 
     def get_title(self) -> str:
@@ -60,8 +60,8 @@ class TypeComboBox(QWidget):
         self._refresh_types()
         layout.addWidget(self.combo, stretch=1)
 
-        add_btn = QPushButton("Add...")
-        add_btn.setToolTip("Add / edit user-defined types")
+        add_btn = QPushButton(self.tr("Add..."))
+        add_btn.setToolTip(self.tr("Add / edit user-defined types"))
         add_btn.clicked.connect(self._open_type_manager)
         layout.addWidget(add_btn)
 
@@ -114,15 +114,15 @@ class GroupComboBox(QWidget):
         self._refresh_groups()
         layout.addWidget(self.combo, stretch=1)
 
-        add_btn = QPushButton("Add...")
-        add_btn.setToolTip("Add a new group")
+        add_btn = QPushButton(self.tr("Add..."))
+        add_btn.setToolTip(self.tr("Add a new group"))
         add_btn.clicked.connect(self._add_group)
         layout.addWidget(add_btn)
 
     def _refresh_groups(self):
         current = self.combo.currentText()
         self.combo.clear()
-        self.combo.addItem("")
+        self.combo.addItem(self.tr(""))
         self.combo.addItems(self.groups)
         if current:
             idx = self.combo.findText(current)
@@ -156,7 +156,7 @@ class EventComboBox(QComboBox):
         super().__init__(parent)
         self.setEditable(True)
         self.setInsertPolicy(QComboBox.NoInsert)
-        self.addItem("")
+        self.addItem(self.tr(""))
         if event_names:
             self.addItems(event_names)
 
@@ -167,7 +167,7 @@ class StateComboBox(QComboBox):
     def __init__(self, parent=None, state_names: Optional[List[str]] = None):
         super().__init__(parent)
         self.setEditable(False)
-        self.addItem("")
+        self.addItem(self.tr(""))
         if state_names:
             self.addItems(state_names)
 
@@ -177,7 +177,7 @@ class GroupAddDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("GroupAdd")
+        self.setWindowTitle(self.tr("GroupAdd"))
         self.setMinimumWidth(350)
 
         layout = QVBoxLayout(self)
@@ -185,7 +185,7 @@ class GroupAddDialog(QDialog):
         layout.addLayout(form)
 
         self.name_edit = QLineEdit()
-        self.name_edit.setPlaceholderText("Enter a new group name")
+        self.name_edit.setPlaceholderText(self.tr("Enter a new group name"))
         form.addRow("Group name", self.name_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -209,7 +209,7 @@ class TypeManagerDialog(QDialog):
     def __init__(self, parent=None, global_defs: Optional[GlobalDefinitions] = None):
         super().__init__(parent)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
-        self.setWindowTitle("User-defined type management")
+        self.setWindowTitle(self.tr("User-defined type management"))
         self.setMinimumSize(800, 500)
 
         layout = QVBoxLayout(self)
@@ -224,11 +224,11 @@ class TypeManagerDialog(QDialog):
         layout.addWidget(self.table, stretch=1)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Add")
+        add_btn = QPushButton(self.tr("Add"))
         add_btn.clicked.connect(self._add_type)
-        edit_btn = QPushButton("Edit")
+        edit_btn = QPushButton(self.tr("Edit"))
         edit_btn.clicked.connect(self._edit_type)
-        del_btn = QPushButton("Delete")
+        del_btn = QPushButton(self.tr("Delete"))
         del_btn.clicked.connect(self._delete_type)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(edit_btn)
@@ -236,7 +236,7 @@ class TypeManagerDialog(QDialog):
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
-        close_btn = QPushButton("Close")
+        close_btn = QPushButton(self.tr("Close"))
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn, alignment=Qt.AlignRight)
 
@@ -312,7 +312,7 @@ class TypeEditDialog(QDialog):
     def __init__(self, parent=None, custom_type: Optional[CustomTypeDef] = None):
         super().__init__(parent)
         self.custom_type = custom_type if custom_type else CustomTypeDef(name="", title="")
-        self.setWindowTitle("Edit user-defined type")
+        self.setWindowTitle(self.tr("Edit user-defined type"))
         self.setMinimumSize(700, 500)
 
         layout = QVBoxLayout(self)
@@ -320,7 +320,7 @@ class TypeEditDialog(QDialog):
         layout.addLayout(form)
 
         self.title_edit = QLineEdit(self.custom_type.title)
-        self.title_edit.setPlaceholderText("Label shown in the list (auto-set if empty)")
+        self.title_edit.setPlaceholderText(self.tr("Label shown in the list (auto-set if empty)"))
         form.addRow("Title *", self.title_edit)
 
         self.name_edit = QLineEdit(self.custom_type.name)
@@ -329,7 +329,7 @@ class TypeEditDialog(QDialog):
         self.desc_edit = QLineEdit(self.custom_type.description)
         form.addRow("Description", self.desc_edit)
 
-        layout.addWidget(QLabel("Member list:"))
+        layout.addWidget(QLabel(self.tr("Member list:")))
         self.member_table = QTableWidget(0, 5)
         self.member_table.setHorizontalHeaderLabels(["Member name", "Type", "Bit width", "Array", "Description"])
         self.member_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -340,11 +340,11 @@ class TypeEditDialog(QDialog):
         layout.addWidget(self.member_table, stretch=1)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Add member")
+        add_btn = QPushButton(self.tr("Add member"))
         add_btn.clicked.connect(self._add_member)
-        edit_btn = QPushButton("Edit member")
+        edit_btn = QPushButton(self.tr("Edit member"))
         edit_btn.clicked.connect(self._edit_member)
-        del_btn = QPushButton("Delete member")
+        del_btn = QPushButton(self.tr("Delete member"))
         del_btn.clicked.connect(self._delete_member)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(edit_btn)
@@ -441,7 +441,7 @@ class StructMemberEditDialog(QDialog):
     def __init__(self, parent=None, member: Optional[StructMemberDef] = None):
         super().__init__(parent)
         self.member = member if member else StructMemberDef(name="", data_type="uint8_t")
-        self.setWindowTitle("Struct member edit")
+        self.setWindowTitle(self.tr("Struct member edit"))
         self.setMinimumWidth(450)
 
         layout = QVBoxLayout(self)
@@ -449,7 +449,7 @@ class StructMemberEditDialog(QDialog):
         layout.addLayout(form)
 
         self.title_edit = QLineEdit(self.member.title)
-        self.title_edit.setPlaceholderText("Label shown in the list (auto-set if empty)")
+        self.title_edit.setPlaceholderText(self.tr("Label shown in the list (auto-set if empty)"))
         form.addRow("Title *", self.title_edit)
 
         self.name_edit = QLineEdit(self.member.name)
@@ -470,7 +470,7 @@ class StructMemberEditDialog(QDialog):
         form.addRow("Type", self.type_combo)
 
         # Bit field
-        self.bitfield_check = QCheckBox("Use bit fields")
+        self.bitfield_check = QCheckBox(self.tr("Use bit fields"))
         self.bitfield_check.setChecked(self.member.bit_width > 0)
         form.addRow("", self.bitfield_check)
 
@@ -480,7 +480,7 @@ class StructMemberEditDialog(QDialog):
         form.addRow("Bit width", self.bit_width_spin)
 
         # Array
-        self.array_check = QCheckBox("Use array")
+        self.array_check = QCheckBox(self.tr("Use array"))
         self.array_check.setChecked(self.member.array_size > 0)
         form.addRow("", self.array_check)
 

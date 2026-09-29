@@ -43,7 +43,7 @@ class RoleFunctionDialog(QDialog):
                  namespace_choices=None,
                  literal_library=None):
         super().__init__(parent)
-        self.setWindowTitle("Edit role function")
+        self.setWindowTitle(self.tr("Edit role function"))
         self.setMinimumWidth(500)
 
         self._original = role_function
@@ -73,21 +73,21 @@ class RoleFunctionDialog(QDialog):
         self.namespace_combo = QComboBox()
         self.namespace_combo.setEditable(True)
         self.namespace_combo.setInsertPolicy(QComboBox.NoInsert)
-        self.namespace_combo.addItem("")
+        self.namespace_combo.addItem(self.tr(""))
         for ns in self._namespace_choices:
             if ns and ns != "":
                 self.namespace_combo.addItem(ns)
         self.namespace_combo.setToolTip(
-            "Namespace (layer name / feature group name).\n"
+            self.tr("Namespace (layer name / feature group name).\n"
             "If specified, it can be referenced as 'Driver.Init'.\n"
             "If empty, it is treated as having no layer ('Init').\n"
-            "Select from the list, or type a new value."
+            "Select from the list, or type a new value.")
         )
         form.addRow("Namespace:", self.namespace_combo)
 
         self.title_edit = QLineEdit()
         self.title_edit.setPlaceholderText(
-            "Label shown in the list (auto-set if empty)")
+            self.tr("Label shown in the list (auto-set if empty)"))
         form.addRow("Display name:", self.title_edit)
 
         self.desc_edit = QLineEdit()
@@ -108,9 +108,9 @@ class RoleFunctionDialog(QDialog):
         if self._literal_library is not None:
             btn_row = QHBoxLayout()
             btn_row.addStretch()
-            self.new_literal_btn = QPushButton("+ New Literal")
+            self.new_literal_btn = QPushButton(self.tr("+ New Literal"))
             self.new_literal_btn.setToolTip(
-                "Create a new literal and add it to the list above")
+                self.tr("Create a new literal and add it to the list above"))
             self.new_literal_btn.clicked.connect(self._on_new_literal)
             btn_row.addWidget(self.new_literal_btn)
             main_layout.addLayout(btn_row)

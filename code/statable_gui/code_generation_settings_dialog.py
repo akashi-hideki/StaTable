@@ -35,7 +35,7 @@ class CodeGenerationSettingsDialog(QDialog):
         self.config_manager = config_manager or ConfigManager()
         self.config = self.config_manager.get_config()
         
-        self.setWindowTitle("Code generation settings")
+        self.setWindowTitle(self.tr("Code generation settings"))
         self.setMinimumSize(600, 600)
         
         self._setup_ui()
@@ -72,15 +72,15 @@ class CodeGenerationSettingsDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         
-        self.reset_btn = QPushButton("Reset")
+        self.reset_btn = QPushButton(self.tr("Reset"))
         self.reset_btn.clicked.connect(self._on_reset)
         button_layout.addWidget(self.reset_btn)
         
-        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn = QPushButton(self.tr("Cancel"))
         self.cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(self.cancel_btn)
         
-        self.ok_btn = QPushButton("OK")
+        self.ok_btn = QPushButton(self.tr("OK"))
         self.ok_btn.clicked.connect(self._on_ok)
         button_layout.addWidget(self.ok_btn)
         
@@ -91,53 +91,53 @@ class CodeGenerationSettingsDialog(QDialog):
         layout = QVBoxLayout(self.basic_tab)
         
         # ★ Project name
-        project_group = QGroupBox("Project settings")
+        project_group = QGroupBox(self.tr("Project settings"))
         project_layout = QFormLayout(project_group)
         
         self.project_name_edit = QLineEdit()
-        self.project_name_edit.setPlaceholderText("Example: MyProject")
-        self.project_name_edit.setToolTip("Used as the generated file name <project_name>_run.c")
+        self.project_name_edit.setPlaceholderText(self.tr("Example: MyProject"))
+        self.project_name_edit.setToolTip(self.tr("Used as the generated file name <project_name>_run.c"))
         project_layout.addRow("Project name:", self.project_name_edit)
         
         layout.addWidget(project_group)
         
         # Generation style (fixed display)
-        style_group = QGroupBox("Generation style")
+        style_group = QGroupBox(self.tr("Generation style"))
         style_layout = QFormLayout(style_group)
         
         # Generation style: fixed
-        style_value_label = QLabel("Table-driven style (cell-level function + function table)")
+        style_value_label = QLabel(self.tr("Table-driven style (cell-level function + function table)"))
         style_value_label.setStyleSheet("font-weight: bold;")
         style_layout.addRow("Generation style:", style_value_label)
         
         # Table style: fixed
-        table_value_label = QLabel("Array style (2D array + O(1) access)")
+        table_value_label = QLabel(self.tr("Array style (2D array + O(1) access)"))
         table_value_label.setStyleSheet("font-weight: bold;")
         style_layout.addRow("Table style:", table_value_label)
         
         # description
         note_label = QLabel(
-            "* Fixed to a style optimized for C.\n"
-            "   Generates cell-level transition functions, managed by a function table."
+            self.tr("* Fixed to a style optimized for C.\n"
+            "   Generates cell-level transition functions, managed by a function table.")
         )
         note_label.setStyleSheet("color: gray; font-size: 10px; margin-left: 10px;")
         style_layout.addRow("", note_label)
         
         # OS type (this is meaningful, so it is selectable)
         self.os_type_combo = QComboBox()
-        self.os_type_combo.addItem("NonRTOS (bare metal)", "non_rtos")
-        self.os_type_combo.addItem("FreeRTOS", "freertos")
-        self.os_type_combo.addItem("ThreadX", "threadx")
+        self.os_type_combo.addItem(self.tr("NonRTOS (bare metal)"), "non_rtos")
+        self.os_type_combo.addItem(self.tr("FreeRTOS"), "freertos")
+        self.os_type_combo.addItem(self.tr("ThreadX"), "threadx")
         style_layout.addRow("OS type:", self.os_type_combo)
         
         layout.addWidget(style_group)
         
         # Naming convention
-        naming_group = QGroupBox("Naming convention")
+        naming_group = QGroupBox(self.tr("Naming convention"))
         naming_layout = QFormLayout(naming_group)
         
         self.naming_prefix_edit = QLineEdit()
-        self.naming_prefix_edit.setPlaceholderText("Function name prefix (optional)")
+        self.naming_prefix_edit.setPlaceholderText(self.tr("Function name prefix (optional)"))
         naming_layout.addRow("Prefix:", self.naming_prefix_edit)
         
         self.state_prefix_edit = QLineEdit()
@@ -152,16 +152,16 @@ class CodeGenerationSettingsDialog(QDialog):
         layout.addWidget(naming_group)
         
         # Comment settings
-        comment_group = QGroupBox("Comment settings")
+        comment_group = QGroupBox(self.tr("Comment settings"))
         comment_layout = QVBoxLayout(comment_group)
         
-        self.enable_comments_check = QCheckBox("Generate comments")
+        self.enable_comments_check = QCheckBox(self.tr("Generate comments"))
         comment_layout.addWidget(self.enable_comments_check)
         
-        self.enable_doxygen_check = QCheckBox("Generate Doxygen-style comments")
+        self.enable_doxygen_check = QCheckBox(self.tr("Generate Doxygen-style comments"))
         comment_layout.addWidget(self.enable_doxygen_check)
         
-        self.enable_markers_check = QCheckBox("Generate user code markers")
+        self.enable_markers_check = QCheckBox(self.tr("Generate user code markers"))
         comment_layout.addWidget(self.enable_markers_check)
         
         layout.addWidget(comment_group)
@@ -171,30 +171,30 @@ class CodeGenerationSettingsDialog(QDialog):
         """Log settings tab"""
         layout = QVBoxLayout(self.log_tab)
         
-        log_group = QGroupBox("Debug log settings")
+        log_group = QGroupBox(self.tr("Debug log settings"))
         log_layout = QVBoxLayout(log_group)
         
-        self.enable_debug_logs_check = QCheckBox("Generate DEBUG logs")
+        self.enable_debug_logs_check = QCheckBox(self.tr("Generate DEBUG logs"))
         log_layout.addWidget(self.enable_debug_logs_check)
         
-        self.enable_info_logs_check = QCheckBox("Generate INFO logs")
+        self.enable_info_logs_check = QCheckBox(self.tr("Generate INFO logs"))
         log_layout.addWidget(self.enable_info_logs_check)
         
-        self.enable_error_logs_check = QCheckBox("Generate ERROR logs")
+        self.enable_error_logs_check = QCheckBox(self.tr("Generate ERROR logs"))
         log_layout.addWidget(self.enable_error_logs_check)
         
         layout.addWidget(log_group)
         
         # Pending event limit
-        pending_group = QGroupBox("Pending event settings")
+        pending_group = QGroupBox(self.tr("Pending event settings"))
         pending_layout = QFormLayout(pending_group)
         
         self.max_pending_spin = QSpinBox()
         self.max_pending_spin.setRange(1, 255)
         self.max_pending_spin.setValue(16)
         self.max_pending_spin.setToolTip(
-            "Upper limit of consecutive pending events.\n"
-            "Processing is aborted beyond this count to prevent infinite loops."
+            self.tr("Upper limit of consecutive pending events.\n"
+            "Processing is aborted beyond this count to prevent infinite loops.")
         )
         pending_layout.addRow("Max consecutive processing:", self.max_pending_spin)
         
@@ -206,12 +206,12 @@ class CodeGenerationSettingsDialog(QDialog):
         layout = QVBoxLayout(self.include_tab)
         
         # External include file
-        include_group = QGroupBox("External include file")
+        include_group = QGroupBox(self.tr("External include file"))
         include_layout = QVBoxLayout(include_group)
         
         hint_label = QLabel(
-            "Specify a generated header such as Renesas Smart Configurator output.\n"
-            "The specified header is #include'd into the selected insertion target."
+            self.tr("Specify a generated header such as Renesas Smart Configurator output.\n"
+            "The specified header is #include'd into the selected insertion target.")
         )
         hint_label.setStyleSheet("color: gray; font-size: 10px;")
         include_layout.addWidget(hint_label)
@@ -223,19 +223,19 @@ class CodeGenerationSettingsDialog(QDialog):
         
         include_btn_layout = QHBoxLayout()
         
-        add_btn = QPushButton("Add...")
+        add_btn = QPushButton(self.tr("Add..."))
         add_btn.clicked.connect(self._on_add_include)
         include_btn_layout.addWidget(add_btn)
         
-        remove_btn = QPushButton("Delete")
+        remove_btn = QPushButton(self.tr("Delete"))
         remove_btn.clicked.connect(self._on_remove_include)
         include_btn_layout.addWidget(remove_btn)
         
-        up_btn = QPushButton("Move up")
+        up_btn = QPushButton(self.tr("Move up"))
         up_btn.clicked.connect(self._on_move_include_up)
         include_btn_layout.addWidget(up_btn)
         
-        down_btn = QPushButton("Move down")
+        down_btn = QPushButton(self.tr("Move down"))
         down_btn.clicked.connect(self._on_move_include_down)
         include_btn_layout.addWidget(down_btn)
         
@@ -245,19 +245,19 @@ class CodeGenerationSettingsDialog(QDialog):
         layout.addWidget(include_group)
         
         # Insertion target
-        target_group = QGroupBox("Insertion target")
+        target_group = QGroupBox(self.tr("Insertion target"))
         target_layout = QVBoxLayout(target_group)
         
-        self.include_in_super_check = QCheckBox("statable_all.h (for user main.c)")
+        self.include_in_super_check = QCheckBox(self.tr("statable_all.h (for user main.c)"))
         target_layout.addWidget(self.include_in_super_check)
         
-        self.include_in_role_check = QCheckBox("Role function .c file")
+        self.include_in_role_check = QCheckBox(self.tr("Role function .c file"))
         target_layout.addWidget(self.include_in_role_check)
         
-        self.include_in_transitions_check = QCheckBox("transitions .c file")
+        self.include_in_transitions_check = QCheckBox(self.tr("transitions .c file"))
         target_layout.addWidget(self.include_in_transitions_check)
         
-        self.include_in_common_check = QCheckBox("common .c file")
+        self.include_in_common_check = QCheckBox(self.tr("common .c file"))
         target_layout.addWidget(self.include_in_common_check)
         
         layout.addWidget(target_group)
@@ -268,12 +268,12 @@ class CodeGenerationSettingsDialog(QDialog):
         layout = QVBoxLayout(self.output_tab)
         
         # Output settings
-        output_group = QGroupBox("Output settings")
+        output_group = QGroupBox(self.tr("Output settings"))
         output_layout = QFormLayout(output_group)
         
         self.output_dir_edit = QLineEdit()
-        self.output_dir_edit.setPlaceholderText("Output directory")
-        self.output_dir_btn = QPushButton("Browse...")
+        self.output_dir_edit.setPlaceholderText(self.tr("Output directory"))
+        self.output_dir_btn = QPushButton(self.tr("Browse..."))
         self.output_dir_btn.clicked.connect(self._select_output_dir)
         
         output_dir_layout = QHBoxLayout()
@@ -285,13 +285,13 @@ class CodeGenerationSettingsDialog(QDialog):
         layout.addWidget(output_group)
         
         # Folder structure
-        folder_group = QGroupBox("Folder structure")
+        folder_group = QGroupBox(self.tr("Folder structure"))
         folder_layout = QFormLayout(folder_group)
         
         self.folder_structure_combo = QComboBox()
-        self.folder_structure_combo.addItem("include/src separation (recommended)", "by_type")
-        self.folder_structure_combo.addItem("Per layer", "by_layer")
-        self.folder_structure_combo.addItem("Flat", "flat")
+        self.folder_structure_combo.addItem(self.tr("include/src separation (recommended)"), "by_type")
+        self.folder_structure_combo.addItem(self.tr("Per layer"), "by_layer")
+        self.folder_structure_combo.addItem(self.tr("Flat"), "flat")
         folder_layout.addRow("Structure:", self.folder_structure_combo)
         
         self.include_dir_edit = QLineEdit()
@@ -309,10 +309,10 @@ class CodeGenerationSettingsDialog(QDialog):
         layout.addWidget(folder_group)
         
         # Super include
-        super_group = QGroupBox("Super include")
+        super_group = QGroupBox(self.tr("Super include"))
         super_layout = QVBoxLayout(super_group)
         
-        self.generate_super_check = QCheckBox("Generate statable_all.h (for user main.c)")
+        self.generate_super_check = QCheckBox(self.tr("Generate statable_all.h (for user main.c)"))
         super_layout.addWidget(self.generate_super_check)
         
         super_form = QFormLayout()
@@ -327,10 +327,10 @@ class CodeGenerationSettingsDialog(QDialog):
         layout.addWidget(super_group)
         
         # Merge settings
-        merge_group = QGroupBox("Merge settings")
+        merge_group = QGroupBox(self.tr("Merge settings"))
         merge_layout = QVBoxLayout(merge_group)
         
-        self.save_with_merge_check = QCheckBox("Save by merging with existing file (preserve user code)")
+        self.save_with_merge_check = QCheckBox(self.tr("Save by merging with existing file (preserve user code)"))
         merge_layout.addWidget(self.save_with_merge_check)
         
         layout.addWidget(merge_group)

@@ -30,8 +30,8 @@ DEFAULT_LANG = "en"
 SUPPORTED_LANGUAGES = ["en", "ja", "zh_CN"]
 LANG_DISPLAY = {
     "en": "English",
-    "ja": "\u65e5\u672c\u8a9e",       # 日本語
-    "zh_CN": "\u7b80\u4f53\u4e2d\u6587",  # 简体中文
+    "ja": "\u65e5\u672c\u8a9e",
+    "zh_CN": "\u7b80\u4f53\u4e2d\u6587",
 }
 
 

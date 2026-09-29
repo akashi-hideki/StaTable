@@ -128,7 +128,7 @@ class ActionEditorDialog(QDialog):
         main_layout = QVBoxLayout(self)
 
         toolbar = QToolBar()
-        refresh_btn = QPushButton("Refresh preview")
+        refresh_btn = QPushButton(self.tr("Refresh preview"))
         refresh_btn.clicked.connect(self._on_refresh_preview)
         toolbar.addWidget(refresh_btn)
         main_layout.addWidget(toolbar)
@@ -211,10 +211,10 @@ class ActionEditorDialog(QDialog):
         # ==============================================================
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton(self.tr("Cancel"))
         cancel_btn.clicked.connect(self.reject)
         btn_layout.addWidget(cancel_btn)
-        ok_btn = QPushButton("OK")
+        ok_btn = QPushButton(self.tr("OK"))
         ok_btn.clicked.connect(self._on_accept)
         btn_layout.addWidget(ok_btn)
         main_layout.addLayout(btn_layout)

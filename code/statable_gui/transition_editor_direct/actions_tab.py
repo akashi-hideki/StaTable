@@ -126,21 +126,21 @@ class _ActionGroup(QGroupBox):
         self.combo.addItems(self.role_functions)
         btn_layout.addWidget(self.combo, stretch=1)
 
-        add_btn = QPushButton("+ Add")
+        add_btn = QPushButton(self.tr("+ Add"))
         add_btn.clicked.connect(self._on_add)
         btn_layout.addWidget(add_btn)
 
-        del_btn = QPushButton("Delete")
-        del_btn.setToolTip("Remove the selected row from this list "
-                           "(does not delete the role function itself)")
+        del_btn = QPushButton(self.tr("Delete"))
+        del_btn.setToolTip(self.tr("Remove the selected row from this list "
+                           "(does not delete the role function itself)"))
         del_btn.clicked.connect(self._on_delete)
         btn_layout.addWidget(del_btn)
 
-        up_btn = QPushButton("Up")
+        up_btn = QPushButton(self.tr("Up"))
         up_btn.clicked.connect(self._on_move_up)
         btn_layout.addWidget(up_btn)
 
-        down_btn = QPushButton("Down")
+        down_btn = QPushButton(self.tr("Down"))
         down_btn.clicked.connect(self._on_move_down)
         btn_layout.addWidget(down_btn)
 
@@ -149,21 +149,21 @@ class _ActionGroup(QGroupBox):
         # ---- Row 2 (v2.5): role function management ----
         role_btn_layout = QHBoxLayout()
 
-        self.new_role_btn = QPushButton("+ New Role Function")
+        self.new_role_btn = QPushButton(self.tr("+ New Role Function"))
         self.new_role_btn.setToolTip(
-            "Create a new role function and add it to this list")
+            self.tr("Create a new role function and add it to this list"))
         self.new_role_btn.clicked.connect(self._on_new_role_function)
         role_btn_layout.addWidget(self.new_role_btn)
 
-        self.edit_role_btn = QPushButton("Edit Role Function")
+        self.edit_role_btn = QPushButton(self.tr("Edit Role Function"))
         self.edit_role_btn.setToolTip(
-            "Edit the role function bound to the selected row")
+            self.tr("Edit the role function bound to the selected row"))
         self.edit_role_btn.clicked.connect(self._on_edit_role_function)
         role_btn_layout.addWidget(self.edit_role_btn)
 
-        self.delete_role_btn = QPushButton("Delete Role Function")
+        self.delete_role_btn = QPushButton(self.tr("Delete Role Function"))
         self.delete_role_btn.setToolTip(
-            "Delete the selected role function from the state machine")
+            self.tr("Delete the selected role function from the state machine"))
         self.delete_role_btn.clicked.connect(self._on_delete_role_function)
         role_btn_layout.addWidget(self.delete_role_btn)
 
@@ -770,9 +770,9 @@ class ActionsTab(QWidget):
     def _build_ui(self):
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel(
-            "Cell-level actions:\n"
+            self.tr("Cell-level actions:\n"
             "  Pre  = before the transition chain (runs even if no transition fires)\n"
-            "  Post = after the transition chain (runs even after early return)"))
+            "  Post = after the transition chain (runs even after early return)")))
 
         self.pre_group = _ActionGroup(
             "Pre (before transitions)", TRIGGER_PRE, self.role_functions,

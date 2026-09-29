@@ -54,7 +54,7 @@ class InterruptEditDialog(QDialog):
         role_functions: Optional[dict] = None,
     ):
         super().__init__(parent)
-        self.setWindowTitle("Edit interrupt handler")
+        self.setWindowTitle(self.tr("Edit interrupt handler"))
         self.setMinimumSize(1100, 800)
         self.event_names = event_names or []
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
@@ -62,7 +62,7 @@ class InterruptEditDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        title = QLabel("Edit interrupt handler")
+        title = QLabel(self.tr("Edit interrupt handler"))
         title.setFont(QFont("sans-serif", 14, QFont.Bold))
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
@@ -73,45 +73,45 @@ class InterruptEditDialog(QDialog):
         self.title_edit = QLineEdit()
         if interrupt:
             self.title_edit.setText(interrupt.title)
-        self.title_edit.setPlaceholderText("Label shown in the list (auto-set if empty)")
-        self.title_edit.setToolTip("Enter the title of this interrupt handler. If empty, a provisional title is set automatically.")
+        self.title_edit.setPlaceholderText(self.tr("Label shown in the list (auto-set if empty)"))
+        self.title_edit.setToolTip(self.tr("Enter the title of this interrupt handler. If empty, a provisional title is set automatically."))
         form.addRow("Title *", self.title_edit)
 
         self.name_edit = QLineEdit()
         if interrupt:
             self.name_edit.setText(interrupt.name)
-        self.name_edit.setToolTip("Please enter an interrupt name (e.g., TIMER0_IRQHandler)")
+        self.name_edit.setToolTip(self.tr("Please enter an interrupt name (e.g., TIMER0_IRQHandler)"))
         form.addRow("Interrupt name", self.name_edit)
 
         self.desc_edit = QLineEdit()
         if interrupt:
             self.desc_edit.setText(interrupt.description)
-        self.desc_edit.setToolTip("Enter the description of this interrupt handler")
+        self.desc_edit.setToolTip(self.tr("Enter the description of this interrupt handler"))
         form.addRow("Description", self.desc_edit)
 
         self.event_combo = QComboBox()
         self.event_combo.setEditable(True)
         self.event_combo.setInsertPolicy(QComboBox.NoInsert)
-        self.event_combo.addItem("")
+        self.event_combo.addItem(self.tr(""))
         self.event_combo.addItems(self.event_names)
         if interrupt and interrupt.event_names:
             self.event_combo.setCurrentText(interrupt.event_names[0])
         self.event_combo.setToolTip(
-            "Select or enter the state transition event name to notify from the ISR.\n"
-            "Entering a new event name registers it as-is."
+            self.tr("Select or enter the state transition event name to notify from the ISR.\n"
+            "Entering a new event name registers it as-is.")
         )
         form.addRow("Event name", self.event_combo)
 
         self.timer_check = QCheckBox()
         self.timer_check.setChecked(interrupt.is_timer if interrupt else False)
-        self.timer_check.setToolTip("Check this if it is a timer interrupt")
+        self.timer_check.setToolTip(self.tr("Check this if it is a timer interrupt"))
         form.addRow("Timer interrupt", self.timer_check)
 
-        layout.addWidget(QLabel("Conditional action list:"))
+        layout.addWidget(QLabel(self.tr("Conditional action list:")))
         help_label = QLabel(
-            "Describe \"state transition condition\" and \"action code\" in each row.\n"
+            self.tr("Describe \"state transition condition\" and \"action code\" in each row.\n"
             "If the state transition condition is empty, the action is executed unconditionally.\n"
-            "Double-click to edit each cell."
+            "Double-click to edit each cell.")
         )
         help_label.setStyleSheet("color: gray; font-size: 11px;")
         layout.addWidget(help_label)
@@ -123,9 +123,9 @@ class InterruptEditDialog(QDialog):
         layout.addWidget(self.action_table, stretch=1)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Add row")
+        add_btn = QPushButton(self.tr("Add row"))
         add_btn.clicked.connect(lambda: self.add_action_row())
-        del_btn = QPushButton("Delete row")
+        del_btn = QPushButton(self.tr("Delete row"))
         del_btn.clicked.connect(lambda: self.delete_action_row())
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
@@ -150,12 +150,12 @@ class InterruptEditDialog(QDialog):
         self.action_table.insertRow(row)
 
         condition_item = QTableWidgetItem(condition.replace('\n', ' ; ') if condition else "")
-        condition_item.setToolTip("Double-click to edit the state transition condition")
+        condition_item.setToolTip(self.tr("Double-click to edit the state transition condition"))
         condition_item.setData(Qt.UserRole, condition)
         self.action_table.setItem(row, 0, condition_item)
 
         action_item = QTableWidgetItem(action.replace('\n', ' ; ') if action else "")
-        action_item.setToolTip("Double-click to edit the action code")
+        action_item.setToolTip(self.tr("Double-click to edit the action code"))
         action_item.setData(Qt.UserRole, action)
         self.action_table.setItem(row, 1, action_item)
 
@@ -255,7 +255,7 @@ class InterruptEditDialog(QDialog):
 class DevicePlaceholderEditDialog(QDialog):
     def __init__(self, parent=None, placeholder: Optional[DevicePlaceholderDef] = None):
         super().__init__(parent)
-        self.setWindowTitle("Device resource placeholder definitionEdit")
+        self.setWindowTitle(self.tr("Device resource placeholder definitionEdit"))
         self.setMinimumWidth(450)
 
         form = QFormLayout(self)
@@ -263,7 +263,7 @@ class DevicePlaceholderEditDialog(QDialog):
         self.title_edit = QLineEdit()
         if placeholder:
             self.title_edit.setText(placeholder.title)
-        self.title_edit.setPlaceholderText("Label shown in the list (auto-set if empty)")
+        self.title_edit.setPlaceholderText(self.tr("Label shown in the list (auto-set if empty)"))
         form.addRow("Title *", self.title_edit)
 
         self.name_edit = QLineEdit()
@@ -298,7 +298,7 @@ class DevicePlaceholderEditDialog(QDialog):
 class TimerBaseEditDialog(QDialog):
     def __init__(self, parent=None, timer_base: TimerBaseDef = None):
         super().__init__(parent)
-        self.setWindowTitle("Timer base variableEdit")
+        self.setWindowTitle(self.tr("Timer base variableEdit"))
         self.setMinimumWidth(450)
 
         form = QFormLayout(self)
@@ -306,7 +306,7 @@ class TimerBaseEditDialog(QDialog):
         self.title_edit = QLineEdit()
         if timer_base:
             self.title_edit.setText(timer_base.title)
-        self.title_edit.setPlaceholderText("Label shown in the list (auto-set if empty)")
+        self.title_edit.setPlaceholderText(self.tr("Label shown in the list (auto-set if empty)"))
         form.addRow("Title *", self.title_edit)
 
         self.var_edit = QLineEdit()
@@ -327,7 +327,7 @@ class TimerBaseEditDialog(QDialog):
         self.interrupt_edit = QLineEdit()
         if timer_base:
             self.interrupt_edit.setText(timer_base.interrupt_name)
-        self.interrupt_edit.setPlaceholderText("Interrupt name driving this timer (optional)")
+        self.interrupt_edit.setPlaceholderText(self.tr("Interrupt name driving this timer (optional)"))
         form.addRow("Interrupt name", self.interrupt_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -354,7 +354,7 @@ class TimerBaseEditDialog(QDialog):
 class TimerDerivedEditDialog(QDialog):
     def __init__(self, parent=None, derived: Optional[TimerDerivedDef] = None):
         super().__init__(parent)
-        self.setWindowTitle("Edit derived timer variable")
+        self.setWindowTitle(self.tr("Edit derived timer variable"))
         self.setMinimumWidth(450)
 
         form = QFormLayout(self)
@@ -362,7 +362,7 @@ class TimerDerivedEditDialog(QDialog):
         self.title_edit = QLineEdit()
         if derived:
             self.title_edit.setText(derived.title)
-        self.title_edit.setPlaceholderText("Label shown in the list (auto-set if empty)")
+        self.title_edit.setPlaceholderText(self.tr("Label shown in the list (auto-set if empty)"))
         form.addRow("Title *", self.title_edit)
 
         self.period_edit = QLineEdit()
@@ -422,7 +422,7 @@ class InterruptHandlerEditDialog(QDialog):
         self.event_names = event_names or []
         self.role_functions = role_functions if role_functions is not None else {}
 
-        self.setWindowTitle("Interrupt handlers, device resources, timer settings")
+        self.setWindowTitle(self.tr("Interrupt handlers, device resources, timer settings"))
         self.setMinimumSize(1200, 800)
 
         layout = QVBoxLayout(self)
@@ -434,7 +434,7 @@ class InterruptHandlerEditDialog(QDialog):
         self.tabs.addTab(self._create_placeholder_tab(), "Device resource")
         self.tabs.addTab(self._create_timer_tab(), "Timer settings")
 
-        close_btn = QPushButton("Close")
+        close_btn = QPushButton(self.tr("Close"))
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn, alignment=Qt.AlignRight)
 
@@ -460,9 +460,9 @@ class InterruptHandlerEditDialog(QDialog):
         layout.addWidget(self.interrupt_table)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Add")
+        add_btn = QPushButton(self.tr("Add"))
         add_btn.clicked.connect(self.add_interrupt)
-        del_btn = QPushButton("Delete")
+        del_btn = QPushButton(self.tr("Delete"))
         del_btn.clicked.connect(self.delete_interrupt)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
@@ -538,9 +538,9 @@ class InterruptHandlerEditDialog(QDialog):
         layout.addWidget(self.placeholder_table)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Add")
+        add_btn = QPushButton(self.tr("Add"))
         add_btn.clicked.connect(self.add_placeholder)
-        del_btn = QPushButton("Delete")
+        del_btn = QPushButton(self.tr("Delete"))
         del_btn.clicked.connect(self.delete_placeholder)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
@@ -603,9 +603,9 @@ class InterruptHandlerEditDialog(QDialog):
         layout.addWidget(self.timer_tabs)
 
         # \"+\" button
-        add_timer_btn = QPushButton("+")
+        add_timer_btn = QPushButton(self.tr("+"))
         add_timer_btn.setFixedWidth(30)
-        add_timer_btn.setToolTip("Add base timer")
+        add_timer_btn.setToolTip(self.tr("Add base timer"))
         add_timer_btn.clicked.connect(self.add_timer_base)
         layout.addWidget(add_timer_btn, alignment=Qt.AlignRight)
 
@@ -647,15 +647,15 @@ class InterruptHandlerEditDialog(QDialog):
 
         interrupt_edit = QLineEdit(timer.interrupt_name)
         interrupt_edit.textChanged.connect(lambda text, t=timer: self._on_timer_interrupt_changed(t, text))
-        interrupt_edit.setPlaceholderText("Interrupt name (optional)")
+        interrupt_edit.setPlaceholderText(self.tr("Interrupt name (optional)"))
         form.addRow("Interrupt name", interrupt_edit)
 
         # Edit button
-        edit_btn = QPushButton("Edit base timer...")
+        edit_btn = QPushButton(self.tr("Edit base timer..."))
         edit_btn.clicked.connect(lambda _checked, t=timer: self.edit_timer_base(t))
         form.addRow("", edit_btn)
 
-        layout.addWidget(QLabel("Derived timer variable:"))
+        layout.addWidget(QLabel(self.tr("Derived timer variable:")))
         derived_table = DoubleClickTable(0, 5)
         derived_table.setHorizontalHeaderLabels(["Title", "Period name", "Multiplier", "Variable name", "Type"])
         derived_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -664,9 +664,9 @@ class InterruptHandlerEditDialog(QDialog):
 
         # Derived timer button
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Add")
+        add_btn = QPushButton(self.tr("Add"))
         add_btn.clicked.connect(lambda _checked, t=timer: self.add_derived(t))
-        del_btn = QPushButton("Delete")
+        del_btn = QPushButton(self.tr("Delete"))
         del_btn.clicked.connect(lambda _checked, t=timer: self.delete_derived(t))
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)

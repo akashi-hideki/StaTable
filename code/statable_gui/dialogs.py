@@ -66,7 +66,7 @@ class TransitionListDialog(QDialog):
                  existing_transitions=None, role_functions=None,
                  global_defs=None, state_machine=None):
         super().__init__(parent)
-        self.setWindowTitle("Transition edit (D&D visual editing)")
+        self.setWindowTitle(self.tr("Transition edit (D&D visual editing)"))
         self.setMinimumSize(1050, 600)
         self.state_names = state_names or []
         self.role_functions = role_functions or {}
@@ -95,17 +95,17 @@ class TransitionListDialog(QDialog):
         self.table.itemChanged.connect(self.on_item_changed)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Add row")
+        add_btn = QPushButton(self.tr("Add row"))
         add_btn.clicked.connect(lambda: self.add_row())
-        del_btn = QPushButton("Delete row")
+        del_btn = QPushButton(self.tr("Delete row"))
         del_btn.clicked.connect(lambda: self.delete_row())
-        up_btn = QPushButton("Move up")
+        up_btn = QPushButton(self.tr("Move up"))
         up_btn.clicked.connect(lambda: self.move_row_up())
-        down_btn = QPushButton("Move down")
+        down_btn = QPushButton(self.tr("Move down"))
         down_btn.clicked.connect(lambda: self.move_row_down())
 
-        dnd_btn = QPushButton("D&DEdit")
-        dnd_btn.setToolTip("Edit the selected row in the visual editor")
+        dnd_btn = QPushButton(self.tr("D&DEdit"))
+        dnd_btn.setToolTip(self.tr("Edit the selected row in the visual editor"))
         dnd_btn.clicked.connect(self.open_dnd_editor)
 
         btn_layout.addWidget(add_btn)
@@ -291,7 +291,7 @@ class TransitionListDialog(QDialog):
 
         action_item = self.table.item(row, COL_ACTION)
         if action_item:
-            action_item.setText("")
+            action_item.setText(self.tr(""))
             action_item.setData(Qt.UserRole, "")
 
         target_widget = self.table.cellWidget(row, COL_TARGET)
@@ -333,25 +333,25 @@ class TransitionListDialog(QDialog):
         # 0: Title
         title_text = trans.title if trans else "(untitled transition)"
         title_item = QTableWidgetItem(title_text)
-        title_item.setToolTip("Title of this transition. Can be edited directly.")
+        title_item.setToolTip(self.tr("Title of this transition. Can be edited directly."))
         self.table.setItem(row, COL_TITLE, title_item)
 
         # 1: Condition
         cond_item = QTableWidgetItem(trans.condition if trans else "")
-        cond_item.setToolTip("Double-click to open condition builder")
+        cond_item.setToolTip(self.tr("Double-click to open condition builder"))
         cond_item.setData(Qt.UserRole, trans.condition if trans else "")
         self.table.setItem(row, COL_CONDITION, cond_item)
 
         # 2: Action
         action_text = trans.action if trans else ""
         action_item = QTableWidgetItem(action_text.replace('\n', ' ; '))
-        action_item.setToolTip("Double-click for D&D editing")
+        action_item.setToolTip(self.tr("Double-click for D&D editing"))
         action_item.setData(Qt.UserRole, action_text)
         self.table.setItem(row, COL_ACTION, action_item)
 
         # 3: Target
         target_combo = QComboBox()
-        target_combo.addItem("")
+        target_combo.addItem(self.tr(""))
         target_combo.addItems(self.state_names)
         if trans and trans.target:
             idx = target_combo.findText(trans.target)
@@ -363,7 +363,7 @@ class TransitionListDialog(QDialog):
         display_title = self._generate_display_title(trans) if trans else ""
         display_item = QTableWidgetItem(display_title)
         display_item.setFlags(display_item.flags() & ~Qt.ItemIsEditable)
-        display_item.setToolTip("Short label shown in state transition table")
+        display_item.setToolTip(self.tr("Short label shown in state transition table"))
         self.table.setItem(row, COL_DISPLAY, display_item)
 
         # 5: Mode (v2.2)
@@ -374,8 +374,8 @@ class TransitionListDialog(QDialog):
         else:
             mode_combo.setCurrentText("Tentative")
         mode_combo.setToolTip(
-            "Commit: stop evaluating later transitions (no overwrite)\n"
-            "Tentative: later transitions may overwrite the target")
+            self.tr("Commit: stop evaluating later transitions (no overwrite)\n"
+            "Tentative: later transitions may overwrite the target"))
         self.table.setCellWidget(row, COL_MODE, mode_combo)
 
     def delete_row(self):
@@ -426,7 +426,7 @@ class TransitionListDialog(QDialog):
         for row in range(self.table.rowCount()):
             title_item = self.table.item(row, COL_TITLE)
             if title_item and not title_item.text().strip():
-                title_item.setText("(untitled transition)")
+                title_item.setText(self.tr("(untitled transition)"))
             self._update_display_title(row)
         self.accept()
 

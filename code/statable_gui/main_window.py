@@ -106,7 +106,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(
-            "StaTable - State Transition Editor[*]")
+            self.tr("StaTable - State Transition Editor[*]"))
         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
 
         self.logger = StaTableLogger()
@@ -217,9 +217,9 @@ class MainWindow(QMainWindow):
 
         # "+" button
         self.add_tab_button = QToolButton()
-        self.add_tab_button.setText("+")
+        self.add_tab_button.setText(self.tr("+"))
         self.add_tab_button.setToolTip(
-            "Add new state machine")
+            self.tr("Add new state machine"))
         self.add_tab_button.clicked.connect(
             self.add_new_tab)
         self.tab_widget.setCornerWidget(
@@ -255,36 +255,36 @@ class MainWindow(QMainWindow):
 
         global_defs_btn = QAction("Global definitions", self)
         global_defs_btn.setToolTip(
-            "Open global variables / event flag definitions")
+            self.tr("Open global variables / event flag definitions"))
         global_defs_btn.triggered.connect(
             self.open_global_defs_dialog)
         toolbar.addAction(global_defs_btn)
 
         type_defs_btn = QAction("Type definitions", self)
         type_defs_btn.setToolTip(
-            "Manage user-defined types (structs)")
+            self.tr("Manage user-defined types (structs)"))
         type_defs_btn.triggered.connect(
             self.open_type_manager)
         toolbar.addAction(type_defs_btn)
 
         event_defs_btn = QAction("Event definitions", self)
         event_defs_btn.setToolTip(
-            "Open state transition event definitions")
+            self.tr("Open state transition event definitions"))
         event_defs_btn.triggered.connect(
             self.open_event_definition_dialog)
         toolbar.addAction(event_defs_btn)
 
         delivery_btn = QAction("Event delivery settings", self)
         delivery_btn.setToolTip(
-            "Open event delivery type settings")
+            self.tr("Open event delivery type settings"))
         delivery_btn.triggered.connect(
             self.open_event_delivery_settings)
         toolbar.addAction(delivery_btn)
 
         interrupt_btn = QAction("Interrupt settings", self)
         interrupt_btn.setToolTip(
-            "Interrupt handler, device resources,"
-            "Open timer settings")
+            self.tr("Interrupt handler, device resources,"
+            "Open timer settings"))
         interrupt_btn.triggered.connect(
             self.open_interrupt_settings)
         toolbar.addAction(interrupt_btn)
@@ -292,7 +292,7 @@ class MainWindow(QMainWindow):
         # Layer settings
         layer_btn = QAction("Layer settings", self)
         layer_btn.setToolTip(
-            "Set layer execution priority and initialization order")
+            self.tr("Set layer execution priority and initialization order"))
         layer_btn.triggered.connect(
             self.open_layer_settings)
         toolbar.addAction(layer_btn)
@@ -301,7 +301,7 @@ class MainWindow(QMainWindow):
 
         validate_btn = QAction("Validation / AI diagnosis", self)
         validate_btn.setToolTip(
-            "Open pre-generation validation / AI diagnosis")
+            self.tr("Open pre-generation validation / AI diagnosis"))
         validate_btn.triggered.connect(
             self.open_validation_dialog)
         toolbar.addAction(validate_btn)
@@ -309,21 +309,21 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
 
         generate_btn = QAction("Code generation", self)
-        generate_btn.setToolTip("Generate C code")
+        generate_btn.setToolTip(self.tr("Generate C code"))
         generate_btn.triggered.connect(
             self.open_code_generation_dialog)
         toolbar.addAction(generate_btn)
 
         gen_settings_btn = QAction("Generation settings", self)
         gen_settings_btn.setToolTip(
-            "Change code generation settings")
+            self.tr("Change code generation settings"))
         gen_settings_btn.triggered.connect(
             self.open_code_generation_settings)
         toolbar.addAction(gen_settings_btn)
 
         gen_save_btn = QAction("Save generated code", self)
         gen_save_btn.setToolTip(
-            "Directly save generated code")
+            self.tr("Directly save generated code"))
         gen_save_btn.triggered.connect(
             self.save_generated_code_direct)
         toolbar.addAction(gen_save_btn)
@@ -331,12 +331,12 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
 
         open_btn = QAction("Open", self)
-        open_btn.setToolTip("Open project")
+        open_btn.setToolTip(self.tr("Open project"))
         open_btn.triggered.connect(self.open_project)
         toolbar.addAction(open_btn)
 
         save_btn = QAction("Save", self)
-        save_btn.setToolTip("Save project")
+        save_btn.setToolTip(self.tr("Save project"))
         save_btn.triggered.connect(self.save_project)
         toolbar.addAction(save_btn)
 
@@ -344,12 +344,12 @@ class MainWindow(QMainWindow):
 
         new_tab_btn = QAction("New tab", self)
         new_tab_btn.setToolTip(
-            "Add a new state transition tab")
+            self.tr("Add a new state transition tab"))
         new_tab_btn.triggered.connect(self.add_new_tab)
         toolbar.addAction(new_tab_btn)
 
         rename_btn = QAction("Rename tab", self)
-        rename_btn.setToolTip("Rename current tab")
+        rename_btn.setToolTip(self.tr("Rename current tab"))
         rename_btn.triggered.connect(
             self.rename_current_tab)
         toolbar.addAction(rename_btn)
@@ -360,7 +360,7 @@ class MainWindow(QMainWindow):
         traceball_btn.setCheckable(True)
         traceball_btn.setChecked(False)
         traceball_btn.setToolTip(
-            "Show/hide TraceBall log")
+            self.tr("Show/hide TraceBall log"))
         traceball_btn.toggled.connect(
             self.toggle_traceball)
         toolbar.addAction(traceball_btn)
@@ -1274,7 +1274,7 @@ class MainWindow(QMainWindow):
 
         Qt replaces [*] with '*' when setWindowModified(True).
         """
-        self.setWindowTitle("Untitled[*] - StaTable")
+        self.setWindowTitle(self.tr("Untitled[*] - StaTable"))
 
     def _on_tab_data_modified(self) -> None:
         """Slot connected to each StateMachineTab.dataModified signal."""

@@ -72,7 +72,7 @@ class VariableEditDialog(QDialog):
         super().__init__(parent)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.groups = groups or []
-        self.setWindowTitle("Global variablesEdit")
+        self.setWindowTitle(self.tr("Global variablesEdit"))
         self.setMinimumWidth(500)
 
         layout = QFormLayout(self)
@@ -88,7 +88,7 @@ class VariableEditDialog(QDialog):
             self.type_combo.set_current_text(variable.type)
         layout.addRow("Type", self.type_combo)
 
-        self.array_check = QCheckBox("Use array")
+        self.array_check = QCheckBox(self.tr("Use array"))
         self.array_check.setChecked(variable.array_size > 0 if variable else False)
         layout.addRow("", self.array_check)
 
@@ -147,7 +147,7 @@ class FlagEditDialog(QDialog):
     def __init__(self, parent=None, groups=None, flag: Optional[EventFlag] = None):
         super().__init__(parent)
         self.groups = groups or []
-        self.setWindowTitle("Event flagsEdit")
+        self.setWindowTitle(self.tr("Event flagsEdit"))
         self.setMinimumWidth(500)
 
         layout = QFormLayout(self)
@@ -191,7 +191,7 @@ class FlagEditDialog(QDialog):
         min_val = self.min_spin.value()
         max_val = self.max_spin.value()
         if max_val < min_val:
-            self.bit_width_label.setText("Error: Max value < Min value")
+            self.bit_width_label.setText(self.tr("Error: Max value < Min value"))
             self.bit_width_label.setStyleSheet("color: red;")
         else:
             width = (max_val - min_val).bit_length()
@@ -221,7 +221,7 @@ class BulkVariableDialog(QDialog):
         super().__init__(parent)
         self.global_defs = global_defs if global_defs else GlobalDefinitions()
         self.groups = groups or []
-        self.setWindowTitle("Bulk registration of global variables")
+        self.setWindowTitle(self.tr("Bulk registration of global variables"))
         self.setMinimumSize(900, 400)
 
         layout = QVBoxLayout(self)
@@ -238,9 +238,9 @@ class BulkVariableDialog(QDialog):
         self.table.setItemDelegateForColumn(6, self.group_delegate)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Add row")
+        add_btn = QPushButton(self.tr("Add row"))
         add_btn.clicked.connect(self.add_empty_row)
-        del_btn = QPushButton("Delete row")
+        del_btn = QPushButton(self.tr("Delete row"))
         del_btn.clicked.connect(self.delete_row)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
@@ -340,7 +340,7 @@ class BulkFlagDialog(QDialog):
     def __init__(self, parent=None, groups=None):
         super().__init__(parent)
         self.groups = groups or []
-        self.setWindowTitle("Bulk registration of event flags")
+        self.setWindowTitle(self.tr("Bulk registration of event flags"))
         self.setMinimumSize(900, 400)
 
         layout = QVBoxLayout(self)
@@ -355,9 +355,9 @@ class BulkFlagDialog(QDialog):
         self.table.setItemDelegateForColumn(4, ReadOnlyDelegate(self.table))
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Add row")
+        add_btn = QPushButton(self.tr("Add row"))
         add_btn.clicked.connect(self.add_empty_row)
-        del_btn = QPushButton("Delete row")
+        del_btn = QPushButton(self.tr("Delete row"))
         del_btn.clicked.connect(self.delete_row)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(del_btn)
@@ -471,15 +471,15 @@ class GlobalDefinitionsDialog(QDialog):
         super().__init__(parent)
         self.defs = defs
         self._updating = False
-        self.setWindowTitle("Global variables & Event flag definition")
+        self.setWindowTitle(self.tr("Global variables & Event flag definition"))
         self.setMinimumSize(900, 600)
 
         layout = QVBoxLayout(self)
 
         search_layout = QHBoxLayout()
-        search_layout.addWidget(QLabel("Search (prefix match):"))
+        search_layout.addWidget(QLabel(self.tr("Search (prefix match):")))
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("Title, member name, group name")
+        self.search_edit.setPlaceholderText(self.tr("Title, member name, group name"))
         self.search_edit.textChanged.connect(self.on_search_changed)
         search_layout.addWidget(self.search_edit)
         layout.addLayout(search_layout)
@@ -490,7 +490,7 @@ class GlobalDefinitionsDialog(QDialog):
         self.tab.addTab(self._create_variable_tab(), "Global variables")
         self.tab.addTab(self._create_flag_tab(), "Event flags")
 
-        close_btn = QPushButton("Close")
+        close_btn = QPushButton(self.tr("Close"))
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn, alignment=Qt.AlignRight)
 
@@ -516,9 +516,9 @@ class GlobalDefinitionsDialog(QDialog):
         self.var_table.setItemDelegateForColumn(6, self.group_delegate)
 
         btn_layout = QHBoxLayout()
-        del_btn = QPushButton("Delete")
+        del_btn = QPushButton(self.tr("Delete"))
         del_btn.clicked.connect(self.delete_variable)
-        bulk_btn = QPushButton("Register in bulk...")
+        bulk_btn = QPushButton(self.tr("Register in bulk..."))
         bulk_btn.clicked.connect(self.bulk_variables)
         btn_layout.addWidget(del_btn)
         btn_layout.addStretch()
@@ -546,9 +546,9 @@ class GlobalDefinitionsDialog(QDialog):
         self.flag_table.setItemDelegateForColumn(5, self.flag_group_delegate)
 
         btn_layout = QHBoxLayout()
-        del_btn = QPushButton("Delete")
+        del_btn = QPushButton(self.tr("Delete"))
         del_btn.clicked.connect(self.delete_flag)
-        bulk_btn = QPushButton("Register in bulk...")
+        bulk_btn = QPushButton(self.tr("Register in bulk..."))
         bulk_btn.clicked.connect(self.bulk_flags)
         btn_layout.addWidget(del_btn)
         btn_layout.addStretch()

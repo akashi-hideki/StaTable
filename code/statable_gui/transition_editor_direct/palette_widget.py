@@ -102,13 +102,13 @@ class PaletteWidget(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
 
-        title_label = QLabel("Event selection screen")
+        title_label = QLabel(self.tr("Event selection screen"))
         title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         title_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(title_label)
 
         # Role function section
-        func_group = QGroupBox("Role function")
+        func_group = QGroupBox(self.tr("Role function"))
         v1 = QVBoxLayout(func_group)
         v1.setContentsMargins(4, 4, 4, 4)
         v1.setSpacing(2)
@@ -119,12 +119,12 @@ class PaletteWidget(QWidget):
         )
         v1.addWidget(self.function_list)
 
-        add_func_btn = QPushButton("+ Role functionAdd")
+        add_func_btn = QPushButton(self.tr("+ Role functionAdd"))
         add_func_btn.clicked.connect(self._add_function)
         v1.addWidget(add_func_btn)
 
         # Transition condition section
-        transition_group = QGroupBox("Transition condition")
+        transition_group = QGroupBox(self.tr("Transition condition"))
         v2 = QVBoxLayout(transition_group)
         v2.setContentsMargins(4, 4, 4, 4)
         v2.setSpacing(2)
@@ -135,7 +135,7 @@ class PaletteWidget(QWidget):
         )
         v2.addWidget(self.transition_list)
 
-        add_transition_btn = QPushButton("+ Transition conditionAdd")
+        add_transition_btn = QPushButton(self.tr("+ Transition conditionAdd"))
         add_transition_btn.clicked.connect(self._add_transition)
         v2.addWidget(add_transition_btn)
 

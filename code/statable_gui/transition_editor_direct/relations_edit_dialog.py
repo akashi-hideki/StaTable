@@ -44,7 +44,7 @@ class RelationsEditDialog(QDialog):
             member_details: {label: "cond_A -> Active"} for display
         """
         super().__init__(parent)
-        self.setWindowTitle("Edit relation")
+        self.setWindowTitle(self.tr("Edit relation"))
         self.setMinimumSize(600, 500)
 
         self.available_labels = list(available_labels or [])
@@ -54,7 +54,7 @@ class RelationsEditDialog(QDialog):
 
         # ---- Kind ----
         kind_layout = QHBoxLayout()
-        kind_layout.addWidget(QLabel("Kind:"))
+        kind_layout.addWidget(QLabel(self.tr("Kind:")))
         self.kind_combo = QComboBox()
         self.kind_combo.addItems(KIND_CHOICES)
         kind_layout.addWidget(self.kind_combo)
@@ -62,7 +62,7 @@ class RelationsEditDialog(QDialog):
         layout.addLayout(kind_layout)
 
         # ---- Members (checkbox list with condition/target) ----
-        members_group = QGroupBox("Members (Transition labels)")
+        members_group = QGroupBox(self.tr("Members (Transition labels)"))
         members_layout = QVBoxLayout(members_group)
         self.members_list = QListWidget()
         for lbl in self.available_labels:
@@ -79,23 +79,23 @@ class RelationsEditDialog(QDialog):
 
         if not self.available_labels:
             hint = QLabel(
-                "No transitions defined in this cell. "
-                "Add transitions first.")
+                self.tr("No transitions defined in this cell. "
+                "Add transitions first."))
             hint.setStyleSheet("color: #a00;")
             members_layout.addWidget(hint)
         layout.addWidget(members_group)
 
         # ---- Shared condition ----
-        cond_group = QGroupBox("Shared condition (used when kind = group)")
+        cond_group = QGroupBox(self.tr("Shared condition (used when kind = group)"))
         cond_layout = QVBoxLayout(cond_group)
         self.shared_edit = QLineEdit()
-        self.shared_edit.setPlaceholderText("e.g. cond_A")
+        self.shared_edit.setPlaceholderText(self.tr("e.g. cond_A"))
         cond_layout.addWidget(self.shared_edit)
         layout.addWidget(cond_group)
 
         # ---- Note ----
         note_layout = QHBoxLayout()
-        note_layout.addWidget(QLabel("Note:"))
+        note_layout.addWidget(QLabel(self.tr("Note:")))
         self.note_edit = QLineEdit()
         note_layout.addWidget(self.note_edit)
         layout.addLayout(note_layout)

@@ -17,10 +17,10 @@ class BaseEditDialog(QDialog):
     def _add_buttons(self, layout):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton(self.tr("Cancel"))
         cancel_btn.clicked.connect(self.reject)
         btn_layout.addWidget(cancel_btn)
-        ok_btn = QPushButton("OK")
+        ok_btn = QPushButton(self.tr("OK"))
         ok_btn.clicked.connect(self.accept)
         btn_layout.addWidget(ok_btn)
         layout.addLayout(btn_layout)
@@ -29,12 +29,12 @@ class BaseEditDialog(QDialog):
 class FunctionEditDialog(BaseEditDialog):
     def __init__(self, item, role_functions=None, parent=None):
         super().__init__(item, parent)
-        self.setWindowTitle("Edit role function")
+        self.setWindowTitle(self.tr("Edit role function"))
         self.role_functions = role_functions or []
 
         layout = QVBoxLayout(self)
         h1 = QHBoxLayout()
-        h1.addWidget(QLabel("Function name:"))
+        h1.addWidget(QLabel(self.tr("Function name:")))
         self.func_combo = QComboBox()
         self.func_combo.setEditable(True)
         self.func_combo.addItems(self.role_functions)
@@ -50,7 +50,7 @@ class FunctionEditDialog(BaseEditDialog):
 class TransitionEditDialog(BaseEditDialog):
     def __init__(self, item, states=None, role_functions=None, global_defs=None, state_machine=None, parent=None):
         super().__init__(item, parent)
-        self.setWindowTitle("Edit state transition event")
+        self.setWindowTitle(self.tr("Edit state transition event"))
         self.states = states or []
         self.role_functions = role_functions or []
         self.global_defs = global_defs
@@ -59,22 +59,22 @@ class TransitionEditDialog(BaseEditDialog):
         layout = QVBoxLayout(self)
 
         h0 = QHBoxLayout()
-        h0.addWidget(QLabel("Event:"))
+        h0.addWidget(QLabel(self.tr("Event:")))
         self.event_label = QLabel(item.params.get('event', item.name))
         h0.addWidget(self.event_label)
         layout.addLayout(h0)
 
         h1 = QHBoxLayout()
-        h1.addWidget(QLabel("Condition:"))
+        h1.addWidget(QLabel(self.tr("Condition:")))
         self.cond_edit = QLineEdit(item.params.get('condition', ''))
         h1.addWidget(self.cond_edit)
 
-        cond_builder_btn = QPushButton("Edit condition...")
+        cond_builder_btn = QPushButton(self.tr("Edit condition..."))
         cond_builder_btn.clicked.connect(self._open_condition_builder)
         h1.addWidget(cond_builder_btn)
         layout.addLayout(h1)
 
-        layout.addWidget(QLabel("Pre-transition processing:"))
+        layout.addWidget(QLabel(self.tr("Pre-transition processing:")))
         self.pre_list = QListWidget()
         self.pre_list.setDragDropMode(QAbstractItemView.InternalMove)
         self.pre_list.setDefaultDropAction(Qt.MoveAction)
@@ -83,20 +83,20 @@ class TransitionEditDialog(BaseEditDialog):
         layout.addWidget(self.pre_list)
 
         pre_btn = QHBoxLayout()
-        add_pre_btn = QPushButton("Add")
+        add_pre_btn = QPushButton(self.tr("Add"))
         add_pre_btn.clicked.connect(self._add_pre)
         pre_btn.addWidget(add_pre_btn)
-        del_pre_btn = QPushButton("Delete")
+        del_pre_btn = QPushButton(self.tr("Delete"))
         del_pre_btn.clicked.connect(self._del_pre)
         pre_btn.addWidget(del_pre_btn)
         layout.addLayout(pre_btn)
 
-        self.has_else_check = QCheckBox("Use else condition")
+        self.has_else_check = QCheckBox(self.tr("Use else condition"))
         self.has_else_check.setChecked(item.params.get('has_else', True))
         layout.addWidget(self.has_else_check)
 
         h3 = QHBoxLayout()
-        h3.addWidget(QLabel("else target:"))
+        h3.addWidget(QLabel(self.tr("else target:")))
         self.else_target_combo = QComboBox()
         self.else_target_combo.setEditable(True)
         self.else_target_combo.addItems(self.states)
@@ -105,7 +105,7 @@ class TransitionEditDialog(BaseEditDialog):
         layout.addLayout(h3)
 
         h2 = QHBoxLayout()
-        h2.addWidget(QLabel("Target:"))
+        h2.addWidget(QLabel(self.tr("Target:")))
         self.target_combo = QComboBox()
         self.target_combo.setEditable(True)
         self.target_combo.addItems(self.states)

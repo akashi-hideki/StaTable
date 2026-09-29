@@ -28,7 +28,7 @@ class RoleFunctionEditDialog(QDialog):
         self.events = events or []
         self.literals = literals or []
 
-        self.setWindowTitle("Edit role function")
+        self.setWindowTitle(self.tr("Edit role function"))
         self.setMinimumWidth(500)
 
         self._setup_ui()
@@ -47,7 +47,7 @@ class RoleFunctionEditDialog(QDialog):
         main_layout.addLayout(form)
 
         # Used global variables
-        global_group = QGroupBox("Used global variables")
+        global_group = QGroupBox(self.tr("Used global variables"))
         global_layout = QVBoxLayout(global_group)
         self.global_list = QListWidget()
         self.global_list.setSelectionMode(QListWidget.NoSelection)
@@ -60,7 +60,7 @@ class RoleFunctionEditDialog(QDialog):
         main_layout.addWidget(global_group)
 
         # Used events
-        event_group = QGroupBox("Used events")
+        event_group = QGroupBox(self.tr("Used events"))
         event_layout = QVBoxLayout(event_group)
         self.event_list = QListWidget()
         self.event_list.setSelectionMode(QListWidget.NoSelection)
@@ -73,7 +73,7 @@ class RoleFunctionEditDialog(QDialog):
         main_layout.addWidget(event_group)
 
         # Used literals
-        literal_group = QGroupBox("Used literals (select from existing)")
+        literal_group = QGroupBox(self.tr("Used literals (select from existing)"))
         literal_layout = QVBoxLayout(literal_group)
         self.literal_list = QListWidget()
         self.literal_list.setSelectionMode(QListWidget.NoSelection)

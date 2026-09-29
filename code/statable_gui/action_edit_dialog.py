@@ -50,7 +50,7 @@ class ActionEditDialog(QDialog):
         role_bar.addWidget(new_role_btn)
         main_layout.addLayout(role_bar)
 
-        self.signature_label = QLabel("")
+        self.signature_label = QLabel(self.tr(""))
         self.signature_label.setFont(QFont("Consolas", 9))
         self.signature_label.setStyleSheet("color: #555;")
         main_layout.addWidget(self.signature_label)
@@ -111,7 +111,7 @@ class ActionEditDialog(QDialog):
                 sig = f"{ret} {display}({arg1} {arg1n}, {arg2} {arg2n})"
                 self.signature_label.setText(sig)
                 return
-        self.signature_label.setText("")
+        self.signature_label.setText(self.tr(""))
 
     # change: use qualified_name
     def insert_role_function(self):

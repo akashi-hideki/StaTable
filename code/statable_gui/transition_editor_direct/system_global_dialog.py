@@ -12,7 +12,7 @@ class SystemGlobalDialog(QDialog):
     def __init__(self, draft, parent=None):
         super().__init__(parent)
         self.draft = draft
-        self.setWindowTitle("System global variables")
+        self.setWindowTitle(self.tr("System global variables"))
         self.setMinimumSize(400, 300)
 
         layout = QVBoxLayout(self)
@@ -20,15 +20,15 @@ class SystemGlobalDialog(QDialog):
         layout.addWidget(self.list_widget)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Add")
+        add_btn = QPushButton(self.tr("Add"))
         add_btn.clicked.connect(self._add)
         btn_layout.addWidget(add_btn)
-        del_btn = QPushButton("Delete")
+        del_btn = QPushButton(self.tr("Delete"))
         del_btn.clicked.connect(self._delete)
         btn_layout.addWidget(del_btn)
         layout.addLayout(btn_layout)
 
-        close_btn = QPushButton("Close")
+        close_btn = QPushButton(self.tr("Close"))
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn)
 

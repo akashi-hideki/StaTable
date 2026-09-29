@@ -175,7 +175,7 @@ class MatrixTableWidget(QTableWidget):
                 else:
                     item = QTableWidgetItem("")
                     item.setData(Qt.UserRole, [])
-                    item.setToolTip("TransitionNone")
+                    item.setToolTip(self.tr("TransitionNone"))
                     self.setItem(row, col, item)
 
         self.resizeColumnsToContents()

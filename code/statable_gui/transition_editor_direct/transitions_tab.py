@@ -104,9 +104,9 @@ class TransitionsTab(QWidget):
         layout = QVBoxLayout(self)
 
         info = QLabel(
-            "Transitions in this cell (top = highest priority, evaluated first)\n"
+            self.tr("Transitions in this cell (top = highest priority, evaluated first)\n"
             "Double-click on the Condition cell to open the condition builder.\n"
-            "Double-click on the Pre/Else cell to edit role functions.")
+            "Double-click on the Pre/Else cell to edit role functions."))
         layout.addWidget(info)
 
         self.table = QTableWidget(0, COLUMN_COUNT)
@@ -128,18 +128,18 @@ class TransitionsTab(QWidget):
         layout.addWidget(self.table)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("+ Add")
+        add_btn = QPushButton(self.tr("+ Add"))
         add_btn.clicked.connect(lambda: self.add_transition())
-        del_btn = QPushButton("Delete")
+        del_btn = QPushButton(self.tr("Delete"))
         del_btn.clicked.connect(lambda: self.delete_transition(
             self.table.currentRow()))
-        up_btn = QPushButton("Move Up")
+        up_btn = QPushButton(self.tr("Move Up"))
         up_btn.clicked.connect(lambda: self.move_up(
             self.table.currentRow()))
-        down_btn = QPushButton("Move Down")
+        down_btn = QPushButton(self.tr("Move Down"))
         down_btn.clicked.connect(lambda: self.move_down(
             self.table.currentRow()))
-        edit_actions_btn = QPushButton("Edit actions...")
+        edit_actions_btn = QPushButton(self.tr("Edit actions..."))
         edit_actions_btn.clicked.connect(self._edit_actions_current_row)
 
         btn_layout.addWidget(add_btn)
@@ -149,11 +149,11 @@ class TransitionsTab(QWidget):
         btn_layout.addWidget(edit_actions_btn)
 
         # v2.5: create a new role function (available in subsequent dialogs)
-        new_role_btn = QPushButton("+ New Role Function")
+        new_role_btn = QPushButton(self.tr("+ New Role Function"))
         new_role_btn.setToolTip(
-            "Create a new role function.\n"
+            self.tr("Create a new role function.\n"
             "It is registered into the state machine and becomes\n"
-            "available in the Pre/Else action dialogs of this tab.")
+            "available in the Pre/Else action dialogs of this tab."))
         new_role_btn.clicked.connect(self._on_new_role_function)
         btn_layout.addWidget(new_role_btn)
 

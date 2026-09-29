@@ -51,10 +51,10 @@ class RelationsTab(QWidget):
         layout = QVBoxLayout(self)
 
         info = QLabel(
-            "Relations between transitions in this cell.\n"
+            self.tr("Relations between transitions in this cell.\n"
             "  sequential: evaluate members in order\n"
             "  exclusive : at most one fires\n"
-            "  group     : hoists shared_condition as outer if")
+            "  group     : hoists shared_condition as outer if"))
         layout.addWidget(info)
 
         self.table = QTableWidget(0, COLUMN_COUNT)
@@ -70,11 +70,11 @@ class RelationsTab(QWidget):
         layout.addWidget(self.table)
 
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("+ Add")
+        add_btn = QPushButton(self.tr("+ Add"))
         add_btn.clicked.connect(lambda: self._add())
-        edit_btn = QPushButton("Edit...")
+        edit_btn = QPushButton(self.tr("Edit..."))
         edit_btn.clicked.connect(lambda: self._edit(self.table.currentRow()))
-        del_btn = QPushButton("Delete")
+        del_btn = QPushButton(self.tr("Delete"))
         del_btn.clicked.connect(lambda: self.delete_relation(
             self.table.currentRow()))
 

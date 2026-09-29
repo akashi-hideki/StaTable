@@ -42,7 +42,7 @@ class ValidationDialog(QDialog):
         self.validation_result = None
         self.parsed_changes = []
         
-        self.setWindowTitle("Pre-generation validation / AI diagnosis")
+        self.setWindowTitle(self.tr("Pre-generation validation / AI diagnosis"))
         self.setMinimumSize(900, 700)
         
         self._setup_ui()
@@ -78,7 +78,7 @@ class ValidationDialog(QDialog):
         
         # Close button
         button_layout = QHBoxLayout()
-        close_btn = QPushButton("Close")
+        close_btn = QPushButton(self.tr("Close"))
         close_btn.clicked.connect(self.accept)
         button_layout.addStretch()
         button_layout.addWidget(close_btn)
@@ -89,7 +89,7 @@ class ValidationDialog(QDialog):
         layout = QVBoxLayout(self.validation_tab)
         
         # Summary label
-        self.summary_label = QLabel("")
+        self.summary_label = QLabel(self.tr(""))
         self.summary_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         layout.addWidget(self.summary_label)
         
@@ -104,7 +104,7 @@ class ValidationDialog(QDialog):
         layout.addWidget(self.issue_tree)
         
         # Re-validate button
-        revalidate_btn = QPushButton("Re-validate")
+        revalidate_btn = QPushButton(self.tr("Re-validate"))
         revalidate_btn.clicked.connect(self._run_validation)
         layout.addWidget(revalidate_btn)
     
@@ -114,17 +114,17 @@ class ValidationDialog(QDialog):
         
         # Description label
         info_label = QLabel(
-            "Perform AI diagnosis with the following steps:\n"
+            self.tr("Perform AI diagnosis with the following steps:\n"
             "1. Click \"Copy\" button to copy the prompt to the clipboard\n"
             "2. Paste into ChatGPT or similar and ask\n"
             "3. Copy the AI answer\n"
-            "4. Paste the answer in the \"AI answer intake\" tab"
+            "4. Paste the answer in the \"AI answer intake\" tab")
         )
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
         
         # Copy button
-        copy_btn = QPushButton("Copy prompt")
+        copy_btn = QPushButton(self.tr("Copy prompt"))
         copy_btn.clicked.connect(self._copy_prompt)
         layout.addWidget(copy_btn)
         
@@ -138,17 +138,17 @@ class ValidationDialog(QDialog):
         layout = QVBoxLayout(self.response_tab)
         
         # Paste button
-        paste_btn = QPushButton("Paste from clipboard")
+        paste_btn = QPushButton(self.tr("Paste from clipboard"))
         paste_btn.clicked.connect(self._paste_response)
         layout.addWidget(paste_btn)
         
         # Answer input
         self.response_edit = QTextEdit()
-        self.response_edit.setPlaceholderText("Paste the AI answer here")
+        self.response_edit.setPlaceholderText(self.tr("Paste the AI answer here"))
         layout.addWidget(self.response_edit)
         
         # Parse button
-        parse_btn = QPushButton("Parse the answer and generate a change list")
+        parse_btn = QPushButton(self.tr("Parse the answer and generate a change list"))
         parse_btn.clicked.connect(self._parse_response)
         layout.addWidget(parse_btn)
     
@@ -166,7 +166,7 @@ class ValidationDialog(QDialog):
         layout.addWidget(self.change_tree)
         
         # Apply button
-        apply_btn = QPushButton("Apply selected changes")
+        apply_btn = QPushButton(self.tr("Apply selected changes"))
         apply_btn.clicked.connect(self._apply_changes)
         layout.addWidget(apply_btn)
     
