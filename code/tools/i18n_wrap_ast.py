@@ -1,18 +1,21 @@
 # code/tools/i18n_wrap_ast.py
 """AST-based bulk-wrap of GUI strings with self.tr() for i18n.
 
+Supports:
+  - Qt widget constructors (QLabel, QPushButton, ...)
+  - QMessageBox.information/warning/critical/question (title + message)
+  - addMenu / addTab / addAction / addItem
+  - setWindowTitle / setText / setToolTip / ...
+
 Safety:
-  - Uses Python's AST for precise detection
-  - Only wraps ast.Constant string nodes
-  - Skips f-strings, variables, already-wrapped strings
-  - VERIFIES the result parses before writing
-  - Idempotent (skips already wrapped)
+  - AST-based, skips f-strings and variables
+  - Verifies result parses before writing
+  - Idempotent
 
 Usage:
     cd code
-    python tools/i18n_wrap_ast.py                       # dry-run
-    python tools/i18n_wrap_ast.py --apply               # apply
-    python tools/i18n_wrap_ast.py --apply path.py       # one file
+    python tools/i18n_wrap_ast.py
+    python tools/i18n_wrap_ast.py --apply
 """
 from __future__ import annotations
 
@@ -24,7 +27,6 @@ from pathlib import Path
 CODE = Path(__file__).resolve().parent.parent
 GUI = CODE / "statable_gui"
 
-# name -> list of arg indices to wrap
 TARGETS = {
     "QLabel": [0],
     "QPushButton": [0],
@@ -32,17 +34,25 @@ TARGETS = {
     "QRadioButton": [0],
     "QGroupBox": [0],
     "QToolButton": [0],
+    "QAction": [0],
     "setWindowTitle": [0],
     "setToolTip": [0],
     "setStatusTip": [0],
     "setWhatsThis": [0],
     "setText": [0],
     "setPlaceholderText": [0],
+    "setTabText": [1],
     "addItem": [0],
+    "addAction": [0],
+    "addTab": [1],
+    "setTitle": [0],
+    "addMenu": [0],
 }
 
+QMSGBOX_METHODS = {"information", "warning", "critical", "question"}
 
-def get_call_name(node: ast.Call) -> str | None:
+
+def get_call_name(node):
     if isinstance(node.func, ast.Name):
         return node.func.id
     if isinstance(node.func, ast.Attribute):
@@ -50,7 +60,7 @@ def get_call_name(node: ast.Call) -> str | None:
     return None
 
 
-def is_self_tr(node: ast.AST) -> bool:
+def is_self_tr(node):
     return (
         isinstance(node, ast.Call)
         and isinstance(node.func, ast.Attribute)
@@ -60,14 +70,34 @@ def is_self_tr(node: ast.AST) -> bool:
     )
 
 
-class Finder(ast.NodeVisitor):
-    def __init__(self) -> None:
-        self.hits: list[ast.Constant] = []
+def is_qmsgbox(recv):
+    if isinstance(recv, ast.Name) and recv.id == "QMessageBox":
+        return True
+    if isinstance(recv, ast.Attribute) and recv.attr == "QMessageBox":
+        return True
+    return False
 
-    def visit_Call(self, node: ast.Call) -> None:
+
+class Finder(ast.NodeVisitor):
+    def __init__(self):
+        self.hits = []
+
+    def visit_Call(self, node):
         self.generic_visit(node)
         if is_self_tr(node):
             return
+
+        # QMessageBox.xxx(parent, "Title", "Message")
+        if isinstance(node.func, ast.Attribute):
+            attr = node.func.attr
+            if attr in QMSGBOX_METHODS and is_qmsgbox(node.func.value):
+                for idx in (1, 2):
+                    if idx < len(node.args):
+                        arg = node.args[idx]
+                        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                            self.hits.append(arg)
+                return
+
         name = get_call_name(node)
         if name not in TARGETS:
             return
@@ -82,13 +112,9 @@ class Finder(ast.NodeVisitor):
             self.hits.append(arg)
 
 
-def wrap(source: str, hits: list[ast.Constant]) -> str:
+def wrap(source, hits):
     lines = source.splitlines(keepends=True)
-    sorted_hits = sorted(
-        hits,
-        key=lambda h: (h.lineno, h.col_offset),
-        reverse=True,
-    )
+    sorted_hits = sorted(hits, key=lambda h: (h.lineno, h.col_offset), reverse=True)
     for arg in sorted_hits:
         l1 = arg.lineno - 1
         c1 = arg.col_offset
@@ -105,7 +131,7 @@ def wrap(source: str, hits: list[ast.Constant]) -> str:
     return "".join(lines)
 
 
-def process(path: Path, apply: bool) -> tuple[int, str]:
+def process(path, apply):
     source = path.read_text(encoding="utf-8")
     try:
         tree = ast.parse(source)
@@ -119,7 +145,6 @@ def process(path: Path, apply: bool) -> tuple[int, str]:
 
     new_source = wrap(source, finder.hits)
 
-    # SAFETY: never write unless result parses
     try:
         ast.parse(new_source)
     except SyntaxError as e:
@@ -130,14 +155,14 @@ def process(path: Path, apply: bool) -> tuple[int, str]:
     return len(finder.hits), ""
 
 
-def resolve(f: str) -> Path:
+def resolve(f):
     p = Path(f)
     if not p.is_absolute():
         p = (CODE / p).resolve()
     return p
 
 
-def main(argv=None) -> int:
+def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("files", nargs="*")

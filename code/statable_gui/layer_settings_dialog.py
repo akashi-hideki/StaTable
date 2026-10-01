@@ -135,8 +135,8 @@ class LayerSettingsDialog(QDialog):
 
         if len(priorities) != len(set(priorities)):
             reply = QMessageBox.question(
-                self, "Confirm",
-                "Priority is duplicated. Continue anyway?",
+                self, self.tr("Confirm"),
+                self.tr("Priority is duplicated. Continue anyway?"),
                 QMessageBox.Yes | QMessageBox.No
             )
             if reply == QMessageBox.No:

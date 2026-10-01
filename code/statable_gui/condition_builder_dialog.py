@@ -319,7 +319,7 @@ class ConditionBuilderDialog(QDialog):
             self.condition_library.add(tmpl)
         except ValueError:
             QMessageBox.warning(
-                self, "Warning",
+                self, self.tr("Warning"),
                 f"A condition template named '{tmpl.name}' already exists.")
             return
 
@@ -398,7 +398,7 @@ class ConditionBuilderDialog(QDialog):
     def _open_literalization(self):
         text = self.condition_edit.toPlainText()
         if not text.strip():
-            QMessageBox.information(self, "Info", "The condition expression is empty.")
+            QMessageBox.information(self, self.tr("Info"), self.tr("The condition expression is empty."))
             return
 
         dialog = LiteralizationDialog(text, self.literal_library, self)

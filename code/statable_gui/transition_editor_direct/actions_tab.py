@@ -438,9 +438,9 @@ class _ActionGroup(QGroupBox):
             logger.warning(
                 "_on_new_role_function: state_machine is None -> abort")
             QMessageBox.information(
-                self, "Information",
-                "StateMachine is not available; cannot create role "
-                "functions from here.")
+                self, self.tr("Information"),
+                self.tr("StateMachine is not available; cannot create role "
+                "functions from here."))
             return
 
         self._dump_sm_roles("_on_new_role_function/before")
@@ -461,16 +461,16 @@ class _ActionGroup(QGroupBox):
             logger.warning(
                 "_on_new_role_function: empty name -> abort")
             QMessageBox.warning(
-                self, "Warning",
-                "Role function name is required.")
+                self, self.tr("Warning"),
+                self.tr("Role function name is required."))
             return
         if rf.name in self.state_machine.role_functions:
             logger.warning(
                 f"_on_new_role_function: duplicate bare name "
                 f"'{rf.name}' in state_machine")
             QMessageBox.warning(
-                self, "Warning",
-                "A role function with the same name already exists.")
+                self, self.tr("Warning"),
+                self.tr("A role function with the same name already exists."))
             return
 
         try:
@@ -480,7 +480,7 @@ class _ActionGroup(QGroupBox):
         except ValueError as e:
             logger.warning(
                 f"_on_new_role_function: add_role_function failed: {e}")
-            QMessageBox.warning(self, "Warning", str(e))
+            QMessageBox.warning(self, self.tr("Warning"), str(e))
             return
 
         self._dump_sm_roles("_on_new_role_function/after_add")
@@ -507,7 +507,7 @@ class _ActionGroup(QGroupBox):
         logger.debug(f"_on_edit_role_function: currentRow={row}")
         if row < 0:
             QMessageBox.information(
-                self, "Information", "Please select a row first.")
+                self, self.tr("Information"), self.tr("Please select a row first."))
             return
         item = self.table.item(row, 0)
         if item is None:
@@ -526,8 +526,8 @@ class _ActionGroup(QGroupBox):
             logger.warning(
                 "_on_edit_role_function: state_machine is None")
             QMessageBox.information(
-                self, "Information",
-                "StateMachine is not available.")
+                self, self.tr("Information"),
+                self.tr("StateMachine is not available."))
             return
 
         self._dump_sm_roles("_on_edit_role_function/before_lookup")
@@ -540,7 +540,7 @@ class _ActionGroup(QGroupBox):
                 f"_on_edit_role_function: could not resolve "
                 f"'{display_name}'")
             QMessageBox.information(
-                self, "Information",
+                self, self.tr("Information"),
                 f"Role function '{display_name}' is not registered in "
                 "this state machine.\nOnly state-machine-owned role "
                 "functions can be edited here.")
@@ -569,8 +569,8 @@ class _ActionGroup(QGroupBox):
                 f"_on_edit_role_function: rename to '{updated.name}' "
                 f"collides with existing entry")
             QMessageBox.warning(
-                self, "Warning",
-                "A role function with the same name already exists.")
+                self, self.tr("Warning"),
+                self.tr("A role function with the same name already exists."))
             return
 
         # [fix] remove_role_function takes the BARE name (dict key).
@@ -594,7 +594,7 @@ class _ActionGroup(QGroupBox):
             except Exception as e2:
                 logger.error(
                     f"_on_edit_role_function: rollback failed: {e2}")
-            QMessageBox.warning(self, "Warning", str(e))
+            QMessageBox.warning(self, self.tr("Warning"), str(e))
             return
 
         self._dump_sm_roles("_on_edit_role_function/after_update")
@@ -644,7 +644,7 @@ class _ActionGroup(QGroupBox):
         logger.debug(f"_on_delete_role_function: currentRow={row}")
         if row < 0:
             QMessageBox.information(
-                self, "Information", "Please select a row first.")
+                self, self.tr("Information"), self.tr("Please select a row first."))
             return
         item = self.table.item(row, 0)
         if item is None:
@@ -663,8 +663,8 @@ class _ActionGroup(QGroupBox):
             logger.warning(
                 "_on_delete_role_function: state_machine is None")
             QMessageBox.information(
-                self, "Information",
-                "StateMachine is not available.")
+                self, self.tr("Information"),
+                self.tr("StateMachine is not available."))
             return
 
         self._dump_sm_roles("_on_delete_role_function/before_lookup")
@@ -676,7 +676,7 @@ class _ActionGroup(QGroupBox):
                 f"_on_delete_role_function: could not resolve "
                 f"'{display_name}'")
             QMessageBox.information(
-                self, "Information",
+                self, self.tr("Information"),
                 f"Role function '{display_name}' is not registered in "
                 "this state machine.")
             return
@@ -686,7 +686,7 @@ class _ActionGroup(QGroupBox):
             f"pure_name='{pure_name}'")
 
         reply = QMessageBox.question(
-            self, "Confirm delete",
+            self, self.tr("Confirm delete"),
             f"Delete role function '{display_name}' from the state "
             "machine?\nThis removes it from all cells in this layer.",
             QMessageBox.Yes | QMessageBox.No,

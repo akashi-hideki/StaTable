@@ -129,8 +129,8 @@ class RelationsEditDialog(QDialog):
         kind = self.kind_combo.currentText()
         if kind == "group" and not members:
             QMessageBox.warning(
-                self, "Warning",
-                "A group relation requires at least one member.")
+                self, self.tr("Warning"),
+                self.tr("A group relation requires at least one member."))
             return
         self.accept()
 

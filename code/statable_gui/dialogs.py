@@ -173,7 +173,7 @@ class TransitionListDialog(QDialog):
     def open_dnd_editor(self):
         row = self.table.currentRow()
         if row < 0:
-            QMessageBox.warning(self, "Warning", "Please select a row to edit.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Please select a row to edit."))
             return
 
         trans = self._row_to_transition(row)

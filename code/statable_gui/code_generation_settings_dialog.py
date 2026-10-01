@@ -52,21 +52,21 @@ class CodeGenerationSettingsDialog(QDialog):
         # Tab
         self.basic_tab = QWidget()
         self._setup_basic_tab()
-        self.tab_widget.addTab(self.basic_tab, "Basic settings")
+        self.tab_widget.addTab(self.basic_tab, self.tr("Basic settings"))
         
         # Log settings tab
         self.log_tab = QWidget()
         self._setup_log_tab()
-        self.tab_widget.addTab(self.log_tab, "Log settings")
+        self.tab_widget.addTab(self.log_tab, self.tr("Log settings"))
         
         # Output settings tab
         self.include_tab = QWidget()
         self._setup_include_tab()
-        self.tab_widget.addTab(self.include_tab, "External include")
+        self.tab_widget.addTab(self.include_tab, self.tr("External include"))
         
         self.output_tab = QWidget()
         self._setup_output_tab()
-        self.tab_widget.addTab(self.output_tab, "Output settings")
+        self.tab_widget.addTab(self.output_tab, self.tr("Output settings"))
         
         # Buttons
         button_layout = QHBoxLayout()
@@ -463,7 +463,7 @@ class CodeGenerationSettingsDialog(QDialog):
     def _on_reset(self):
         """Reset button"""
         reply = QMessageBox.question(
-            self, "Confirm", "Reset settings?",
+            self, self.tr("Confirm"), self.tr("Reset settings?"),
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:

@@ -46,10 +46,10 @@ class NewLiteralDialog(QDialog):
 
     def _on_accept(self):
         if not self.name_edit.text().strip():
-            QMessageBox.warning(self, "Warning", "Name is required.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Name is required."))
             return
         if not self.value_edit.text().strip():
-            QMessageBox.warning(self, "Warning", "Value is required.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Value is required."))
             return
         self.accept()
 

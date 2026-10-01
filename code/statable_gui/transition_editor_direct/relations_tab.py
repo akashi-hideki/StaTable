@@ -124,9 +124,9 @@ class RelationsTab(QWidget):
             available = self._get_available_labels()
             if not available:
                 QMessageBox.warning(
-                    self, "Warning",
-                    "No transitions defined in this cell.\n"
-                    "Add transitions first.")
+                    self, self.tr("Warning"),
+                    self.tr("No transitions defined in this cell.\n"
+                    "Add transitions first."))
                 return -1
             dlg = RelationsEditDialog(
                 parent=self,

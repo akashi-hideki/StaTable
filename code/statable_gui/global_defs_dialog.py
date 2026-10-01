@@ -57,7 +57,7 @@ class InsertableTable(QTableWidget):
 
     def _show_context_menu(self, pos):
         menu = QMenu(self)
-        add_action = menu.addAction("Add row")
+        add_action = menu.addAction(self.tr("Add row"))
         add_action.triggered.connect(self.insert_requested.emit)
         menu.exec(self.viewport().mapToGlobal(pos))
 
@@ -487,8 +487,8 @@ class GlobalDefinitionsDialog(QDialog):
         self.tab = QTabWidget()
         layout.addWidget(self.tab)
 
-        self.tab.addTab(self._create_variable_tab(), "Global variables")
-        self.tab.addTab(self._create_flag_tab(), "Event flags")
+        self.tab.addTab(self._create_variable_tab(), self.tr("Global variables"))
+        self.tab.addTab(self._create_flag_tab(), self.tr("Event flags"))
 
         close_btn = QPushButton(self.tr("Close"))
         close_btn.clicked.connect(self.accept)

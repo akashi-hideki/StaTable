@@ -199,7 +199,7 @@ class RoleFunctionDialog(QDialog):
             self._literal_library.add(lit)
         except ValueError:
             QMessageBox.warning(
-                self, "Warning",
+                self, self.tr("Warning"),
                 f"A literal named '{lit.name}' already exists.")
             return
 

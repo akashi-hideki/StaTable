@@ -223,7 +223,7 @@ class EventQueueDefsDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             new_q = dlg.get_queue_def()
             if not new_q.name:
-                QMessageBox.warning(self, "Warning", "Please enter a queue name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a queue name."))
                 return
             self.global_defs.event_queues[row] = new_q
             self.refresh_table()
@@ -233,7 +233,7 @@ class EventQueueDefsDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             q = dlg.get_queue_def()
             if not q.name:
-                QMessageBox.warning(self, "Warning", "Please enter a queue name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a queue name."))
                 return
             self.global_defs.event_queues.append(q)
             self.refresh_table()

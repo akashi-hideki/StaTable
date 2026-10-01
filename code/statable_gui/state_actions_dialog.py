@@ -293,7 +293,7 @@ class StateActionsDialog(QDialog):
         refresh_btn.clicked.connect(self._refresh_preview)
         preview_layout.addWidget(refresh_btn)
         preview_layout.addWidget(self.preview_widget)
-        self.tabs.addTab(preview_container, "Preview")
+        self.tabs.addTab(preview_container, self.tr("Preview"))
 
         # Buttons
         buttons = QDialogButtonBox(

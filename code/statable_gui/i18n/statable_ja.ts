@@ -204,6 +204,51 @@
         <source>Generated code preview:</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+101"/>
+        <source>Warnings during generation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <location line="+12"/>
+        <location line="+84"/>
+        <location line="+7"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-102"/>
+        <source>State machine and global definitionsis not set.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <location line="+91"/>
+        <source>Please set the output directory.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-47"/>
+        <location line="+70"/>
+        <source>Error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-51"/>
+        <source>Completion</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+21"/>
+        <source>No code was generated.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+24"/>
+        <source>Save complete</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>CodeGenerationSettingsDialog</name>
@@ -213,7 +258,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+37"/>
+        <location line="+17"/>
+        <source>Basic settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Log settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>External include</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+10"/>
         <source>Reset</source>
         <translation type="unfinished"></translation>
     </message>
@@ -396,7 +456,18 @@ The specified header is #include&apos;d into the selected insertion target.</sou
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+206"/>
+        <source>Confirm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Reset settings?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-397"/>
+        <location line="+202"/>
         <source>Output settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -529,6 +600,21 @@ The specified header is #include&apos;d into the selected insertion target.</sou
         <source>Generated C code (ctx-&gt; form)</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+145"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+79"/>
+        <source>Info</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>The condition expression is empty.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ConditionEditDialog</name>
@@ -616,6 +702,27 @@ The specified header is #include&apos;d into the selected insertion target.</sou
         <source>Title of this event. Can be edited directly.</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+45"/>
+        <location line="+6"/>
+        <location line="+24"/>
+        <location line="+3"/>
+        <location line="+21"/>
+        <location line="+6"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-60"/>
+        <location line="+30"/>
+        <source>Please enter an event name.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+32"/>
+        <source>Confirm</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>EventDeliverySettingsDialog</name>
@@ -654,7 +761,7 @@ Select QUEUE if you need event counts or data.</source>
 <context>
     <name>EventEditDialog</name>
     <message>
-        <location filename="../event_definition_dialog.py" line="-447"/>
+        <location filename="../event_definition_dialog.py" line="-554"/>
         <source>Edit state transition event</source>
         <translation type="unfinished"></translation>
     </message>
@@ -767,11 +874,23 @@ Not used for kind=change (use transition condition).</source>
         <source>Title of this queue. Can be edited directly.</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+43"/>
+        <location line="+10"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-10"/>
+        <location line="+10"/>
+        <source>Please enter a queue name.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>EventQueueEditDialog</name>
     <message>
-        <location line="-144"/>
+        <location line="-197"/>
         <source>EventQueueEdit</source>
         <translation type="unfinished"></translation>
     </message>
@@ -820,7 +939,17 @@ Not used for kind=change (use transition condition).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+8"/>
+        <source>Global variables</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Event flags</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Close</source>
         <translation type="unfinished"></translation>
     </message>
@@ -849,11 +978,21 @@ Not used for kind=change (use transition condition).</source>
         <source>Enter a new group name</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+10"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Please enter a group name.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>GroupComboBox</name>
     <message>
-        <location line="-71"/>
+        <location line="-81"/>
         <source>Add...</source>
         <translation type="unfinished"></translation>
     </message>
@@ -865,6 +1004,14 @@ Not used for kind=change (use transition condition).</source>
     <message>
         <location line="+7"/>
         <source></source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>InsertableTable</name>
+    <message>
+        <location filename="../global_defs_dialog.py" line="-491"/>
+        <source>Add row</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -953,7 +1100,22 @@ Double-click to edit each cell.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+8"/>
+        <source>Interrupt handler</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Device resource</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Timer settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Close</source>
         <translation type="unfinished"></translation>
     </message>
@@ -972,7 +1134,32 @@ Double-click to edit each cell.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-63"/>
+        <location line="-168"/>
+        <location line="+15"/>
+        <location line="+54"/>
+        <location line="+10"/>
+        <location line="+140"/>
+        <location line="+12"/>
+        <location line="+13"/>
+        <location line="+39"/>
+        <location line="+11"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-294"/>
+        <location line="+15"/>
+        <source>Please enter an interrupt name.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+54"/>
+        <location line="+10"/>
+        <source>Please enter a placeholder name.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+26"/>
         <source>+</source>
         <translation type="unfinished"></translation>
     </message>
@@ -994,6 +1181,28 @@ Double-click to edit each cell.</source>
     <message>
         <location line="+4"/>
         <source>Derived timer variable:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+62"/>
+        <location line="+12"/>
+        <source>Please enter a base variable name.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>The main timer cannot be deleted.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Confirm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+33"/>
+        <location line="+11"/>
+        <source>Please enter a period name.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1027,11 +1236,34 @@ Double-click to edit each cell.</source>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+52"/>
+        <source>Confirm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Priority is duplicated. Continue anyway?</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>LiteralEditDialog</name>
+    <message>
+        <location filename="../libcntrl/literal_management_dialog.py" line="+175"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Please enter a name.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>LiteralManagementDialog</name>
     <message>
-        <location filename="../libcntrl/literal_management_dialog.py" line="+23"/>
+        <location line="-152"/>
         <source>Literal management</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1055,11 +1287,38 @@ Double-click to edit each cell.</source>
         <source>Close</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+35"/>
+        <location line="+24"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-19"/>
+        <location line="+24"/>
+        <source>Info</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-24"/>
+        <source>Please select a literal to edit.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+24"/>
+        <source>Please select a literal to delete.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Confirm</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>LiteralizationDialog</name>
     <message>
-        <location filename="../condition_builder_dialog.py" line="+259"/>
+        <location filename="../condition_builder_dialog.py" line="+35"/>
         <source>Literalize</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1087,82 +1346,328 @@ Double-click to edit each cell.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+36"/>
+        <location line="+34"/>
+        <source>Global definitions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Open global variables / event flag definitions</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+5"/>
+        <source>Type definitions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Manage user-defined types (structs)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+5"/>
+        <source>Event definitions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Open state transition event definitions</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+5"/>
+        <source>Event delivery settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Open event delivery type settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+5"/>
+        <source>Interrupt settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Interrupt handler, device resources,Open timer settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+7"/>
+        <source>Layer settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Set layer execution priority and initialization order</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+9"/>
+        <location line="+7"/>
+        <source>Validation / AI diagnosis</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Open pre-generation validation / AI diagnosis</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+7"/>
+        <source>Code generation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Generate C code</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+5"/>
+        <source>Generation settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Change code generation settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+5"/>
+        <source>Save generated code</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Directly save generated code</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+7"/>
+        <source>Open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Open project</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+4"/>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Save project</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+6"/>
+        <source>New tab</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
         <source>Add a new state transition tab</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+5"/>
+        <location line="+4"/>
+        <source>Rename tab</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
         <source>Rename current tab</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+11"/>
+        <location line="+7"/>
+        <source>Show log</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>Show/hide TraceBall log</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+914"/>
+        <location line="+13"/>
+        <source>File</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>New Project...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Open Project...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Save Project...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Rename Tab...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>New State Machine</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Edit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Global Definitions...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Type Definitions...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Event Definitions...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Event Delivery Settings...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Interrupt Settings...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Layer Settings...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Validate(&amp;V)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Validation / AI diagnosis...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Code generation(&amp;G)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Code generation...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>Generation settings...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Save generated code...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>View</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>TraceBall</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+29"/>
+        <location line="+51"/>
+        <location line="+17"/>
+        <location line="+411"/>
+        <location line="+133"/>
+        <location line="+16"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-627"/>
+        <source>No layers are defined.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+51"/>
+        <location line="+17"/>
+        <source>There is no state transition tab.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+133"/>
+        <location line="+192"/>
+        <location line="+274"/>
+        <source>Error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-188"/>
+        <source>At least one tab is required.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+133"/>
+        <source>Output directory is not set.
+First set the output directory in settings.
+Please specify.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>There are no tabs.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+49"/>
+        <source>Save complete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+13"/>
+        <source>Warnings during generation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+61"/>
+        <source>Unsaved Changes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The current project has unsaved changes.
+Do you want to save them before continuing?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+21"/>
         <source>Untitled[*] - StaTable</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1195,12 +1700,44 @@ Double-click to edit each cell.</source>
         <source>Example: err_code != 0</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+16"/>
+        <location line="+3"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-3"/>
+        <source>Name is required.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Condition is required.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>NewLiteralDialog</name>
     <message>
         <location filename="../literal_definition_dialog.py" line="+23"/>
         <source>New Literal</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+26"/>
+        <location line="+3"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-3"/>
+        <source>Name is required.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Value is required.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1292,6 +1829,16 @@ Double-click to edit each cell.</source>
         <source>Note:</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+34"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>A group relation requires at least one member.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>RelationsTab</name>
@@ -1316,6 +1863,17 @@ Double-click to edit each cell.</source>
     <message>
         <location line="+2"/>
         <source>Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+50"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>No transitions defined in this cell.
+Add transitions first.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1352,6 +1910,11 @@ Select from the list, or type a new value.</source>
     <message>
         <location line="+2"/>
         <source>Create a new literal and add it to the list above</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+89"/>
+        <source>Warning</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1393,7 +1956,12 @@ Select from the list, or type a new value.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="-2"/>
+        <location line="-25"/>
+        <source>State list</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+23"/>
         <source>Edit</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1403,8 +1971,25 @@ Select from the list, or type a new value.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+90"/>
+        <location line="+4"/>
+        <source>Role function</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+86"/>
         <source>Double-click to edit actions (Entry / Exit / Do)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+152"/>
+        <location line="+33"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-32"/>
+        <location line="+33"/>
+        <source>A role function with the same name already exists.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1424,6 +2009,11 @@ Custom C code can be edited in the generated file ([[STABLE_USER_CODE_..._custom
     <message>
         <location line="+3"/>
         <source>Refresh preview</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
+        <source>Preview</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1517,7 +2107,7 @@ Custom C code can be edited in the generated file ([[STABLE_USER_CODE_..._custom
 <context>
     <name>TimerBaseEditDialog</name>
     <message>
-        <location filename="../interrupt_handler_edit_dialog.py" line="-357"/>
+        <location filename="../interrupt_handler_edit_dialog.py" line="-494"/>
         <source>Timer base variableEdit</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1674,7 +2264,17 @@ Custom C code can be edited in the generated file ([[STABLE_USER_CODE_..._custom
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+186"/>
+        <location line="+68"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Please select a row to edit.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+118"/>
         <location line="+60"/>
         <source></source>
         <translation type="unfinished"></translation>
@@ -1757,6 +2357,43 @@ It is registered into the state machine and becomes
 available in the Pre/Else action dialogs of this tab.</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+101"/>
+        <source>Information</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>StateMachine is not available; cannot create role functions from here.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <location line="+5"/>
+        <location line="+7"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-11"/>
+        <source>Role function name is required.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>A role function with the same name already exists.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+163"/>
+        <source>Info</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Please select a row first.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>TypeComboBox</name>
@@ -1803,11 +2440,30 @@ available in the Pre/Else action dialogs of this tab.</source>
         <source>Delete member</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+38"/>
+        <location line="+3"/>
+        <location line="+14"/>
+        <location line="+23"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-40"/>
+        <location line="+17"/>
+        <source>Please enter a member name.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+23"/>
+        <source>Please enter a type name.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>TypeManagerDialog</name>
     <message>
-        <location line="-135"/>
+        <location line="-213"/>
         <source>User-defined type management</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1831,6 +2487,24 @@ available in the Pre/Else action dialogs of this tab.</source>
         <source>Close</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+30"/>
+        <location line="+3"/>
+        <location line="+14"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-17"/>
+        <location line="+17"/>
+        <source>Please enter a type name.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>Confirm</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ValidationDialog</name>
@@ -1840,7 +2514,27 @@ available in the Pre/Else action dialogs of this tab.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location line="+36"/>
+        <location line="+17"/>
+        <source>1) Validation result</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>2) AI prompt</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>3) AI answer intake</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>4) Change list / apply</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+4"/>
         <source>Close</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1888,11 +2582,64 @@ available in the Pre/Else action dialogs of this tab.</source>
         <source>Apply selected changes</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+50"/>
+        <source>Copy complete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Prompt copied to clipboard.
+Please paste into ChatGPT or similar and ask.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>Failed to copy to clipboard.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <location line="+6"/>
+        <location line="+31"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-37"/>
+        <source>Clipboard is empty.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>AI answer is empty.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+19"/>
+        <source>Parse complete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+12"/>
+        <source>No changes selected for applying.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <source>Apply complete</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>VariableEditDialog</name>
     <message>
-        <location filename="../global_defs_dialog.py" line="-476"/>
+        <location filename="../global_defs_dialog.py" line="+15"/>
         <source>Global variablesEdit</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1959,11 +2706,64 @@ available in the Pre/Else action dialogs of this tab.</source>
         <source>Delete the selected role function from the state machine</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location line="+275"/>
+        <location line="+69"/>
+        <location line="+19"/>
+        <location line="+14"/>
+        <location line="+104"/>
+        <location line="+19"/>
+        <location line="+13"/>
+        <source>Information</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-237"/>
+        <source>StateMachine is not available; cannot create role functions from here.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+22"/>
+        <location line="+8"/>
+        <location line="+11"/>
+        <location line="+89"/>
+        <location line="+25"/>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-132"/>
+        <source>Role function name is required.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <location line="+100"/>
+        <source>A role function with the same name already exists.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-63"/>
+        <location line="+137"/>
+        <source>Please select a row first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="-117"/>
+        <location line="+137"/>
+        <source>StateMachine is not available.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+22"/>
+        <source>Confirm delete</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>_ActionListWidget</name>
     <message>
-        <location filename="../state_actions_dialog.py" line="-206"/>
+        <location filename="../state_actions_dialog.py" line="-210"/>
         <source>+ Add</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1986,7 +2786,7 @@ available in the Pre/Else action dialogs of this tab.</source>
 <context>
     <name>_NamespaceDelegate</name>
     <message>
-        <location filename="../widgets.py" line="-650"/>
+        <location filename="../widgets.py" line="-836"/>
         <source></source>
         <translation type="unfinished"></translation>
     </message>

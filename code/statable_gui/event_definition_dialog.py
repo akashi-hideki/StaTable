@@ -536,13 +536,13 @@ class EventDefinitionDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             new_event = dlg.get_event()
             if not new_event.name:
-                QMessageBox.warning(self, "Warning", "Please enter an event name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter an event name."))
                 return
             # Handler when the name changes
             old_name = event.name
             if old_name != new_event.name:
                 if new_event.name in self.sm.events:
-                    QMessageBox.warning(self, "Warning", f"Event '{new_event.name}' already exists.")
+                    QMessageBox.warning(self, self.tr("Warning"), f"Event '{new_event.name}' already exists.")
                     return
                 #Rebuild dict preserving original positions
                 new_events = {}
@@ -566,10 +566,10 @@ class EventDefinitionDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             event = dlg.get_event()
             if not event.name:
-                QMessageBox.warning(self, "Warning", "Please enter an event name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter an event name."))
                 return
             if event.name in self.sm.events:
-                QMessageBox.warning(self, "Warning", f"Event '{event.name}' already exists.")
+                QMessageBox.warning(self, self.tr("Warning"), f"Event '{event.name}' already exists.")
                 return
             self.sm.add_event(event)
             self.refresh_table()
@@ -590,15 +590,15 @@ class EventDefinitionDialog(QDialog):
             for trans in transitions:
                 msg += f"  - {trans.source} → {trans.target}\n"
             msg += "\nPlease delete these transitions first."
-            QMessageBox.warning(self, "Warning", msg)
+            QMessageBox.warning(self, self.tr("Warning"), msg)
             return
 
         # Interrupt handler check
         for intr in self.global_defs.interrupts:
             if event.name in intr.event_names:
-                QMessageBox.warning(self, "Warning", f"Event '{event.title}' is used by interrupt handler '{intr.title}'.")
+                QMessageBox.warning(self, self.tr("Warning"), f"Event '{event.title}' is used by interrupt handler '{intr.title}'.")
                 return
-        reply = QMessageBox.question(self, "Confirm", f"Event '{event.title}': confirm delete?", QMessageBox.Yes | QMessageBox.No)
+        reply = QMessageBox.question(self, self.tr("Confirm"), f"Event '{event.title}': confirm delete?", QMessageBox.Yes | QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.sm.remove_event(event.name)
             self.refresh_table()

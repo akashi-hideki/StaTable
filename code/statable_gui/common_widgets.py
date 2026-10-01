@@ -195,7 +195,7 @@ class GroupAddDialog(QDialog):
 
     def _on_accept(self):
         if not self.name_edit.text().strip():
-            QMessageBox.warning(self, "Warning", "Please enter a group name.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a group name."))
             return
         self.accept()
 
@@ -266,10 +266,10 @@ class TypeManagerDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             new_type = dlg.get_custom_type()
             if not new_type.name:
-                QMessageBox.warning(self, "Warning", "Please enter a type name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a type name."))
                 return
             if any(t.name == new_type.name for t in self.global_defs.custom_types):
-                QMessageBox.warning(self, "Warning", f"Type '{new_type.name}' already exists.")
+                QMessageBox.warning(self, self.tr("Warning"), f"Type '{new_type.name}' already exists.")
                 return
             self.global_defs.custom_types.append(new_type)
             self._refresh_table()
@@ -283,7 +283,7 @@ class TypeManagerDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             new_type = dlg.get_custom_type()
             if not new_type.name:
-                QMessageBox.warning(self, "Warning", "Please enter a type name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a type name."))
                 return
             target.name = new_type.name
             target.description = new_type.description
@@ -297,7 +297,7 @@ class TypeManagerDialog(QDialog):
         if not target:
             return
         reply = QMessageBox.question(
-            self, "Confirm", f"Type '{target.title}': confirm delete?",
+            self, self.tr("Confirm"), f"Type '{target.title}': confirm delete?",
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
@@ -382,10 +382,10 @@ class TypeEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             member = dlg.get_member()
             if not member.name:
-                QMessageBox.warning(self, "Warning", "Please enter a member name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a member name."))
                 return
             if any(m.name == member.name for m in self.custom_type.members):
-                QMessageBox.warning(self, "Warning", f"Member '{member.name}' already exists.")
+                QMessageBox.warning(self, self.tr("Warning"), f"Member '{member.name}' already exists.")
                 return
             self.custom_type.members.append(member)
             self._refresh_member_table()
@@ -399,7 +399,7 @@ class TypeEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             new_member = dlg.get_member()
             if not new_member.name:
-                QMessageBox.warning(self, "Warning", "Please enter a member name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a member name."))
                 return
             target.name = new_member.name
             target.data_type = new_member.data_type
@@ -422,7 +422,7 @@ class TypeEditDialog(QDialog):
         if not self.title_edit.text().strip():
             self.title_edit.setText(f"Type: {self.name_edit.text().strip() or '(unnamed)'}")
         if not self.name_edit.text().strip():
-            QMessageBox.warning(self, "Warning", "Please enter a type name.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a type name."))
             return
         self.accept()
 

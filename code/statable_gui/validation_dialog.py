@@ -59,22 +59,22 @@ class ValidationDialog(QDialog):
         # ===== Validation result tab =====
         self.validation_tab = QWidget()
         self._setup_validation_tab()
-        self.tab_widget.addTab(self.validation_tab, "1) Validation result")
+        self.tab_widget.addTab(self.validation_tab, self.tr("1) Validation result"))
         
         # ===== AI prompt tab =====
         self.prompt_tab = QWidget()
         self._setup_prompt_tab()
-        self.tab_widget.addTab(self.prompt_tab, "2) AI prompt")
+        self.tab_widget.addTab(self.prompt_tab, self.tr("2) AI prompt"))
         
         # ===== AI answer tab =====
         self.response_tab = QWidget()
         self._setup_response_tab()
-        self.tab_widget.addTab(self.response_tab, "3) AI answer intake")
+        self.tab_widget.addTab(self.response_tab, self.tr("3) AI answer intake"))
         
         # ===== Change list tab =====
         self.changes_tab = QWidget()
         self._setup_changes_tab()
-        self.tab_widget.addTab(self.changes_tab, "4) Change list / apply")
+        self.tab_widget.addTab(self.changes_tab, self.tr("4) Change list / apply"))
         
         # Close button
         button_layout = QHBoxLayout()
@@ -216,11 +216,11 @@ class ValidationDialog(QDialog):
             self.sm, self.gd, self.validation_result
         )
         if self.clipboard.copy_to_clipboard(prompt):
-            QMessageBox.information(self, "Copy complete",
-                "Prompt copied to clipboard.\n"
-                "Please paste into ChatGPT or similar and ask.")
+            QMessageBox.information(self, self.tr("Copy complete"),
+                self.tr("Prompt copied to clipboard.\n"
+                "Please paste into ChatGPT or similar and ask."))
         else:
-            QMessageBox.warning(self, "Error", "Failed to copy to clipboard.")
+            QMessageBox.warning(self, self.tr("Error"), self.tr("Failed to copy to clipboard."))
     
     def _paste_response(self):
         """Paste AI answer from clipboard"""
@@ -228,13 +228,13 @@ class ValidationDialog(QDialog):
         if text:
             self.response_edit.setPlainText(text)
         else:
-            QMessageBox.warning(self, "Warning", "Clipboard is empty.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Clipboard is empty."))
     
     def _parse_response(self):
         """Parse AI answer"""
         text = self.response_edit.toPlainText()
         if not text.strip():
-            QMessageBox.warning(self, "Warning", "AI answer is empty.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("AI answer is empty."))
             return
         
         self.parsed_changes = self.response_parser.parse(text)
@@ -253,7 +253,7 @@ class ValidationDialog(QDialog):
         # Switch the tab to the change list
         self.tab_widget.setCurrentIndex(3)
         
-        QMessageBox.information(self, "Parse complete",
+        QMessageBox.information(self, self.tr("Parse complete"),
             f"{len(self.parsed_changes)} change(s) extracted.")
     
     def _apply_changes(self):
@@ -265,13 +265,13 @@ class ValidationDialog(QDialog):
                 selected_changes.append(self.parsed_changes[i])
         
         if not selected_changes:
-            QMessageBox.warning(self, "Warning", "No changes selected for applying.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("No changes selected for applying."))
             return
         
         applier = ChangeApplier(self.sm, self.gd)
         result = applier.apply_all(selected_changes)
         
-        QMessageBox.information(self, "Apply complete",
+        QMessageBox.information(self, self.tr("Apply complete"),
             f"{result['applied']} change(s) applied.\n"
             f"Failed: {result['failed']} item(s)")
         

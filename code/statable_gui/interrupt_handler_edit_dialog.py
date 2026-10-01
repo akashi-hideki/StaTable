@@ -430,9 +430,9 @@ class InterruptHandlerEditDialog(QDialog):
         self.tabs = QTabWidget()
         layout.addWidget(self.tabs)
 
-        self.tabs.addTab(self._create_interrupt_tab(), "Interrupt handler")
-        self.tabs.addTab(self._create_placeholder_tab(), "Device resource")
-        self.tabs.addTab(self._create_timer_tab(), "Timer settings")
+        self.tabs.addTab(self._create_interrupt_tab(), self.tr("Interrupt handler"))
+        self.tabs.addTab(self._create_placeholder_tab(), self.tr("Device resource"))
+        self.tabs.addTab(self._create_timer_tab(), self.tr("Timer settings"))
 
         close_btn = QPushButton(self.tr("Close"))
         close_btn.clicked.connect(self.accept)
@@ -498,7 +498,7 @@ class InterruptHandlerEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             new_intr = dlg.get_interrupt()
             if not new_intr.name:
-                QMessageBox.warning(self, "Warning", "Please enter an interrupt name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter an interrupt name."))
                 return
             self.global_defs.interrupts[row] = new_intr
             self.refresh_interrupt_table()
@@ -513,7 +513,7 @@ class InterruptHandlerEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             intr = dlg.get_interrupt()
             if not intr.name:
-                QMessageBox.warning(self, "Warning", "Please enter an interrupt name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter an interrupt name."))
                 return
             self.global_defs.interrupts.append(intr)
             self.refresh_interrupt_table()
@@ -567,7 +567,7 @@ class InterruptHandlerEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             new_ph = dlg.get_placeholder()
             if not new_ph.name:
-                QMessageBox.warning(self, "Warning", "Please enter a placeholder name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a placeholder name."))
                 return
             self.global_defs.placeholders[row] = new_ph
             self.refresh_placeholder_table()
@@ -577,7 +577,7 @@ class InterruptHandlerEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             ph = dlg.get_placeholder()
             if not ph.name:
-                QMessageBox.warning(self, "Warning", "Please enter a placeholder name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a placeholder name."))
                 return
             self.global_defs.placeholders.append(ph)
             self.refresh_placeholder_table()
@@ -717,7 +717,7 @@ class InterruptHandlerEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             new_timer = dlg.get_timer_base()
             if not new_timer.variable_name:
-                QMessageBox.warning(self, "Warning", "Please enter a base variable name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a base variable name."))
                 return
             self.global_defs.extra_timers.append(new_timer)
             self.global_defs.add_timer_variables()
@@ -729,7 +729,7 @@ class InterruptHandlerEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             new_timer = dlg.get_timer_base()
             if not new_timer.variable_name:
-                QMessageBox.warning(self, "Warning", "Please enter a base variable name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a base variable name."))
                 return
             timer.variable_name = new_timer.variable_name
             timer.unit = new_timer.unit
@@ -742,13 +742,13 @@ class InterruptHandlerEditDialog(QDialog):
 
     def close_timer_tab(self, index: int):
         if index == 0:
-            QMessageBox.warning(self, "Warning", "The main timer cannot be deleted.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("The main timer cannot be deleted."))
             return
         all_timers = [self.global_defs.timer_base] + self.global_defs.extra_timers
         if 0 <= index < len(all_timers):
             timer = all_timers[index]
             reply = QMessageBox.question(
-                self, "Confirm",
+                self, self.tr("Confirm"),
                 f"Base timer '{timer.title}': confirm delete?",
                 QMessageBox.Yes | QMessageBox.No
             )
@@ -781,7 +781,7 @@ class InterruptHandlerEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             new_d = dlg.get_derived()
             if not new_d.period_name:
-                QMessageBox.warning(self, "Warning", "Please enter a period name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a period name."))
                 return
             timer.derived[row] = new_d
             self.global_defs.add_timer_variables()
@@ -792,7 +792,7 @@ class InterruptHandlerEditDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             d = dlg.get_derived()
             if not d.period_name:
-                QMessageBox.warning(self, "Warning", "Please enter a period name.")
+                QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a period name."))
                 return
             timer.derived.append(d)
             self.global_defs.add_timer_variables()

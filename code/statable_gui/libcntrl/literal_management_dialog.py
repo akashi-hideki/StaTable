@@ -84,12 +84,12 @@ class LiteralManagementDialog(QDialog):
                 self.literal_library.add(lit)
                 self._load_table()
             except ValueError as e:
-                QMessageBox.warning(self, "Warning", str(e))
+                QMessageBox.warning(self, self.tr("Warning"), str(e))
 
     def _edit_literal(self):
         name = self._get_selected_literal_name()
         if name is None:
-            QMessageBox.information(self, "Info", "Please select a literal to edit.")
+            QMessageBox.information(self, self.tr("Info"), self.tr("Please select a literal to edit."))
             return
 
         lit = self.literal_library.get(name)
@@ -108,17 +108,17 @@ class LiteralManagementDialog(QDialog):
             except ValueError as e:
                 # If failure occurs, revert
                 self.literal_library.add(lit)
-                QMessageBox.warning(self, "Warning", str(e))
+                QMessageBox.warning(self, self.tr("Warning"), str(e))
 
     def _delete_literal(self):
         name = self._get_selected_literal_name()
         if name is None:
-            QMessageBox.information(self, "Info", "Please select a literal to delete.")
+            QMessageBox.information(self, self.tr("Info"), self.tr("Please select a literal to delete."))
             return
 
         ret = QMessageBox.warning(
             self,
-            "Confirm",
+            self.tr("Confirm"),
             f"Literal '{name}': confirm delete?\n"
             "If any transition condition uses this literal,\n"
             "It must also be removed from the relevant condition expression.",
@@ -172,7 +172,7 @@ class LiteralEditDialog(QDialog):
     def _on_accept(self):
         name = self.name_edit.text().strip()
         if not name:
-            QMessageBox.warning(self, "Warning", "Please enter a name.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Please enter a name."))
             return
         self.accept()
 

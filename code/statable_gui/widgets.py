@@ -756,7 +756,7 @@ class SettingsPanel(QWidget):
         btn_state.addWidget(add_state_btn)
         btn_state.addWidget(del_state_btn)
         state_layout.addLayout(btn_state)
-        self.tab.addTab(state_tab, "State list")
+        self.tab.addTab(state_tab, self.tr("State list"))
 
         # ---- Role function tab ----
         role_tab = QWidget()
@@ -792,7 +792,7 @@ class SettingsPanel(QWidget):
         event_btn.clicked.connect(self.open_event_definition)
         role_layout.addWidget(event_btn)
 
-        self.tab.addTab(role_tab, "Role function")
+        self.tab.addTab(role_tab, self.tr("Role function"))
 
         self.state_table.itemChanged.connect(self.on_state_table_item_changed)
         self.role_table.itemChanged.connect(self.on_role_table_item_changed)
@@ -1030,8 +1030,8 @@ class SettingsPanel(QWidget):
             rf = dlg.get_role_function()
             if rf.name in self.sm.role_functions:
                 QMessageBox.warning(
-                    self, "Warning",
-                    "A role function with the same name already exists.")
+                    self, self.tr("Warning"),
+                    self.tr("A role function with the same name already exists."))
                 return
             self.sm.add_role_function(rf)
             self.populate_role_table()
@@ -1063,8 +1063,8 @@ class SettingsPanel(QWidget):
 
         if updated.name != name and updated.name in self.sm.role_functions:
             QMessageBox.warning(
-                self, "Warning",
-                "A role function with the same name already exists.")
+                self, self.tr("Warning"),
+                self.tr("A role function with the same name already exists."))
             return
 
         self.sm.remove_role_function(name)

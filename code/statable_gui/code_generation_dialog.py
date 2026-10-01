@@ -330,7 +330,7 @@ class CodeGenerationDialog(QDialog):
                 unique.append(r)
         QMessageBox.warning(
             self,
-            "Warnings during generation",
+            self.tr("Warnings during generation"),
             "The following warnings occurred:\n\n"
             + "\n".join(f"- {m}" for m in unique),
         )
@@ -341,9 +341,9 @@ class CodeGenerationDialog(QDialog):
         if self.state_machine is None or \
            self.global_defs is None:
             QMessageBox.warning(
-                self, "Warning",
-                "State machine and global definitions"
-                "is not set.")
+                self, self.tr("Warning"),
+                self.tr("State machine and global definitions"
+                "is not set."))
             return
 
         output_dir = self.output_dir_edit.text().strip()
@@ -353,8 +353,8 @@ class CodeGenerationDialog(QDialog):
 
         if not output_dir:
             QMessageBox.warning(
-                self, "Warning",
-                "Please set the output directory.")
+                self, self.tr("Warning"),
+                self.tr("Please set the output directory."))
             self._select_output_dir()
             output_dir = self.output_dir_edit.text().strip()
             if not output_dir:
@@ -398,7 +398,7 @@ class CodeGenerationDialog(QDialog):
             self.generate_btn.setEnabled(True)
             self.progress_bar.setVisible(False)
             QMessageBox.critical(
-                self, "Error",
+                self, self.tr("Error"),
                 f"Code generation failed:\n{e}")
             return
         finally:
@@ -417,7 +417,7 @@ class CodeGenerationDialog(QDialog):
 
         # CompletionMessage
         QMessageBox.information(
-            self, "Completion",
+            self, self.tr("Completion"),
             f"{len(self.generated_files)} files "
             f"generated.\nOutput: {output_dir}")
 
@@ -437,15 +437,15 @@ class CodeGenerationDialog(QDialog):
         """Save generated code"""
         if not self.generated_files:
             QMessageBox.warning(
-                self, "Warning",
-                "No code was generated.")
+                self, self.tr("Warning"),
+                self.tr("No code was generated."))
             return
         
         output_dir = self.output_dir_edit.text().strip()
         if not output_dir:
             QMessageBox.warning(
-                self, "Warning",
-                "Please set the output directory.")
+                self, self.tr("Warning"),
+                self.tr("Please set the output directory."))
             return
 
         try:
@@ -462,13 +462,13 @@ class CodeGenerationDialog(QDialog):
                         self.generated_files, output_dir)
             self._save_settings()
             QMessageBox.information(
-                self, "Save complete",
+                self, self.tr("Save complete"),
                 f"{len(saved_files)} files "
                 f"saved.\n\n"
                 f"Output: {output_dir}")
         except Exception as e:
             QMessageBox.critical(
-                self, "Error",
+                self, self.tr("Error"),
                 f"Save failed:\n{e}")
 
     def _on_close(self):

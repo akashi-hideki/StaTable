@@ -252,9 +252,9 @@ class TransitionsTab(QWidget):
         """
         if self.state_machine is None:
             QMessageBox.information(
-                self, "Information",
-                "StateMachine is not available; cannot create role "
-                "functions from here.")
+                self, self.tr("Information"),
+                self.tr("StateMachine is not available; cannot create role "
+                "functions from here."))
             return
 
         dlg = RoleFunctionDialog(self, **self._dialog_kwargs())
@@ -264,19 +264,19 @@ class TransitionsTab(QWidget):
         rf = dlg.get_role_function()
         if not rf.name:
             QMessageBox.warning(
-                self, "Warning",
-                "Role function name is required.")
+                self, self.tr("Warning"),
+                self.tr("Role function name is required."))
             return
         if rf.name in self.state_machine.role_functions:
             QMessageBox.warning(
-                self, "Warning",
-                "A role function with the same name already exists.")
+                self, self.tr("Warning"),
+                self.tr("A role function with the same name already exists."))
             return
 
         try:
             self.state_machine.add_role_function(rf)
         except ValueError as e:
-            QMessageBox.warning(self, "Warning", str(e))
+            QMessageBox.warning(self, self.tr("Warning"), str(e))
             return
 
         qn = _qualified_name(rf)
@@ -433,7 +433,7 @@ class TransitionsTab(QWidget):
         row = self.table.currentRow()
         if row < 0:
             QMessageBox.information(
-                self, "Info", "Please select a row first.")
+                self, self.tr("Info"), self.tr("Please select a row first."))
             return
         self._edit_actions(row)
 

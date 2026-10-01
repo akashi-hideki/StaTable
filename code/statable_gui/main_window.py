@@ -253,35 +253,35 @@ class MainWindow(QMainWindow):
         toolbar.setToolButtonStyle(Qt.ToolButtonTextOnly)
         self.addToolBar(Qt.TopToolBarArea, toolbar)
 
-        global_defs_btn = QAction("Global definitions", self)
+        global_defs_btn = QAction(self.tr("Global definitions"), self)
         global_defs_btn.setToolTip(
             self.tr("Open global variables / event flag definitions"))
         global_defs_btn.triggered.connect(
             self.open_global_defs_dialog)
         toolbar.addAction(global_defs_btn)
 
-        type_defs_btn = QAction("Type definitions", self)
+        type_defs_btn = QAction(self.tr("Type definitions"), self)
         type_defs_btn.setToolTip(
             self.tr("Manage user-defined types (structs)"))
         type_defs_btn.triggered.connect(
             self.open_type_manager)
         toolbar.addAction(type_defs_btn)
 
-        event_defs_btn = QAction("Event definitions", self)
+        event_defs_btn = QAction(self.tr("Event definitions"), self)
         event_defs_btn.setToolTip(
             self.tr("Open state transition event definitions"))
         event_defs_btn.triggered.connect(
             self.open_event_definition_dialog)
         toolbar.addAction(event_defs_btn)
 
-        delivery_btn = QAction("Event delivery settings", self)
+        delivery_btn = QAction(self.tr("Event delivery settings"), self)
         delivery_btn.setToolTip(
             self.tr("Open event delivery type settings"))
         delivery_btn.triggered.connect(
             self.open_event_delivery_settings)
         toolbar.addAction(delivery_btn)
 
-        interrupt_btn = QAction("Interrupt settings", self)
+        interrupt_btn = QAction(self.tr("Interrupt settings"), self)
         interrupt_btn.setToolTip(
             self.tr("Interrupt handler, device resources,"
             "Open timer settings"))
@@ -290,7 +290,7 @@ class MainWindow(QMainWindow):
         toolbar.addAction(interrupt_btn)
 
         # Layer settings
-        layer_btn = QAction("Layer settings", self)
+        layer_btn = QAction(self.tr("Layer settings"), self)
         layer_btn.setToolTip(
             self.tr("Set layer execution priority and initialization order"))
         layer_btn.triggered.connect(
@@ -299,7 +299,7 @@ class MainWindow(QMainWindow):
 
         toolbar.addSeparator()
 
-        validate_btn = QAction("Validation / AI diagnosis", self)
+        validate_btn = QAction(self.tr("Validation / AI diagnosis"), self)
         validate_btn.setToolTip(
             self.tr("Open pre-generation validation / AI diagnosis"))
         validate_btn.triggered.connect(
@@ -308,20 +308,20 @@ class MainWindow(QMainWindow):
 
         toolbar.addSeparator()
 
-        generate_btn = QAction("Code generation", self)
+        generate_btn = QAction(self.tr("Code generation"), self)
         generate_btn.setToolTip(self.tr("Generate C code"))
         generate_btn.triggered.connect(
             self.open_code_generation_dialog)
         toolbar.addAction(generate_btn)
 
-        gen_settings_btn = QAction("Generation settings", self)
+        gen_settings_btn = QAction(self.tr("Generation settings"), self)
         gen_settings_btn.setToolTip(
             self.tr("Change code generation settings"))
         gen_settings_btn.triggered.connect(
             self.open_code_generation_settings)
         toolbar.addAction(gen_settings_btn)
 
-        gen_save_btn = QAction("Save generated code", self)
+        gen_save_btn = QAction(self.tr("Save generated code"), self)
         gen_save_btn.setToolTip(
             self.tr("Directly save generated code"))
         gen_save_btn.triggered.connect(
@@ -330,25 +330,25 @@ class MainWindow(QMainWindow):
 
         toolbar.addSeparator()
 
-        open_btn = QAction("Open", self)
+        open_btn = QAction(self.tr("Open"), self)
         open_btn.setToolTip(self.tr("Open project"))
         open_btn.triggered.connect(self.open_project)
         toolbar.addAction(open_btn)
 
-        save_btn = QAction("Save", self)
+        save_btn = QAction(self.tr("Save"), self)
         save_btn.setToolTip(self.tr("Save project"))
         save_btn.triggered.connect(self.save_project)
         toolbar.addAction(save_btn)
 
         toolbar.addSeparator()
 
-        new_tab_btn = QAction("New tab", self)
+        new_tab_btn = QAction(self.tr("New tab"), self)
         new_tab_btn.setToolTip(
             self.tr("Add a new state transition tab"))
         new_tab_btn.triggered.connect(self.add_new_tab)
         toolbar.addAction(new_tab_btn)
 
-        rename_btn = QAction("Rename tab", self)
+        rename_btn = QAction(self.tr("Rename tab"), self)
         rename_btn.setToolTip(self.tr("Rename current tab"))
         rename_btn.triggered.connect(
             self.rename_current_tab)
@@ -356,7 +356,7 @@ class MainWindow(QMainWindow):
 
         toolbar.addSeparator()
 
-        traceball_btn = QAction("Show log", self)
+        traceball_btn = QAction(self.tr("Show log"), self)
         traceball_btn.setCheckable(True)
         traceball_btn.setChecked(False)
         traceball_btn.setToolTip(
@@ -373,91 +373,91 @@ class MainWindow(QMainWindow):
     def create_menus(self):
         menubar = self.menuBar()
 
-        file_menu = menubar.addMenu("File")
+        file_menu = menubar.addMenu(self.tr("File"))
 
         # [v2.3] New Project (Ctrl+N)
-        new_project_action = QAction("New Project...", self)
+        new_project_action = QAction(self.tr("New Project..."), self)
         new_project_action.setShortcut("Ctrl+N")
         new_project_action.triggered.connect(self.new_project)
         file_menu.addAction(new_project_action)
 
         file_menu.addSeparator()
 
-        open_action = QAction("Open Project...", self)
+        open_action = QAction(self.tr("Open Project..."), self)
         open_action.triggered.connect(self.open_project)
         file_menu.addAction(open_action)
 
-        save_action = QAction("Save Project...", self)
+        save_action = QAction(self.tr("Save Project..."), self)
         save_action.triggered.connect(self.save_project)
         file_menu.addAction(save_action)
 
-        rename_action = QAction("Rename Tab...", self)
+        rename_action = QAction(self.tr("Rename Tab..."), self)
         rename_action.triggered.connect(
             self.rename_current_tab)
         file_menu.addAction(rename_action)
 
         file_menu.addSeparator()
         new_tab_action = QAction(
-            "New State Machine", self)
+            self.tr("New State Machine"), self)
         new_tab_action.triggered.connect(self.add_new_tab)
         file_menu.addAction(new_tab_action)
 
-        edit_menu = menubar.addMenu("Edit")
+        edit_menu = menubar.addMenu(self.tr("Edit"))
         global_defs_action = QAction(
-            "Global Definitions...", self)
+            self.tr("Global Definitions..."), self)
         global_defs_action.triggered.connect(
             self.open_global_defs_dialog)
         edit_menu.addAction(global_defs_action)
 
         type_defs_action = QAction(
-            "Type Definitions...", self)
+            self.tr("Type Definitions..."), self)
         type_defs_action.triggered.connect(
             self.open_type_manager)
         edit_menu.addAction(type_defs_action)
 
         event_defs_action = QAction(
-            "Event Definitions...", self)
+            self.tr("Event Definitions..."), self)
         event_defs_action.triggered.connect(
             self.open_event_definition_dialog)
         edit_menu.addAction(event_defs_action)
 
         delivery_settings_action = QAction(
-            "Event Delivery Settings...", self)
+            self.tr("Event Delivery Settings..."), self)
         delivery_settings_action.triggered.connect(
             self.open_event_delivery_settings)
         edit_menu.addAction(delivery_settings_action)
 
         interrupt_action = QAction(
-            "Interrupt Settings...", self)
+            self.tr("Interrupt Settings..."), self)
         interrupt_action.triggered.connect(
             self.open_interrupt_settings)
         edit_menu.addAction(interrupt_action)
 
         # Layer settings
         layer_settings_action = QAction(
-            "Layer Settings...", self)
+            self.tr("Layer Settings..."), self)
         layer_settings_action.triggered.connect(
             self.open_layer_settings)
         edit_menu.addAction(layer_settings_action)
 
-        validation_menu = menubar.addMenu("Validate(&V)")
+        validation_menu = menubar.addMenu(self.tr("Validate(&V)"))
         validate_action = QAction(
-            "Validation / AI diagnosis...", self)
+            self.tr("Validation / AI diagnosis..."), self)
         validate_action.setShortcut("Ctrl+Shift+V")
         validate_action.triggered.connect(
             self.open_validation_dialog)
         validation_menu.addAction(validate_action)
 
-        code_gen_menu = menubar.addMenu("Code generation(&G)")
+        code_gen_menu = menubar.addMenu(self.tr("Code generation(&G)"))
         generate_action = QAction(
-            "Code generation...", self)
+            self.tr("Code generation..."), self)
         generate_action.setShortcut("Ctrl+G")
         generate_action.triggered.connect(
             self.open_code_generation_dialog)
         code_gen_menu.addAction(generate_action)
 
         gen_settings_action = QAction(
-            "Generation settings...", self)
+            self.tr("Generation settings..."), self)
         gen_settings_action.setShortcut("Ctrl+Shift+G")
         gen_settings_action.triggered.connect(
             self.open_code_generation_settings)
@@ -465,14 +465,14 @@ class MainWindow(QMainWindow):
 
         code_gen_menu.addSeparator()
         gen_save_action = QAction(
-            "Save generated code...", self)
+            self.tr("Save generated code..."), self)
         gen_save_action.setShortcut("Ctrl+Shift+S")
         gen_save_action.triggered.connect(
             self.save_generated_code_direct)
         code_gen_menu.addAction(gen_save_action)
 
-        view_menu = menubar.addMenu("View")
-        toggle_traceball = QAction("TraceBall", self)
+        view_menu = menubar.addMenu(self.tr("View"))
+        toggle_traceball = QAction(self.tr("TraceBall"), self)
         toggle_traceball.setCheckable(True)
         toggle_traceball.setChecked(False)
         toggle_traceball.toggled.connect(
@@ -501,8 +501,8 @@ class MainWindow(QMainWindow):
 
         if not layers:
             QMessageBox.warning(
-                self, "Warning",
-                "No layers are defined.")
+                self, self.tr("Warning"),
+                self.tr("No layers are defined."))
             return
 
         StaTableLogger.debug(
@@ -552,8 +552,8 @@ class MainWindow(QMainWindow):
         if current_tab is None or \
            not hasattr(current_tab, 'sm'):
             QMessageBox.warning(
-                self, "Warning",
-                "There is no state transition tab.")
+                self, self.tr("Warning"),
+                self.tr("There is no state transition tab."))
             return
         dlg = EventDefinitionDialog(
             current_tab.sm, self.global_defs, self)
@@ -569,8 +569,8 @@ class MainWindow(QMainWindow):
         if current_tab is None or \
            not hasattr(current_tab, 'sm'):
             QMessageBox.warning(
-                self, "Warning",
-                "There is no state transition tab.")
+                self, self.tr("Warning"),
+                self.tr("There is no state transition tab."))
             return
 
         auto_convert = \
@@ -703,7 +703,7 @@ class MainWindow(QMainWindow):
                 f"{filepath}, error: {e}\n"
                 f"{traceback.format_exc()}")
             QMessageBox.critical(
-                self, "Error",
+                self, self.tr("Error"),
                 f"Failed to save project:\n{e}")
             return False
 
@@ -895,7 +895,7 @@ class MainWindow(QMainWindow):
                 f"{filepath}, error: {e}\n"
                 f"{traceback.format_exc()}")
             QMessageBox.critical(
-                self, "Error",
+                self, self.tr("Error"),
                 f"Failed to open project:\n{e}")
 
     def close_all_tabs(self):
@@ -980,8 +980,8 @@ class MainWindow(QMainWindow):
     def close_tab(self, index: int):
         if self.tab_widget.count() <= 1:
             QMessageBox.warning(
-                self, "Warning",
-                "At least one tab is required.")
+                self, self.tr("Warning"),
+                self.tr("At least one tab is required."))
             return
         widget = self.tab_widget.widget(index)
         self.tab_widget.removeTab(index)
@@ -1113,12 +1113,12 @@ class MainWindow(QMainWindow):
 
         if not output_dir:
             QMessageBox.warning(
-                self, "Warning",
-                "Output directory is not set.\n"
+                self, self.tr("Warning"),
+                self.tr("Output directory is not set.\n"
                 # [C-19 fix] Add the missing '.' and '\n' so the
                 # message reads "... in settings.\nPlease specify."
                 "First set the output directory in settings.\n"
-                "Please specify.")
+                "Please specify."))
             self.open_code_generation_settings()
             config = self.config_manager.get_config()
             output_dir = config.output_directory
@@ -1129,7 +1129,7 @@ class MainWindow(QMainWindow):
         layers = self._get_all_layers()
         if not layers:
             QMessageBox.warning(
-                self, "Warning", "There are no tabs.")
+                self, self.tr("Warning"), self.tr("There are no tabs."))
             return
 
         global_defs = self.global_defs
@@ -1169,7 +1169,7 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             QMessageBox.critical(
-                self, "Error",
+                self, self.tr("Error"),
                 f"Code generation failed:\n{e}")
             StaTableLogger.error(
                 f"Code generation failed: {e}")
@@ -1178,7 +1178,7 @@ class MainWindow(QMainWindow):
             root_logger.removeHandler(collector)
 
         QMessageBox.information(
-            self, "Save complete",
+            self, self.tr("Save complete"),
             f"{len(saved_files)} files saved.\n"
             f"Layers: {len(layers)}\n\n"
             f"Output: {output_dir}")
@@ -1191,7 +1191,7 @@ class MainWindow(QMainWindow):
                     seen.add(r)
                     unique.append(r)
             QMessageBox.warning(
-                self, "Warnings during generation",
+                self, self.tr("Warnings during generation"),
                 "The following warnings occurred:\n\n"
                 + "\n".join(f"- {m}" for m in unique))
 
@@ -1252,9 +1252,9 @@ class MainWindow(QMainWindow):
 
         ret = QMessageBox.warning(
             self,
-            "Unsaved Changes",
-            "The current project has unsaved changes.\n"
-            "Do you want to save them before continuing?",
+            self.tr("Unsaved Changes"),
+            self.tr("The current project has unsaved changes.\n"
+            "Do you want to save them before continuing?"),
             QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
             QMessageBox.Save,
         )

@@ -43,10 +43,10 @@ class NewConditionTemplateDialog(QDialog):
 
     def _on_accept(self):
         if not self.name_edit.text().strip():
-            QMessageBox.warning(self, "Warning", "Name is required.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Name is required."))
             return
         if not self.condition_edit.text().strip():
-            QMessageBox.warning(self, "Warning", "Condition is required.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Condition is required."))
             return
         self.accept()
 
