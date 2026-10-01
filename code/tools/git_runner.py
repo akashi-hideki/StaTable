@@ -115,8 +115,10 @@ def has_unpushed_commits() -> bool:
         cwd=str(REPO),
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
-    return bool(r.stdout.strip())
+    return bool(r.stdout and r.stdout.strip())
 
 
 # ---------------------------------------------------------------------------
