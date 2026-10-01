@@ -10,6 +10,24 @@
 
 ---
 
+## What's New in v3.1
+
+> **Chinese Language Support** — Released 2026-10-01
+
+StaTable now supports **简体中文 (Simplified Chinese)** in the GUI.
+
+- **Language menu** — switch between English and 简体中文
+- **Auto restart** — click "Restart now" to apply the new language
+- **97.4% translation** (485 / 498 strings)
+- **Unified startup** — `python -m statable` and `python gui_main.py`
+  both apply the saved language
+
+To switch:
+
+1. Menu bar: **Language / 语言** → **简体中文**
+2. Click **Restart now / 立即重启** in the dialog
+3. StaTable restarts with the Chinese UI
+
 ## What's New in v2.8.0
 
 > **AI Diagnosis Refresh** — Released 2026-09-27
@@ -142,6 +160,18 @@ Or, equivalently:
 ```bash
 python gui_main.py
 ```
+
+### Language / 语言
+
+StaTable supports English and Simplified Chinese (简体中文).
+
+To change the language:
+
+1. Menu bar: **Language / 语言**
+2. Select **English** or **简体中文**
+3. Click **Restart now** in the dialog
+
+The setting is saved and applied on the next startup.
 
 ### Run the Test Suite
 
@@ -590,6 +620,13 @@ only. See the `## v2.8.0` section above for details.
 - ⏳ **Custom template support**
 - ⏳ **Chinese-language documentation**
 - ⏳ **Evaluation binary distribution** (Windows / Linux)
+
+### v3.1 (In Progress — Chinese Language Support)
+
+- ✅ **Chinese-language GUI** (简体中文, 97.4%)
+- ✅ **Language menu** (English ↔ 简体中文)
+- ✅ **Auto restart** on language change
+- ⏳ Chinese-language documentation
 
 ### v3.1+ (Exploring)
 
