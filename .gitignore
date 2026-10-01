@@ -110,3 +110,7 @@ code/examples/_output/
 .project
 .settings/
 generated/
+
+
+# v3.1: i18n translation workspace (transient)
+code/i18n_work/

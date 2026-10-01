@@ -27,10 +27,9 @@ from PySide6.QtWidgets import QApplication
 
 I18N_DIR = Path(__file__).parent
 DEFAULT_LANG = "en"
-SUPPORTED_LANGUAGES = ["en", "ja", "zh_CN"]
+SUPPORTED_LANGUAGES = ["en", "zh_CN"]
 LANG_DISPLAY = {
     "en": "English",
-    "ja": "\u65e5\u672c\u8a9e",
     "zh_CN": "\u7b80\u4f53\u4e2d\u6587",
 }
 

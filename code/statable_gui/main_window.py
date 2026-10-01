@@ -471,6 +471,104 @@ class MainWindow(QMainWindow):
             self.save_generated_code_direct)
         code_gen_menu.addAction(gen_save_action)
 
+        # [v3.1] Language menu (English / Chinese) with auto-restart
+        lang_menu = menubar.addMenu("Language / \u8bed\u8a00")
+
+        def _switch_language(code):
+            from statable_gui.i18n import (
+                save_preferred_language,
+                load_preferred_language,
+            )
+            current = load_preferred_language()
+            if code == current:
+                return
+            save_preferred_language(code)
+
+            from PySide6.QtWidgets import QMessageBox
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Language / \u8bed\u8a00")
+            msg.setText(
+                "Restart StaTable to apply the new language?\n"
+                "\u662f\u5426\u91cd\u65b0\u542f\u52a8 StaTable \u4ee5\u5e94\u7528\u65b0\u7684\u8bed\u8a00\uff1f"
+            )
+            btn_restart = msg.addButton(
+                "Restart now / \u7acb\u5373\u91cd\u542f",
+                QMessageBox.AcceptRole)
+            msg.addButton(
+                "Later / \u7a0d\u540e",
+                QMessageBox.RejectRole)
+            msg.exec()
+            if msg.clickedButton() is not btn_restart:
+                return
+
+            _relaunch_application()
+
+        def _relaunch_application():
+            """Start a new instance detached, then quit (guaranteed)."""
+            import os
+            import sys as _sys
+            from PySide6.QtCore import QProcess
+
+            # Guard: prevent concurrent restarts
+            if getattr(self, "_restart_in_progress", False):
+                return
+            self._restart_in_progress = True
+
+            exe = _sys.executable
+            args = [exe, "-m", "statable"]
+            cwd = os.getcwd()
+
+            # Disable UI to avoid double-clicks
+            self.setEnabled(False)
+
+            # Fully detach: redirect I/O to null, new process group
+            ok = False
+            try:
+                import subprocess
+                kwargs = {
+                    "cwd": cwd,
+                    "stdin": subprocess.DEVNULL,
+                    "stdout": subprocess.DEVNULL,
+                    "stderr": subprocess.DEVNULL,
+                    "close_fds": True,
+                }
+                if os.name == "nt":
+                    kwargs["creationflags"] = (
+                        0x00000008  # DETACHED_PROCESS
+                        | 0x00000200  # CREATE_NEW_PROCESS_GROUP
+                    )
+                else:
+                    kwargs["start_new_session"] = True
+                subprocess.Popen(args, **kwargs)
+                ok = True
+            except Exception:
+                ok = False
+
+            if not ok:
+                self._restart_in_progress = False
+                self.setEnabled(True)
+                QMessageBox.warning(
+                    self,
+                    "Restart failed",
+                    "Could not restart automatically.\n"
+                    "Please start StaTable manually.",
+                )
+                return
+
+            # Exit immediately (no cleanup needed)
+            os._exit(0)
+
+        act_en = QAction("English", self)
+        act_en.triggered.connect(
+            lambda checked=False: _switch_language("en"))
+        lang_menu.addAction(act_en)
+
+        act_zh = QAction("\u7b80\u4f53\u4e2d\u6587", self)
+        act_zh.triggered.connect(
+            lambda checked=False: _switch_language("zh_CN"))
+        lang_menu.addAction(act_zh)
+
         view_menu = menubar.addMenu(self.tr("View"))
         toggle_traceball = QAction(self.tr("TraceBall"), self)
         toggle_traceball.setCheckable(True)

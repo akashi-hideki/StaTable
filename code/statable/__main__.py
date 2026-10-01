@@ -32,6 +32,14 @@ def main() -> int:
         return 1
 
     app = QApplication(sys.argv)
+
+    # [v3.1] Apply saved language preference (en / zh_CN)
+    try:
+        from statable_gui.i18n import install_translator
+        install_translator(app)
+    except Exception:
+        pass  # i18n is optional; fall back to English
+
     window = MainWindow()
     window.show()
     return app.exec()
