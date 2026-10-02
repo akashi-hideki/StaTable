@@ -27,7 +27,7 @@ import json
 import sys
 from pathlib import Path
 
-CLI_VERSION = "3.0.0"
+CLI_VERSION = "3.1.0"
 
 
 def _err(msg: str) -> None:
