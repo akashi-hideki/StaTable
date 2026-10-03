@@ -1,4 +1,4 @@
-﻿# code/tests/test_v3_0_s2_public_api.py
+# code/tests/test_v3_0_s2_public_api.py
 """
 Phase S-2 (v3.0) tests: public API definition.
 
@@ -47,8 +47,8 @@ def main() -> int:
         _summary()
         return 1
 
-    check("statable has __version__ == '3.1.0'",
-          getattr(statable, "__version__", None) == "3.1.0",
+    check("statable has __version__ == '3.1.1'",
+          getattr(statable, "__version__", None) == "3.1.1",
           f"got: {getattr(statable, '__version__', None)!r}")
     check("'__version__' in statable.__all__",
           "__version__" in statable.__all__,
@@ -69,8 +69,8 @@ def main() -> int:
         _summary()
         return 1
 
-    check("codegen has __version__ == '3.1.0'",
-          getattr(codegen, "__version__", None) == "3.1.0",
+    check("codegen has __version__ == '3.1.1'",
+          getattr(codegen, "__version__", None) == "3.1.1",
           f"got: {getattr(codegen, '__version__', None)!r}")
     check("'validate' in codegen.__all__",
           "validate" in codegen.__all__,
