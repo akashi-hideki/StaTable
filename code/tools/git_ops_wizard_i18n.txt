@@ -1,0 +1,11 @@
+# v3.2 i18n: Chinese translations for New Project Wizard + README suite count
+# --------------------------------------------------------------------
+
+add README.md
+add code/statable_gui/i18n/statable_zh_CN.qm
+add code/statable_gui/i18n/statable_zh_CN.ts
+add code/statable_gui/new_project_wizard.py
+
+commit feat(i18n): add Chinese translations for New Project Wizard
+
+push origin main
