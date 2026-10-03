@@ -856,6 +856,26 @@ class CCodeGenerator:
         return [self._generate_include_guard_end(guard)]
 
     def _step_include_section(self, step, ctx):
+        """Emit include section + file-level user code markers.
+
+        The empty [[STABLE_USER_CODE_START]] / [[STABLE_USER_CODE_END]]
+        block is emitted for .c files so users can hand-write includes
+        that must be visible to all functions in the file.
+
+        On regeneration, code_merger preserves anything the user adds
+        inside these markers.
+        """
+        result = self._step_include_section_impl(step, ctx)
+        filename = ctx.get('filename', '')
+        if filename.endswith('.c'):
+            result = list(result) + [
+                '',
+                '/* [[STABLE_USER_CODE_START]] */',
+                '/* [[STABLE_USER_CODE_END]] */',
+            ]
+        return result
+
+    def _step_include_section_impl(self, step, ctx):
         key = step.get('key', '')
         filename = ctx.get('filename', '')
         layers = ctx.get('layers', [])
