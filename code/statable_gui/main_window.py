@@ -211,6 +211,8 @@ class MainWindow(QMainWindow):
 
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
+        # [v3.2.1] Enable drag-and-drop tab reordering
+        self.tab_widget.setMovable(True)
         self.tab_widget.tabCloseRequested.connect(
             self.close_tab)
         self.setCentralWidget(self.tab_widget)
@@ -384,7 +386,8 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
 
         open_action = QAction(self.tr("Open Project..."), self)
-        open_action.triggered.connect(self.open_project)
+        # [v3.2.1 fix] lambda: avoid passing triggered(bool) as filepath
+        open_action.triggered.connect(lambda: self.open_project())
         file_menu.addAction(open_action)
 
         save_action = QAction(self.tr("Save Project..."), self)
@@ -812,6 +815,10 @@ class MainWindow(QMainWindow):
 
     def open_project(self, filepath: str = None):
         """Load the whole project"""
+        # [v3.2.1 fix] Qt triggered signal passes bool; normalize to None
+        if isinstance(filepath, bool):
+            filepath = None
+
         # [v2.3] Prompt to save before loading
         if not self._maybe_save():
             return
