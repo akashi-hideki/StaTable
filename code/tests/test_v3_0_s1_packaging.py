@@ -3,11 +3,11 @@
 Phase S-1 (v3.0) tests: packaging foundation.
 
 Verifies:
-  - code/pyproject.toml exists and declares statable/3.1.1
+  - code/pyproject.toml exists and declares statable/3.2.0
   - statable-cli entry point is defined
   - extras: gui / dev
-  - statable.__version__ == "3.1.1"
-  - codegen.__version__ == "3.1.1"
+  - statable.__version__ == "3.2.0"
+  - codegen.__version__ == "3.2.0"
 """
 from __future__ import annotations
 
@@ -64,8 +64,8 @@ def main() -> int:
     check("project.name == 'statable'",
           project.get("name") == "statable",
           f"got: {project.get('name')!r}")
-    check("project.version == '3.1.1'",
-          project.get("version") == "3.1.1",
+    check("project.version == '3.2.0'",
+          project.get("version") == "3.2.0",
           f"got: {project.get('version')!r}")
 
     # --- T4: requires-python ---------------------------------------
@@ -101,16 +101,16 @@ def main() -> int:
     # --- T8: runtime __version__ -----------------------------------
     try:
         import statable
-        check("statable.__version__ == '3.1.1'",
-              getattr(statable, "__version__", None) == "3.1.1",
+        check("statable.__version__ == '3.2.0'",
+              getattr(statable, "__version__", None) == "3.2.0",
               f"got: {getattr(statable, '__version__', None)!r}")
     except Exception as e:
         check("statable importable", False, repr(e))
 
     try:
         import codegen
-        check("codegen.__version__ == '3.1.1'",
-              getattr(codegen, "__version__", None) == "3.1.1",
+        check("codegen.__version__ == '3.2.0'",
+              getattr(codegen, "__version__", None) == "3.2.0",
               f"got: {getattr(codegen, '__version__', None)!r}")
     except Exception as e:
         check("codegen importable", False, repr(e))

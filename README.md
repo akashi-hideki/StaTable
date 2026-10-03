@@ -7,9 +7,48 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/statable.svg)](https://pypi.org/project/statable/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-1479%20PASS-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-1537%20PASS-green.svg)]()
 [![MISRA](https://img.shields.io/badge/MISRA-C%3A2012-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
+
+---
+
+## What's New in v3.2.0
+
+> **New Project Wizard + Chinese i18n** — Released 2026-10-03
+
+### New Project Wizard
+
+Create a new project in 4 steps (`Ctrl+N` / **File → New Project...**):
+
+1. **Project Info** — name and output folder
+2. **Template** — choose from 3 templates:
+   - **3-Layer** (Driver / Middleware / Application) [Recommended]
+   - **Basic** (Single Layer)
+   - **Empty Project**
+3. **Customize Names** — rename States, Role Functions, Events, Interrupts, Variables, Flags, Queues
+4. **Preview** — review before generation
+
+Each non-empty template generates per layer:
+
+- **5 states** (Init / Idle / Active / Error / Recover)
+- **5 events** (INIT / START / STOP / ERROR / TIMEOUT)
+- **5 role functions** (HwInit / Start / Stop / HandleError / Cleanup)
+
+Plus globally:
+
+- **5 interrupts**, **5 variables**, **5 flags**, **5 event queues**
+
+**All elements are placeholders** — rename them in the GUI after creation.
+
+### Chinese i18n for Wizard
+
+The New Project Wizard is fully translated to **简体中文**.
+
+### Test Coverage
+
+- **+58 new tests** (`test_v3_2_s1_wizard.py`): templates, generation, rename, menu cleanup
+- Total: **1537 PASS / 0 FAIL / 2 SKIP** across 41 suites
 
 ---
 
@@ -92,7 +131,7 @@ custom tooling from scratch.
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **41 test suites, 1479 PASS / 0 FAIL / 2 SKIP**
+- ✅ **41 test suites, 1537 PASS / 0 FAIL / 2 SKIP**
 
 ### v2.7 Highlights
 
@@ -238,7 +277,7 @@ python tests/test_v2_2_p1.py
 python tests/test_v2_7_p4.py
 ```
 
-Expected: **1479 PASS / 0 FAIL / 2 SKIP** across 41 suites.
+Expected: **1537 PASS / 0 FAIL / 2 SKIP** across 41 suites.
 
 ---
 
@@ -675,6 +714,13 @@ only. See the `## v2.8.0` section above for details.
 - ✅ **Python SDK** (`pip install statable`)
 - ✅ **Apache-2.0 license** with commercial/OEM options
 
+### v3.2.0 (Released 2026-10-03 — New Project Wizard + i18n)
+
+- ✅ **New Project Wizard** — 4 pages, 3 templates, customizable names
+- ✅ **Complete Chinese i18n** for Wizard
+- ✅ **+58 tests** (`test_v3_2_s1_wizard.py`)
+- ✅ **Single menu** — `File → New Project...` (Ctrl+N)
+
 ### v3.1.0 (Released 2026-10-03 — PyPI Release + Chinese Language Support)
 
 - ✅ **PyPI package** published: https://pypi.org/project/statable/
@@ -746,7 +792,7 @@ python tests/test_v2_3_p1.py
 # ...
 ```
 
-All 41 suites should pass (1479 PASS / 2 SKIP).
+All 41 suites should pass (1537 PASS / 2 SKIP).
 
 ---
 

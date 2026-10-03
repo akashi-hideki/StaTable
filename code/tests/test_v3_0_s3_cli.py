@@ -60,8 +60,8 @@ def main() -> int:
     try:
         from statable import cli
         check("statable.cli importable", True)
-        check("CLI_VERSION == '3.1.1'",
-              cli.CLI_VERSION == "3.1.1",
+        check("CLI_VERSION == '3.2.0'",
+              cli.CLI_VERSION == "3.2.0",
               f"got: {cli.CLI_VERSION!r}")
     except Exception as e:
         check("statable.cli importable", False, repr(e))
@@ -91,8 +91,8 @@ def main() -> int:
     # --- T3: version --------------------------------------------------
     rc, out, _ = run_cli(["version"])
     check("version: exit 0", rc == 0, f"rc={rc}")
-    check("version: prints 'statable-cli 3.1.1'",
-          "statable-cli 3.1.1" in out,
+    check("version: prints 'statable-cli 3.2.0'",
+          "statable-cli 3.2.0" in out,
           f"out={out!r}")
 
     # --- T4: validate on real XML (json) ------------------------------
