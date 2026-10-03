@@ -1,0 +1,12 @@
+# v3.2 Wizard: New Project Wizard with customizable names + tests
+# --------------------------------------------------------------------
+
+add .gitignore
+add code/statable_gui/new_project_templates.py
+add code/statable_gui/new_project_wizard.py
+add code/statable_gui/main_window.py
+add code/tests/test_v3_2_s1_wizard.py
+
+commit feat(gui): add New Project Wizard with customizable names
+
+push origin main
