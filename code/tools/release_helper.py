@@ -137,6 +137,13 @@ class ReleaseHelper(QMainWindow):
         self._config = self._load_config()
         self._full_release_stage: str | None = None
 
+        # Phase 1: log file persistence
+        self._log_file: Path | None = None
+        self._log_file_handle = None
+
+        # Phase 1: restore window geometry
+        self._restore_geometry()
+
         self._detect_paths()
         self._build_ui()
         self._refresh_dist_list()
@@ -161,6 +168,77 @@ class ReleaseHelper(QMainWindow):
             )
         except Exception as e:
             self._log("warn", f"設定保存失敗: {e}")
+
+    # -- window geometry (Phase 1) -----------------------------------------
+
+    def _restore_geometry(self):
+        """Restore window geometry from config."""
+        geom = self._config.get("window_geometry")
+        if not geom or not isinstance(geom, list) or len(geom) != 4:
+            return
+        try:
+            x, y, w, h = [int(v) for v in geom]
+            self.setGeometry(x, y, w, h)
+        except Exception:
+            pass
+
+    def _save_geometry(self):
+        """Save window geometry to config."""
+        try:
+            g = self.geometry()
+            self._config["window_geometry"] = [g.x(), g.y(), g.width(), g.height()]
+        except Exception:
+            pass
+
+    def closeEvent(self, event):
+        """Handle close: save geometry + config + close log."""
+        try:
+            self._save_geometry()
+            self._save_config()
+        except Exception:
+            pass
+        try:
+            if self._log_file_handle:
+                self._log_file_handle.close()
+        except Exception:
+            pass
+        super().closeEvent(event)
+
+    # -- log file persistence (Phase 1) ------------------------------------
+
+    def _ensure_log_file(self):
+        """Open log file on demand. Returns file handle or None."""
+        if self._log_file_handle is not None:
+            return self._log_file_handle
+        try:
+            if self._code_dir:
+                log_dir = self._code_dir / "logs"
+            else:
+                log_dir = Path.cwd() / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            self._log_file = log_dir / f"release_{datetime.now():%Y%m%d}.log"
+            self._log_file_handle = open(
+                self._log_file, "a", encoding="utf-8"
+            )
+        except Exception:
+            self._log_file_handle = None
+        return self._log_file_handle
+
+    def _on_open_log(self):
+        """Open log file in default editor."""
+        self._ensure_log_file()
+        if not self._log_file or not self._log_file.exists():
+            QMessageBox.information(self, "情報",
+                "ログファイルがまだありません")
+            return
+        try:
+            os.startfile(str(self._log_file))
+        except AttributeError:
+            import subprocess as _sp
+            _sp.Popen(["xdg-open", str(self._log_file)])
+        except Exception as e:
+            QMessageBox.warning(self, "エラー",
+                f"ログを開けません: {e}")
 
     # -- path detection ----------------------------------------------------
 
@@ -226,10 +304,17 @@ class ReleaseHelper(QMainWindow):
         log_v.addWidget(self.log_view)
 
         log_btns = QHBoxLayout()
+        self.btn_cancel = QPushButton("実行中のタスクを中止")
+        self.btn_cancel.setEnabled(False)
+        self.btn_cancel.clicked.connect(self._on_cancel)
+        log_btns.addWidget(self.btn_cancel)
         log_btns.addStretch()
         btn_clear = QPushButton("ログをクリア")
         btn_clear.clicked.connect(self.log_view.clear)
         log_btns.addWidget(btn_clear)
+        btn_open = QPushButton("ログファイルを開く")
+        btn_open.clicked.connect(self._on_open_log)
+        log_btns.addWidget(btn_open)
         log_v.addLayout(log_btns)
 
         splitter.addWidget(log_group)
@@ -457,6 +542,16 @@ class ReleaseHelper(QMainWindow):
     # -- logging / status --------------------------------------------------
 
     def _log(self, level: str, msg: str):
+        # Phase 1: persist to log file
+        try:
+            h = self._ensure_log_file()
+            if h:
+                ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                h.write(f"[{ts}] [{level.upper():4}] {msg}\n")
+                h.flush()
+        except Exception:
+            pass
+
         colors = {
             "info": "#333", "ok": "#0a7a0a", "fail": "#c00",
             "warn": "#c80", "cmd": "#06c", "head": "#004",
@@ -488,6 +583,29 @@ class ReleaseHelper(QMainWindow):
             self.btn_refresh_dist, self.btn_refresh_upload,
         ):
             btn.setEnabled(state)
+        if hasattr(self, "btn_cancel"):
+            self.btn_cancel.setEnabled(busy)
+
+    def _on_cancel(self):
+        """Cancel the currently running worker (Phase 1)."""
+        if not self._workers:
+            return
+        r = QMessageBox.question(
+            self, "キャンセル確認",
+            "実行中のタスクを中止しますか？",
+            QMessageBox.Yes | QMessageBox.No,
+        )
+        if r != QMessageBox.Yes:
+            return
+        for w in list(self._workers):
+            try:
+                w.terminate()
+            except Exception:
+                pass
+        self._log("warn", "タスクを中止しました")
+        self._full_release_stage = None
+        self._set_busy(False)
+        self._set_status("Cancelled")
 
     # -- command runner ----------------------------------------------------
 
