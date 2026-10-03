@@ -1,4 +1,4 @@
-# StaTable
+﻿# StaTable
 
 **MISRA C:2012-aware state machine design and C code generation for embedded systems.**
 
@@ -48,7 +48,7 @@ The New Project Wizard is fully translated to **简体中文**.
 ### Test Coverage
 
 - **+58 new tests** (`test_v3_2_s1_wizard.py`): templates, generation, rename, menu cleanup
-- Total: **1537 PASS / 0 FAIL / 2 SKIP** across 41 suites
+- Total: **1537 PASS / 0 FAIL / 2 SKIP** across 42 suites
 
 ---
 
@@ -131,7 +131,7 @@ custom tooling from scratch.
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **41 test suites, 1537 PASS / 0 FAIL / 2 SKIP**
+- ✅ **42 test suites, 1537 PASS / 0 FAIL / 2 SKIP**
 
 ### v2.7 Highlights
 
@@ -185,7 +185,7 @@ diagrams, and generate production-ready C code with a single click.*
 | **Ubuntu 22.04+** | ⚠️ **Auto tests pass on CI** | GUI not yet manually verified — feedback welcome |
 | **macOS** | ⚠️ **Not tested** | Community testing welcome |
 
-**Note for Linux users**: The automated test suite (41 suites, 1168 tests)
+**Note for Linux users**: The automated test suite (42 suites, 1168 tests)
 passes on Ubuntu via GitHub Actions, but the GUI has only been manually
 verified on Windows. If you try it on Linux, please report your experience
 via [GitHub Issues](https://github.com/akashi-hideki/StaTable/issues).
@@ -277,7 +277,7 @@ python tests/test_v2_2_p1.py
 python tests/test_v2_7_p4.py
 ```
 
-Expected: **1537 PASS / 0 FAIL / 2 SKIP** across 41 suites.
+Expected: **1537 PASS / 0 FAIL / 2 SKIP** across 42 suites.
 
 ---
 
@@ -792,7 +792,7 @@ python tests/test_v2_3_p1.py
 # ...
 ```
 
-All 41 suites should pass (1537 PASS / 2 SKIP).
+All 42 suites should pass (1537 PASS / 2 SKIP).
 
 ---
 
