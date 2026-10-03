@@ -39,7 +39,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
-    QMainWindow, QTabWidget, QToolButton, QMessageBox,
+    QMainWindow, QTabWidget, QToolButton, QMessageBox, QDialog,
     QInputDialog, QFileDialog, QDialog, QToolBar
 )
 
@@ -375,11 +375,11 @@ class MainWindow(QMainWindow):
 
         file_menu = menubar.addMenu(self.tr("File"))
 
-        # [v2.3] New Project (Ctrl+N)
-        new_project_action = QAction(self.tr("New Project..."), self)
-        new_project_action.setShortcut("Ctrl+N")
-        new_project_action.triggered.connect(self.new_project)
-        file_menu.addAction(new_project_action)
+        # [v3.2] New Project Wizard (Ctrl+N)
+        new_wizard_action = QAction(self.tr("New Project..."), self)
+        new_wizard_action.setShortcut("Ctrl+N")
+        new_wizard_action.triggered.connect(self.new_project_wizard)
+        file_menu.addAction(new_wizard_action)
 
         file_menu.addSeparator()
 
@@ -810,7 +810,7 @@ class MainWindow(QMainWindow):
                 f"Failed to save project:\n{e}")
             return False
 
-    def open_project(self):
+    def open_project(self, filepath: str = None):
         """Load the whole project"""
         # [v2.3] Prompt to save before loading
         if not self._maybe_save():
@@ -819,13 +819,14 @@ class MainWindow(QMainWindow):
         StaTableLogger.debug(
             "MainWindow.open_project called")
 
-        last_dir = self.prefs.last_project_dir
-        filepath, _ = QFileDialog.getOpenFileName(
-            self, "Open Project", last_dir,
-            "XML files (*.xml)")
-        if not filepath:
-            StaTableLogger.debug("Open cancelled")
-            return
+        if filepath is None:
+            last_dir = self.prefs.last_project_dir
+            filepath, _ = QFileDialog.getOpenFileName(
+                self, "Open Project", last_dir,
+                "XML files (*.xml)")
+            if not filepath:
+                StaTableLogger.debug("Open cancelled")
+                return
         try:
             StaTableLogger.debug(
                 f"Calling project_from_xml: {filepath}")
@@ -1301,6 +1302,38 @@ class MainWindow(QMainWindow):
     # ==================================================================
     # New Project feature (v2.3 / F-15)
     # ==================================================================
+
+    def new_project_wizard(self) -> None:
+        """[v3.2] Launch the New Project Wizard."""
+        if not self._maybe_save():
+            return
+        try:
+            from statable_gui.new_project_wizard import NewProjectWizard
+        except ImportError as e:
+            QMessageBox.critical(
+                self, "Wizard Error",
+                f"Failed to import wizard module:\n{e}")
+            return
+        try:
+            wiz = NewProjectWizard(self)
+            if wiz.exec() != QDialog.Accepted:
+                StaTableLogger.debug("New project wizard: cancelled")
+                return
+            xml_path = wiz.generate()
+            if not xml_path:
+                StaTableLogger.warning("Wizard returned no path")
+                return
+            StaTableLogger.info(f"New project generated: {xml_path}")
+            self.open_project(filepath=xml_path)
+            self.statusBar().showMessage(
+                f"New project created: {xml_path}", 5000)
+        except Exception as e:
+            StaTableLogger.error(f"New project wizard failed: {e!r}")
+            import traceback
+            QMessageBox.critical(
+                self, "Wizard Error",
+                f"Failed to create project:\n{e}\n\n"
+                f"{traceback.format_exc()}")
 
     def new_project(self) -> None:
         """Start a new empty project.

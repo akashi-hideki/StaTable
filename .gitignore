@@ -131,3 +131,8 @@ pypi-*.txt
 # GitHub 2FA recovery codes (NEVER commit)
 github-recovery-codes.txt
 github-recovery*.txt
+
+
+# Portable ZIP (distribute via GitHub Releases, not via Git)
+*.zip
+StaTable-portable-*.zip
