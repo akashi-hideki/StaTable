@@ -126,3 +126,8 @@ pypi-token.txt
 # PyPI token accidentally saved as filename (emergency)
 pypi-AgEI*.txt
 pypi-*.txt
+
+
+# GitHub 2FA recovery codes (NEVER commit)
+github-recovery-codes.txt
+github-recovery*.txt

@@ -2,6 +2,9 @@
 
 **MISRA C:2012-aware state machine design and C code generation for embedded systems.**
 
+[![PyPI version](https://img.shields.io/pypi/v/statable.svg)](https://pypi.org/project/statable/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/statable.svg)](https://pypi.org/project/statable/)
+[![Python versions](https://img.shields.io/pypi/pyversions/statable.svg)](https://pypi.org/project/statable/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)]()
 [![Tests](https://img.shields.io/badge/Tests-1479%20PASS-green.svg)]()
@@ -10,9 +13,27 @@
 
 ---
 
-## What's New in v3.1
+## What's New in v3.1.0
 
-> **Chinese Language Support** — Released 2026-10-01
+> **PyPI Release + Chinese Language Support** — Released 2026-10-03
+
+### Now Available on PyPI
+
+StaTable is now a pip-installable package:
+
+```bash
+pip install statable           # core (zero dependencies)
+pip install statable[gui]      # + PySide6 GUI
+pip install statable[dev]      # + pytest, pycparser
+```
+
+- **Zero dependencies** for the core (Python API + CLI)
+- **CLI**: `statable-cli generate/validate/version`
+- **Python API**: `import statable` (21 public symbols)
+- **Apache-2.0 license** — free for commercial use
+- **PyPI**: https://pypi.org/project/statable/
+
+### Chinese Language Support
 
 StaTable now supports **简体中文 (Simplified Chinese)** in the GUI.
 
@@ -141,10 +162,20 @@ via [GitHub Issues](https://github.com/akashi-hideki/StaTable/issues).
 
 ### Installation
 
+#### Option A: Install from PyPI (recommended for users)
+
+```bash
+pip install statable           # core (Python API + CLI)
+pip install statable[gui]      # + PySide6 GUI
+pip install statable[dev]      # + pytest, pycparser (for development)
+```
+
+#### Option B: Install from source (for developers)
+
 ```bash
 git clone https://github.com/akashi-hideki/StaTable.git
 cd StaTable/code
-pip install PySide6 pycparser
+pip install -e .[gui,dev]
 ```
 
 ### Run the GUI
@@ -172,6 +203,31 @@ To change the language:
 3. Click **Restart now** in the dialog
 
 The setting is saved and applied on the next startup.
+
+### CLI Usage
+
+The `statable-cli` command is available after `pip install statable`:
+
+```bash
+# Show version
+statable-cli version
+
+# Generate C code from a design XML
+statable-cli generate --xml design.xml --out generated/ --format json
+
+# Validate a design XML
+statable-cli validate --xml design.xml --format json --exit-on-error
+```
+
+| Subcommand | Description |
+|---|---|
+| `generate` | Generate C code from XML design |
+| `validate` | Validate XML design (exit code 1 on error with `--exit-on-error`) |
+| `version`  | Print version |
+
+**Exit codes**: `0` success / `1` validation error / `2` internal error
+
+**Output**: stdout = JSON (default) or plain text / stderr = logs
 
 ### Run the Test Suite
 
@@ -613,20 +669,20 @@ only. See the `## v2.8.0` section above for details.
 - ✅ Logger guard against deleted TraceBall widgets (C-40)
 - ✅ **551 PASS / 0 FAIL / 2 SKIP**
 
-### v3.0 (In Progress — SDK Foundation)
+### v3.0 (Released 2026-10-02 — SDK Foundation)
 
 - ✅ **CLI** (`statable-cli generate --xml ...`)
-- ✅ **Python SDK** (pip install statable)
-- ⏳ **Custom template support**
-- ⏳ **Chinese-language documentation**
-- ⏳ **Evaluation binary distribution** (Windows / Linux)
+- ✅ **Python SDK** (`pip install statable`)
+- ✅ **Apache-2.0 license** with commercial/OEM options
 
-### v3.1 (In Progress — Chinese Language Support)
+### v3.1.0 (Released 2026-10-03 — PyPI Release + Chinese Language Support)
 
+- ✅ **PyPI package** published: https://pypi.org/project/statable/
+- ✅ **GitHub Release** v3.1.0 with wheel + sdist
 - ✅ **Chinese-language GUI** (简体中文, 97.4%)
 - ✅ **Language menu** (English ↔ 简体中文)
 - ✅ **Auto restart** on language change
-- ⏳ Chinese-language documentation
+- ⏳ Chinese-language documentation (README_zh-CN.md exists, docs pending)
 
 ### v3.1+ (Exploring)
 
