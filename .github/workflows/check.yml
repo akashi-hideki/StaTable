@@ -145,6 +145,10 @@ jobs:
           python tests/test_v3_0_s4_docs.py
           python tests/test_v3_0_g1_shared.py
 
+      - name: Run v3.2 test suites
+        run: |
+          python tests/test_v3_2_s2_signals.py
+
       - name: Run README consistency test
         run: |
           python tests/test_readme_consistency.py

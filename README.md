@@ -7,7 +7,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/statable.svg)](https://pypi.org/project/statable/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-1537%20PASS-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-1545%20PASS-green.svg)]()
 [![MISRA](https://img.shields.io/badge/MISRA-C%3A2012-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
@@ -48,7 +48,7 @@ The New Project Wizard is fully translated to **简体中文**.
 ### Test Coverage
 
 - **+58 new tests** (`test_v3_2_s1_wizard.py`): templates, generation, rename, menu cleanup
-- Total: **1537 PASS / 0 FAIL / 2 SKIP** across 42 suites
+- Total: **1545 PASS / 0 FAIL / 2 SKIP** across 42 suites
 
 ---
 
@@ -131,7 +131,7 @@ custom tooling from scratch.
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **42 test suites, 1537 PASS / 0 FAIL / 2 SKIP**
+- ✅ **42 test suites, 1545 PASS / 0 FAIL / 2 SKIP**
 
 ### v2.7 Highlights
 
@@ -277,7 +277,7 @@ python tests/test_v2_2_p1.py
 python tests/test_v2_7_p4.py
 ```
 
-Expected: **1537 PASS / 0 FAIL / 2 SKIP** across 42 suites.
+Expected: **1545 PASS / 0 FAIL / 2 SKIP** across 42 suites.
 
 ---
 
@@ -792,7 +792,7 @@ python tests/test_v2_3_p1.py
 # ...
 ```
 
-All 42 suites should pass (1537 PASS / 2 SKIP).
+All 42 suites should pass (1545 PASS / 2 SKIP).
 
 ---
 
