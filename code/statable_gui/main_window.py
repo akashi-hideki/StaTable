@@ -334,7 +334,8 @@ class MainWindow(QMainWindow):
 
         open_btn = QAction(self.tr("Open"), self)
         open_btn.setToolTip(self.tr("Open project"))
-        open_btn.triggered.connect(self.open_project)
+        # [v3.2.2 fix] lambda: avoid passing triggered(bool) as filepath
+        open_btn.triggered.connect(lambda: self.open_project())
         toolbar.addAction(open_btn)
 
         save_btn = QAction(self.tr("Save"), self)
