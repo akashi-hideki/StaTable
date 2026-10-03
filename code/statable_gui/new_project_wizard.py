@@ -41,24 +41,24 @@ from .new_project_templates import (
 class PageProjectInfo(QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setTitle("Project Information")
-        self.setSubTitle("Enter the project name and output folder.")
+        self.setTitle(self.tr("Project Information"))
+        self.setSubTitle(self.tr("Enter the project name and output folder."))
 
         layout = QFormLayout(self)
 
         self.name_edit = QLineEdit("MyProject")
         self.name_edit.textChanged.connect(self.completeChanged)
-        layout.addRow("Project name:", self.name_edit)
+        layout.addRow(self.tr("Project name:"), self.name_edit)
 
         folder_layout = QHBoxLayout()
         self.folder_edit = QLineEdit(
             str(Path.home() / "Documents" / "StaTableProjects"))
         self.folder_edit.textChanged.connect(self.completeChanged)
         folder_layout.addWidget(self.folder_edit)
-        browse_btn = QPushButton("Browse...")
+        browse_btn = QPushButton(self.tr("Browse..."))
         browse_btn.clicked.connect(self._on_browse)
         folder_layout.addWidget(browse_btn)
-        layout.addRow("Output folder:", folder_layout)
+        layout.addRow(self.tr("Output folder:"), folder_layout)
 
     def _on_browse(self):
         path = QFileDialog.getExistingDirectory(self, "Select Output Folder")
@@ -82,16 +82,17 @@ class PageProjectInfo(QWizardPage):
 class PageTemplate(QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setTitle("Template Selection")
-        self.setSubTitle("Choose a project structure template.")
+        self.setTitle(self.tr("Template Selection"))
+        self.setSubTitle(self.tr("Choose a project structure template."))
 
         layout = QVBoxLayout(self)
         self.group = QButtonGroup(self)
 
         self._buttons = {}
         for key in ("three_layer", "basic", "blank"):
-            tpl = TEMPLATES[key]
-            rb = QRadioButton(f"{tpl['name']}\n   {tpl['description']}")
+            name = self._tr_template_name(key)
+            desc = self._tr_template_desc(key)
+            rb = QRadioButton(f"{name}\n   {desc}")
             rb.setProperty("template_id", key)
             if key == "three_layer":
                 rb.setChecked(True)
@@ -100,6 +101,26 @@ class PageTemplate(QWizardPage):
             self._buttons[key] = rb
 
         layout.addStretch()
+
+    def _tr_template_name(self, key):
+        """Return translated template name (literal for lupdate)."""
+        return {
+            "three_layer": self.tr(
+                "3-Layer (Driver / Middleware / Application) [Recommended]"),
+            "basic": self.tr("Basic (Single Layer)"),
+            "blank": self.tr("Empty Project"),
+        }.get(key, key)
+
+    def _tr_template_desc(self, key):
+        """Return translated template description (literal for lupdate)."""
+        return {
+            "three_layer": self.tr(
+                "Full 3-layer structure with all placeholders"),
+            "basic": self.tr(
+                "Application layer with 5 states + 5 events + 5 role functions"),
+            "blank": self.tr(
+                "One empty Application layer (existing behavior)"),
+        }.get(key, "")
 
     def selected_template_id(self):
         for key, rb in self._buttons.items():
@@ -114,18 +135,18 @@ class PageTemplate(QWizardPage):
 class PageCustomize(QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setTitle("Customize Names")
-        self.setSubTitle(
+        self.setTitle(self.tr("Customize Names"))
+        self.setSubTitle(self.tr(
             "Optionally rename placeholder elements. "
             "Leave 'New Name' blank to keep the default."
-        )
+        ))
 
         layout = QVBoxLayout(self)
 
-        info = QLabel(
+        info = QLabel(self.tr(
             "Edit the 'New Name' column to rename. "
             "Double-click a cell to edit."
-        )
+        ))
         info.setStyleSheet("color: #666; padding: 4px;")
         layout.addWidget(info)
 
@@ -143,7 +164,7 @@ class PageCustomize(QWizardPage):
 
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
-        btn_reset = QPushButton("Reset All")
+        btn_reset = QPushButton(self.tr("Reset All"))
         btn_reset.clicked.connect(self._on_reset)
         btn_layout.addWidget(btn_reset)
         layout.addLayout(btn_layout)
@@ -184,11 +205,23 @@ class PageCustomize(QWizardPage):
         for eq in EVENT_QUEUES:
             self._add_row("Queue", "(shared)", eq["name"])
 
+    def _tr_category(self, category):
+        return {
+            "State": self.tr("State"),
+            "Role Function": self.tr("Role Function"),
+            "Event": self.tr("Event"),
+            "Interrupt": self.tr("Interrupt"),
+            "Variable": self.tr("Variable"),
+            "Flag": self.tr("Flag"),
+            "Queue": self.tr("Queue"),
+        }.get(category, category)
+
     def _add_row(self, category, layer, default):
         row = self.table.rowCount()
         self.table.insertRow(row)
 
-        for col, text in enumerate([category, layer, default]):
+        for col, text in enumerate(
+                [self._tr_category(category), layer, default]):
             item = QTableWidgetItem(text)
             item.setFlags(item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, col, item)
@@ -220,8 +253,8 @@ class PageCustomize(QWizardPage):
 class PagePreview(QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setTitle("Preview")
-        self.setSubTitle("Review what will be generated.")
+        self.setTitle(self.tr("Preview"))
+        self.setSubTitle(self.tr("Review what will be generated."))
 
         layout = QVBoxLayout(self)
         self.preview = QPlainTextEdit()
@@ -242,7 +275,7 @@ class PagePreview(QWizardPage):
         lines = [
             f"Project name: {name}",
             f"Output folder: {wiz.page_info.output_folder()}",
-            f"Template: {tpl['name']}",
+            f"Template: {wiz.page_template._tr_template_name(tpl_id)}",
             f"Custom renames: {len(renames)}",
             "",
         ]
@@ -320,7 +353,7 @@ class PagePreview(QWizardPage):
 class NewProjectWizard(QWizard):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("New Project Wizard")
+        self.setWindowTitle(self.tr("New Project Wizard"))
         self.setWizardStyle(QWizard.ClassicStyle)
         self.resize(820, 620)
 
