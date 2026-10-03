@@ -1,0 +1,16 @@
+# v3.2.0: New Project Wizard + i18n release
+# --------------------------------------------------------------------
+
+add CHANGELOG.md
+add README.md
+add code/codegen/__init__.py
+add code/pyproject.toml
+add code/statable/__init__.py
+add code/statable/cli.py
+add code/tests/test_v3_0_s1_packaging.py
+add code/tests/test_v3_0_s2_public_api.py
+add code/tests/test_v3_0_s3_cli.py
+
+commit chore(v3.2.0): bump version to 3.2.0 + README/CHANGELOG for Wizard release
+
+push origin main
