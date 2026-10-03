@@ -147,6 +147,7 @@ jobs:
 
       - name: Run v3.2 test suites
         run: |
+          python tests/test_v3_2_s1_wizard.py
           python tests/test_v3_2_s2_signals.py
 
       - name: Run CI registration meta test
