@@ -5,7 +5,36 @@ All notable changes to StaTable will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-10-04
+
+### Added
+
+- **File-level user code markers** — all generated `.c` files now
+  emit an empty `[[STABLE_USER_CODE_START]]` / `[[STABLE_USER_CODE_END]]`
+  block immediately after the include section. Users can hand-write
+  `#include "..."` lines that are visible to every function in the
+  file, and the marker-based merger preserves them on regeneration.
+- `tools/test_user_code_roundtrip.py` — end-to-end test:
+  inject → merge → gcc compile → ARM link.
+
+### Fixed
+
+- **CI test registration** — `test_v3_2_s1_wizard.py` and
+  `test_v3_2_s2_signals.py` were present but never executed in CI.
+  Now registered in `check.yml` Job 3.
+- Add `test_ci_registration.py` meta test that fails if any
+  `code/tests/test_*.py` is missing from `check.yml`.
+
+### Changed
+
+- Add `.gitattributes` to normalize line endings to LF.
+- Add `--smoke-test` mode to `python -m statable` and
+  `tools/smoke_frozen.py` for PyInstaller frozen EXE verification.
+- Add `tools/test_user_code_compile.py` for user code injection
+  compilation tests.
+
 ## [3.2.2] - 2026-10-03
+
 
 ### Fixed
 
