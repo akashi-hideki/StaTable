@@ -149,6 +149,10 @@ jobs:
         run: |
           python tests/test_v3_2_s2_signals.py
 
+      - name: Run CI registration meta test
+        run: |
+          python tests/test_ci_registration.py
+
       - name: Run README consistency test
         run: |
           python tests/test_readme_consistency.py
