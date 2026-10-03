@@ -516,7 +516,12 @@ class MainWindow(QMainWindow):
             self._restart_in_progress = True
 
             exe = _sys.executable
-            args = [exe, "-m", "statable"]
+            # [v3.2] Frozen (PyInstaller) support: sys.executable is the
+            # bundled StaTable.exe, which does not accept "-m statable".
+            if getattr(_sys, "frozen", False):
+                args = [exe]
+            else:
+                args = [exe, "-m", "statable"]
             cwd = os.getcwd()
 
             # Disable UI to avoid double-clicks

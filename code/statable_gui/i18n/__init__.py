@@ -14,6 +14,7 @@ Usage in gui_main.py or statable_gui/main_window.py:
 """
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -25,7 +26,16 @@ from PySide6.QtCore import (
 )
 from PySide6.QtWidgets import QApplication
 
-I18N_DIR = Path(__file__).parent
+# [v3.2] PyInstaller frozen support
+if getattr(sys, "frozen", False):
+    # Bundled: resources are in sys._MEIPASS/statable_gui/i18n
+    _meipass = getattr(sys, "_MEIPASS", None)
+    if _meipass:
+        I18N_DIR = Path(_meipass) / "statable_gui" / "i18n"
+    else:
+        I18N_DIR = Path(__file__).parent
+else:
+    I18N_DIR = Path(__file__).parent
 DEFAULT_LANG = "en"
 SUPPORTED_LANGUAGES = ["en", "zh_CN"]
 LANG_DISPLAY = {
