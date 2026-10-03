@@ -1,4 +1,4 @@
-﻿# StaTable
+# StaTable
 
 **MISRA C:2012-aware state machine design and C code generation for embedded systems.**
 
