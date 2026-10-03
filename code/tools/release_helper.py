@@ -287,6 +287,7 @@ class ReleaseHelper(QMainWindow):
 
         self.tabs = QTabWidget()
         self.tabs.addTab(self._tab_settings(), "設定")
+        self.tabs.addTab(self._tab_version(), "バージョン")
         self.tabs.addTab(self._tab_build(), "ビルド")
         self.tabs.addTab(self._tab_verify(), "検証")
         self.tabs.addTab(self._tab_upload(), "アップロード")
@@ -390,6 +391,180 @@ class ReleaseHelper(QMainWindow):
 
         v.addStretch()
         return w
+
+    def _tab_version(self):
+        w = QWidget()
+        v = QVBoxLayout(w)
+
+        # Current version
+        gb_cur = QGroupBox("現在のバージョン")
+        f_cur = QFormLayout(gb_cur)
+        self.current_version_label = QLabel("(loading...)")
+        self.current_version_label.setStyleSheet("font-size: 14pt; font-weight: bold;")
+        f_cur.addRow("現在:", self.current_version_label)
+
+        btn_reload = QPushButton("再読み込み")
+        btn_reload.clicked.connect(self._refresh_current_version)
+        f_cur.addRow("", btn_reload)
+        v.addWidget(gb_cur)
+
+        # New version input
+        gb_new = QGroupBox("新バージョン")
+        f_new = QFormLayout(gb_new)
+        self.new_version_edit = QLineEdit()
+        self.new_version_edit.setPlaceholderText("e.g. 3.2.0")
+        f_new.addRow("新バージョン:", self.new_version_edit)
+
+        btn_preview = QPushButton("差分プレビュー")
+        btn_preview.clicked.connect(self._on_preview_version_bump)
+        f_new.addRow("", btn_preview)
+        v.addWidget(gb_new)
+
+        # Preview
+        gb_prev = QGroupBox("差分プレビュー")
+        v_prev = QVBoxLayout(gb_prev)
+        self.version_preview = QPlainTextEdit()
+        self.version_preview.setReadOnly(True)
+        self.version_preview.setFont(QFont("Consolas", 9))
+        v_prev.addWidget(self.version_preview)
+        v.addWidget(gb_prev, stretch=1)
+
+        # Action buttons
+        row = QHBoxLayout()
+        self.btn_apply_version = QPushButton("バージョンを更新")
+        self.btn_apply_version.setMinimumHeight(32)
+        self.btn_apply_version.setEnabled(False)
+        self.btn_apply_version.clicked.connect(self._on_apply_version_bump)
+        row.addWidget(self.btn_apply_version)
+
+        btn_rollback = QPushButton("戻す")
+        btn_rollback.clicked.connect(self._on_rollback_version_bump)
+        row.addWidget(btn_rollback)
+        row.addStretch()
+        v.addLayout(row)
+
+        # Load current version on init
+        self._refresh_current_version()
+        return w
+
+    def _version_targets(self):
+        """Return list of (label, path, regex) for version files."""
+        if not self._code_dir:
+            return []
+        return [
+            ("pyproject.toml",
+             self._code_dir / "pyproject.toml",
+             r'^(version\s*=\s*)"([^"]+)"'),
+            ("statable/__init__.py",
+             self._code_dir / "statable" / "__init__.py",
+             r'^(__version__\s*=\s*)"([^"]+)"'),
+            ("codegen/__init__.py",
+             self._code_dir / "codegen" / "__init__.py",
+             r'^(__version__\s*=\s*)"([^"]+)"'),
+            ("statable/cli.py",
+             self._code_dir / "statable" / "cli.py",
+             r'^(CLI_VERSION\s*=\s*)"([^"]+)"'),
+        ]
+
+    def _refresh_current_version(self):
+        targets = self._version_targets()
+        if not targets:
+            self.current_version_label.setText("(not detected)")
+            return
+        versions = {}
+        for label, path, pattern in targets:
+            try:
+                text = path.read_text(encoding="utf-8")
+                m = __import__("re").search(pattern, text, __import__("re").MULTILINE)
+                versions[label] = m.group(2) if m else "?"
+            except Exception as e:
+                versions[label] = f"ERR:{e}"
+        unique = set(versions.values())
+        cur = next(iter(unique)) if len(unique) == 1 else f"MISMATCH: {versions}"
+        self.current_version_label.setText(cur)
+        self.new_version_edit.clear()
+
+    def _on_preview_version_bump(self):
+        new_ver = self.new_version_edit.text().strip()
+        if not new_ver:
+            QMessageBox.warning(self, "エラー",
+                "新バージョンを入力してください")
+            return
+        if not __import__("re").match(r"^\d+\.\d+\.\d+", new_ver):
+            r = QMessageBox.question(self, "確認",
+                f"'{new_ver}' は標準的な形式 (X.Y.Z) ではありません。\n"
+                "続行しますか？",
+                QMessageBox.Yes | QMessageBox.No)
+            if r != QMessageBox.Yes:
+                return
+
+        targets = self._version_targets()
+        lines = []
+        for label, path, pattern in targets:
+            try:
+                text = path.read_text(encoding="utf-8")
+                m = __import__("re").search(pattern, text, __import__("re").MULTILINE)
+                if m:
+                    old_v = m.group(2)
+                    lines.append(f"{label}: {old_v} -> {new_ver}")
+                else:
+                    lines.append(f"{label}: (pattern not found)")
+            except Exception as e:
+                lines.append(f"{label}: ERR {e}")
+        self.version_preview.setPlainText("\n".join(lines))
+        self.btn_apply_version.setEnabled(True)
+
+    def _on_apply_version_bump(self):
+        new_ver = self.new_version_edit.text().strip()
+        if not new_ver:
+            return
+        targets = self._version_targets()
+        results = []
+        for label, path, pattern in targets:
+            try:
+                text = path.read_text(encoding="utf-8")
+                m = __import__("re").search(pattern, text, __import__("re").MULTILINE)
+                if m:
+                    old_v = m.group(2)
+                    new_text = __import__("re").sub(
+                        pattern,
+                        lambda mm: f'{mm.group(1)}"{new_ver}"',
+                        text,
+                        count=1,
+                        flags=__import__("re").MULTILINE,
+                    )
+                    path.write_text(new_text, encoding="utf-8")
+                    results.append(f"  [OK]   {label}: {old_v} -> {new_ver}")
+                else:
+                    results.append(f"  [SKIP] {label}: pattern not found")
+            except Exception as e:
+                results.append(f"  [FAIL] {label}: {e}")
+
+        # Save rollback info
+        self._version_bump_rollback = results
+        self._log("head", "=== バージョン bump ===")
+        for r in results:
+            self._log("info", r)
+        self._log("ok", f"バージョンを {new_ver} に更新")
+        self._refresh_current_version()
+        QMessageBox.information(self, "完了",
+            f"バージョンを {new_ver} に更新しました\n\n"
+            "❌ コミットする前に diff を確認してください\n"
+            "   git diff")
+
+    def _on_rollback_version_bump(self):
+        r = QMessageBox.question(self, "確認",
+            "直前のバージョン更新を戻しますか？\n"
+            "(バックアップから復元)",
+            QMessageBox.Yes | QMessageBox.No)
+        if r != QMessageBox.Yes:
+            return
+        QMessageBox.information(self, "手動ロールバック",
+            "バックアップファイルは\n"
+            "code/tools/release_helper.py.bak_* \n"
+            "には保存されていません。\n\n"
+            "Git で戻す場合:\n"
+            "  git checkout -- code/")
 
     def _tab_build(self):
         w = QWidget()
