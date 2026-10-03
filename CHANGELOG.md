@@ -5,6 +5,21 @@ All notable changes to StaTable will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.2] - 2026-10-03
+
+### Fixed
+
+- **GUI hang from toolbar Open button** — the toolbar "Open" QAction
+  passed `triggered(bool)` to `open_project(filepath)`, causing the
+  same hang as the v3.2.0 menu bug (fixed in v3.2.1 for the menu only).
+  Now wrapped with `lambda: self.open_project()`.
+
+### Added
+
+- **Qt signal-slot safety regression tests** (`test_v3_2_s2_signals.py`,
+  8 tests): verifies `open_project(bool)` normalization, lambda wrapper
+  enforcement, and `isinstance(filepath, bool)` guard.
+
 ## [3.2.1] - 2026-10-03
 
 ### Fixed
