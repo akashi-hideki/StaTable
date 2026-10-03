@@ -1,4 +1,4 @@
-﻿# code/tests/test_v3_0_s4_docs.py
+# code/tests/test_v3_0_s4_docs.py
 """
 Phase S-4 (v3.0) tests: SDK documentation + examples.
 
@@ -7,7 +7,7 @@ Verifies:
   - SPEC_SDK_API_en.md has section 2.6 (CLI Usage)
   - examples/quickstart.py exists and is syntactically valid
   - examples/cli_guide.md exists
-  - README v3.0 section marked In Progress
+  - README v3.0 section marked Released
   - README mentions pip install statable
   - .gitignore excludes examples/_output/
 """
@@ -104,14 +104,14 @@ def main() -> int:
     check("README.md exists", README.exists(), str(README))
     if README.exists():
         text = README.read_text(encoding="utf-8")
-        check("README v3.0 marked 'In Progress'",
-              "### v3.0 (In Progress" in text)
+        check("README v3.0 marked 'Released'",
+              "### v3.0 (Released" in text)
         check("README mentions 'pip install statable'",
               "pip install statable" in text)
         check("README has CLI checkmark entry",
               "**CLI**" in text)
         check("README has Python SDK checkmark entry",
-              "**Python SDK** (pip install statable)" in text)
+              "**Python SDK**" in text)
 
     # --- T6: .gitignore ----------------------------------------------
     check(".gitignore exists", GITIGNORE.exists(), str(GITIGNORE))
