@@ -121,3 +121,8 @@ PyPI-Recovery-Codes-*.txt
 pypi-apitoken.txt
 pypi-token.txt
 .pypirc
+
+
+# PyPI token accidentally saved as filename (emergency)
+pypi-AgEI*.txt
+pypi-*.txt
