@@ -27,11 +27,16 @@ import json
 import sys
 from pathlib import Path
 
-try:
-    from statable import __version__ as _pkg_version
-    CLI_VERSION = _pkg_version
-except Exception:
-    CLI_VERSION = "0.0.0"
+def _resolve_cli_version() -> str:
+    """Resolve CLI version dynamically from statable.__version__."""
+    try:
+        from statable import __version__ as _pkg_version
+        return _pkg_version
+    except Exception:
+        return "0.0.0"
+
+
+CLI_VERSION = _resolve_cli_version()
 
 
 def _err(msg: str) -> None:

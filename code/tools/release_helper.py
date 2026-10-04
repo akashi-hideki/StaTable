@@ -1025,7 +1025,8 @@ class ReleaseHelper(QMainWindow):
         for name, v in versions.items():
             self._add_verify_result(not v.startswith("ERROR"), f"{name}: {v}")
 
-        valid = [v for v in versions.values() if not v.startswith("ERROR")]
+        valid = [v for v in versions.values()
+                 if not v.startswith("ERROR") and v != "?"]
         unique = set(valid)
         if len(unique) == 1 and valid:
             v = next(iter(unique))
