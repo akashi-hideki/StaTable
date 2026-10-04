@@ -1,0 +1,346 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Project name="CookingHeaterController">
+    <ProjectSettings>
+        <CodeGeneration project_name="CookingHeaterController" table_type="array" generation_style="table_driven" os_type="non_rtos" folder_structure="by_layer" include_dir_name="include" source_dir_name="src" common_dir_name="common" project_dir_name="project" generate_super_include="true" super_include_file="statable_all.h" max_consecutive_pending_events="16" external_includes_in_super="true" external_includes_in_role="true" external_includes_in_transitions="false" external_includes_in_common="false" />
+    </ProjectSettings>
+    <GlobalDefinitions>
+        <SystemVariables>
+            <Variable name="g_system_tick" type="volatile uint32_t" unit="1ms" default_value="0" group="Timer" description="System tick" title="System tick" array_size="0" />
+            <Variable name="error_code" type="uint8_t" unit="" default_value="0" group="System" description="Error code" title="Error code" array_size="0" />
+            <Variable name="zc_count" type="uint32_t" unit="count" default_value="0" group="Hardware" description="Zero-cross count" title="Zero-cross count" array_size="0" />
+            <Variable name="seq_step" type="uint8_t" unit="" default_value="0" group="Hardware" description="Current sequence step" title="Current sequence step" array_size="0" />
+            <Variable name="seq_total" type="uint8_t" unit="" default_value="0" group="Hardware" description="Total sequence steps" title="Total sequence steps" array_size="0" />
+            <Variable name="ir_value" type="uint16_t" unit="ADC" default_value="0" group="Hardware" description="IR sensor moving average" title="IR sensor moving average" array_size="0" />
+            <Variable name="steam_sensor" type="uint16_t" unit="ADC" default_value="0" group="Hardware" description="Steam sensor (vacuum-therm diff)" title="Steam sensor (vacuum-therm diff)" array_size="0" />
+            <Variable name="thermistor_top" type="uint16_t" unit="degC" default_value="0" group="Hardware" description="Top thermistor" title="Top thermistor" array_size="0" />
+            <Variable name="thermistor_bottom" type="uint16_t" unit="degC" default_value="0" group="Hardware" description="Bottom thermistor" title="Bottom thermistor" array_size="0" />
+            <Variable name="thermistor_back" type="uint16_t" unit="degC" default_value="0" group="Hardware" description="Back thermistor" title="Back thermistor" array_size="0" />
+            <Variable name="humidity" type="uint8_t" unit="%" default_value="0" group="Hardware" description="Humidity" title="Humidity" array_size="0" />
+            <Variable name="heater_top_duty" type="uint8_t" unit="%" default_value="0" group="Hardware" description="Top heater PWM duty" title="Top heater PWM duty" array_size="0" />
+            <Variable name="heater_bottom_duty" type="uint8_t" unit="%" default_value="0" group="Hardware" description="Bottom heater PWM duty" title="Bottom heater PWM duty" array_size="0" />
+            <Variable name="heater_back_duty" type="uint8_t" unit="%" default_value="0" group="Hardware" description="Back heater PWM duty" title="Back heater PWM duty" array_size="0" />
+            <Variable name="fan_duty" type="uint8_t" unit="%" default_value="0" group="Hardware" description="Convection fan duty" title="Convection fan duty" array_size="0" />
+            <Variable name="mw_power" type="uint16_t" unit="W" default_value="0" group="Hardware" description="Microwave power" title="Microwave power" array_size="0" />
+            <Variable name="mw_anode_current" type="uint16_t" unit="mA" default_value="0" group="Hardware" description="Magnetron anode current" title="Magnetron anode current" array_size="0" />
+            <Variable name="boiler_temp" type="uint16_t" unit="degC" default_value="0" group="Hardware" description="Steam boiler temperature" title="Steam boiler temperature" array_size="0" />
+            <Variable name="pump_pulse_count" type="uint8_t" unit="" default_value="0" group="Hardware" description="Boiler pump pulse count" title="Boiler pump pulse count" array_size="0" />
+            <Variable name="mw_target_power" type="uint16_t" unit="W" default_value="0" group="Hardware" description="Target microwave power" title="Target microwave power" array_size="0" />
+            <Variable name="oven_target_temp" type="uint16_t" unit="degC" default_value="0" group="Hardware" description="Target oven temperature" title="Target oven temperature" array_size="0" />
+            <Variable name="oven_current_temp" type="uint16_t" unit="degC" default_value="0" group="Hardware" description="Current oven temperature" title="Current oven temperature" array_size="0" />
+            <Variable name="steam_target_temp" type="uint16_t" unit="degC" default_value="0" group="Hardware" description="Target steam temperature" title="Target steam temperature" array_size="0" />
+            <Variable name="stage_elapsed" type="uint32_t" unit="ms" default_value="0" group="Hardware" description="Elapsed time in current stage" title="Elapsed time in current stage" array_size="0" />
+            <Variable name="stage_duration" type="uint32_t" unit="ms" default_value="0" group="Hardware" description="Duration of current stage" title="Duration of current stage" array_size="0" />
+            <Variable name="stage_mode" type="uint8_t" unit="" default_value="0" group="Hardware" description="Current stage heating mode" title="Current stage heating mode" array_size="0" />
+        </SystemVariables>
+        <EventFlags>
+            <Flag name="EVT_SEQ_READY" min_value="0" max_value="1" group="System" description="Sequence ready flag" title="Sequence ready" />
+            <Flag name="EVT_OVERHEAT" min_value="0" max_value="1" group="Safety" description="Overheat flag" title="Overheat" />
+        </EventFlags>
+        <Interrupts>
+            <Interrupt name="TIMER0" description="1ms timer" event_names="" is_timer="true" title="Timer0">
+                <Action condition="" action="ctx-&gt;data.g_system_tick++" />
+                <UsedVariable name="g_system_tick" />
+            </Interrupt>
+        </Interrupts>
+        <TimerBase>
+            <Timer variable_name="g_system_tick" unit="1ms" data_type="volatile uint32_t" title="System tick" interrupt_name="TIMER0" />
+        </TimerBase>
+    </GlobalDefinitions>
+    <SharedLibraries>
+        <RoleFunctionLibrary>
+            <RoleFunction name="ReadSensorsMovingAvg" namespace="Driver" title="Read sensors and update moving averages" description="Read sensors and update moving averages" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="EmitIrReady" namespace="Driver" title="Emit IR_READY event" description="Emit IR_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="EmitSteamReady" namespace="Driver" title="Emit STEAM_READY event" description="Emit STEAM_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="EmitThermReady" namespace="Driver" title="Emit THERM_READY event" description="Emit THERM_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SendStatusMaster" namespace="Driver" title="Send status to panel (master mode)" description="Send status to panel (master mode)" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ReceiveCommand" namespace="Driver" title="Receive command from panel" description="Receive command from panel" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetHeaterPwm" namespace="Driver" title="Set heater PWM duty" description="Set heater PWM duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetConvectionFan" namespace="Driver" title="Set convection fan duty" description="Set convection fan duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetMagnetronPower" namespace="Driver" title="Set magnetron power" description="Set magnetron power" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="PulseBoilerPump" namespace="Driver" title="Pulse boiler pump" description="Pulse boiler pump" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="CheckAnodeCurrent" namespace="Driver" title="Check magnetron anode current" description="Check magnetron anode current" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="LogHwFault" namespace="Driver" title="Log hardware fault" description="Log hardware fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ClearHwFault" namespace="Driver" title="Clear hardware fault" description="Clear hardware fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StartMagnetron" namespace="MwMicrowave" title="Start magnetron with soft-start" description="Start magnetron with soft-start" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StopMagnetron" namespace="MwMicrowave" title="Stop magnetron" description="Stop magnetron" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetMwPower" namespace="MwMicrowave" title="Set microwave power level" description="Set microwave power level" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="CheckAnodeCurrent" namespace="MwMicrowave" title="Monitor anode current" description="Monitor anode current" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="LogMwFault" namespace="MwMicrowave" title="Log microwave fault" description="Log microwave fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ClearMwFault" namespace="MwMicrowave" title="Clear microwave fault" description="Clear microwave fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StartOvenPid" namespace="MwOven" title="Start oven PID control" description="Start oven PID control" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StopOvenPid" namespace="MwOven" title="Stop oven PID control" description="Stop oven PID control" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetTopHeaterDuty" namespace="MwOven" title="Set top heater duty" description="Set top heater duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetBottomHeaterDuty" namespace="MwOven" title="Set bottom heater duty" description="Set bottom heater duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetBackHeaterDuty" namespace="MwOven" title="Set back heater duty" description="Set back heater duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetConvectionFan" namespace="MwOven" title="Set convection fan duty" description="Set convection fan duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ReadThermistors" namespace="MwOven" title="Read all thermistors" description="Read all thermistors" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="CheckOvenOverheat" namespace="MwOven" title="Check oven overheat" description="Check oven overheat" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="LogOvFault" namespace="MwOven" title="Log oven fault" description="Log oven fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ClearOvFault" namespace="MwOven" title="Clear oven fault" description="Clear oven fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StartGrill" namespace="MwGrill" title="Start grill heater" description="Start grill heater" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StopGrill" namespace="MwGrill" title="Stop grill heater" description="Stop grill heater" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetGrillDuty" namespace="MwGrill" title="Set grill heater duty" description="Set grill heater duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="CheckGrillOverheat" namespace="MwGrill" title="Check grill overheat" description="Check grill overheat" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="LogGrFault" namespace="MwGrill" title="Log grill fault" description="Log grill fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ClearGrFault" namespace="MwGrill" title="Clear grill fault" description="Clear grill fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StartBoilerHeater" namespace="MwSteam" title="Start boiler heater" description="Start boiler heater" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StopBoilerHeater" namespace="MwSteam" title="Stop boiler heater" description="Stop boiler heater" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="PulsePump" namespace="MwSteam" title="Pulse boiler pump" description="Pulse boiler pump" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetPumpDuty" namespace="MwSteam" title="Set pump duty cycle" description="Set pump duty cycle" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ReadBoilerTemp" namespace="MwSteam" title="Read boiler temperature" description="Read boiler temperature" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="CalculateSteamPID" namespace="MwSteam" title="Compute steam PID output" description="Compute steam PID output" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="CheckSteamOverheat" namespace="MwSteam" title="Check steam overheat" description="Check steam overheat" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="LogStFault" namespace="MwSteam" title="Log steam fault" description="Log steam fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ClearStFault" namespace="MwSteam" title="Clear steam fault" description="Clear steam fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ReceiveSequence" namespace="Application" title="Receive sequence from panel" description="Receive sequence from panel" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ParseSequence" namespace="Application" title="Parse sequence data" description="Parse sequence data" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StartStage" namespace="Application" title="Start current stage" description="Start current stage" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="StopStage" namespace="Application" title="Stop current stage" description="Stop current stage" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="CheckStageDone" namespace="Application" title="Check if stage complete" description="Check if stage complete" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="NextStage" namespace="Application" title="Advance to next stage" description="Advance to next stage" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ReportStatus" namespace="Application" title="Report status to panel" description="Report status to panel" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ReportComplete" namespace="Application" title="Report completion" description="Report completion" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="LogAppError" namespace="Application" title="Log application error" description="Log application error" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ClearAppError" namespace="Application" title="Clear application error" description="Clear application error" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+        </RoleFunctionLibrary>
+        <ConditionLibrary />
+        <LiteralLibrary />
+    </SharedLibraries>
+    <Tab name="Driver">
+        <StateMachine initial="HwIdle" layer_priority="1" layer_description="Hardware driver layer" layer_name="Driver">
+            <States>
+                <State name="HwIdle" type="initial" parent="" do="" description="Waiting for HW event" />
+                <State name="HwTxStatus" type="normal" parent="" do="" description="Master TX to panel" />
+                <State name="HwRxCommand" type="normal" parent="" do="" description="Receiving command" />
+                <State name="HwSensing" type="normal" parent="" do="" description="Sensing + moving average" />
+                <State name="HwHeating" type="normal" parent="" do="" description="Heating output" />
+                <State name="HwError" type="normal" parent="" do="" description="Hardware error" />
+            </States>
+            <Events>
+                <Event name="ZC_PULSE" id="1" kind="signal" params="" priority="9" description="AC zero-cross pulse" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="AC zero-cross pulse" />
+                <Event name="TX_DONE" id="2" kind="signal" params="" priority="0" description="Master TX done" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Master TX done" />
+                <Event name="RX_DONE" id="3" kind="signal" params="" priority="0" description="RX complete" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="RX complete" />
+                <Event name="SENSOR_TICK" id="4" kind="signal" params="" priority="0" description="Periodic sensor tick" delivery_type="queue" source_layer="driver" data_type="" data_name="" title="Periodic sensor tick" />
+                <Event name="HEAT_START" id="5" kind="signal" params="" priority="0" description="Start heating" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Start heating" />
+                <Event name="HEAT_STOP" id="6" kind="signal" params="" priority="0" description="Stop heating" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Stop heating" />
+                <Event name="HW_FAULT" id="7" kind="signal" params="err_code" priority="9" description="Hardware fault" delivery_type="queue" source_layer="driver" data_type="uint8_t" data_name="err_code" title="Hardware fault" />
+                <Event name="CLEAR_FAULT" id="8" kind="signal" params="" priority="0" description="Clear fault" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Clear fault" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="ReadSensorsMovingAvg" namespace="Driver" title="Read sensors and update moving averages" description="Read sensors and update moving averages" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="EmitIrReady" namespace="Driver" title="Emit IR_READY event" description="Emit IR_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="EmitSteamReady" namespace="Driver" title="Emit STEAM_READY event" description="Emit STEAM_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="EmitThermReady" namespace="Driver" title="Emit THERM_READY event" description="Emit THERM_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SendStatusMaster" namespace="Driver" title="Send status to panel (master mode)" description="Send status to panel (master mode)" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ReceiveCommand" namespace="Driver" title="Receive command from panel" description="Receive command from panel" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetHeaterPwm" namespace="Driver" title="Set heater PWM duty" description="Set heater PWM duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetConvectionFan" namespace="Driver" title="Set convection fan duty" description="Set convection fan duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetMagnetronPower" namespace="Driver" title="Set magnetron power" description="Set magnetron power" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="PulseBoilerPump" namespace="Driver" title="Pulse boiler pump" description="Pulse boiler pump" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="CheckAnodeCurrent" namespace="Driver" title="Check magnetron anode current" description="Check magnetron anode current" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="LogHwFault" namespace="Driver" title="Log hardware fault" description="Log hardware fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ClearHwFault" namespace="Driver" title="Clear hardware fault" description="Clear hardware fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="HwIdle" event="ZC_PULSE" condition="" action="" target="HwTxStatus" transition_type="external" title="Zero-cross: start TX" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HwTxStatus" event="TX_DONE" condition="" action="" target="HwRxCommand" transition_type="external" title="TX done: await RX" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HwRxCommand" event="RX_DONE" condition="" action="" target="HwIdle" transition_type="external" title="RX done: idle" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HwIdle" event="SENSOR_TICK" condition="" action="" target="HwSensing" transition_type="external" title="Sensor tick" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HwSensing" event="TX_DONE" condition="" action="" target="HwIdle" transition_type="external" title="Sensing done" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HwIdle" event="HEAT_START" condition="" action="" target="HwHeating" transition_type="external" title="Start heating" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HwHeating" event="HEAT_STOP" condition="" action="" target="HwIdle" transition_type="external" title="Stop heating" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HwIdle" event="HW_FAULT" condition="" action="" target="HwError" transition_type="external" title="Fault (HwIdle)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HwTxStatus" event="HW_FAULT" condition="" action="" target="HwError" transition_type="external" title="Fault (HwTxStatus)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HwRxCommand" event="HW_FAULT" condition="" action="" target="HwError" transition_type="external" title="Fault (HwRxCommand)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HwSensing" event="HW_FAULT" condition="" action="" target="HwError" transition_type="external" title="Fault (HwSensing)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HwHeating" event="HW_FAULT" condition="" action="" target="HwError" transition_type="external" title="Fault (HwHeating)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="HwError" event="CLEAR_FAULT" condition="" action="" target="HwIdle" transition_type="external" title="Clear fault" has_else="false" else_target="" early_return="true" label="T1" />
+            </Transitions>
+        </StateMachine>
+    </Tab>
+    <Tab name="MwMicrowave">
+        <StateMachine initial="MwIdle" layer_priority="3" layer_description="Microwave heating layer" layer_name="MwMicrowave">
+            <States>
+                <State name="MwIdle" type="initial" parent="" do="" description="Microwave idle" />
+                <State name="Heating" type="normal" parent="" do="" description="Magnetron heating" />
+                <State name="MwError" type="normal" parent="" do="" description="Microwave error" />
+            </States>
+            <Events>
+                <Event name="MW_START" id="1" kind="signal" params="" priority="0" description="Start microwave" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Start microwave" />
+                <Event name="MW_STOP" id="2" kind="signal" params="" priority="0" description="Stop microwave" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Stop microwave" />
+                <Event name="MW_ANODE_OK" id="3" kind="signal" params="" priority="0" description="Anode current OK" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Anode current OK" />
+                <Event name="MW_ANODE_FAULT" id="4" kind="signal" params="err_code" priority="9" description="Anode current fault" delivery_type="queue" source_layer="middleware" data_type="uint8_t" data_name="err_code" title="Anode current fault" />
+                <Event name="MW_OVERHEAT" id="5" kind="signal" params="err_code" priority="9" description="Overheat detected" delivery_type="queue" source_layer="middleware" data_type="uint8_t" data_name="err_code" title="Overheat detected" />
+                <Event name="MW_CLEAR" id="6" kind="signal" params="" priority="0" description="Clear fault" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Clear fault" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="StartMagnetron" namespace="MwMicrowave" title="Start magnetron with soft-start" description="Start magnetron with soft-start" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="StopMagnetron" namespace="MwMicrowave" title="Stop magnetron" description="Stop magnetron" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetMwPower" namespace="MwMicrowave" title="Set microwave power level" description="Set microwave power level" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="CheckAnodeCurrent" namespace="MwMicrowave" title="Monitor anode current" description="Monitor anode current" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="LogMwFault" namespace="MwMicrowave" title="Log microwave fault" description="Log microwave fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ClearMwFault" namespace="MwMicrowave" title="Clear microwave fault" description="Clear microwave fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="MwIdle" event="MW_START" condition="" action="" target="Heating" transition_type="external" title="Start heating" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Heating" event="MW_STOP" condition="" action="" target="MwIdle" transition_type="external" title="Stop heating" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="MwIdle" event="MW_ANODE_FAULT" condition="" action="" target="MwError" transition_type="external" title="Anode fault (MwIdle)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="MwIdle" event="MW_OVERHEAT" condition="" action="" target="MwError" transition_type="external" title="Overheat (MwIdle)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Heating" event="MW_ANODE_FAULT" condition="" action="" target="MwError" transition_type="external" title="Anode fault (Heating)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Heating" event="MW_OVERHEAT" condition="" action="" target="MwError" transition_type="external" title="Overheat (Heating)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="MwError" event="MW_CLEAR" condition="" action="" target="MwIdle" transition_type="external" title="Clear fault" has_else="false" else_target="" early_return="true" label="T1" />
+            </Transitions>
+        </StateMachine>
+    </Tab>
+    <Tab name="MwOven">
+        <StateMachine initial="OvIdle" layer_priority="3" layer_description="Oven and grill heater layer" layer_name="MwOven">
+            <States>
+                <State name="OvIdle" type="initial" parent="" do="" description="Oven idle" />
+                <State name="PidHeating" type="normal" parent="" do="" description="PID heating with convection" />
+                <State name="OvError" type="normal" parent="" do="" description="Oven error" />
+            </States>
+            <Events>
+                <Event name="OV_START" id="1" kind="signal" params="" priority="0" description="Start oven" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Start oven" />
+                <Event name="OV_STOP" id="2" kind="signal" params="" priority="0" description="Stop oven" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Stop oven" />
+                <Event name="OV_TEMP_REACHED" id="3" kind="signal" params="" priority="0" description="Target temperature reached" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Target temperature reached" />
+                <Event name="OV_THERM_TICK" id="4" kind="signal" params="" priority="0" description="Thermistor update tick" delivery_type="queue" source_layer="middleware" data_type="" data_name="" title="Thermistor update tick" />
+                <Event name="OV_OVERHEAT" id="5" kind="signal" params="err_code" priority="9" description="Oven overheat" delivery_type="queue" source_layer="middleware" data_type="uint8_t" data_name="err_code" title="Oven overheat" />
+                <Event name="OV_CLEAR" id="6" kind="signal" params="" priority="0" description="Clear fault" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Clear fault" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="StartOvenPid" namespace="MwOven" title="Start oven PID control" description="Start oven PID control" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="StopOvenPid" namespace="MwOven" title="Stop oven PID control" description="Stop oven PID control" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetTopHeaterDuty" namespace="MwOven" title="Set top heater duty" description="Set top heater duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetBottomHeaterDuty" namespace="MwOven" title="Set bottom heater duty" description="Set bottom heater duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetBackHeaterDuty" namespace="MwOven" title="Set back heater duty" description="Set back heater duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetConvectionFan" namespace="MwOven" title="Set convection fan duty" description="Set convection fan duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ReadThermistors" namespace="MwOven" title="Read all thermistors" description="Read all thermistors" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="CheckOvenOverheat" namespace="MwOven" title="Check oven overheat" description="Check oven overheat" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="LogOvFault" namespace="MwOven" title="Log oven fault" description="Log oven fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ClearOvFault" namespace="MwOven" title="Clear oven fault" description="Clear oven fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="OvIdle" event="OV_START" condition="" action="" target="PidHeating" transition_type="external" title="Start PID heating" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="PidHeating" event="OV_STOP" condition="" action="" target="OvIdle" transition_type="external" title="Stop heating" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="PidHeating" event="OV_TEMP_REACHED" condition="" action="" target="PidHeating" transition_type="external" title="Maintain temperature" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OvIdle" event="OV_OVERHEAT" condition="" action="" target="OvError" transition_type="external" title="Overheat (OvIdle)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="PidHeating" event="OV_OVERHEAT" condition="" action="" target="OvError" transition_type="external" title="Overheat (PidHeating)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OvError" event="OV_CLEAR" condition="" action="" target="OvIdle" transition_type="external" title="Clear fault" has_else="false" else_target="" early_return="true" label="T1" />
+            </Transitions>
+        </StateMachine>
+    </Tab>
+    <Tab name="MwGrill">
+        <StateMachine initial="GrIdle" layer_priority="3" layer_description="Grill heater layer" layer_name="MwGrill">
+            <States>
+                <State name="GrIdle" type="initial" parent="" do="" description="Grill idle" />
+                <State name="Grilling" type="normal" parent="" do="" description="Grill heating" />
+                <State name="GrError" type="normal" parent="" do="" description="Grill error" />
+            </States>
+            <Events>
+                <Event name="GR_START" id="1" kind="signal" params="" priority="0" description="Start grill" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Start grill" />
+                <Event name="GR_STOP" id="2" kind="signal" params="" priority="0" description="Stop grill" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Stop grill" />
+                <Event name="GR_OVERHEAT" id="3" kind="signal" params="err_code" priority="9" description="Grill overheat" delivery_type="queue" source_layer="middleware" data_type="uint8_t" data_name="err_code" title="Grill overheat" />
+                <Event name="GR_CLEAR" id="4" kind="signal" params="" priority="0" description="Clear fault" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Clear fault" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="StartGrill" namespace="MwGrill" title="Start grill heater" description="Start grill heater" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="StopGrill" namespace="MwGrill" title="Stop grill heater" description="Stop grill heater" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetGrillDuty" namespace="MwGrill" title="Set grill heater duty" description="Set grill heater duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="CheckGrillOverheat" namespace="MwGrill" title="Check grill overheat" description="Check grill overheat" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="LogGrFault" namespace="MwGrill" title="Log grill fault" description="Log grill fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ClearGrFault" namespace="MwGrill" title="Clear grill fault" description="Clear grill fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="GrIdle" event="GR_START" condition="" action="" target="Grilling" transition_type="external" title="Start grill" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Grilling" event="GR_STOP" condition="" action="" target="GrIdle" transition_type="external" title="Stop grill" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="GrIdle" event="GR_OVERHEAT" condition="" action="" target="GrError" transition_type="external" title="Overheat (GrIdle)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Grilling" event="GR_OVERHEAT" condition="" action="" target="GrError" transition_type="external" title="Overheat (Grilling)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="GrError" event="GR_CLEAR" condition="" action="" target="GrIdle" transition_type="external" title="Clear fault" has_else="false" else_target="" early_return="true" label="T1" />
+            </Transitions>
+        </StateMachine>
+    </Tab>
+    <Tab name="MwSteam">
+        <StateMachine initial="StIdle" layer_priority="3" layer_description="Steam generation layer" layer_name="MwSteam">
+            <States>
+                <State name="StIdle" type="initial" parent="" do="" description="Steam generator idle" />
+                <State name="Steaming" type="normal" parent="" do="" description="Steam generation active" />
+                <State name="StError" type="normal" parent="" do="" description="Steam error" />
+            </States>
+            <Events>
+                <Event name="ST_START" id="1" kind="signal" params="" priority="0" description="Start steam" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Start steam" />
+                <Event name="ST_STOP" id="2" kind="signal" params="" priority="0" description="Stop steam" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Stop steam" />
+                <Event name="ST_BOILER_READY" id="3" kind="signal" params="" priority="0" description="Boiler at temperature" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Boiler at temperature" />
+                <Event name="ST_PUMP_TICK" id="4" kind="signal" params="" priority="0" description="Pump pulse tick" delivery_type="queue" source_layer="middleware" data_type="" data_name="" title="Pump pulse tick" />
+                <Event name="ST_OVERHEAT" id="5" kind="signal" params="err_code" priority="9" description="Boiler overheat" delivery_type="queue" source_layer="middleware" data_type="uint8_t" data_name="err_code" title="Boiler overheat" />
+                <Event name="ST_CLEAR" id="6" kind="signal" params="" priority="0" description="Clear fault" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Clear fault" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="StartBoilerHeater" namespace="MwSteam" title="Start boiler heater" description="Start boiler heater" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="StopBoilerHeater" namespace="MwSteam" title="Stop boiler heater" description="Stop boiler heater" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="PulsePump" namespace="MwSteam" title="Pulse boiler pump" description="Pulse boiler pump" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetPumpDuty" namespace="MwSteam" title="Set pump duty cycle" description="Set pump duty cycle" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ReadBoilerTemp" namespace="MwSteam" title="Read boiler temperature" description="Read boiler temperature" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="CalculateSteamPID" namespace="MwSteam" title="Compute steam PID output" description="Compute steam PID output" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="CheckSteamOverheat" namespace="MwSteam" title="Check steam overheat" description="Check steam overheat" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="LogStFault" namespace="MwSteam" title="Log steam fault" description="Log steam fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ClearStFault" namespace="MwSteam" title="Clear steam fault" description="Clear steam fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="StIdle" event="ST_START" condition="" action="" target="Steaming" transition_type="external" title="Start steam" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Steaming" event="ST_STOP" condition="" action="" target="StIdle" transition_type="external" title="Stop steam" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Steaming" event="ST_PUMP_TICK" condition="" action="" target="Steaming" transition_type="external" title="Pulse pump" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="StIdle" event="ST_OVERHEAT" condition="" action="" target="StError" transition_type="external" title="Overheat (StIdle)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Steaming" event="ST_OVERHEAT" condition="" action="" target="StError" transition_type="external" title="Overheat (Steaming)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="StError" event="ST_CLEAR" condition="" action="" target="StIdle" transition_type="external" title="Clear fault" has_else="false" else_target="" early_return="true" label="T1" />
+            </Transitions>
+        </StateMachine>
+    </Tab>
+    <Tab name="Application">
+        <StateMachine initial="Idle" layer_priority="5" layer_description="Cooking sequence application layer" layer_name="Application">
+            <States>
+                <State name="Idle" type="initial" parent="" do="" description="Waiting for sequence from panel" />
+                <State name="Executing" type="normal" parent="" do="" description="Executing current stage" />
+                <State name="StepTransition" type="normal" parent="" do="" description="Transitioning between stages" />
+                <State name="Completed" type="normal" parent="" do="" description="Sequence complete" />
+                <State name="Error" type="final" parent="" do="" description="Fatal error" />
+            </States>
+            <Events>
+                <Event name="SEQ_RECEIVED" id="1" kind="signal" params="" priority="0" description="Sequence received" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Sequence received" />
+                <Event name="STAGE_START" id="2" kind="signal" params="" priority="0" description="Start current stage" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Start current stage" />
+                <Event name="STAGE_DONE" id="3" kind="signal" params="" priority="0" description="Stage completed" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Stage completed" />
+                <Event name="NEXT_STEP" id="4" kind="signal" params="" priority="0" description="Advance to next step" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Advance to next step" />
+                <Event name="ALL_DONE" id="5" kind="signal" params="" priority="0" description="All stages complete" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="All stages complete" />
+                <Event name="CANCEL" id="6" kind="signal" params="" priority="1" description="Cancel sequence" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Cancel sequence" />
+                <Event name="APP_FAULT" id="7" kind="signal" params="err_code" priority="9" description="Application fault" delivery_type="queue" source_layer="middleware" data_type="uint8_t" data_name="err_code" title="Application fault" />
+                <Event name="RESET" id="8" kind="signal" params="" priority="0" description="Reset" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Reset" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="ReceiveSequence" namespace="Application" title="Receive sequence from panel" description="Receive sequence from panel" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ParseSequence" namespace="Application" title="Parse sequence data" description="Parse sequence data" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="StartStage" namespace="Application" title="Start current stage" description="Start current stage" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="StopStage" namespace="Application" title="Stop current stage" description="Stop current stage" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="CheckStageDone" namespace="Application" title="Check if stage complete" description="Check if stage complete" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="NextStage" namespace="Application" title="Advance to next stage" description="Advance to next stage" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ReportStatus" namespace="Application" title="Report status to panel" description="Report status to panel" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ReportComplete" namespace="Application" title="Report completion" description="Report completion" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="LogAppError" namespace="Application" title="Log application error" description="Log application error" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ClearAppError" namespace="Application" title="Clear application error" description="Clear application error" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="Idle" event="SEQ_RECEIVED" condition="" action="" target="Executing" transition_type="external" title="Start sequence" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Executing" event="STAGE_DONE" condition="" action="" target="StepTransition" transition_type="external" title="Stage completed" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="StepTransition" event="NEXT_STEP" condition="" action="" target="Executing" transition_type="external" title="Next stage" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="StepTransition" event="ALL_DONE" condition="" action="" target="Completed" transition_type="external" title="All stages done" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Completed" event="RESET" condition="" action="" target="Idle" transition_type="external" title="Reset to idle" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Executing" event="CANCEL" condition="" action="" target="Idle" transition_type="external" title="Cancel sequence" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="StepTransition" event="CANCEL" condition="" action="" target="Idle" transition_type="external" title="Cancel (between stages)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Idle" event="STAGE_START" condition="" action="" target="Executing" transition_type="external" title="Direct stage start" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Idle" event="APP_FAULT" condition="" action="" target="Error" transition_type="external" title="Fault (Idle)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Executing" event="APP_FAULT" condition="" action="" target="Error" transition_type="external" title="Fault (Executing)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="StepTransition" event="APP_FAULT" condition="" action="" target="Error" transition_type="external" title="Fault (StepTransition)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Completed" event="APP_FAULT" condition="" action="" target="Error" transition_type="external" title="Fault (Completed)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Error" event="RESET" condition="" action="" target="Idle" transition_type="external" title="Maintenance reset" has_else="false" else_target="" early_return="true" label="T1" />
+            </Transitions>
+        </StateMachine>
+    </Tab>
+</Project>
