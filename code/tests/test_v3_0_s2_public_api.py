@@ -38,6 +38,16 @@ def main() -> int:
     print("  test_v3_0_s2_public_api")
     print("=" * 70)
 
+    # --- dynamic expected version (read from pyproject.toml) ---
+    _EXPECTED_VERSION = "0.0.0"
+    try:
+        import tomllib
+        _pp = CODE / "pyproject.toml"
+        if _pp.exists():
+            with open(_pp, "rb") as _f:
+                _EXPECTED_VERSION = tomllib.load(_f)["project"]["version"]
+    except Exception:
+        pass
     # --- T1: statable -------------------------------------------------
     try:
         import statable
@@ -47,8 +57,8 @@ def main() -> int:
         _summary()
         return 1
 
-    check("statable has __version__ == '3.2.2'",
-          getattr(statable, "__version__", None) == "3.2.2",
+    check(f"statable has __version__ == '{_EXPECTED_VERSION}'",
+          getattr(statable, "__version__", None) == _EXPECTED_VERSION,
           f"got: {getattr(statable, '__version__', None)!r}")
     check("'__version__' in statable.__all__",
           "__version__" in statable.__all__,
@@ -69,8 +79,8 @@ def main() -> int:
         _summary()
         return 1
 
-    check("codegen has __version__ == '3.2.2'",
-          getattr(codegen, "__version__", None) == "3.2.2",
+    check(f"codegen has __version__ == '{_EXPECTED_VERSION}'",
+          getattr(codegen, "__version__", None) == _EXPECTED_VERSION,
           f"got: {getattr(codegen, '__version__', None)!r}")
     check("'validate' in codegen.__all__",
           "validate" in codegen.__all__,

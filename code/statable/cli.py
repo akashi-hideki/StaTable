@@ -27,7 +27,11 @@ import json
 import sys
 from pathlib import Path
 
-CLI_VERSION = "3.2.2"
+try:
+    from statable import __version__ as _pkg_version
+    CLI_VERSION = _pkg_version
+except Exception:
+    CLI_VERSION = "0.0.0"
 
 
 def _err(msg: str) -> None:

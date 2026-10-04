@@ -56,12 +56,22 @@ def main() -> int:
     print("  test_v3_0_s3_cli")
     print("=" * 70)
 
+    # --- dynamic expected version (read from pyproject.toml) ---
+    _EXPECTED_VERSION = "0.0.0"
+    try:
+        import tomllib
+        _pp = CODE / "pyproject.toml"
+        if _pp.exists():
+            with open(_pp, "rb") as _f:
+                _EXPECTED_VERSION = tomllib.load(_f)["project"]["version"]
+    except Exception:
+        pass
     # --- T1: import / version -----------------------------------------
     try:
         from statable import cli
         check("statable.cli importable", True)
-        check("CLI_VERSION == '3.2.2'",
-              cli.CLI_VERSION == "3.2.2",
+        check(f"CLI_VERSION == '{_EXPECTED_VERSION}'",
+              cli.CLI_VERSION == _EXPECTED_VERSION,
               f"got: {cli.CLI_VERSION!r}")
     except Exception as e:
         check("statable.cli importable", False, repr(e))
@@ -91,8 +101,8 @@ def main() -> int:
     # --- T3: version --------------------------------------------------
     rc, out, _ = run_cli(["version"])
     check("version: exit 0", rc == 0, f"rc={rc}")
-    check("version: prints 'statable-cli 3.2.2'",
-          "statable-cli 3.2.2" in out,
+    check(f"version: prints 'statable-cli {_EXPECTED_VERSION}'",
+          f"statable-cli {_EXPECTED_VERSION}" in out,
           f"out={out!r}")
 
     # --- T4: validate on real XML (json) ------------------------------
