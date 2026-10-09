@@ -7,11 +7,33 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/statable.svg)](https://pypi.org/project/statable/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-1605%20PASS-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-1642%20PASS-green.svg)]()
 [![MISRA](https://img.shields.io/badge/MISRA-C%3A2012-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
 ---
+
+## What's New in v3.4.0
+
+**StateActionsDialog: combo-based editing + role/event management**
+
+- **Target column is now a QComboBox** (Type-dependent)
+  - `role`       -> `qualified_name` from `RoleFunctionLibrary` + `state_machine`
+  - `fire_event` -> `EVENT_<Layer>_<Name>` from `state_machine.events`
+  - Eliminates typos and makes generated C code deterministic
+- **Role function management buttons**: `+ New` / `Edit` / `Delete`
+  - Uses `RoleFunctionDialog` (same UX as `ActionEditorDialog`)
+  - Registers into `state_machine.role_functions` on the fly
+- **Event management buttons**: `+ New` / `Edit` / `Delete`
+  - Uses `EventEditDialog`
+  - Reference check before delete (transitions must be removed first)
+- **Condition column**: `QLineEdit` + `[...]` button
+  - Opens `ConditionBuilderDialog` (same as `ActionEditorDialog`)
+- **New constructor args**: `role_function_library`, `literal_library`,
+  `condition_library`, `layer_names_provider`, `global_defs`
+- **Test**: `test_v3_4_0_state_actions.py` (30 PASS)
+
+See [SPEC_STATE_ACTIONS_v1.md](code/docs/SPEC_STATE_ACTIONS_v1.md) for details.
 
 ## What's New in v3.2.0
 
@@ -48,7 +70,7 @@ The New Project Wizard is fully translated to **简体中文**.
 ### Test Coverage
 
 - **+58 new tests** (`test_v3_2_s1_wizard.py`): templates, generation, rename, menu cleanup
-- Total: **1605 PASS / 0 FAIL / 2 SKIP** across 43 suites
+- Total: **1642 PASS / 0 FAIL / 2 SKIP** across 44 suites
 
 ---
 
@@ -131,7 +153,7 @@ custom tooling from scratch.
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **43 test suites, 1605 PASS / 0 FAIL / 2 SKIP**
+- ✅ **44 test suites, 1642 PASS / 0 FAIL / 2 SKIP**
 
 ### v2.7 Highlights
 
@@ -185,7 +207,7 @@ diagrams, and generate production-ready C code with a single click.*
 | **Ubuntu 22.04+** | ⚠️ **Auto tests pass on CI** | GUI not yet manually verified — feedback welcome |
 | **macOS** | ⚠️ **Not tested** | Community testing welcome |
 
-**Note for Linux users**: The automated test suite (43 suites, 1168 tests)
+**Note for Linux users**: The automated test suite (44 suites, 1168 tests)
 passes on Ubuntu via GitHub Actions, but the GUI has only been manually
 verified on Windows. If you try it on Linux, please report your experience
 via [GitHub Issues](https://github.com/akashi-hideki/StaTable/issues).
@@ -277,7 +299,7 @@ python tests/test_v2_2_p1.py
 python tests/test_v2_7_p4.py
 ```
 
-Expected: **1605 PASS / 0 FAIL / 2 SKIP** across 43 suites.
+Expected: **1642 PASS / 0 FAIL / 2 SKIP** across 44 suites.
 
 ---
 
@@ -792,7 +814,7 @@ python tests/test_v2_3_p1.py
 # ...
 ```
 
-All 43 suites should pass (1605 PASS / 2 SKIP).
+All 44 suites should pass (1642 PASS / 2 SKIP).
 
 ---
 

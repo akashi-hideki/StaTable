@@ -936,8 +936,16 @@ class SettingsPanel(QWidget):
             return
 
         state = self.sm.states[name]
+        # [v3.4.0] Forward full editing context
         dlg = StateActionsDialog(
-            parent=self, state=state, state_machine=self.sm)
+            parent=self,
+            state=state,
+            state_machine=self.sm,
+            role_function_library=self.role_function_library,
+            literal_library=self.literal_library,
+            layer_names_provider=self.layer_names_provider,
+            global_defs=self.global_defs,
+        )
         if dlg.exec() == QDialog.Accepted:
             self.settings_changed.emit()
             StaTableLogger.info(

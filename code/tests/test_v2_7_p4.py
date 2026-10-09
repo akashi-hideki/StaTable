@@ -342,7 +342,8 @@ if str(PROJECT_ROOT) not in sys.path:
 # 5. _ActionListWidget: add / delete / up / down
 # ======================================================================
 def test_action_list_widget_operations():
-    print("\n[5] _ActionListWidget operations")
+    print("")
+    print("[5] _ActionListWidget operations")
     app = get_app()
     if app is None:
         RESULT.skip("_ActionListWidget", "PySide6 not available")
@@ -350,6 +351,7 @@ def test_action_list_widget_operations():
 
     from statable_gui.state_actions_dialog import _ActionListWidget
     from statable.model import ActionStep
+    from PySide6.QtWidgets import QLineEdit, QComboBox
 
     w = _ActionListWidget()
 
@@ -359,8 +361,23 @@ def test_action_list_widget_operations():
         ActionStep(role_function="Driver.B", condition="x > 0"),
     ])
     check("set_actions row count", w.table.rowCount() == 2)
-    check("row 0 target", w.table.item(0, w.COL_TARGET).text() == "Driver.A")
-    check("row 1 condition", w.table.item(1, w.COL_CONDITION).text() == "x > 0")
+    check("set_actions _rows len", len(w._rows) == 2)
+    check("row 0 target (rows)", w._rows[0]["target"] == "Driver.A")
+    check("row 1 condition (rows)", w._rows[1]["condition"] == "x > 0")
+
+    # Target column is now QComboBox (cell widget)
+    combo0 = w.table.cellWidget(0, w.COL_TARGET)
+    check("row 0 target is QComboBox",
+          combo0 is not None and isinstance(combo0, QComboBox))
+
+    # Condition column is now a QWidget container with QLineEdit
+    cond1 = w.table.cellWidget(1, w.COL_CONDITION)
+    check("row 1 condition container exists", cond1 is not None)
+    if cond1 is not None:
+        edit1 = cond1.findChild(QLineEdit)
+        check("row 1 condition has QLineEdit", edit1 is not None)
+        if edit1 is not None:
+            check("row 1 condition text", edit1.text() == "x > 0")
 
     # get_actions round-trip
     got = w.get_actions()
@@ -371,30 +388,29 @@ def test_action_list_widget_operations():
     # add
     w._on_add()
     check("_on_add row count", w.table.rowCount() == 3)
+    check("_on_add _rows len", len(w._rows) == 3)
 
     # delete
     w.table.selectRow(2)
     w._on_delete()
     check("_on_delete row count", w.table.rowCount() == 2)
+    check("_on_delete _rows len", len(w._rows) == 2)
 
     # up
     w.table.selectRow(1)
     w._on_up()
-    check("_on_up reorder",
-          w.table.item(0, w.COL_TARGET).text() == "Driver.B")
-    check("_on_up reorder (2)",
-          w.table.item(1, w.COL_TARGET).text() == "Driver.A")
+    check("_on_up reorder", w._rows[0]["target"] == "Driver.B")
+    check("_on_up reorder (2)", w._rows[1]["target"] == "Driver.A")
 
     # down
     w.table.selectRow(0)
     w._on_down()
-    check("_on_down reorder",
-          w.table.item(0, w.COL_TARGET).text() == "Driver.A")
+    check("_on_down reorder", w._rows[0]["target"] == "Driver.A")
 
     # empty target is dropped
     w.set_actions([
         ActionStep(role_function="Driver.X"),
-        ActionStep(),  # empty
+        ActionStep(),
     ])
     got = w.get_actions()
     check("empty target dropped", len(got) == 1)
