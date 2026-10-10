@@ -366,6 +366,7 @@ static void Driver_Exit_Waiting(SystemContext_t *ctx)
 | `fire_event` | 无 | `FIRE_EVENT_<Layer>(<EVENT>);` |
 | `fire_event` | 有 | `if (<condition>) { FIRE_EVENT_<Layer>(<EVENT>); }` |
 | `custom` | — | GUI 不生成，由 Custom Code 标签编辑 |
+
 **RoleFunc 调用的第 1 参数为 `NULL`**（设计决策 #1 / 方案 A）。
 
 直接使用既有 RoleFunc 的签名。
@@ -382,9 +383,6 @@ void VendingMachineTutorial_Run(void)
         Application_Do(g_Application_state, &g_ctx);
         /* Existing event processing */
         {
-```
-
-```
             EVENT_Driver_t evt = StateMachine_GetNextEvent_Driver(&g_ctx);
             if (evt != EVENT_Driver_NONE) {
                 g_Driver_state = StateMachine_Process_Driver(
@@ -426,6 +424,7 @@ STATE_Driver_t StateMachine_Process_Driver(
 | **A** | SettingsPanel 状态行**双击** | ✅ |
 | **B** | 右键 → 上下文菜单 `Edit Actions...` | 辅助 |
 | **C** | 专用按钮列 | 将来讨论 |
+
 **冲突规避**：状态行**Name 列以外**双击启动。
 
 Name 列保留内联编辑（维持既有行为）。
@@ -517,6 +516,7 @@ static void Driver_Do_Waiting(SystemContext_t *ctx)
 | 3 | 事件选择下拉框 | 新规（用于 `FIRE_EVENT`） |
 | 4 | Preview 功能 | 沿用 `CodeWidget` |
 | 5 | Custom Code 编辑器 | 新规 |
+
 **共通控件抽出在 Phase 5 判断**（设计决策 #6）。
 
 ---
@@ -581,7 +581,6 @@ static void Driver_Do_Waiting(SystemContext_t *ctx)
 | `State.do_actions` | 无 | `List[ActionStep]` | 新规 |
 | `State.do` | `str`（保留） | `str`（保持保留） | 维持 |
 
-```
 ### 9.2 XML
 旧格式的 `<Entry><Action name="..."/></Entry>` 由
 `from_dict` 规范化为 `ActionStep(role_function="...")`。
