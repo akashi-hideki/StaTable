@@ -32,6 +32,7 @@ sys.path.append(
 
 from statable.state_machine import StateMachine
 from statable.global_defs import GlobalDefinitions
+from statable.output_utils import find_orphan_files
 
 try:
     from .type_mapper import CTypeMapper
@@ -387,6 +388,11 @@ class CCodeGenerator:
         self.state_actions_gen = StateActionsGenerator()
         self.templates = CodeTemplates()
         self.strings = self.templates.STRINGS
+        # [v3.5.0] Orphan (stale) files left over from a
+        # previous generation in output_dir.  Populated
+        # by save_generated_code(); read by GUI/CLI to
+        # warn the user before a build fails.
+        self.last_orphans: List[str] = []
         self.formats = self.templates.FORMATS
         self.merger = CodeMerger()
 
@@ -1729,6 +1735,13 @@ class CCodeGenerator:
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
             saved_files.append(filepath)
+        # [v3.5.0] Record stale files for the caller.
+        self.last_orphans = find_orphan_files(
+            output_dir, saved_files)
+        if self.last_orphans:
+            logger.warning(
+                '%d stale file(s) left in %s',
+                len(self.last_orphans), output_dir)
         return saved_files
 
     def save_generated_code_with_merge(self, generated_files,
