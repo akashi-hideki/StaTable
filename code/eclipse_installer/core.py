@@ -8,11 +8,16 @@ Makefile, .project, .cproject).
 from __future__ import annotations
 
 import os
+import sys
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
-TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+# PyInstaller: templates are bundled under sys._MEIPASS
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    TEMPLATES_DIR = Path(sys._MEIPASS) / "eclipse_installer" / "templates"
+else:
+    TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
 # ----------------------------------------------------------------------
 # Options
