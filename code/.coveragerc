@@ -1,0 +1,15 @@
+[run]
+source = statable, statable_gui, codegen
+branch = True
+parallel = True
+omit =
+    */tests/*
+    */tools/*
+    */__pycache__/*
+    */site-packages/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    raise NotImplementedError

@@ -60,9 +60,13 @@ jobs:
   # Job 3: Unit tests
   # ==============================================================
   tests:
-    name: Unit tests
+    name: Unit tests (py${{ matrix.python-version }})
     runs-on: ubuntu-24.04
     needs: [syntax]
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     env:
       QT_QPA_PLATFORM: offscreen
       STATABLE_DISABLE_MERMAID: '1'
@@ -72,85 +76,85 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
 
       - name: Install Qt system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libegl1 libgl1 libglib2.0-0 libdbus-1-3 libxkbcommon0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xfixes0 libxcb-cursor0 libfontconfig1 libfreetype6
 
-      - name: Install PySide6 and pycparser
-        run: pip install PySide6 pycparser
+      - name: Install PySide6, pycparser, coverage
+        run: pip install PySide6 pycparser coverage
 
       - name: Run v2.2 test suites
         run: |
-          python tests/test_v2_2_p1.py
-          python tests/test_v2_2_p2.py
-          python tests/test_v2_2_p3.py
-          python tests/test_v2_2_p4a.py
-          python tests/test_v2_2_p4b.py
-          python tests/test_v2_2_p12_2.py
-          python tests/test_v2_2_p12_5.py
-          python tests/test_v2_2_p12_6.py
-          python tests/test_v2_2_p12_7.py
-          python tests/test_v2_2_p12_8.py
-          python tests/test_v2_2_p12_9.py
-          python tests/test_v2_2_p12_10.py
+          coverage run --parallel-mode tests/test_v2_2_p1.py
+          coverage run --parallel-mode tests/test_v2_2_p2.py
+          coverage run --parallel-mode tests/test_v2_2_p3.py
+          coverage run --parallel-mode tests/test_v2_2_p4a.py
+          coverage run --parallel-mode tests/test_v2_2_p4b.py
+          coverage run --parallel-mode tests/test_v2_2_p12_2.py
+          coverage run --parallel-mode tests/test_v2_2_p12_5.py
+          coverage run --parallel-mode tests/test_v2_2_p12_6.py
+          coverage run --parallel-mode tests/test_v2_2_p12_7.py
+          coverage run --parallel-mode tests/test_v2_2_p12_8.py
+          coverage run --parallel-mode tests/test_v2_2_p12_9.py
+          coverage run --parallel-mode tests/test_v2_2_p12_10.py
 
       - name: Run v2.3 test suites
         run: |
-          python tests/test_v2_3_p1.py
+          coverage run --parallel-mode tests/test_v2_3_p1.py
 
       - name: Run v2.4 test suites
         run: |
-          python tests/test_v2_4_p1_merge.py
+          coverage run --parallel-mode tests/test_v2_4_p1_merge.py
 
       - name: Run v2.5 test suites
         run: |
-          python tests/test_v2_5_p1.py
-          python tests/test_v2_5_p2.py
-          python tests/test_v2_5_p3.py
-          python tests/test_v2_5_p4.py
-          python tests/test_v2_5_p5.py
-          python tests/test_v2_5_p6.py
-          python tests/test_v2_5_p8.py
-          python tests/test_v2_5_p9.py
-          python tests/test_v2_5_p10.py
-          python tests/test_v2_5_p11.py
+          coverage run --parallel-mode tests/test_v2_5_p1.py
+          coverage run --parallel-mode tests/test_v2_5_p2.py
+          coverage run --parallel-mode tests/test_v2_5_p3.py
+          coverage run --parallel-mode tests/test_v2_5_p4.py
+          coverage run --parallel-mode tests/test_v2_5_p5.py
+          coverage run --parallel-mode tests/test_v2_5_p6.py
+          coverage run --parallel-mode tests/test_v2_5_p8.py
+          coverage run --parallel-mode tests/test_v2_5_p9.py
+          coverage run --parallel-mode tests/test_v2_5_p10.py
+          coverage run --parallel-mode tests/test_v2_5_p11.py
 
       - name: Run v2.6 test suites
         run: |
-          python tests/test_v2_6_p1.py
-          python tests/test_v2_6_p2.py
-          python tests/test_v2_6_p3.py
+          coverage run --parallel-mode tests/test_v2_6_p1.py
+          coverage run --parallel-mode tests/test_v2_6_p2.py
+          coverage run --parallel-mode tests/test_v2_6_p3.py
 
       - name: Run v2.7 test suites
         run: |
-          python tests/test_v2_7_p3.py
-          python tests/test_v2_7_p4.py
-          python tests/test_v2_7_p5_validation.py
-          python tests/test_v3_4_0_state_actions.py
-          python tests/test_v3_4_0_signal_safety.py
+          coverage run --parallel-mode tests/test_v2_7_p3.py
+          coverage run --parallel-mode tests/test_v2_7_p4.py
+          coverage run --parallel-mode tests/test_v2_7_p5_validation.py
+          coverage run --parallel-mode tests/test_v3_4_0_state_actions.py
+          coverage run --parallel-mode tests/test_v3_4_0_signal_safety.py
 
       - name: Run v2.8 test suites
         run: |
-          python tests/test_v2_8_p1_ai_prompt.py
-          python tests/test_v2_8_p2_response_parser.py
-          python tests/test_v2_8_p3_response_validator.py
-          python tests/test_v2_8_p4_gui_integration.py
+          coverage run --parallel-mode tests/test_v2_8_p1_ai_prompt.py
+          coverage run --parallel-mode tests/test_v2_8_p2_response_parser.py
+          coverage run --parallel-mode tests/test_v2_8_p3_response_validator.py
+          coverage run --parallel-mode tests/test_v2_8_p4_gui_integration.py
 
       - name: Run v3.0 test suites
         run: |
-          python tests/test_v3_0_s1_packaging.py
-          python tests/test_v3_0_s2_public_api.py
-          python tests/test_v3_0_s3_cli.py
-          python tests/test_v3_0_s4_docs.py
-          python tests/test_v3_0_g1_shared.py
+          coverage run --parallel-mode tests/test_v3_0_s1_packaging.py
+          coverage run --parallel-mode tests/test_v3_0_s2_public_api.py
+          coverage run --parallel-mode tests/test_v3_0_s3_cli.py
+          coverage run --parallel-mode tests/test_v3_0_s4_docs.py
+          coverage run --parallel-mode tests/test_v3_0_g1_shared.py
 
       - name: Run v3.2 test suites
         run: |
-          python tests/test_v3_2_s1_wizard.py
-          python tests/test_v3_2_s2_signals.py
+          coverage run --parallel-mode tests/test_v3_2_s1_wizard.py
+          coverage run --parallel-mode tests/test_v3_2_s2_signals.py
           python tests/test_v3_5_s1_smoke.py
 
       - name: Run smoke tests (levels 0-3)
@@ -162,11 +166,27 @@ jobs:
 
       - name: Run CI registration meta test
         run: |
-          python tests/test_ci_registration.py
+          coverage run --parallel-mode tests/test_ci_registration.py
 
       - name: Run README consistency test
         run: |
-          python tests/test_readme_consistency.py
+          coverage run --parallel-mode tests/test_readme_consistency.py
+
+      - name: Combine coverage
+        if: always()
+        run: |
+          coverage combine || true
+          coverage report --show-missing --skip-covered || true
+          coverage html || true
+
+      - name: Upload coverage HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-py${{ matrix.python-version }}
+          path: code/htmlcov/
+          if-no-files-found: warn
+          retention-days: 30
 
 
   # ==============================================================

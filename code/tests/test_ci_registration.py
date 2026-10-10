@@ -26,7 +26,13 @@ def find_registered() -> set[str]:
     text = CHECK_YML.read_text(encoding="utf-8")
     # Matches:   python tests/test_xxx.py
     #            python tests\test_xxx.py
-    return set(re.findall(r"python\s+tests[\\/](test_\w+\.py)", text))
+    # Matches:  python tests/test_xxx.py
+    #           python tests\\test_xxx.py
+    #           coverage run --parallel-mode tests/test_xxx.py
+    return set(re.findall(
+        r"(?:python|coverage\s+run(?:\s+--parallel-mode)?)\s+tests[\\/](test_\w+\.py)",
+        text,
+    ))
 
 
 def main() -> int:
