@@ -33,7 +33,8 @@
   `condition_library`, `layer_names_provider`, `global_defs`
 - **Test**: `test_v3_4_0_state_actions.py` (30 PASS)
 
-See [SPEC_STATE_ACTIONS_v1.md](code/docs/SPEC_STATE_ACTIONS_v1.md) for details.
+See [SPEC_STATE_ACTIONS_v1_en.md](code/docs/SPEC_STATE_ACTIONS_v1_en.md) or
+[SPEC_STATE_ACTIONS_v1_zh.md](code/docs/SPEC_STATE_ACTIONS_v1_zh.md) for details.
 
 ## What's New in v3.2.0
 
@@ -498,7 +499,9 @@ Where MISRA C:2012 compliance is non-negotiable.
 | [SPEC_SCREENS_en.md](code/docs/SPEC_SCREENS_en.md) | English | GUI screen specification |
 | [SPEC_SCREENS_ja.md](code/docs/SPEC_SCREENS_ja.md) | 日本語 | 画面仕様書 |
 | [SPEC_CODEGEN_v3.md](code/docs/SPEC_CODEGEN_v3.md) | English | Code generation details |
-| [SPEC_STATE_ACTIONS_v1.md](code/docs/SPEC_STATE_ACTIONS_v1.md) | English | **v2.7** State actions (Entry/Exit/Do) specification |
+| [SPEC_STATE_ACTIONS_v1_en.md](code/docs/SPEC_STATE_ACTIONS_v1_en.md) | English | **v2.7** State actions (Entry/Exit/Do) specification |
+| [SPEC_STATE_ACTIONS_v1_zh.md](code/docs/SPEC_STATE_ACTIONS_v1_zh.md) | 中文 | **v2.7** State actions (Entry/Exit/Do) specification |
+| [SPEC_STATE_ACTIONS_v1_ja.md](code/docs/SPEC_STATE_ACTIONS_v1_ja.md) | 日本語 | **v2.7** State actions (Entry/Exit/Do) specification |
 | [OSAL_PORTING_GUIDE_ja.md](code/docs/OSAL_PORTING_GUIDE_ja.md) | 日本語 | OSAL 移植ガイド（R-14） |
 | [IMPLEMENTATION_PLAN_v2_3.md](code/docs/IMPLEMENTATION_PLAN_v2_3.md) | English | v2.3 implementation plan |
 | [ECLIPSE_INTEGRATION_ja.md](code/docs/ECLIPSE_INTEGRATION_ja.md) | 日本語 | Eclipse External Tools 連携ガイド |
