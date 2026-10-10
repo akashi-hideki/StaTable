@@ -25,6 +25,9 @@ from .model import (
 # state_machine.py (depends on model)
 from .state_machine import StateMachine
 
+# output_utils.py (v3.5.0, stdlib os only)
+from .output_utils import find_orphan_files
+
 # global_defs.py (no dependencies)
 from .global_defs import (
     GlobalDefinitions,
@@ -54,6 +57,8 @@ __all__ = [
     'EventSourceLayer',
     # state_machine
     'StateMachine',
+    # output_utils (v3.5.0)
+    'find_orphan_files',
     # global_defs
     'GlobalDefinitions',
     'SystemVariable',
