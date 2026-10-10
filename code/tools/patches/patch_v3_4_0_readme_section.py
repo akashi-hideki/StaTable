@@ -25,7 +25,7 @@ SECTION = """## What's New in v3.4.0
   `condition_library`, `layer_names_provider`, `global_defs`
 - **Test**: `test_v3_4_0_state_actions.py` (30 PASS)
 
-See [SPEC_STATE_ACTIONS_v1.md](code/docs/SPEC_STATE_ACTIONS_v1.md) for details.
+See [SPEC_STATE_ACTIONS_v1_ja.md](code/docs/SPEC_STATE_ACTIONS_v1_ja.md) for details.
 
 """
 

@@ -250,8 +250,8 @@ def test_doc_links():
               f"missing: {path}")
 
     # SPEC_STATE_ACTIONS must be linked
-    check("SPEC_STATE_ACTIONS_v1.md is linked",
-          any("SPEC_STATE_ACTIONS_v1.md" in l for l in links))
+    check("SPEC_STATE_ACTIONS_v1_ja.md is linked",
+          any("SPEC_STATE_ACTIONS_v1_ja.md" in l for l in links))
 
 
 # ======================================================================

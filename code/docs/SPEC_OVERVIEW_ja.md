@@ -1818,7 +1818,7 @@ StaTable/
 | | | - `{project}_run.c` で `<Layer>_Do(...)` 呼び出し（Phase 3） |
 | | | - `StateMachine_Process_<Layer>` で Entry/Exit 呼び出し（Phase 3d） |
 | | | - `StateActionsDialog`（4タブ）新規、SettingsPanel 3列化、マトリクスヘッダ起動（Phase 4） |
-| | | - `SPEC_STATE_ACTIONS_v1.md` 追加 |
+| | | - `SPEC_STATE_ACTIONS_v1_ja.md` 追加 |
 | 2.6.0 | 2026-09-25 | C-51 Step 3（構造化 `<Trigger>`）： |
 | | | - §12：C-51 を Step 3 完了に更新 |
 | | | - `EventTrigger` dataclass（type: manual/edge/polling/timer/call/comparison）追加 |
