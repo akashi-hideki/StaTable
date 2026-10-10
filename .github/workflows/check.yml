@@ -151,6 +151,14 @@ jobs:
         run: |
           python tests/test_v3_2_s1_wizard.py
           python tests/test_v3_2_s2_signals.py
+          python tests/test_v3_5_s1_smoke.py
+
+      - name: Run smoke tests (levels 0-3)
+        run: |
+          python -m statable --smoke-test --smoke-level=0
+          python -m statable --smoke-test --smoke-level=1
+          python -m statable --smoke-test --smoke-level=2
+          python -m statable --smoke-test --smoke-level=3
 
       - name: Run CI registration meta test
         run: |

@@ -11,53 +11,10 @@ from __future__ import annotations
 import sys
 
 
-def run_smoke_test() -> int:
-    """Headless smoke test for frozen EXE packaging verification."""
-    import os
-    os.environ["QT_QPA_PLATFORM"] = "offscreen"
-    os.environ["STATABLE_DISABLE_MERMAID"] = "1"
-
-    try:
-        from PySide6.QtWidgets import QApplication, QFileDialog
-    except ImportError:
-        return 1
-
-    # Patch dialogs: no user to interact in headless mode
-    QFileDialog.getOpenFileName = staticmethod(lambda *a, **k: ("", ""))
-    QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: ("", ""))
-    QFileDialog.getExistingDirectory = staticmethod(lambda *a, **k: "")
-
-    try:
-        app = QApplication.instance() or QApplication(sys.argv)
-    except Exception:
-        return 4
-
-    try:
-        from statable_gui.main_window import MainWindow
-        window = MainWindow()
-    except Exception as e:
-        sys.stderr.write(f"MainWindow failed: {e!r}\n")
-        return 2
-
-    # v3.2.2 regression scenario
-    try:
-        window.open_project(False)
-        window.open_project(True)
-    except Exception as e:
-        sys.stderr.write(f"open_project failed: {e!r}\n")
-        return 3
-
-    try:
-        window.close()
-        app.processEvents()
-    except Exception:
-        pass
-
-    return 0
-
 def main() -> int:
     if "--smoke-test" in sys.argv:
-        return run_smoke_test()
+        from statable.smoke import parse_level, run as run_smoke
+        return run_smoke(parse_level(sys.argv))
 
     try:
         from PySide6.QtWidgets import QApplication

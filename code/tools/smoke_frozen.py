@@ -103,13 +103,19 @@ def run_pyinstaller() -> bool:
     return True
 
 
-def run_smoke(exe: Path, timeout: int) -> int:
+def run_smoke(exe: Path, timeout: int,
+              smoke_level: int | None = None) -> int:
     print(f"[2/3] Launching frozen EXE: {exe}")
     print(f"      timeout: {timeout}s")
+    if smoke_level is not None:
+        print(f"      level:   {smoke_level}")
     t0 = time.time()
+    argv = [str(exe), "--smoke-test"]
+    if smoke_level is not None:
+        argv.append(f"--smoke-level={smoke_level}")
     try:
         proc = subprocess.Popen(
-            [str(exe), "--smoke-test"],
+            argv,
             cwd=str(exe.parent),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -153,6 +159,9 @@ def main() -> int:
                     help="smoke test timeout in seconds (default 60)")
     ap.add_argument("--exe", type=Path, default=None,
                     help="override exe path")
+    ap.add_argument("--smoke-level", type=int, default=None,
+                    choices=[0, 1, 2, 3],
+                    help="smoke test level (0-3)")
     args = ap.parse_args()
 
     exe = args.exe.resolve() if args.exe else DEFAULT_EXE
@@ -178,7 +187,7 @@ def main() -> int:
         print(f"[FAIL] exe not found: {exe}")
         return EXIT_EXE_MISSING
 
-    result = run_smoke(exe, args.timeout)
+    result = run_smoke(exe, args.timeout, args.smoke_level)
     print()
     if result == EXIT_PASS:
         print("[PASS] frozen EXE smoke test")

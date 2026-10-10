@@ -7,7 +7,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/statable.svg)](https://pypi.org/project/statable/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-1649%20PASS-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-1657%20PASS-green.svg)]()
 [![MISRA](https://img.shields.io/badge/MISRA-C%3A2012-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
@@ -71,7 +71,7 @@ The New Project Wizard is fully translated to **简体中文**.
 ### Test Coverage
 
 - **+58 new tests** (`test_v3_2_s1_wizard.py`): templates, generation, rename, menu cleanup
-- Total: **1649 PASS / 0 FAIL / 2 SKIP** across 45 suites
+- Total: **1657 PASS / 0 FAIL / 2 SKIP** across 46 suites
 
 ---
 
@@ -154,7 +154,7 @@ custom tooling from scratch.
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **45 test suites, 1649 PASS / 0 FAIL / 2 SKIP**
+- ✅ **46 test suites, 1657 PASS / 0 FAIL / 2 SKIP**
 
 ### v2.7 Highlights
 
@@ -208,7 +208,7 @@ diagrams, and generate production-ready C code with a single click.*
 | **Ubuntu 22.04+** | ⚠️ **Auto tests pass on CI** | GUI not yet manually verified — feedback welcome |
 | **macOS** | ⚠️ **Not tested** | Community testing welcome |
 
-**Note for Linux users**: The automated test suite (45 suites, 1168 tests)
+**Note for Linux users**: The automated test suite (46 suites, 1168 tests)
 passes on Ubuntu via GitHub Actions, but the GUI has only been manually
 verified on Windows. If you try it on Linux, please report your experience
 via [GitHub Issues](https://github.com/akashi-hideki/StaTable/issues).
@@ -300,7 +300,7 @@ python tests/test_v2_2_p1.py
 python tests/test_v2_7_p4.py
 ```
 
-Expected: **1649 PASS / 0 FAIL / 2 SKIP** across 45 suites.
+Expected: **1657 PASS / 0 FAIL / 2 SKIP** across 46 suites.
 
 ---
 
@@ -817,7 +817,7 @@ python tests/test_v2_3_p1.py
 # ...
 ```
 
-All 45 suites should pass (1649 PASS / 2 SKIP).
+All 46 suites should pass (1657 PASS / 2 SKIP).
 
 ---
 

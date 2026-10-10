@@ -27,7 +27,7 @@ datas = [
 hiddenimports = [
     'statable', 'statable.model', 'statable.state_machine',
     'statable.global_defs', 'statable.xml_io', 'statable.parser',
-    'statable.cli',
+    'statable.cli', 'statable.smoke',
     'codegen', 'codegen.c_code_generator', 'codegen.config',
     'statable_gui', 'statable_gui.main_window',
     'statable_gui.matrix_table', 'statable_gui.i18n', 'statable_gui.config',
