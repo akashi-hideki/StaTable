@@ -360,6 +360,53 @@ jobs:
           retention-days: 30
 
   # ==============================================================
+  # Job 8: mypy check (informational, Phase 1a)
+  #
+  # Introduces static type checking.  continue-on-error is true
+  # so the first runs only *report* errors and never block the
+  # build.  Once the error count is driven to zero, this flips
+  # to blocking and the config gets stricter (Phase 1b/1c).
+  #
+  # The report is uploaded as an artifact for inspection.
+  # ==============================================================
+  mypy-check:
+    name: mypy check (informational)
+    runs-on: ubuntu-latest
+    needs: [syntax]
+    continue-on-error: true
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install mypy
+        run: pip install mypy
+
+      - name: Run mypy
+        run: |
+          mypy statable statable_gui codegen \
+            2>&1 | tee mypy_report.txt || true
+
+      - name: Show summary (tail)
+        if: always()
+        run: |
+          echo "----- mypy_report.txt (last 40 lines) -----"
+          tail -n 40 mypy_report.txt || true
+
+      - name: Upload mypy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mypy-report
+          path: code/mypy_report.txt
+          if-no-files-found: warn
+          retention-days: 30
+
+  # ==============================================================
   # Job 7: ARM link verification (framework links, no hardware)
   #
   # Compiles the generated framework with arm-none-eabi-gcc,

@@ -1,4 +1,22 @@
-"""statable.smoke - Headless smoke tests for StaTable (levels 0-3).
+"""v3.5.0 S-2 Phase 1a: fix smoke.py type errors + mypy overrides.
+
+Adds / modifies:
+  - code/statable/smoke.py        (rewrite with type annotations)
+  - code/pyproject.toml           (append [tool.mypy.overrides])
+
+Run from repo root (StaTable/):
+    python code/tools/patches/patch_v3_5_s2_mypy_fix.py
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[3]
+CODE = REPO / "code"
+
+
+SMOKE_PY = '''"""statable.smoke - Headless smoke tests for StaTable (levels 0-3).
 
 Levels:
   0 (default) : MainWindow creation + open_project regression (v3.2.2)
@@ -69,23 +87,20 @@ class SmokeRunner:
             from PySide6.QtWidgets import QFileDialog, QMessageBox
         except ImportError:
             return
-        # Use setattr() so mypy does not complain about assigning
-        # to bound methods (the signatures differ by design here).
-        setattr(QFileDialog, "getOpenFileName",
-                staticmethod(lambda *a, **k: ("", "")))
-        setattr(QFileDialog, "getSaveFileName",
-                staticmethod(lambda *a, **k: ("", "")))
-        setattr(QFileDialog, "getExistingDirectory",
-                staticmethod(lambda *a, **k: ""))
-        setattr(QMessageBox, "information",
-                staticmethod(lambda *a, **k: None))
-        setattr(QMessageBox, "warning",
-                staticmethod(lambda *a, **k: None))
-        setattr(QMessageBox, "critical",
-                staticmethod(lambda *a, **k: None))
-        setattr(QMessageBox, "question",
-                staticmethod(lambda *a, **k:
-                             QMessageBox.StandardButton.Yes))
+        QFileDialog.getOpenFileName = staticmethod(  # type: ignore[method-assign]
+            lambda *a, **k: ("", ""))
+        QFileDialog.getSaveFileName = staticmethod(  # type: ignore[method-assign]
+            lambda *a, **k: ("", ""))
+        QFileDialog.getExistingDirectory = staticmethod(  # type: ignore[method-assign]
+            lambda *a, **k: "")
+        QMessageBox.information = staticmethod(  # type: ignore[method-assign]
+            lambda *a, **k: None)
+        QMessageBox.warning = staticmethod(  # type: ignore[method-assign]
+            lambda *a, **k: None)
+        QMessageBox.critical = staticmethod(  # type: ignore[method-assign]
+            lambda *a, **k: None)
+        QMessageBox.question = staticmethod(  # type: ignore[method-assign]
+            lambda *a, **k: QMessageBox.StandardButton.Yes)
 
     def _get_app(self) -> Any:
         from PySide6.QtWidgets import QApplication
@@ -201,10 +216,10 @@ class SmokeRunner:
             target = os.path.join(tmpd, "smoke_project.statable")
             try:
                 from PySide6.QtWidgets import QFileDialog
-                setattr(QFileDialog, "getSaveFileName",
-                        staticmethod(lambda *a, **k: (target, "")))
-                setattr(QFileDialog, "getOpenFileName",
-                        staticmethod(lambda *a, **k: (target, "")))
+                QFileDialog.getSaveFileName = staticmethod(  # type: ignore[method-assign]
+                    lambda *a, **k: (target, ""))
+                QFileDialog.getOpenFileName = staticmethod(  # type: ignore[method-assign]
+                    lambda *a, **k: (target, ""))
             except Exception as e:
                 self.check("patch QFileDialog for L3", False, repr(e))
                 return
@@ -283,3 +298,58 @@ def run(level: int) -> int:
     if level > LEVEL_MAX:
         level = LEVEL_MAX
     return SmokeRunner(level).run()
+'''
+
+
+MYPY_OVERRIDES = '''
+# ---- Phase 1a: overrides (see patch_v3_5_s2_mypy_fix.py) ----
+
+# PySide6 type stubs are incomplete (e.g. Qt.ItemIsUserCheckable).
+# Suppress all errors inside modules that use PySide6 so the
+# baseline error count reflects the non-GUI code base.
+[[tool.mypy.overrides]]
+module = ["statable_gui.*", "PySide6.*", "PySide6.*.*"]
+ignore_errors = true
+
+# codegen: try/except ImportError aliasing (import X as Y with a
+# fallback definition) is intentional and trips no-redef.
+[[tool.mypy.overrides]]
+module = ["codegen.*", "statable.*"]
+disable_error_code = ["no-redef"]
+'''
+
+
+def main() -> int:
+    print("=" * 70)
+    print("  patch_v3_5_s2_mypy_fix (Phase 1a cleanup)")
+    print("=" * 70)
+
+    # 1. Rewrite smoke.py with type annotations
+    smoke_path = CODE / "statable" / "smoke.py"
+    smoke_path.write_text(SMOKE_PY, encoding="utf-8")
+    print(f"  rewrote: {smoke_path.relative_to(REPO)}")
+
+    # 2. Append mypy overrides to pyproject.toml
+    pyproject = CODE / "pyproject.toml"
+    txt = pyproject.read_text(encoding="utf-8")
+    marker = "# ---- Phase 1a: overrides"
+    if marker in txt:
+        print(f"  skipped (already present): {pyproject.relative_to(REPO)}")
+    else:
+        if not txt.endswith("\n"):
+            txt += "\n"
+        txt += MYPY_OVERRIDES
+        pyproject.write_text(txt, encoding="utf-8")
+        print(f"  appended: {pyproject.relative_to(REPO)}")
+
+    print()
+    print("[OK] patch applied. Next steps:")
+    print("     1. cd code")
+    print("     2. mypy statable statable_gui codegen 2>&1 | Tee-Object -FilePath mypy_report.txt")
+    print("     3. Look at 'Found N errors' line")
+    print("     4. git add / commit / push")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

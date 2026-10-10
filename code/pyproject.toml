@@ -32,7 +32,7 @@ classifiers = [
 
 [project.optional-dependencies]
 gui = ["PySide6>=6.0"]
-dev = ["pytest>=7.0", "pycparser"]
+dev = ["pytest>=7.0", "pycparser", "mypy>=1.10"]
 
 [project.scripts]
 statable-cli = "statable.cli:main"
@@ -45,3 +45,41 @@ Issues = "https://github.com/akashi-hideki/StaTable/issues"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["statable*", "codegen*", "statable_gui*"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_configs = true
+ignore_missing_imports = true
+follow_imports = "silent"
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+# Phase 1a: keep untyped defs allowed for gradual adoption.
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+strict_optional = true
+
+# Exclude tests and patch scripts (Phase 1a scope).
+exclude = [
+    "^tests/",
+    "^tools/patches/",
+    "^__pycache__/",
+]
+
+# Per-module overrides to silence known-noisy modules until Phase 1c.
+
+# ---- Phase 1a: overrides (see patch_v3_5_s2_mypy_fix.py) ----
+
+# PySide6 type stubs are incomplete (e.g. Qt.ItemIsUserCheckable).
+# Suppress all errors inside modules that use PySide6 so the
+# baseline error count reflects the non-GUI code base.
+[[tool.mypy.overrides]]
+module = ["statable_gui.*", "PySide6.*", "PySide6.*.*"]
+ignore_errors = true
+
+# codegen: try/except ImportError aliasing (import X as Y with a
+# fallback definition) is intentional and trips no-redef.
+[[tool.mypy.overrides]]
+module = ["codegen.*", "statable.*"]
+disable_error_code = ["no-redef"]
