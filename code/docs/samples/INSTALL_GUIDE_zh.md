@@ -114,7 +114,7 @@ statable-cli --help
 |  File  Edit  Code generation  Validate   |
 +------------------------------------------+
 |                                          |
-|  [Application] [Driver] [Middleware]     |
+|  [Application] [DriverInput] [DriverOutput] |
 |                                          |
 |  +-- Matrix (top) -----------------+     |
 |  |                                 |     |
@@ -129,7 +129,7 @@ statable-cli --help
 
 1. **File → Open Project...**
 2. 选择 `code/docs/samples/cooking_heater_controller.xml`
-3. 六层架构示例加载（约 5 秒）
+3. 七层架构示例加载（约 5 秒）
 
 ### 4.3 生成 C 代码
 

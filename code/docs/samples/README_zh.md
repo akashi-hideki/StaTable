@@ -1,4 +1,4 @@
-# StaTable 复合烹饪器具示例包 — 六层架构
+# StaTable 复合烹饪器具示例包 — 七层架构
 
 Version: 1.0
 Date: 2026-10-04
@@ -12,9 +12,9 @@ Date: 2026-10-04
 
 | 文件 | 内容 | 大小 |
 |---|---|---|
-| `cooking_heater_controller.xml` | 六层架构示例项目 | 53 KB |
-| `LAYER_DESIGN_zh.md` | 六层架构设计指南 | 21 KB |
-| `ROLE_FUNCTIONS_zh.md` | 54 个 Role 函数参考 | 32 KB |
+| `cooking_heater_controller.xml` | 七层架构示例项目 | 53 KB |
+| `LAYER_DESIGN_zh.md` | 七层架构设计指南 | 21 KB |
+| `ROLE_FUNCTIONS_zh.md` | 60 个 Role 函数参考 | 32 KB |
 | `ECLIPSE_INTEGRATION_zh.md` | Eclipse 集成指南 | 13 KB |
 | `INSTALL_GUIDE_zh.md` | 安装指南 | 5 KB |
 | `README_zh.md` | 本文件 | — |
@@ -34,7 +34,7 @@ Date: 2026-10-04
 
 ---
 
-## 六层架构概览
+## 七层架构概览
 
 ```
 +-----------------------------------------------+
@@ -50,7 +50,8 @@ Date: 2026-10-04
 +--+-+ +--+-+ +--+-+ +--+-+
    |      |      |      |
 +--v------v------v------v----------------------+
-|  Driver 层（HW / 通信 / 传感器）              |
+|  DriverInput 层（传感器 / RX / 门）           |
+|  DriverOutput 层（加热器 / 风扇 / TX）        |
 +-----------------------------------------------+
 ```
 
@@ -59,12 +60,13 @@ Date: 2026-10-04
 | 层 | 职责 | 状态数 |
 |---|---|---:|
 | Application | 序列执行 / 状态报告 | 5 |
-| MwSteam | 蒸汽发生控制 | 3 |
+| MwSteam | 蒸汽发生控制 | 5 |
 | MwGrill | 烧烤加热控制 | 3 |
 | MwOven | 烤箱 / 热风控制 | 3 |
-| MwMicrowave | 微波控制 | 3 |
-| Driver | HW / 通信 / 传感器 | 6 |
-| **合计** | | **23** |
+| MwMicrowave | 微波控制 | 4 |
+| DriverInput | 输入系（传感器 / RX / 门） | 5 |
+| DriverOutput | 输出系（加热器 / 风扇 / TX） | 6 |
+| **合计** | | **31** |
 
 ---
 
@@ -117,7 +119,7 @@ Overall:  ALL PASS
 
 | 目的 | 文档 |
 |---|---|
-| 理解六层架构 | `LAYER_DESIGN_zh.md` |
+| 理解七层架构 | `LAYER_DESIGN_zh.md` |
 | 查看状态迁移图 | `LAYER_DESIGN_zh.md` 第 4 章 |
 | 修改 / 扩展架构 | `LAYER_DESIGN_zh.md` 第 6 章 |
 
@@ -139,11 +141,11 @@ Overall:  ALL PASS
 
 ---
 
-## 六层架构的优势
+## 七层架构的优势
 
 ### 1. 状态数线性增长
 
-单一状态机: 数十状态 -> 六层架构: **23 状态**
+单一状态机: 数十状态 -> 七层架构: **31 状态**
 
 ### 2. 并列加热容易表达
 
@@ -247,4 +249,4 @@ NG:   C:\用户\文档\项目\
 
 ---
 
-*本包为 Galanz 复合烹饪器具的 StaTable 六层架构设计参考资料。*
+*本包为 Galanz 复合烹饪器具的 StaTable 七层架构设计参考资料。*

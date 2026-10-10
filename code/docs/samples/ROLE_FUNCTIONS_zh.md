@@ -1,6 +1,6 @@
 # StaTable Role 函数参考手册 — 复合烹饪器具
 
-Version: 1.0
+Version: 1.1
 Date: 2026-10-04
 适用：Galanz 等复合烹饪器具（微波炉 / 烤箱 / 蒸箱 / 组合机）
 关联：`cooking_heater_controller.xml`, `LAYER_DESIGN_zh.md`
@@ -11,14 +11,15 @@ Date: 2026-10-04
 
 1. 前言
 2. 通用规范
-3. Driver 层（13 个）
-4. MwMicrowave 层（6 个）
-5. MwOven 层（10 个）
-6. MwGrill 层（6 个）
-7. MwSteam 层（9 个）
-8. Application 层（10 个）
-9. 通用实现模式
-10. 变更历史
+3. DriverInput 层（6 个）
+4. DriverOutput 层（13 个）
+5. MwMicrowave 层（6 个）
+6. MwOven 层（10 个）
+7. MwGrill 层（6 个）
+8. MwSteam 层（9 个）
+9. Application 层（10 个）
+10. 通用实现模式
+11. 变更历史
 
 ---
 
@@ -26,7 +27,7 @@ Date: 2026-10-04
 
 ### 1.1 本文目的
 
-本文档详细说明 StaTable 生成的 54 个 **Role 函数** 的：
+本文档详细说明 StaTable 生成的 60 个 **Role 函数** 的：
 
 - 签名（参数 / 返回值）
 - 用途与调用时机
@@ -126,32 +127,31 @@ ctx->data.heater_top_duty = 50;
 
 ---
 
-## 3. Driver 层（13 个）
+## 3. DriverInput 层（6 个）
 
 ### 3.1 ReadSensorsMovingAvg
 
 | 项目 | 内容 |
 |---|---|
 | 用途 | 读取全部传感器并更新移动平均 |
-| 调用时机 | `HwSensing` 状态的入口 / 周期触发 |
-| 关联变量 | `ir_value`, `steam_sensor`, `thermistor_top/bottom/back`, `humidity` |
+| 调用时机 | `InSensing` 状态的入口 / 周期触发 |
+| 关联变量 | `ir_value`, `steam_sensor`, `thermistor_top/middle/bottom`, `humidity` |
 
 **实现例**:
 
 ```c
-int RoleFunc_Driver_ReadSensorsMovingAvg(
-    const TransitionContext_Driver_t *transition,
+int RoleFunc_DriverInput_ReadSensorsMovingAvg(
+    const TransitionContext_DriverInput_t *transition,
     SystemContext_t *ctx)
 {
     (void)transition;
-    /* [[STABLE_USER_CODE_START:Driver_ReadSensorsMovingAvg]] */
-    static uint16_t buf_ir[8]   = {0};
-    static uint16_t buf_stm[8]  = {0};
+    /* [[STABLE_USER_CODE_START:DriverInput_ReadSensorsMovingAvg]] */
+    static uint16_t buf_ir[8]  = {0};
+    static uint16_t buf_stm[8] = {0};
     static uint8_t  idx = 0;
 
     uint16_t raw_ir  = ADC_Read(CH_IR);
     uint16_t raw_stm = ADC_Read(CH_STEAM);
-
     buf_ir[idx]  = raw_ir;
     buf_stm[idx] = raw_stm;
     idx = (idx + 1) & 0x07;
@@ -165,9 +165,9 @@ int RoleFunc_Driver_ReadSensorsMovingAvg(
     ctx->data.steam_sensor = (uint16_t)(sum_stm / 8);
 
     ctx->data.thermistor_top    = Thermistor_Read(CH_TOP);
+    ctx->data.thermistor_middle = Thermistor_Read(CH_MIDDLE);
     ctx->data.thermistor_bottom = Thermistor_Read(CH_BOTTOM);
-    ctx->data.thermistor_back   = Thermistor_Read(CH_BACK);
-    /* [[STABLE_USER_CODE_END:Driver_ReadSensorsMovingAvg]] */
+    /* [[STABLE_USER_CODE_END:DriverInput_ReadSensorsMovingAvg]] */
     return 1;
 }
 ```
@@ -176,20 +176,19 @@ int RoleFunc_Driver_ReadSensorsMovingAvg(
 
 | 项目 | 内容 |
 |---|---|
-| 用途 | 红外传感器移动平均完成后发布 IR_READY 事件 |
-| 调用时机 | `HwSensing` 完成时 |
+| 用途 | 红外传感器移动平均完成后发布 IR_READY |
+| 调用时机 | `InSensing` 完成时 |
 | 关联变量 | `ir_value` |
 
 **实现例**:
 
 ```c
-int RoleFunc_Driver_EmitIrReady(...)
+int RoleFunc_DriverInput_EmitIrReady(...)
 {
-    /* [[STABLE_USER_CODE_START:Driver_EmitIrReady]] */
-    /* 通过事件队列通知中间层 */
+    /* [[STABLE_USER_CODE_START:DriverInput_EmitIrReady]] */
     StateMachine_EnqueueEvent(&g_ctx,
         EVENT_Middleware_IR_READY);
-    /* [[STABLE_USER_CODE_END:Driver_EmitIrReady]] */
+    /* [[STABLE_USER_CODE_END:DriverInput_EmitIrReady]] */
     return 1;
 }
 ```
@@ -204,12 +203,12 @@ int RoleFunc_Driver_EmitIrReady(...)
 **实现例**:
 
 ```c
-int RoleFunc_Driver_EmitSteamReady(...)
+int RoleFunc_DriverInput_EmitSteamReady(...)
 {
-    /* [[STABLE_USER_CODE_START:Driver_EmitSteamReady]] */
+    /* [[STABLE_USER_CODE_START:DriverInput_EmitSteamReady]] */
     StateMachine_EnqueueEvent(&g_ctx,
         EVENT_Middleware_STEAM_READY);
-    /* [[STABLE_USER_CODE_END:Driver_EmitSteamReady]] */
+    /* [[STABLE_USER_CODE_END:DriverInput_EmitSteamReady]] */
     return 1;
 }
 ```
@@ -219,35 +218,326 @@ int RoleFunc_Driver_EmitSteamReady(...)
 | 项目 | 内容 |
 |---|---|
 | 用途 | 热敏电阻读取完成后发布 THERM_READY |
-| 关联变量 | `thermistor_top/bottom/back` |
+| 关联变量 | `thermistor_top/middle/bottom` |
 
 **实现例**:
 
 ```c
-int RoleFunc_Driver_EmitThermReady(...)
+int RoleFunc_DriverInput_EmitThermReady(...)
 {
-    /* [[STABLE_USER_CODE_START:Driver_EmitThermReady]] */
+    /* [[STABLE_USER_CODE_START:DriverInput_EmitThermReady]] */
     StateMachine_EnqueueEvent(&g_ctx,
         EVENT_Middleware_THERM_READY);
-    /* [[STABLE_USER_CODE_END:Driver_EmitThermReady]] */
+    /* [[STABLE_USER_CODE_END:DriverInput_EmitThermReady]] */
     return 1;
 }
 ```
 
-### 3.5 SendStatusMaster
+### 3.5 ReceiveCommand
+
+| 项目 | 内容 |
+|---|---|
+| 用途 | 从 Android 面板接收调理序列数据 |
+| 调用时机 | `InTxRx` 状态入口 |
+| 关联变量 | 序列数据结构 |
+
+**实现例**:
+
+```c
+int RoleFunc_DriverInput_ReceiveCommand(...)
+{
+    /* [[STABLE_USER_CODE_START:DriverInput_ReceiveCommand]] */
+    uint8_t frame[32];
+    if (ZcSync_UartReceive(frame, sizeof(frame)) > 0) {
+        if (Checksum(frame, 31) == frame[31]) {
+            ParseSequenceFrame(frame);
+            return 1;
+        }
+    }
+    return 0;
+    /* [[STABLE_USER_CODE_END:DriverInput_ReceiveCommand]] */
+}
+```
+
+### 3.6 OnDoorOpen
+
+| 项目 | 内容 |
+|---|---|
+| 用途 | 门开启时立即停止（安全） |
+| 调用时机 | `InDoorOpen` 状态入口 |
+| 关联变量 | `door_open` |
+
+**实现例**:
+
+```c
+int RoleFunc_DriverInput_OnDoorOpen(...)
+{
+    /* [[STABLE_USER_CODE_START:DriverInput_OnDoorOpen]] */
+    /* 停止全部输出（硬件级二重化） */
+    HAL_GPIO_WritePin(HEATER_TOP_PORT, HEATER_TOP_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(HEATER_MIDDLE_PORT, HEATER_MIDDLE_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(HEATER_BOTTOM_PORT, HEATER_BOTTOM_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(MAG_EN_PORT, MAG_EN_PIN, GPIO_PIN_RESET);
+    /* [[STABLE_USER_CODE_END:DriverInput_OnDoorOpen]] */
+    return 1;
+}
+```
+
+---
+
+## 4. DriverOutput 层（13 个）
+
+### 4.1 SetHeaterOn
+
+| 项目 | 内容 |
+|---|---|
+| 用途 | 加热器 ON（全功率） |
+| 关联变量 | `heater_top_on`, `heater_middle_on`, `heater_bottom_on` |
+
+**实现例**:
+
+```c
+int RoleFunc_DriverOutput_SetHeaterOn(...)
+{
+    /* [[STABLE_USER_CODE_START:DriverOutput_SetHeaterOn]] */
+    if (ctx->data.heater_top_on) {
+        HAL_GPIO_WritePin(HEATER_TOP_PORT, HEATER_TOP_PIN, GPIO_PIN_SET);
+    }
+    if (ctx->data.heater_middle_on) {
+        HAL_GPIO_WritePin(HEATER_MIDDLE_PORT, HEATER_MIDDLE_PIN, GPIO_PIN_SET);
+    }
+    if (ctx->data.heater_bottom_on) {
+        HAL_GPIO_WritePin(HEATER_BOTTOM_PORT, HEATER_BOTTOM_PIN, GPIO_PIN_SET);
+    }
+    /* [[STABLE_USER_CODE_END:DriverOutput_SetHeaterOn]] */
+    return 1;
+}
+```
+
+### 4.2 SetHeaterOff
+
+| 项目 | 内容 |
+|---|---|
+| 用途 | 加热器 OFF |
+| 关联变量 | `heater_top_on`, `heater_middle_on`, `heater_bottom_on` |
+
+**实现例**:
+
+```c
+int RoleFunc_DriverOutput_SetHeaterOff(...)
+{
+    /* [[STABLE_USER_CODE_START:DriverOutput_SetHeaterOff]] */
+    HAL_GPIO_WritePin(HEATER_TOP_PORT, HEATER_TOP_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(HEATER_MIDDLE_PORT, HEATER_MIDDLE_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(HEATER_BOTTOM_PORT, HEATER_BOTTOM_PIN, GPIO_PIN_RESET);
+    /* [[STABLE_USER_CODE_END:DriverOutput_SetHeaterOff]] */
+    return 1;
+}
+```
+
+### 4.3 SetHeaterPwm
+
+| 项目 | 内容 |
+|---|---|
+| 用途 | 上部 / 中部 / 下部加热器的 PWM 输出 |
+| 调用时机 | MwOven / MwGrill 层请求加热时 |
+| 关联变量 | `heater_top_duty`, `heater_middle_duty`, `heater_bottom_duty` |
+
+**实现例**:
+
+```c
+int RoleFunc_DriverOutput_SetHeaterPwm(...)
+{
+    /* [[STABLE_USER_CODE_START:DriverOutput_SetHeaterPwm]] */
+    uint32_t arr = TIM1->ARR;
+    TIM1->CCR1 = (ctx->data.heater_top_duty    * arr) / 100;
+    TIM1->CCR2 = (ctx->data.heater_middle_duty * arr) / 100;
+    TIM1->CCR3 = (ctx->data.heater_bottom_duty * arr) / 100;
+    TIM1->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC3E);
+    /* [[STABLE_USER_CODE_END:DriverOutput_SetHeaterPwm]] */
+    return 1;
+}
+```
+
+### 4.4 SetFanOn
+
+| 项目 | 内容 |
+|---|---|
+| 用途 | 风扇 ON |
+| 关联变量 | `fan_on` |
+
+**实现例**:
+
+```c
+int RoleFunc_DriverOutput_SetFanOn(...)
+{
+    /* [[STABLE_USER_CODE_START:DriverOutput_SetFanOn]] */
+    HAL_GPIO_WritePin(FAN_EN_PORT, FAN_EN_PIN, GPIO_PIN_SET);
+    /* [[STABLE_USER_CODE_END:DriverOutput_SetFanOn]] */
+    return 1;
+}
+```
+
+### 4.5 SetFanOff
+
+| 项目 | 内容 |
+|---|---|
+| 用途 | 风扇 OFF |
+
+**实现例**:
+
+```c
+int RoleFunc_DriverOutput_SetFanOff(...)
+{
+    /* [[STABLE_USER_CODE_START:DriverOutput_SetFanOff]] */
+    HAL_GPIO_WritePin(FAN_EN_PORT, FAN_EN_PIN, GPIO_PIN_RESET);
+    /* [[STABLE_USER_CODE_END:DriverOutput_SetFanOff]] */
+    return 1;
+}
+```
+
+### 4.6 SetFanPwm
+
+| 项目 | 内容 |
+|---|---|
+| 用途 | 风扇 PWM duty 设置 |
+| 关联变量 | `fan_duty` |
+
+**实现例**:
+
+```c
+int RoleFunc_DriverOutput_SetFanPwm(...)
+{
+    /* [[STABLE_USER_CODE_START:DriverOutput_SetFanPwm]] */
+    TIM2->CCR1 = (ctx->data.fan_duty * TIM2->ARR) / 100;
+    if (ctx->data.fan_duty > 0) {
+        HAL_GPIO_WritePin(FAN_EN_PORT, FAN_EN_PIN, GPIO_PIN_SET);
+    } else {
+        HAL_GPIO_WritePin(FAN_EN_PORT, FAN_EN_PIN, GPIO_PIN_RESET);
+    }
+    /* [[STABLE_USER_CODE_END:DriverOutput_SetFanPwm]] */
+    return 1;
+}
+```
+
+### 4.7 SetPumpOn
+
+| 项目 | 内容 |
+|---|---|
+| 用途 | 蒸汽泵 ON |
+| 关联变量 | `pump_on` |
+
+**实现例**:
+
+```c
+int RoleFunc_DriverOutput_SetPumpOn(...)
+{
+    /* [[STABLE_USER_CODE_START:DriverOutput_SetPumpOn]] */
+    HAL_GPIO_WritePin(PUMP_PORT, PUMP_PIN, GPIO_PIN_SET);
+    /* [[STABLE_USER_CODE_END:DriverOutput_SetPumpOn]] */
+    return 1;
+}
+```
+
+### 4.8 SetPumpOff
+
+| 项目 | 内容 |
+|---|---|
+| 用途 | 蒸汽泵 OFF |
+
+**实现例**:
+
+```c
+int RoleFunc_DriverOutput_SetPumpOff(...)
+{
+    /* [[STABLE_USER_CODE_START:DriverOutput_SetPumpOff]] */
+    HAL_GPIO_WritePin(PUMP_PORT, PUMP_PIN, GPIO_PIN_RESET);
+    /* [[STABLE_USER_CODE_END:DriverOutput_SetPumpOff]] */
+    return 1;
+}
+```
+
+### 4.9 SetMagOn
+
+| 项目 | 内容 |
+|---|---|
+| 用途 | 磁控管 ON（全功率） |
+| 关联变量 | `mag_on` |
+
+**实现例**:
+
+```c
+int RoleFunc_DriverOutput_SetMagOn(...)
+{
+    /* [[STABLE_USER_CODE_START:DriverOutput_SetMagOn]] */
+    HAL_GPIO_WritePin(MAG_EN_PORT, MAG_EN_PIN, GPIO_PIN_SET);
+    /* [[STABLE_USER_CODE_END:DriverOutput_SetMagOn]] */
+    return 1;
+}
+```
+
+### 4.10 SetMagOff
+
+| 项目 | 内容 |
+|---|---|
+| 用途 | 磁控管 OFF |
+
+**实现例**:
+
+```c
+int RoleFunc_DriverOutput_SetMagOff(...)
+{
+    /* [[STABLE_USER_CODE_START:DriverOutput_SetMagOff]] */
+    HAL_GPIO_WritePin(MAG_EN_PORT, MAG_EN_PIN, GPIO_PIN_RESET);
+    /* [[STABLE_USER_CODE_END:DriverOutput_SetMagOff]] */
+    return 1;
+}
+```
+
+### 4.11 SetMagPwm
+
+| 项目 | 内容 |
+|---|---|
+| 用途 | 磁控管 PWM 功率设置（逆变器控制） |
+| 关联变量 | `mw_power` |
+
+**实现例**:
+
+```c
+int RoleFunc_DriverOutput_SetMagPwm(...)
+{
+    /* [[STABLE_USER_CODE_START:DriverOutput_SetMagPwm]] */
+    uint16_t power = ctx->data.mw_power;
+    uint16_t duty  = (power * 100) / 1500;   /* 0-1500W -> 0-100% */
+    if (duty > 100) duty = 100;
+
+    TIM4->CCR1 = (duty * TIM4->ARR) / 100;
+    TIM4->CCER |= TIM_CCER_CC1E;
+
+    if (duty > 0) {
+        HAL_GPIO_WritePin(MAG_EN_PORT, MAG_EN_PIN, GPIO_PIN_SET);
+    } else {
+        HAL_GPIO_WritePin(MAG_EN_PORT, MAG_EN_PIN, GPIO_PIN_RESET);
+    }
+    /* [[STABLE_USER_CODE_END:DriverOutput_SetMagPwm]] */
+    return 1;
+}
+```
+
+### 4.12 SendStatusMaster
 
 | 项目 | 内容 |
 |---|---|
 | 用途 | 主模式：向 Android 面板发送状态（AC 零交叉同步） |
-| 调用时机 | `HwTxStatus` 状态入口 |
+| 调用时机 | `OutTx` 状态入口 |
 | 关联变量 | `seq_step`, `seq_total`, `stage_elapsed`, `error_code` |
 
 **实现例**:
 
 ```c
-int RoleFunc_Driver_SendStatusMaster(...)
+int RoleFunc_DriverOutput_SendStatusMaster(...)
 {
-    /* [[STABLE_USER_CODE_START:Driver_SendStatusMaster]] */
+    /* [[STABLE_USER_CODE_START:DriverOutput_SendStatusMaster]] */
     uint8_t frame[8];
     frame[0] = 0xA5;                       /* SOF */
     frame[1] = ctx->data.seq_step;
@@ -258,136 +548,13 @@ int RoleFunc_Driver_SendStatusMaster(...)
     frame[6] = 0x00;                       /* reserved */
     frame[7] = Checksum(frame, 7);
 
-    ZcSync_UartSend(frame, 8);             /* 零交叉同步发送 */
-    /* [[STABLE_USER_CODE_END:Driver_SendStatusMaster]] */
+    ZcSync_UartSend(frame, 8);
+    /* [[STABLE_USER_CODE_END:DriverOutput_SendStatusMaster]] */
     return 1;
 }
 ```
 
-### 3.6 ReceiveCommand
-
-| 项目 | 内容 |
-|---|---|
-| 用途 | 从 Android 面板接收调理序列数据 |
-| 调用时机 | `HwRxCommand` 状态入口 |
-| 关联变量 | 序列数据结构 |
-
-**实现例**:
-
-```c
-int RoleFunc_Driver_ReceiveCommand(...)
-{
-    /* [[STABLE_USER_CODE_START:Driver_ReceiveCommand]] */
-    uint8_t frame[32];
-    if (ZcSync_UartReceive(frame, sizeof(frame)) > 0) {
-        if (Checksum(frame, 31) == frame[31]) {
-            /* 解析并存入共享变量 */
-            ParseSequenceFrame(frame);
-            return 1;
-        }
-    }
-    return 0;
-    /* [[STABLE_USER_CODE_END:Driver_ReceiveCommand]] */
-}
-```
-
----
-### 3.7 SetHeaterPwm
-
-| 项目 | 内容 |
-|---|---|
-| 用途 | 上部 / 下部 / 背部加热器的 PWM 输出 |
-| 调用时机 | MwOven / MwGrill 层请求加热时 |
-| 关联变量 | `heater_top_duty`, `heater_bottom_duty`, `heater_back_duty` |
-
-**实现例**:
-
-```c
-int RoleFunc_Driver_SetHeaterPwm(...)
-{
-    /* [[STABLE_USER_CODE_START:Driver_SetHeaterPwm]] */
-    /* 使用 STM32 TIM1 输出 3 通道 PWM */
-    uint32_t arr = TIM1->ARR;
-    TIM1->CCR1 = (ctx->data.heater_top_duty    * arr) / 100;
-    TIM1->CCR2 = (ctx->data.heater_bottom_duty * arr) / 100;
-    TIM1->CCR3 = (ctx->data.heater_back_duty   * arr) / 100;
-    /* [[STABLE_USER_CODE_END:Driver_SetHeaterPwm]] */
-    return 1;
-}
-```
-
-### 3.8 SetConvectionFan
-
-| 项目 | 内容 |
-|---|---|
-| 用途 | 热风风扇 duty 设置 |
-| 关联变量 | `fan_duty` |
-
-**实现例**:
-
-```c
-int RoleFunc_Driver_SetConvectionFan(...)
-{
-    /* [[STABLE_USER_CODE_START:Driver_SetConvectionFan]] */
-    TIM2->CCR1 = (ctx->data.fan_duty * TIM2->ARR) / 100;
-    if (ctx->data.fan_duty > 0) {
-        HAL_GPIO_WritePin(FAN_EN_PORT, FAN_EN_PIN, GPIO_PIN_SET);
-    } else {
-        HAL_GPIO_WritePin(FAN_EN_PORT, FAN_EN_PIN, GPIO_PIN_RESET);
-    }
-    /* [[STABLE_USER_CODE_END:Driver_SetConvectionFan]] */
-    return 1;
-}
-```
-
-### 3.9 SetMagnetronPower
-
-| 项目 | 内容 |
-|---|---|
-| 用途 | 磁控管功率级别设置 |
-| 关联变量 | `mw_power` |
-
-**实现例**:
-
-```c
-int RoleFunc_Driver_SetMagnetronPower(...)
-{
-    /* [[STABLE_USER_CODE_START:Driver_SetMagnetronPower]] */
-    /* 通过逆变器 PWM 占空比控制微波功率 */
-    uint16_t power = ctx->data.mw_power;
-    uint16_t duty  = (power * 100) / 1500;   /* 0-1500W → 0-100% */
-    INV_SetDuty(duty);
-    /* [[STABLE_USER_CODE_END:Driver_SetMagnetronPower]] */
-    return 1;
-}
-```
-
-### 3.10 PulseBoilerPump
-
-| 项目 | 内容 |
-|---|---|
-| 用途 | 锅炉脉冲注水（避免过水） |
-| 关联变量 | `pump_pulse_count` |
-
-**实现例**:
-
-```c
-int RoleFunc_Driver_PulseBoilerPump(...)
-{
-    /* [[STABLE_USER_CODE_START:Driver_PulseBoilerPump]] */
-    uint8_t pulses = ctx->data.pump_pulse_count;
-    for (uint8_t i = 0; i < pulses; i++) {
-        HAL_GPIO_WritePin(PUMP_PORT, PUMP_PIN, GPIO_PIN_SET);
-        HAL_Delay(50);      /* 50ms 通水 */
-        HAL_GPIO_WritePin(PUMP_PORT, PUMP_PIN, GPIO_PIN_RESET);
-        HAL_Delay(150);     /* 150ms 待机 */
-    }
-    /* [[STABLE_USER_CODE_END:Driver_PulseBoilerPump]] */
-    return 1;
-}
-```
-
-### 3.11 CheckAnodeCurrent
+### 4.13 CheckAnodeCurrent
 
 | 项目 | 内容 |
 |---|---|
@@ -397,74 +564,31 @@ int RoleFunc_Driver_PulseBoilerPump(...)
 **实现例**:
 
 ```c
-int RoleFunc_Driver_CheckAnodeCurrent(...)
+int RoleFunc_DriverOutput_CheckAnodeCurrent(...)
 {
-    /* [[STABLE_USER_CODE_START:Driver_CheckAnodeCurrent]] */
+    /* [[STABLE_USER_CODE_START:DriverOutput_CheckAnodeCurrent]] */
     static uint8_t fault_count = 0;
     uint16_t current = ADC_Read(CH_ANODE);
     ctx->data.mw_anode_current = current;
 
-    /* 无功率时电流异常高 → 故障 */
     if (ctx->data.mw_power == 0 && current > 500) {
         fault_count++;
         if (fault_count >= 3) {
-            return 1;   /* 故障持续 3 次 */
+            return 1;
         }
     } else {
         fault_count = 0;
     }
     return 0;
-    /* [[STABLE_USER_CODE_END:Driver_CheckAnodeCurrent]] */
-}
-```
-
-### 3.12 LogHwFault
-
-| 项目 | 内容 |
-|---|---|
-| 用途 | 硬件故障记录 |
-| 关联变量 | `error_code` |
-
-**实现例**:
-
-```c
-int RoleFunc_Driver_LogHwFault(...)
-{
-    /* [[STABLE_USER_CODE_START:Driver_LogHwFault]] */
-    Log_Write(LOG_LEVEL_ERROR, "HW fault: %d",
-              ctx->data.error_code);
-    /* 可扩展为闪存记录 / 云端上传 */
-    /* [[STABLE_USER_CODE_END:Driver_LogHwFault]] */
-    return 1;
-}
-```
-
-### 3.13 ClearHwFault
-
-| 项目 | 内容 |
-|---|---|
-| 用途 | 硬件故障清除 |
-| 关联变量 | `error_code` |
-
-**实现例**:
-
-```c
-int RoleFunc_Driver_ClearHwFault(...)
-{
-    /* [[STABLE_USER_CODE_START:Driver_ClearHwFault]] */
-    ctx->data.error_code = 0;
-    /* 复位相关外设 */
-    INV_Reset();
-    /* [[STABLE_USER_CODE_END:Driver_ClearHwFault]] */
-    return 1;
+    /* [[STABLE_USER_CODE_END:DriverOutput_CheckAnodeCurrent]] */
 }
 ```
 
 ---
 
-## 4. MwMicrowave 层（6 个）
+## 5. MwMicrowave 层（6 个）
 
-### 4.1 StartMagnetron
+### 5.1 StartMagnetron
 
 | 项目 | 内容 |
 |---|---|
@@ -488,7 +612,7 @@ int RoleFunc_MwMicrowave_StartMagnetron(...)
 }
 ```
 
-### 4.2 StopMagnetron
+### 5.2 StopMagnetron
 
 | 项目 | 内容 |
 |---|---|
@@ -508,7 +632,7 @@ int RoleFunc_MwMicrowave_StopMagnetron(...)
 }
 ```
 
-### 4.3 SetMwPower
+### 5.3 SetMwPower
 
 | 项目 | 内容 |
 |---|---|
@@ -532,7 +656,7 @@ int RoleFunc_MwMicrowave_SetMwPower(...)
 }
 ```
 
-### 4.4 CheckAnodeCurrent
+### 5.4 CheckAnodeCurrent
 
 | 项目 | 内容 |
 |---|---|
@@ -549,7 +673,7 @@ int RoleFunc_MwMicrowave_CheckAnodeCurrent(...)
 }
 ```
 
-### 4.5 LogMwFault
+### 5.5 LogMwFault
 
 | 项目 | 内容 |
 |---|---|
@@ -568,7 +692,7 @@ int RoleFunc_MwMicrowave_LogMwFault(...)
 }
 ```
 
-### 4.6 ClearMwFault
+### 5.6 ClearMwFault
 
 | 项目 | 内容 |
 |---|---|
@@ -588,9 +712,9 @@ int RoleFunc_MwMicrowave_ClearMwFault(...)
 
 ---
 
-## 5. MwOven 层（10 个）
+## 6. MwOven 层（10 个）
 
-### 5.1 StartOvenPid
+### 6.1 StartOvenPid
 
 | 项目 | 内容 |
 |---|---|
@@ -613,7 +737,7 @@ int RoleFunc_MwOven_StartOvenPid(...)
 }
 ```
 
-### 5.2 StopOvenPid
+### 6.2 StopOvenPid
 
 | 项目 | 内容 |
 |---|---|
@@ -634,7 +758,7 @@ int RoleFunc_MwOven_StopOvenPid(...)
 }
 ```
 
-### 5.3 SetTopHeaterDuty
+### 6.3 SetTopHeaterDuty
 
 | 项目 | 内容 |
 |---|---|
@@ -653,7 +777,7 @@ int RoleFunc_MwOven_SetTopHeaterDuty(...)
 }
 ```
 
-### 5.4 SetBottomHeaterDuty
+### 6.4 SetBottomHeaterDuty
 
 | 项目 | 内容 |
 |---|---|
@@ -672,7 +796,7 @@ int RoleFunc_MwOven_SetBottomHeaterDuty(...)
 }
 ```
 
-### 5.5 SetBackHeaterDuty
+### 6.5 SetBackHeaterDuty
 
 | 项目 | 内容 |
 |---|---|
@@ -691,7 +815,7 @@ int RoleFunc_MwOven_SetBackHeaterDuty(...)
 }
 ```
 
-### 5.6 SetConvectionFan
+### 6.6 SetConvectionFan
 
 | 项目 | 内容 |
 |---|---|
@@ -710,7 +834,7 @@ int RoleFunc_MwOven_SetConvectionFan(...)
 }
 ```
 
-### 5.7 ReadThermistors
+### 6.7 ReadThermistors
 
 | 项目 | 内容 |
 |---|---|
@@ -735,7 +859,7 @@ int RoleFunc_MwOven_ReadThermistors(...)
 }
 ```
 
-### 5.8 CheckOvenOverheat
+### 6.8 CheckOvenOverheat
 
 | 项目 | 内容 |
 |---|---|
@@ -755,7 +879,7 @@ int RoleFunc_MwOven_CheckOvenOverheat(...)
 }
 ```
 
-### 5.9 LogOvFault
+### 6.9 LogOvFault
 
 | 项目 | 内容 |
 |---|---|
@@ -774,7 +898,7 @@ int RoleFunc_MwOven_LogOvFault(...)
 }
 ```
 
-### 5.10 ClearOvFault
+### 6.10 ClearOvFault
 
 | 项目 | 内容 |
 |---|---|
@@ -794,9 +918,9 @@ int RoleFunc_MwOven_ClearOvFault(...)
 ```
 
 ---
-## 6. MwGrill 层（6 个）
+## 7. MwGrill 层（6 个）
 
-### 6.1 StartGrill
+### 7.1 StartGrill
 
 | 项目 | 内容 |
 |---|---|
@@ -816,7 +940,7 @@ int RoleFunc_MwGrill_StartGrill(...)
 }
 ```
 
-### 6.2 StopGrill
+### 7.2 StopGrill
 
 | 项目 | 内容 |
 |---|---|
@@ -836,7 +960,7 @@ int RoleFunc_MwGrill_StopGrill(...)
 }
 ```
 
-### 6.3 SetGrillDuty
+### 7.3 SetGrillDuty
 
 | 项目 | 内容 |
 |---|---|
@@ -858,7 +982,7 @@ int RoleFunc_MwGrill_SetGrillDuty(...)
 }
 ```
 
-### 6.4 CheckGrillOverheat
+### 7.4 CheckGrillOverheat
 
 | 项目 | 内容 |
 |---|---|
@@ -878,7 +1002,7 @@ int RoleFunc_MwGrill_CheckGrillOverheat(...)
 }
 ```
 
-### 6.5 LogGrFault
+### 7.5 LogGrFault
 
 | 项目 | 内容 |
 |---|---|
@@ -897,7 +1021,7 @@ int RoleFunc_MwGrill_LogGrFault(...)
 }
 ```
 
-### 6.6 ClearGrFault
+### 7.6 ClearGrFault
 
 | 项目 | 内容 |
 |---|---|
@@ -918,9 +1042,9 @@ int RoleFunc_MwGrill_ClearGrFault(...)
 
 ---
 
-## 7. MwSteam 层（9 个）
+## 8. MwSteam 层（9 个）
 
-### 7.1 StartBoilerHeater
+### 8.1 StartBoilerHeater
 
 | 项目 | 内容 |
 |---|---|
@@ -946,7 +1070,7 @@ int RoleFunc_MwSteam_StartBoilerHeater(...)
 }
 ```
 
-### 7.2 StopBoilerHeater
+### 8.2 StopBoilerHeater
 
 | 项目 | 内容 |
 |---|---|
@@ -965,7 +1089,7 @@ int RoleFunc_MwSteam_StopBoilerHeater(...)
 }
 ```
 
-### 7.3 PulsePump
+### 8.3 PulsePump
 
 | 项目 | 内容 |
 |---|---|
@@ -989,7 +1113,7 @@ int RoleFunc_MwSteam_PulsePump(...)
 }
 ```
 
-### 7.4 SetPumpDuty
+### 8.4 SetPumpDuty
 
 | 项目 | 内容 |
 |---|---|
@@ -1008,7 +1132,7 @@ int RoleFunc_MwSteam_SetPumpDuty(...)
 }
 ```
 
-### 7.5 ReadBoilerTemp
+### 8.5 ReadBoilerTemp
 
 | 项目 | 内容 |
 |---|---|
@@ -1027,7 +1151,7 @@ int RoleFunc_MwSteam_ReadBoilerTemp(...)
 }
 ```
 
-### 7.6 CalculateSteamPID
+### 8.6 CalculateSteamPID
 
 | 项目 | 内容 |
 |---|---|
@@ -1049,7 +1173,7 @@ int RoleFunc_MwSteam_CalculateSteamPID(...)
 }
 ```
 
-### 7.7 CheckSteamOverheat
+### 8.7 CheckSteamOverheat
 
 | 项目 | 内容 |
 |---|---|
@@ -1069,7 +1193,7 @@ int RoleFunc_MwSteam_CheckSteamOverheat(...)
 }
 ```
 
-### 7.8 LogStFault
+### 8.8 LogStFault
 
 | 项目 | 内容 |
 |---|---|
@@ -1088,7 +1212,7 @@ int RoleFunc_MwSteam_LogStFault(...)
 }
 ```
 
-### 7.9 ClearStFault
+### 8.9 ClearStFault
 
 | 项目 | 内容 |
 |---|---|
@@ -1109,9 +1233,9 @@ int RoleFunc_MwSteam_ClearStFault(...)
 
 ---
 
-## 8. Application 层（10 个）
+## 9. Application 层（10 个）
 
-### 8.1 ReceiveSequence
+### 9.1 ReceiveSequence
 
 | 项目 | 内容 |
 |---|---|
@@ -1134,7 +1258,7 @@ int RoleFunc_Application_ReceiveSequence(...)
 }
 ```
 
-### 8.2 ParseSequence
+### 9.2 ParseSequence
 
 | 项目 | 内容 |
 |---|---|
@@ -1159,7 +1283,7 @@ int RoleFunc_Application_ParseSequence(...)
 }
 ```
 
-### 8.3 StartStage
+### 9.3 StartStage
 
 | 项目 | 内容 |
 |---|---|
@@ -1205,7 +1329,7 @@ int RoleFunc_Application_StartStage(...)
 }
 ```
 
-### 8.4 StopStage
+### 9.4 StopStage
 
 | 项目 | 内容 |
 |---|---|
@@ -1230,7 +1354,7 @@ int RoleFunc_Application_StopStage(...)
 }
 ```
 
-### 8.5 CheckStageDone
+### 9.5 CheckStageDone
 
 | 项目 | 内容 |
 |---|---|
@@ -1260,7 +1384,7 @@ int RoleFunc_Application_CheckStageDone(...)
 }
 ```
 
-### 8.6 NextStage
+### 9.6 NextStage
 
 | 项目 | 内容 |
 |---|---|
@@ -1286,7 +1410,7 @@ int RoleFunc_Application_NextStage(...)
 }
 ```
 
-### 8.7 ReportStatus
+### 9.7 ReportStatus
 
 | 项目 | 内容 |
 |---|---|
@@ -1305,7 +1429,7 @@ int RoleFunc_Application_ReportStatus(...)
 }
 ```
 
-### 8.8 ReportComplete
+### 9.8 ReportComplete
 
 | 项目 | 内容 |
 |---|---|
@@ -1326,7 +1450,7 @@ int RoleFunc_Application_ReportComplete(...)
 }
 ```
 
-### 8.9 LogAppError
+### 9.9 LogAppError
 
 | 项目 | 内容 |
 |---|---|
@@ -1345,7 +1469,7 @@ int RoleFunc_Application_LogAppError(...)
 }
 ```
 
-### 8.10 ClearAppError
+### 9.10 ClearAppError
 
 | 项目 | 内容 |
 |---|---|
@@ -1368,9 +1492,9 @@ int RoleFunc_Application_ClearAppError(...)
 
 ---
 
-## 9. 通用实现模式
+## 10. 通用实现模式
 
-### 9.1 层间调用
+### 10.1 层间调用
 
 上层 → 下层：**直接函数调用**
 
@@ -1387,7 +1511,7 @@ StateMachine_EnqueueEvent(&g_ctx,
     EVENT_Application_STAGE_DONE);
 ```
 
-### 9.2 错误处理
+### 10.2 错误处理
 
 ```c
 static uint8_t error_count = 0;
@@ -1402,7 +1526,7 @@ if (check_error()) {
 }
 ```
 
-### 9.3 PID 控制
+### 10.3 PID 控制
 
 ```c
 typedef struct {
@@ -1413,14 +1537,14 @@ typedef struct {
 } Pid_t;
 ```
 
-### 9.4 事件发布
+### 10.4 事件发布
 
 ```c
 StateMachine_EnqueueEvent(&g_ctx,
     EVENT_<Layer>_<EventName>);
 ```
 
-### 9.5 用户代码保护
+### 10.5 用户代码保护
 
 所有实现放在 `[[STABLE_USER_CODE_START:...]]` / `_END` 之间：
 
@@ -1430,11 +1554,12 @@ StateMachine_EnqueueEvent(&g_ctx,
 
 ---
 
-## 10. 变更历史
+## 11. 变更历史
 
 | 版本 | 日期 | 内容 |
 |---|---|---|
-| 1.0 | 2026-10-04 | 初版（54 个 Role 函数参考） |
+| 1.0 | 2026-10-04 | 初版（60 个 Role 函数参考） |
+| 1.1 | 2026-10-10 | v3.4.3 整備：DriverInput / DriverOutput 分割、Role 60 個 |
 
 ---
 
