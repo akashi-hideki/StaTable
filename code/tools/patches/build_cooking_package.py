@@ -1,7 +1,16 @@
-"""Build distribution package for Galanz cooking appliance.
+"""Build distribution package for Galanz cooking appliance (v3.4.3).
 
-Assembles docs + sample + portable ZIP into a single folder,
-then optionally compresses it.
+Layout:
+    StaTable-CookingHeater-Package-v3.4.3/
+    ├── README_zh.md
+    ├── INSTALL_GUIDE_zh.md
+    ├── docs/
+    ├── samples/
+    └── StaTable/                <- app folder (subfolder)
+        ├── StaTable.exe
+        └── _internal/
+
+Single-extract: user extracts the ZIP, opens `StaTable/StaTable.exe`.
 """
 from __future__ import annotations
 
@@ -15,18 +24,39 @@ SCRIPT = Path(__file__).resolve()
 CODE_DIR = SCRIPT.parent.parent.parent        # code/
 REPO_DIR = CODE_DIR.parent                     # StaTable/
 SAMPLES_SRC = CODE_DIR / "docs" / "samples"
-PORTABLE_SRC = CODE_DIR / "StaTable-portable-v3.3.0-win64.zip"
+DOCS_SRC = CODE_DIR / "docs"
+PORTABLE_SRC = CODE_DIR / "StaTable-portable-v3.4.3-win64.zip"
 
-DEFAULT_OUT = REPO_DIR / "dist_package" / "StaTable-CookingHeater-Package-v3.3.0"
+DEFAULT_OUT = REPO_DIR / "dist_package" / "StaTable-CookingHeater-Package-v3.4.3"
+
+TOP_FILES = ["README_zh.md", "INSTALL_GUIDE_zh.md"]
+DOCS_FILES = ["LAYER_DESIGN_zh.md", "ROLE_FUNCTIONS_zh.md",
+              "ECLIPSE_INTEGRATION_zh.md"]
+DOCS_ROOT_FILES = ["SPEC_STATE_ACTIONS_v1_zh.md",
+                   "SPEC_STATE_ACTIONS_v1_en.md"]
+
+APP_SUBDIR = "StaTable"   # <- EXE + _internal go into this folder
+
+
+def extract_portable(app_dir: Path) -> None:
+    """Extract the portable ZIP into `app_dir/` (StaTable/ subfolder)."""
+    if not PORTABLE_SRC.exists():
+        print(f"[FAIL] portable ZIP not found: {PORTABLE_SRC}")
+        sys.exit(1)
+    print(f"[i] extracting {PORTABLE_SRC.name} into {APP_SUBDIR}/ ...")
+    app_dir.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(PORTABLE_SRC, "r") as z:
+        z.extractall(app_dir)
+    size_mb = PORTABLE_SRC.stat().st_size / 1024 / 1024
+    print(f"[OK] {APP_SUBDIR}/ ({size_mb:.1f} MB compressed)")
 
 
 def copy_docs(out: Path) -> None:
-    """Copy docs to their subfolders."""
+    """Copy docs into their subfolders."""
     (out / "docs").mkdir(parents=True, exist_ok=True)
     (out / "samples").mkdir(parents=True, exist_ok=True)
 
-    # Top-level: README + INSTALL_GUIDE
-    for f in ("README_zh.md", "INSTALL_GUIDE_zh.md"):
+    for f in TOP_FILES:
         src = SAMPLES_SRC / f
         if not src.exists():
             print(f"[FAIL] missing {src}")
@@ -34,9 +64,7 @@ def copy_docs(out: Path) -> None:
         shutil.copy2(src, out / f)
         print(f"[OK] {f}")
 
-    # docs/: design/role/eclipse
-    for f in ("LAYER_DESIGN_zh.md", "ROLE_FUNCTIONS_zh.md",
-              "ECLIPSE_INTEGRATION_zh.md"):
+    for f in DOCS_FILES:
         src = SAMPLES_SRC / f
         if not src.exists():
             print(f"[FAIL] missing {src}")
@@ -44,7 +72,14 @@ def copy_docs(out: Path) -> None:
         shutil.copy2(src, out / "docs" / f)
         print(f"[OK] docs/{f}")
 
-    # samples/: XML
+    for f in DOCS_ROOT_FILES:
+        src = DOCS_SRC / f
+        if not src.exists():
+            print(f"[WARN] missing {src} (skip)")
+            continue
+        shutil.copy2(src, out / "docs" / f)
+        print(f"[OK] docs/{f}")
+
     src = SAMPLES_SRC / "cooking_heater_controller.xml"
     if not src.exists():
         print(f"[FAIL] missing {src}")
@@ -53,24 +88,12 @@ def copy_docs(out: Path) -> None:
     print(f"[OK] samples/cooking_heater_controller.xml")
 
 
-def copy_portable(out: Path) -> None:
-    """Copy portable ZIP to install/."""
-    (out / "install").mkdir(parents=True, exist_ok=True)
-    if not PORTABLE_SRC.exists():
-        print(f"[WARN] portable ZIP not found: {PORTABLE_SRC}")
-        print("       (skip — package will lack the executable)")
-        return
-    shutil.copy2(PORTABLE_SRC, out / "install" / PORTABLE_SRC.name)
-    size_mb = PORTABLE_SRC.stat().st_size / 1024 / 1024
-    print(f"[OK] install/{PORTABLE_SRC.name} ({size_mb:.1f} MB)")
-
-
 def make_zip(out: Path) -> Path:
     """Compress the package folder into a ZIP."""
     zip_path = out.parent / f"{out.name}.zip"
     if zip_path.exists():
         zip_path.unlink()
-    print(f"\n[i] creating {zip_path} ...")
+    print(f"\n[i] creating {zip_path.name} ...")
     with zipfile.ZipFile(zip_path, "w",
                          zipfile.ZIP_DEFLATED, compresslevel=6) as z:
         for p in sorted(out.rglob("*")):
@@ -85,8 +108,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(DEFAULT_OUT))
     ap.add_argument("--no-zip", action="store_true")
-    ap.add_argument("--keep", action="store_true",
-                    help="do not delete existing out folder")
+    ap.add_argument("--keep", action="store_true")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -98,9 +120,13 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
 
     print(f"[i] building package at: {out}\n")
-    copy_docs(out)
+
+    # 1. Extract portable ZIP into `out/StaTable/`
+    extract_portable(out / APP_SUBDIR)
     print()
-    copy_portable(out)
+
+    # 2. Copy docs + sample
+    copy_docs(out)
 
     if not args.no_zip:
         make_zip(out)
