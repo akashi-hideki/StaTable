@@ -19,8 +19,9 @@
 
 **v3.5.0 は未リリース** (段階的に開発中)
 
-### 最新コミット (CI green 7 連続)
+### 最新コミット (CI green 8 連続)
 
+- `16237ff` refactor(v3.5.0): Phase 1b mypy cleanup (218 -> 58 errors)
 - `29cf425` ci(v3.5.0): update GitHub Actions to Node.js 24 versions (S-5)
 - `1825170` fix(ci): add tomli fallback for Python 3.10 (S-4)
 - `6c39a34` ci(v3.5.0): add Python matrix (3.10-3.13) + coverage (S-4)
@@ -36,7 +37,7 @@
   - `mypy-check` (informational)
 - **テスト: 46 suites / 1657 PASS / 0 FAIL (py3.10-3.13 全て)**
 - **coverage: htmlcov を artifact 化 (matrix 毎に 4 種)**
-- **mypy baseline: 218 errors / 23 files** (informational, 削減目標)
+- **mypy baseline: 58 errors / 16 files** (Phase 1b 後、218 から -73%)
 - gcc + ARM 全ファイル構文検証: PASS
 - ARM Cortex-M4 リンク検証: PASS
 - MISRA C:2012: cppcheck 検出、10 hits 抑制
@@ -97,6 +98,16 @@
 - 効果: Node.js 20 deprecation 警告が 21 件 -> 1 件に削減
   - 残る 1 件は `upload-artifact@v5` 側の問題（GitHub 側の対応待ち）
 
+### Phase 1b: mypy 218 -> 58 errors (commit 16237ff)
+
+- `CodeTemplates` の 15 dict に `dict[str, Any]` 注釈
+- 各ジェネレータの `*_TEMPLATES` 26 dict に `dict[str, Any]` 注釈
+- `xml_io.py` の truthy-function 6 件 (`X is not None`)
+- 7 ファイルの var-annotated 12 件（dict/list 型注釈）
+- `SubElement(..., **attrs)` 15 行に `# type: ignore[arg-type]`
+  - mypy の dict invariance 由来、実行時は問題なし
+- **結果: 218 -> 58 errors (-73%)**
+
 ### 配布パッケージ構造 (v3.4.3 以降、変更なし)
 
 - サブフォルダレイアウト:
@@ -110,10 +121,10 @@
 ### 優先度 S
 
 1. **v3.5.0 続行**
-   - Phase 1b: `CodeTemplates` の型問題解消 (~150 errors 削減)
-   - Phase 1c: `Optional[X]` -> `X | None` 統一 (88 箇所)
+   - Phase 1c: 残り 58 errors の削減（`statable/xml_io.py` 中心）
    - S-3 Step 2: ubuntu-26.04 preview ジョブ追加 (**10/19 以降**)
-   - 完了済み: S-4 (matrix + coverage), S-5 (Node.js 24 対応)
+   - **GUI 生成時の output クリア問題**（下記「未解決の問題」参照）
+   - 完了済み: S-4, S-5, Phase 1b
 
 2. **ビジネス側から要望された機能**
    - ビジネススレッドからのフィードバック待ち
@@ -237,6 +248,33 @@ PowerShell で以下を実行:
 
 ---
 
+## 未解決の問題: GUI コード生成時の output クリア漏れ
+
+### 症状
+- GUI でプロジェクトを生成時、`output/` をクリアしないため、
+  古いアーキテクチャ（例: v3.3.x の `Driver/` 層）のファイルが残存
+- 新プロジェクトで未定義の変数（`retry_count` 等）を参照 → コンパイル失敗
+
+### 再現手順（2026-10-11 確認済み）
+1. v3.3.x の XML を GUI で読み込み、`output/` に生成
+2. v3.4.3 以降の XML（7 層調理器サンプル）を読み込み、同じ `output/` に生成
+   （クリアせず）
+3. `output/Driver/` の古いファイルが残り、`arm-none-eabi-gcc` で失敗
+
+### 確認済みの事実
+- `output/` 完全削除 → 再生成で **LINK PASS**（firmware.bin 28540 bytes）
+- `statable_types_common.h` の `SystemData_t` に `retry_count` なし
+- しかし `Driver/statable_role_functions_Driver.c` が参照（古いファイル）
+- **codegen 側のバグではなく、GUI 側の運用問題**
+
+### 対処案（未決定）
+- A. 生成前に自動クリア（オプション or 常時）
+- B. 生成後に古いファイルを警告
+- C. 「クリーン生成」ボタン追加
+- D. output/ を一時ディレクトリに生成してから同期
+
+---
+
 ## 新スレッド開始時の推奨アクション
 
 1. **現状確認** (上記コマンド実行)
@@ -248,6 +286,7 @@ PowerShell で以下を実行:
 
 ## v3.5.0 コミット履歴
 
+- `16237ff` refactor(v3.5.0): Phase 1b mypy cleanup (218 -> 58 errors)
 - `29cf425` ci(v3.5.0): update GitHub Actions to Node.js 24 versions (S-5)
 - `1825170` fix(ci): add tomli fallback for Python 3.10 (S-4)
 - `6c39a34` ci(v3.5.0): add Python matrix (3.10-3.13) + coverage (S-4)
@@ -258,21 +297,20 @@ PowerShell で以下を実行:
 
 ---
 
-## mypy Baseline (Phase 1a 完了時点)
+## mypy Baseline (Phase 1b 完了時点)
 
 | File | errors |
 |---|---:|
-| `statable/xml_io.py` | 47 |
-| `codegen/osal_generator.py` | 35 |
-| `codegen/role_function_generator.py` | 34 |
-| `codegen/transition_generator.py` | 31 |
-| `codegen/enum_generator.py` | 16 |
-| `codegen/struct_generator.py` | 13 |
-| others | 42 |
-| **Total** | **218** |
+| `statable/xml_io.py` | ~30 |
+| `codegen/validate/validation_dialog.py` | ~9 |
+| PySide6 `type[Qt]` 系 | ~7 |
+| others | ~12 |
+| **Total** | **58** |
 
-**Phase 1b の主眼**: `CodeTemplates` が `object` 型として推論される問題 (~150 errors)
-**Phase 1c の主眼**: `Optional[X]` -> `X | None` 統一 (88 箇所)
+**Phase 1c の主眼**:
+- `statable/xml_io.py` の残り（型注釈・`# type: ignore`）
+- `statable_gui.*` の PySide6 stub 問題（overrides で抑制可）
+- `Optional[X]` -> `X | None` 統一 (88 箇所)
 
 ---
 
