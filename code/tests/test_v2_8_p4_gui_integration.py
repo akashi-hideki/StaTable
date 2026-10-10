@@ -156,4 +156,4 @@ print("=" * 70)
 print(f"  TOTAL: {_total}  PASSED: {_passed}  FAILED: {_failed}")
 print("=" * 70)
 
-sys.exit(0 if _failed == 0 else 1)
+os._exit(0 if _failed == 0 else 1)

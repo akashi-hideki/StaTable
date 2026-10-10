@@ -1,0 +1,27 @@
+# v3.4.3: universal Linux CI segfault fix (all Qt tests)
+# --------------------------------------------------------------------
+
+add .gitignore
+add code/tools/git_ops_v343.txt
+add code/tools/patches/patch_v3_4_3_all_qt_tests.py
+
+add code/tests/test_v2_2_p3.py
+add code/tests/test_v2_2_p4b.py
+add code/tests/test_v2_3_p1.py
+add code/tests/test_v2_5_p1.py
+add code/tests/test_v2_5_p11.py
+add code/tests/test_v2_5_p5.py
+add code/tests/test_v2_5_p6.py
+add code/tests/test_v2_5_p9.py
+add code/tests/test_v2_6_p2.py
+add code/tests/test_v2_6_p3.py
+add code/tests/test_v2_7_p4.py
+add code/tests/test_v2_8_p4_gui_integration.py
+add code/tests/test_v3_2_s1_wizard.py
+add code/tests/test_v3_2_s2_signals.py
+add code/tests/test_v3_4_0_signal_safety.py
+add code/tests/test_v3_4_0_state_actions.py
+
+commit fix(v3.4.3): universal Linux CI segfault fix for all Qt tests
+
+push origin main

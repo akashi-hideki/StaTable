@@ -260,7 +260,7 @@ def main():
     test_full_vending()
 
     ok = R.summary()
-    sys.exit(0 if ok else 1)
+    os._exit(0 if ok else 1)
 
 
 if __name__ == "__main__":

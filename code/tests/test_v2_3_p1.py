@@ -206,4 +206,4 @@ if __name__ == "__main__":
     print("=" * 70)
     print(f"  TOTAL: {passed + failed}  PASSED: {passed}  FAILED: {failed}")
     print("=" * 70)
-    sys.exit(1 if failed else 0)
+    os._exit(1 if failed else 0)

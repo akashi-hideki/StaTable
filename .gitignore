@@ -138,4 +138,4 @@ github-recovery*.txt
 StaTable-portable-*.zip
 
 dist_package/
-ci_failure_log.txt
+ci_failure_log*.txt

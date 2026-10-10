@@ -353,7 +353,7 @@ def main():
     test_round_trip_full()
 
     ok = R.summary()
-    sys.exit(0 if ok else 1)
+    os._exit(0 if ok else 1)
 
 
 if __name__ == "__main__":

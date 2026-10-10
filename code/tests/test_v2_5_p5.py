@@ -256,7 +256,7 @@ def main():
     test_end_to_end_namespace_choices()
 
     ok = R.summary()
-    sys.exit(0 if ok else 1)
+    os._exit(0 if ok else 1)
 
 
 if __name__ == "__main__":

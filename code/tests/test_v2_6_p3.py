@@ -411,4 +411,4 @@ if R.failures:
     for name in R.failures:
         print(f"  - {name}")
 
-sys.exit(0 if R.failed == 0 else 1)
+os._exit(0 if R.failed == 0 else 1)
