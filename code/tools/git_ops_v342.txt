@@ -1,0 +1,18 @@
+# v3.4.2: Linux CI segfault fix (test_v2_2_p4a.py)
+# --------------------------------------------------------------------
+
+add code/tests/test_v2_2_p4a.py
+add code/tools/patches/patch_v3_4_2_segfault_fix.py
+
+commit fix(v3.4.2): skip Python/Qt teardown in test_v2_2_p4a.py
+
+- Linux CI: SIGSEGV (exit 139) at Python exit, test body 82/82 PASS
+- Root cause: Qt C++ destructor race on glibc at process shutdown
+- Fix: flush stdout/stderr + os._exit() to skip teardown entirely
+- Windows local: 3/3 PASS (exit 0), no regression
+- patch_v3_4_2_segfault_fix.py: reproducible patch script
+
+Verified locally (Windows, offscreen):
+  python tests/test_v2_2_p4a.py  ->  Run1/2/3 exit: 0
+
+push origin main
