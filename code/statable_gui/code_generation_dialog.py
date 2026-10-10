@@ -52,6 +52,16 @@ except ImportError:
         CodeGenerationSettingsDialog,
     )
 
+try:
+    from .output_warning import show_orphan_warning
+except ImportError:
+    from output_warning import show_orphan_warning
+
+try:
+    from .fs_cleanup import robust_rmtree
+except ImportError:
+    from fs_cleanup import robust_rmtree
+
 logger = logging.getLogger(__name__)
 
 #Default settings file path
@@ -466,10 +476,42 @@ class CodeGenerationDialog(QDialog):
                 f"{len(saved_files)} files "
                 f"saved.\n\n"
                 f"Output: {output_dir}")
+            # [v3.5.0] Warn about stale files left in output_dir.
+            _orph = getattr(generator, "last_orphans", None)
+            if _orph:
+                show_orphan_warning(
+                    self, _orph, output_dir,
+                    on_clean=self._clean_and_resave)
         except Exception as e:
             QMessageBox.critical(
                 self, self.tr("Error"),
                 f"Save failed:\n{e}")
+
+    def _clean_and_resave(self):
+        """[v3.5.0] Delete output_dir, then re-save."""
+        output_dir = self.output_dir_edit.text().strip()
+        if not output_dir:
+            return
+        logger.info(
+            f"_clean_and_resave: removing {output_dir}")
+        errors = robust_rmtree(output_dir)
+        if errors:
+            detail = "\n".join(
+                f"- {p}\n    {typ}: {msg}"
+                for p, typ, msg in errors[:10])
+            if len(errors) > 10:
+                detail += f"\n... and {len(errors) - 10} more"
+            QMessageBox.critical(
+                self, self.tr("Clean failed"),
+                self.tr(
+                    "Failed to delete some files under:\n"
+                    "{0}\n\n"
+                    "Errors:\n{1}").format(
+                        output_dir, detail))
+            return
+        logger.info(
+            f"_clean_and_resave: removed {output_dir}")
+        self._save_code()
 
     def _on_close(self):
         """Handler on close"""

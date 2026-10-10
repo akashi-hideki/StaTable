@@ -33,6 +33,7 @@ v2.4    - Provide all layer names to StateMachineTab (v3.11).
 
 import sys
 import os
+import shutil
 import logging
 from pathlib import Path
 
@@ -52,6 +53,8 @@ from statable.sample_data import (
     create_sample_global_defs)
 
 from .logger import StaTableLogger
+from .output_warning import show_orphan_warning
+from .fs_cleanup import robust_rmtree
 from .traceball import TraceBallWidget
 from .config import WINDOW_WIDTH, WINDOW_HEIGHT
 from .widgets import StateMachineTab
@@ -330,6 +333,15 @@ class MainWindow(QMainWindow):
             self.save_generated_code_direct)
         toolbar.addAction(gen_save_btn)
 
+        gen_clean_btn = QAction(
+            self.tr("Clean generate"), self)
+        gen_clean_btn.setToolTip(self.tr(
+            "Delete output directory and regenerate "
+            "from scratch"))
+        gen_clean_btn.triggered.connect(
+            lambda: self.clean_generate_code())
+        toolbar.addAction(gen_clean_btn)
+
         toolbar.addSeparator()
 
         open_btn = QAction(self.tr("Open"), self)
@@ -474,6 +486,12 @@ class MainWindow(QMainWindow):
         gen_save_action.triggered.connect(
             self.save_generated_code_direct)
         code_gen_menu.addAction(gen_save_action)
+
+        gen_clean_action = QAction(
+            self.tr("Clean generate..."), self)
+        gen_clean_action.triggered.connect(
+            lambda: self.clean_generate_code())
+        code_gen_menu.addAction(gen_clean_action)
 
         # [v3.1] Language menu (English / Chinese) with auto-restart
         lang_menu = menubar.addMenu("Language / \u8bed\u8a00")
@@ -1295,6 +1313,14 @@ class MainWindow(QMainWindow):
             f"Layers: {len(layers)}\n\n"
             f"Output: {output_dir}")
 
+        # [v3.5.0] Warn about stale files left in output_dir.
+        _orph = getattr(generator, "last_orphans", None)
+        if _orph:
+            show_orphan_warning(
+                self, _orph, output_dir,
+                on_clean=lambda: self.clean_generate_code(
+                    skip_confirm=True))
+
         if collector.records:
             seen = set()
             unique = []
@@ -1306,6 +1332,59 @@ class MainWindow(QMainWindow):
                 self, self.tr("Warnings during generation"),
                 "The following warnings occurred:\n\n"
                 + "\n".join(f"- {m}" for m in unique))
+
+    # ------------------------------------------------------------------
+    # [v3.5.0] Clean generate (delete output_dir and regenerate)
+    # ------------------------------------------------------------------
+
+    def clean_generate_code(self, skip_confirm: bool = False) -> None:
+        """[v3.5.0] Delete output_dir, then regenerate.
+
+        Args:
+            skip_confirm: Skip the confirmation dialog (used
+                when called from the stale-files warning
+                dialog, where intent is already clear).
+        """
+        config = self.config_manager.get_config()
+        output_dir = config.output_directory
+        if not output_dir or not os.path.isdir(output_dir):
+            self.save_generated_code_direct()
+            return
+        if not skip_confirm:
+            reply = QMessageBox.warning(
+                self, self.tr("Clean generate"),
+                self.tr(
+                    "This will DELETE all files under:\n"
+                    "{0}\n\n"
+                    "then regenerate from scratch.\n\n"
+                    "Any manual edits in generated files "
+                    "(including user code preserved by merge) "
+                    "will be lost.\n\n"
+                    "Continue?").format(output_dir),
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No)
+            if reply != QMessageBox.Yes:
+                return
+        StaTableLogger.info(
+            f"clean_generate_code: removing {output_dir}")
+        errors = robust_rmtree(output_dir)
+        if errors:
+            detail = "\n".join(
+                f"- {p}\n    {typ}: {msg}"
+                for p, typ, msg in errors[:10])
+            if len(errors) > 10:
+                detail += f"\n... and {len(errors) - 10} more"
+            QMessageBox.critical(
+                self, self.tr("Clean failed"),
+                self.tr(
+                    "Failed to delete some files under:\n"
+                    "{0}\n\n"
+                    "Errors:\n{1}").format(
+                        output_dir, detail))
+            return
+        StaTableLogger.info(
+            f"clean_generate_code: removed {output_dir}")
+        self.save_generated_code_direct()
 
     # ==================================================================
     # New Project feature (v2.3 / F-15)
