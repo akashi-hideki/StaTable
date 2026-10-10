@@ -156,6 +156,7 @@ jobs:
           coverage run --parallel-mode tests/test_v3_2_s1_wizard.py
           coverage run --parallel-mode tests/test_v3_2_s2_signals.py
           python tests/test_v3_5_s1_smoke.py
+          coverage run --parallel-mode tests/test_v3_5_gui_output_clean.py
 
       - name: Run smoke tests (levels 0-3)
         run: |
