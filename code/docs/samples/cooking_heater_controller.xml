@@ -14,11 +14,9 @@
             <Variable name="steam_sensor" type="uint16_t" unit="ADC" default_value="0" group="Hardware" description="Steam sensor (vacuum-therm diff)" title="Steam sensor (vacuum-therm diff)" array_size="0" />
             <Variable name="thermistor_top" type="uint16_t" unit="degC" default_value="0" group="Hardware" description="Top thermistor" title="Top thermistor" array_size="0" />
             <Variable name="thermistor_bottom" type="uint16_t" unit="degC" default_value="0" group="Hardware" description="Bottom thermistor" title="Bottom thermistor" array_size="0" />
-            <Variable name="thermistor_back" type="uint16_t" unit="degC" default_value="0" group="Hardware" description="Back thermistor" title="Back thermistor" array_size="0" />
             <Variable name="humidity" type="uint8_t" unit="%" default_value="0" group="Hardware" description="Humidity" title="Humidity" array_size="0" />
             <Variable name="heater_top_duty" type="uint8_t" unit="%" default_value="0" group="Hardware" description="Top heater PWM duty" title="Top heater PWM duty" array_size="0" />
             <Variable name="heater_bottom_duty" type="uint8_t" unit="%" default_value="0" group="Hardware" description="Bottom heater PWM duty" title="Bottom heater PWM duty" array_size="0" />
-            <Variable name="heater_back_duty" type="uint8_t" unit="%" default_value="0" group="Hardware" description="Back heater PWM duty" title="Back heater PWM duty" array_size="0" />
             <Variable name="fan_duty" type="uint8_t" unit="%" default_value="0" group="Hardware" description="Convection fan duty" title="Convection fan duty" array_size="0" />
             <Variable name="mw_power" type="uint16_t" unit="W" default_value="0" group="Hardware" description="Microwave power" title="Microwave power" array_size="0" />
             <Variable name="mw_anode_current" type="uint16_t" unit="mA" default_value="0" group="Hardware" description="Magnetron anode current" title="Magnetron anode current" array_size="0" />
@@ -31,6 +29,16 @@
             <Variable name="stage_elapsed" type="uint32_t" unit="ms" default_value="0" group="Hardware" description="Elapsed time in current stage" title="Elapsed time in current stage" array_size="0" />
             <Variable name="stage_duration" type="uint32_t" unit="ms" default_value="0" group="Hardware" description="Duration of current stage" title="Duration of current stage" array_size="0" />
             <Variable name="stage_mode" type="uint8_t" unit="" default_value="0" group="Hardware" description="Current stage heating mode" title="Current stage heating mode" array_size="0" />
+            <Variable name="thermistor_middle" type="uint16_t" unit="degC" default_value="0" group="Hardware" description="Middle thermistor" title="Middle thermistor" array_size="0" />
+            <Variable name="door_open" type="uint8_t" unit="" default_value="0" group="Hardware" description="Door open flag" title="Door open flag" array_size="0" />
+            <Variable name="rx_buf" type="uint8_t" unit="" default_value="0" group="Hardware" description="UART RX buffer" title="UART RX buffer" array_size="0" />
+            <Variable name="heater_top_on" type="uint8_t" unit="" default_value="0" group="Hardware" description="Top heater ON flag" title="Top heater ON flag" array_size="0" />
+            <Variable name="heater_middle_on" type="uint8_t" unit="" default_value="0" group="Hardware" description="Middle heater ON flag" title="Middle heater ON flag" array_size="0" />
+            <Variable name="heater_bottom_on" type="uint8_t" unit="" default_value="0" group="Hardware" description="Bottom heater ON flag" title="Bottom heater ON flag" array_size="0" />
+            <Variable name="heater_middle_duty" type="uint8_t" unit="%" default_value="0" group="Hardware" description="Middle heater PWM duty" title="Middle heater PWM duty" array_size="0" />
+            <Variable name="fan_on" type="uint8_t" unit="" default_value="0" group="Hardware" description="Fan ON flag" title="Fan ON flag" array_size="0" />
+            <Variable name="pump_on" type="uint8_t" unit="" default_value="0" group="Hardware" description="Pump ON flag" title="Pump ON flag" array_size="0" />
+            <Variable name="mag_on" type="uint8_t" unit="" default_value="0" group="Hardware" description="Magnetron ON flag" title="Magnetron ON flag" array_size="0" />
         </SystemVariables>
         <EventFlags>
             <Flag name="EVT_SEQ_READY" min_value="0" max_value="1" group="System" description="Sequence ready flag" title="Sequence ready" />
@@ -48,19 +56,6 @@
     </GlobalDefinitions>
     <SharedLibraries>
         <RoleFunctionLibrary>
-            <RoleFunction name="ReadSensorsMovingAvg" namespace="Driver" title="Read sensors and update moving averages" description="Read sensors and update moving averages" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="EmitIrReady" namespace="Driver" title="Emit IR_READY event" description="Emit IR_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="EmitSteamReady" namespace="Driver" title="Emit STEAM_READY event" description="Emit STEAM_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="EmitThermReady" namespace="Driver" title="Emit THERM_READY event" description="Emit THERM_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="SendStatusMaster" namespace="Driver" title="Send status to panel (master mode)" description="Send status to panel (master mode)" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="ReceiveCommand" namespace="Driver" title="Receive command from panel" description="Receive command from panel" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="SetHeaterPwm" namespace="Driver" title="Set heater PWM duty" description="Set heater PWM duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="SetConvectionFan" namespace="Driver" title="Set convection fan duty" description="Set convection fan duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="SetMagnetronPower" namespace="Driver" title="Set magnetron power" description="Set magnetron power" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="PulseBoilerPump" namespace="Driver" title="Pulse boiler pump" description="Pulse boiler pump" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="CheckAnodeCurrent" namespace="Driver" title="Check magnetron anode current" description="Check magnetron anode current" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="LogHwFault" namespace="Driver" title="Log hardware fault" description="Log hardware fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-            <RoleFunction name="ClearHwFault" namespace="Driver" title="Clear hardware fault" description="Clear hardware fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
             <RoleFunction name="StartMagnetron" namespace="MwMicrowave" title="Start magnetron with soft-start" description="Start magnetron with soft-start" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
             <RoleFunction name="StopMagnetron" namespace="MwMicrowave" title="Stop magnetron" description="Stop magnetron" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
             <RoleFunction name="SetMwPower" namespace="MwMicrowave" title="Set microwave power level" description="Set microwave power level" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
@@ -102,59 +97,127 @@
             <RoleFunction name="ReportComplete" namespace="Application" title="Report completion" description="Report completion" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
             <RoleFunction name="LogAppError" namespace="Application" title="Log application error" description="Log application error" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
             <RoleFunction name="ClearAppError" namespace="Application" title="Clear application error" description="Clear application error" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ReadSensorsMovingAvg" namespace="DriverInput" title="Read sensors with moving average" description="Read sensors with moving average" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="EmitIrReady" namespace="DriverInput" title="Emit IR_READY event" description="Emit IR_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="EmitSteamReady" namespace="DriverInput" title="Emit STEAM_READY event" description="Emit STEAM_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="EmitThermReady" namespace="DriverInput" title="Emit THERM_READY event" description="Emit THERM_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="ReceiveCommand" namespace="DriverInput" title="Receive command from panel" description="Receive command from panel" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="OnDoorOpen" namespace="DriverInput" title="Safety: door open immediate stop" description="Safety: door open immediate stop" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetHeaterOn" namespace="DriverOutput" title="Set heaters ON (full power)" description="Set heaters ON (full power)" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetHeaterOff" namespace="DriverOutput" title="Set heaters OFF" description="Set heaters OFF" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetHeaterPwm" namespace="DriverOutput" title="Set heater PWM duty" description="Set heater PWM duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetFanOn" namespace="DriverOutput" title="Set fan ON" description="Set fan ON" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetFanOff" namespace="DriverOutput" title="Set fan OFF" description="Set fan OFF" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetFanPwm" namespace="DriverOutput" title="Set fan PWM duty" description="Set fan PWM duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetPumpOn" namespace="DriverOutput" title="Set pump ON" description="Set pump ON" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetPumpOff" namespace="DriverOutput" title="Set pump OFF" description="Set pump OFF" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetMagOn" namespace="DriverOutput" title="Set magnetron ON (full power)" description="Set magnetron ON (full power)" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetMagOff" namespace="DriverOutput" title="Set magnetron OFF" description="Set magnetron OFF" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SetMagPwm" namespace="DriverOutput" title="Set magnetron PWM power" description="Set magnetron PWM power" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="SendStatusMaster" namespace="DriverOutput" title="Send status to panel" description="Send status to panel" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            <RoleFunction name="CheckAnodeCurrent" namespace="DriverOutput" title="Check magnetron anode current" description="Check magnetron anode current" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
         </RoleFunctionLibrary>
         <ConditionLibrary />
         <LiteralLibrary />
     </SharedLibraries>
-    <Tab name="Driver">
-        <StateMachine initial="HwIdle" layer_priority="1" layer_description="Hardware driver layer" layer_name="Driver">
+    <Tab name="DriverInput">
+        <StateMachine initial="InIdle" layer_priority="1" layer_description="Input devices layer" layer_name="DriverInput">
             <States>
-                <State name="HwIdle" type="initial" parent="" do="" description="Waiting for HW event" />
-                <State name="HwTxStatus" type="normal" parent="" do="" description="Master TX to panel" />
-                <State name="HwRxCommand" type="normal" parent="" do="" description="Receiving command" />
-                <State name="HwSensing" type="normal" parent="" do="" description="Sensing + moving average" />
-                <State name="HwHeating" type="normal" parent="" do="" description="Heating output" />
-                <State name="HwError" type="normal" parent="" do="" description="Hardware error" />
+                <State name="InIdle" type="initial" parent="" do="" description="Waiting for input events" />
+                <State name="InSensing" type="normal" parent="" do="" description="ADC reading + moving average" />
+                <State name="InTxRx" type="normal" parent="" do="" description="Zero-cross sync UART RX" />
+                <State name="InDoorOpen" type="normal" parent="" do="" description="Door open (safety)" />
+                <State name="InError" type="normal" parent="" do="" description="Input error" />
             </States>
             <Events>
-                <Event name="ZC_PULSE" id="1" kind="signal" params="" priority="9" description="AC zero-cross pulse" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="AC zero-cross pulse" />
-                <Event name="TX_DONE" id="2" kind="signal" params="" priority="0" description="Master TX done" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Master TX done" />
-                <Event name="RX_DONE" id="3" kind="signal" params="" priority="0" description="RX complete" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="RX complete" />
-                <Event name="SENSOR_TICK" id="4" kind="signal" params="" priority="0" description="Periodic sensor tick" delivery_type="queue" source_layer="driver" data_type="" data_name="" title="Periodic sensor tick" />
-                <Event name="HEAT_START" id="5" kind="signal" params="" priority="0" description="Start heating" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Start heating" />
-                <Event name="HEAT_STOP" id="6" kind="signal" params="" priority="0" description="Stop heating" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Stop heating" />
-                <Event name="HW_FAULT" id="7" kind="signal" params="err_code" priority="9" description="Hardware fault" delivery_type="queue" source_layer="driver" data_type="uint8_t" data_name="err_code" title="Hardware fault" />
-                <Event name="CLEAR_FAULT" id="8" kind="signal" params="" priority="0" description="Clear fault" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Clear fault" />
+                <Event name="SENSOR_TICK" id="1" kind="signal" params="" priority="0" description="Periodic sensor tick" delivery_type="queue" source_layer="driver" data_type="" data_name="" title="Periodic sensor tick" />
+                <Event name="ADC_DONE" id="2" kind="signal" params="" priority="0" description="ADC conversion complete" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="ADC conversion complete" />
+                <Event name="ZC_PULSE" id="3" kind="signal" params="" priority="9" description="AC zero-cross pulse" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="AC zero-cross pulse" />
+                <Event name="RX_DONE" id="4" kind="signal" params="" priority="0" description="UART RX complete" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="UART RX complete" />
+                <Event name="RX_TIMEOUT" id="5" kind="signal" params="" priority="5" description="UART RX timeout" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="UART RX timeout" />
+                <Event name="DOOR_OPEN" id="6" kind="signal" params="" priority="9" description="Door opened (safety)" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Door opened (safety)" />
+                <Event name="DOOR_CLOSE" id="7" kind="signal" params="" priority="9" description="Door closed" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Door closed" />
+                <Event name="HW_FAULT" id="8" kind="signal" params="err_code" priority="9" description="Hardware fault" delivery_type="queue" source_layer="driver" data_type="uint8_t" data_name="err_code" title="Hardware fault" />
+                <Event name="CLEAR_FAULT" id="9" kind="signal" params="" priority="0" description="Clear fault" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Clear fault" />
             </Events>
             <RoleFunctions>
-                <RoleFunction name="ReadSensorsMovingAvg" namespace="Driver" title="Read sensors and update moving averages" description="Read sensors and update moving averages" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-                <RoleFunction name="EmitIrReady" namespace="Driver" title="Emit IR_READY event" description="Emit IR_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-                <RoleFunction name="EmitSteamReady" namespace="Driver" title="Emit STEAM_READY event" description="Emit STEAM_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-                <RoleFunction name="EmitThermReady" namespace="Driver" title="Emit THERM_READY event" description="Emit THERM_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-                <RoleFunction name="SendStatusMaster" namespace="Driver" title="Send status to panel (master mode)" description="Send status to panel (master mode)" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-                <RoleFunction name="ReceiveCommand" namespace="Driver" title="Receive command from panel" description="Receive command from panel" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-                <RoleFunction name="SetHeaterPwm" namespace="Driver" title="Set heater PWM duty" description="Set heater PWM duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-                <RoleFunction name="SetConvectionFan" namespace="Driver" title="Set convection fan duty" description="Set convection fan duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-                <RoleFunction name="SetMagnetronPower" namespace="Driver" title="Set magnetron power" description="Set magnetron power" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-                <RoleFunction name="PulseBoilerPump" namespace="Driver" title="Pulse boiler pump" description="Pulse boiler pump" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-                <RoleFunction name="CheckAnodeCurrent" namespace="Driver" title="Check magnetron anode current" description="Check magnetron anode current" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-                <RoleFunction name="LogHwFault" namespace="Driver" title="Log hardware fault" description="Log hardware fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
-                <RoleFunction name="ClearHwFault" namespace="Driver" title="Clear hardware fault" description="Clear hardware fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ReadSensorsMovingAvg" namespace="DriverInput" title="Read sensors with moving average" description="Read sensors with moving average" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="EmitIrReady" namespace="DriverInput" title="Emit IR_READY event" description="Emit IR_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="EmitSteamReady" namespace="DriverInput" title="Emit STEAM_READY event" description="Emit STEAM_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="EmitThermReady" namespace="DriverInput" title="Emit THERM_READY event" description="Emit THERM_READY event" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="ReceiveCommand" namespace="DriverInput" title="Receive command from panel" description="Receive command from panel" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="OnDoorOpen" namespace="DriverInput" title="Safety: door open immediate stop" description="Safety: door open immediate stop" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
             </RoleFunctions>
             <Transitions>
-                <Transition source="HwIdle" event="ZC_PULSE" condition="" action="" target="HwTxStatus" transition_type="external" title="Zero-cross: start TX" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="HwTxStatus" event="TX_DONE" condition="" action="" target="HwRxCommand" transition_type="external" title="TX done: await RX" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="HwRxCommand" event="RX_DONE" condition="" action="" target="HwIdle" transition_type="external" title="RX done: idle" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="HwIdle" event="SENSOR_TICK" condition="" action="" target="HwSensing" transition_type="external" title="Sensor tick" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="HwSensing" event="TX_DONE" condition="" action="" target="HwIdle" transition_type="external" title="Sensing done" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="HwIdle" event="HEAT_START" condition="" action="" target="HwHeating" transition_type="external" title="Start heating" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="HwHeating" event="HEAT_STOP" condition="" action="" target="HwIdle" transition_type="external" title="Stop heating" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="HwIdle" event="HW_FAULT" condition="" action="" target="HwError" transition_type="external" title="Fault (HwIdle)" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="HwTxStatus" event="HW_FAULT" condition="" action="" target="HwError" transition_type="external" title="Fault (HwTxStatus)" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="HwRxCommand" event="HW_FAULT" condition="" action="" target="HwError" transition_type="external" title="Fault (HwRxCommand)" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="HwSensing" event="HW_FAULT" condition="" action="" target="HwError" transition_type="external" title="Fault (HwSensing)" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="HwHeating" event="HW_FAULT" condition="" action="" target="HwError" transition_type="external" title="Fault (HwHeating)" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="HwError" event="CLEAR_FAULT" condition="" action="" target="HwIdle" transition_type="external" title="Clear fault" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="InIdle" event="SENSOR_TICK" condition="" action="" target="InSensing" transition_type="external" title="Sensor tick" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="InSensing" event="ADC_DONE" condition="" action="" target="InIdle" transition_type="external" title="Sensing done" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="InIdle" event="ZC_PULSE" condition="" action="" target="InTxRx" transition_type="external" title="ZC: start RX" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="InTxRx" event="RX_DONE" condition="" action="" target="InIdle" transition_type="external" title="RX done" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="InTxRx" event="RX_TIMEOUT" condition="" action="" target="InError" transition_type="external" title="RX timeout" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="InIdle" event="DOOR_OPEN" condition="" action="" target="InDoorOpen" transition_type="external" title="Door open" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="InDoorOpen" event="DOOR_CLOSE" condition="" action="" target="InIdle" transition_type="external" title="Door closed" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="InIdle" event="HW_FAULT" condition="" action="" target="InError" transition_type="external" title="Fault (InIdle)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="InSensing" event="HW_FAULT" condition="" action="" target="InError" transition_type="external" title="Fault (InSensing)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="InTxRx" event="HW_FAULT" condition="" action="" target="InError" transition_type="external" title="Fault (InTxRx)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="InDoorOpen" event="HW_FAULT" condition="" action="" target="InError" transition_type="external" title="Fault (InDoorOpen)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="InError" event="CLEAR_FAULT" condition="" action="" target="InIdle" transition_type="external" title="Clear fault" has_else="false" else_target="" early_return="true" label="T1" />
+            </Transitions>
+        </StateMachine>
+    </Tab>
+    <Tab name="DriverOutput">
+        <StateMachine initial="OutIdle" layer_priority="1" layer_description="Output devices layer" layer_name="DriverOutput">
+            <States>
+                <State name="OutIdle" type="initial" parent="" do="" description="All outputs OFF" />
+                <State name="OutHeating" type="normal" parent="" do="" description="Heater output active" />
+                <State name="OutFanPump" type="normal" parent="" do="" description="Fan / pump active" />
+                <State name="OutMag" type="normal" parent="" do="" description="Magnetron active" />
+                <State name="OutTx" type="normal" parent="" do="" description="UART TX active" />
+                <State name="OutError" type="normal" parent="" do="" description="Output error" />
+            </States>
+            <Events>
+                <Event name="HEAT_START" id="1" kind="signal" params="" priority="0" description="Start heater" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Start heater" />
+                <Event name="HEAT_STOP" id="2" kind="signal" params="" priority="0" description="Stop heater" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Stop heater" />
+                <Event name="FAN_PUMP_START" id="3" kind="signal" params="" priority="0" description="Start fan / pump" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Start fan / pump" />
+                <Event name="FAN_PUMP_STOP" id="4" kind="signal" params="" priority="0" description="Stop fan / pump" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Stop fan / pump" />
+                <Event name="MAG_START" id="5" kind="signal" params="" priority="0" description="Start magnetron" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Start magnetron" />
+                <Event name="MAG_STOP" id="6" kind="signal" params="" priority="0" description="Stop magnetron" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Stop magnetron" />
+                <Event name="ZC_TX_START" id="7" kind="signal" params="" priority="9" description="Zero-cross TX start" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Zero-cross TX start" />
+                <Event name="TX_DONE" id="8" kind="signal" params="" priority="0" description="UART TX complete" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="UART TX complete" />
+                <Event name="TX_TIMEOUT" id="9" kind="signal" params="" priority="5" description="UART TX timeout" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="UART TX timeout" />
+                <Event name="HW_FAULT" id="10" kind="signal" params="err_code" priority="9" description="Hardware fault" delivery_type="queue" source_layer="driver" data_type="uint8_t" data_name="err_code" title="Hardware fault" />
+                <Event name="CLEAR_FAULT" id="11" kind="signal" params="" priority="0" description="Clear fault" delivery_type="direct" source_layer="driver" data_type="" data_name="" title="Clear fault" />
+            </Events>
+            <RoleFunctions>
+                <RoleFunction name="SetHeaterOn" namespace="DriverOutput" title="Set heaters ON (full power)" description="Set heaters ON (full power)" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetHeaterOff" namespace="DriverOutput" title="Set heaters OFF" description="Set heaters OFF" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetHeaterPwm" namespace="DriverOutput" title="Set heater PWM duty" description="Set heater PWM duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetFanOn" namespace="DriverOutput" title="Set fan ON" description="Set fan ON" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetFanOff" namespace="DriverOutput" title="Set fan OFF" description="Set fan OFF" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetFanPwm" namespace="DriverOutput" title="Set fan PWM duty" description="Set fan PWM duty" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetPumpOn" namespace="DriverOutput" title="Set pump ON" description="Set pump ON" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetPumpOff" namespace="DriverOutput" title="Set pump OFF" description="Set pump OFF" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetMagOn" namespace="DriverOutput" title="Set magnetron ON (full power)" description="Set magnetron ON (full power)" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetMagOff" namespace="DriverOutput" title="Set magnetron OFF" description="Set magnetron OFF" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SetMagPwm" namespace="DriverOutput" title="Set magnetron PWM power" description="Set magnetron PWM power" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="SendStatusMaster" namespace="DriverOutput" title="Send status to panel" description="Send status to panel" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+                <RoleFunction name="CheckAnodeCurrent" namespace="DriverOutput" title="Check magnetron anode current" description="Check magnetron anode current" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
+            </RoleFunctions>
+            <Transitions>
+                <Transition source="OutIdle" event="HEAT_START" condition="" action="" target="OutHeating" transition_type="external" title="Start heating" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutHeating" event="HEAT_STOP" condition="" action="" target="OutIdle" transition_type="external" title="Stop heating" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutIdle" event="FAN_PUMP_START" condition="" action="" target="OutFanPump" transition_type="external" title="Start fan/pump" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutFanPump" event="FAN_PUMP_STOP" condition="" action="" target="OutIdle" transition_type="external" title="Stop fan/pump" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutIdle" event="MAG_START" condition="" action="" target="OutMag" transition_type="external" title="Start magnetron" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutMag" event="MAG_STOP" condition="" action="" target="OutIdle" transition_type="external" title="Stop magnetron" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutIdle" event="ZC_TX_START" condition="" action="" target="OutTx" transition_type="external" title="ZC: start TX" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutTx" event="TX_DONE" condition="" action="" target="OutIdle" transition_type="external" title="TX done" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutTx" event="TX_TIMEOUT" condition="" action="" target="OutError" transition_type="external" title="TX timeout" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutIdle" event="HW_FAULT" condition="" action="" target="OutError" transition_type="external" title="Fault (OutIdle)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutHeating" event="HW_FAULT" condition="" action="" target="OutError" transition_type="external" title="Fault (OutHeating)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutFanPump" event="HW_FAULT" condition="" action="" target="OutError" transition_type="external" title="Fault (OutFanPump)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutMag" event="HW_FAULT" condition="" action="" target="OutError" transition_type="external" title="Fault (OutMag)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutTx" event="HW_FAULT" condition="" action="" target="OutError" transition_type="external" title="Fault (OutTx)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="OutError" event="CLEAR_FAULT" condition="" action="" target="OutIdle" transition_type="external" title="Clear fault" has_else="false" else_target="" early_return="true" label="T1" />
             </Transitions>
         </StateMachine>
     </Tab>
@@ -164,6 +227,7 @@
                 <State name="MwIdle" type="initial" parent="" do="" description="Microwave idle" />
                 <State name="Heating" type="normal" parent="" do="" description="Magnetron heating" />
                 <State name="MwError" type="normal" parent="" do="" description="Microwave error" />
+                <State name="Preheating" type="normal" parent="" do="" description="Magnetron preheat / soft-start" />
             </States>
             <Events>
                 <Event name="MW_START" id="1" kind="signal" params="" priority="0" description="Start microwave" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Start microwave" />
@@ -182,13 +246,17 @@
                 <RoleFunction name="ClearMwFault" namespace="MwMicrowave" title="Clear microwave fault" description="Clear microwave fault" return_type="int" arg1_type="" arg1_name="" arg2_type="" arg2_name="" />
             </RoleFunctions>
             <Transitions>
-                <Transition source="MwIdle" event="MW_START" condition="" action="" target="Heating" transition_type="external" title="Start heating" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="MwIdle" event="MW_START" condition="" action="" target="Preheating" transition_type="external" title="Start preheat" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="Heating" event="MW_STOP" condition="" action="" target="MwIdle" transition_type="external" title="Stop heating" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="MwIdle" event="MW_ANODE_FAULT" condition="" action="" target="MwError" transition_type="external" title="Anode fault (MwIdle)" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="MwIdle" event="MW_OVERHEAT" condition="" action="" target="MwError" transition_type="external" title="Overheat (MwIdle)" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="Heating" event="MW_ANODE_FAULT" condition="" action="" target="MwError" transition_type="external" title="Anode fault (Heating)" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="Heating" event="MW_OVERHEAT" condition="" action="" target="MwError" transition_type="external" title="Overheat (Heating)" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="MwError" event="MW_CLEAR" condition="" action="" target="MwIdle" transition_type="external" title="Clear fault" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Preheating" event="MW_ANODE_OK" condition="" action="" target="Heating" transition_type="external" title="Preheat done: heating" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Preheating" event="MW_STOP" condition="" action="" target="MwIdle" transition_type="external" title="Stop preheat" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Preheating" event="MW_ANODE_FAULT" condition="" action="" target="MwError" transition_type="external" title="MW_ANODE_FAULT (Preheating)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Preheating" event="MW_OVERHEAT" condition="" action="" target="MwError" transition_type="external" title="MW_OVERHEAT (Preheating)" has_else="false" else_target="" early_return="true" label="T1" />
             </Transitions>
         </StateMachine>
     </Tab>
@@ -265,6 +333,8 @@
                 <State name="StIdle" type="initial" parent="" do="" description="Steam generator idle" />
                 <State name="Steaming" type="normal" parent="" do="" description="Steam generation active" />
                 <State name="StError" type="normal" parent="" do="" description="Steam error" />
+                <State name="PumpOn" type="normal" parent="" do="" description="Boiler pump pulse ON" />
+                <State name="PumpOff" type="normal" parent="" do="" description="Boiler pump pulse OFF" />
             </States>
             <Events>
                 <Event name="ST_START" id="1" kind="signal" params="" priority="0" description="Start steam" delivery_type="direct" source_layer="middleware" data_type="" data_name="" title="Start steam" />
@@ -288,10 +358,16 @@
             <Transitions>
                 <Transition source="StIdle" event="ST_START" condition="" action="" target="Steaming" transition_type="external" title="Start steam" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="Steaming" event="ST_STOP" condition="" action="" target="StIdle" transition_type="external" title="Stop steam" has_else="false" else_target="" early_return="true" label="T1" />
-                <Transition source="Steaming" event="ST_PUMP_TICK" condition="" action="" target="Steaming" transition_type="external" title="Pulse pump" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="StIdle" event="ST_OVERHEAT" condition="" action="" target="StError" transition_type="external" title="Overheat (StIdle)" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="Steaming" event="ST_OVERHEAT" condition="" action="" target="StError" transition_type="external" title="Overheat (Steaming)" has_else="false" else_target="" early_return="true" label="T1" />
                 <Transition source="StError" event="ST_CLEAR" condition="" action="" target="StIdle" transition_type="external" title="Clear fault" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="Steaming" event="ST_PUMP_TICK" condition="" action="" target="PumpOn" transition_type="external" title="Pump pulse ON" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="PumpOn" event="ST_PUMP_TICK" condition="" action="" target="PumpOff" transition_type="external" title="Pump pulse OFF" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="PumpOff" event="ST_PUMP_TICK" condition="" action="" target="PumpOn" transition_type="external" title="Pump pulse ON" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="PumpOn" event="ST_STOP" condition="" action="" target="StIdle" transition_type="external" title="Stop steam" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="PumpOn" event="ST_OVERHEAT" condition="" action="" target="StError" transition_type="external" title="Overheat (PumpOn)" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="PumpOff" event="ST_STOP" condition="" action="" target="StIdle" transition_type="external" title="Stop steam" has_else="false" else_target="" early_return="true" label="T1" />
+                <Transition source="PumpOff" event="ST_OVERHEAT" condition="" action="" target="StError" transition_type="external" title="Overheat (PumpOff)" has_else="false" else_target="" early_return="true" label="T1" />
             </Transitions>
         </StateMachine>
     </Tab>
