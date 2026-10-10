@@ -676,7 +676,16 @@ def main():
     test_draft_roundtrip_via_dialog()
 
     ok = RESULT.summary()
-    sys.exit(0 if ok else 1)
+    # ------------------------------------------------------------------
+    # [v3.4.2] Linux CI fix: skip Python/Qt teardown to avoid SIGSEGV.
+    # Qt C++ destructors race on Linux glibc at process exit; the test
+    # body already passed, so exit the process immediately after
+    # flushing stdout/stderr.
+    # ------------------------------------------------------------------
+    sys.stdout.flush()
+    sys.stderr.flush()
+    import os as _os
+    _os._exit(0 if ok else 1)
 
 
 if __name__ == "__main__":
