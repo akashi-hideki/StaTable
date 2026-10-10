@@ -130,6 +130,7 @@ jobs:
           python tests/test_v2_7_p4.py
           python tests/test_v2_7_p5_validation.py
           python tests/test_v3_4_0_state_actions.py
+          python tests/test_v3_4_0_signal_safety.py
 
       - name: Run v2.8 test suites
         run: |

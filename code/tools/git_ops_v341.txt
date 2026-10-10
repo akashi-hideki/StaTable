@@ -1,0 +1,31 @@
+# v3.4.1: signal safety test + CI registration + README bump
+# --------------------------------------------------------------------
+
+# --- New: signal safety test ---
+add code/tests/test_v3_4_0_signal_safety.py
+
+# --- New: patch scripts for reproducibility ---
+add code/tools/patches/patch_v3_4_1_ci_register.py
+add code/tools/patches/patch_v3_4_1_readme.py
+
+# --- Modified: CI + README ---
+add .github/workflows/check.yml
+add README.md
+
+commit test(v3.4.1): add StateActionsDialog signal safety test
+
+- tests/test_v3_4_0_signal_safety.py: 7 PASS
+  - 30 QPushButton click() calls (no hang, no exception)
+  - QComboBox / QLineEdit signal emission verification
+  - Regression guard for v3.2.2-style bool-injection bugs
+  - Root-level mock strategy: replace dialog classes by name
+- .github/workflows/check.yml: register new test (45 suites total)
+- README.md: suite 44 -> 45, PASS 1642 -> 1649
+- patch_v3_4_1_*.py: reproducible ops for CI/README updates
+
+Verified:
+  test_ci_registration.py        2 PASS
+  test_readme_consistency.py    32 PASS
+  test_v3_4_0_signal_safety.py   7 PASS
+
+push origin main
