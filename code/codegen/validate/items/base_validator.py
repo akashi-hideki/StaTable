@@ -3,7 +3,7 @@
 
 import sys
 import os
-from typing import List
+from typing import Any, List
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -14,7 +14,7 @@ class BaseValidator:
     """Validator base class"""
     
     category: str = ""
-    rules = {}
+    rules: dict[str, Any] = {}
     
     def validate(self, context: ValidationContext) -> List[ValidationIssue]:
         issues = []

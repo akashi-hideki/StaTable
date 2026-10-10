@@ -46,7 +46,7 @@ class CStructGenerator:
     # ==================================================================
     # [Data Table 1] Common struct templates (SystemContext_t etc.)
     # ==================================================================
-    CONTEXT_TEMPLATES = {
+    CONTEXT_TEMPLATES: dict[str, Any] = {
         # --- Section comment ---
         'section_comment': Template(
             '/* $title */\n'
@@ -87,7 +87,7 @@ class CStructGenerator:
     # ==================================================================
     # [Data Table 2] Common macro templates
     # ==================================================================
-    MACRO_TEMPLATES = {
+    MACRO_TEMPLATES: dict[str, Any] = {
         # --- Section comment ---
         'section_comment': (
             '\n'
@@ -164,7 +164,7 @@ class CStructGenerator:
     # ==================================================================
     # [Data Table 3] Common TransitionContext_t template
     # ==================================================================
-    COMMON_TRANSITION_CONTEXT_TEMPLATES = {
+    COMMON_TRANSITION_CONTEXT_TEMPLATES: dict[str, Any] = {
         'comment': (
             '/* Generic transition context (for common role functions across layers) */\n'
             '/* Same layout as each layer\'s TransitionContext_<Layer>_t */\n'
@@ -186,7 +186,7 @@ class CStructGenerator:
     # ==================================================================
     # [Data Table 4] Per-layer TransitionContext_<Layer>_t
     # ==================================================================
-    LAYER_TRANSITION_CONTEXT_TEMPLATES = {
+    LAYER_TRANSITION_CONTEXT_TEMPLATES: dict[str, Any] = {
         'comment': Template(
             '/* Transition context for $layer layer */\n'
         ),
@@ -216,7 +216,7 @@ class CStructGenerator:
     # ==================================================================
     # [Data Table 6] Member generation templates
     # ==================================================================
-    MEMBER_TEMPLATES = {
+    MEMBER_TEMPLATES: dict[str, Any] = {
         'bit_field': Template(
             '$indent$c_type $name : $width;\n'
         ),

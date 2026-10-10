@@ -17,12 +17,14 @@ Version: 2.2.2 (2026-09-19)
 Version: 2.2.1
 """
 
+from typing import Any
+
 
 class CodeTemplates:
     """Code generation template dictionary"""
 
     # ===== Basic string definitions =====
-    STRINGS = {
+    STRINGS: dict[str, Any] = {
         # --- Fixed section line (VALID C block comment) ---
         'section_line_start': '/*==============================================================',
         'section_line_end':   ' *==============================================================*/',
@@ -60,7 +62,7 @@ class CodeTemplates:
         'log_error': 'LOG_ERROR',
     }
 
-    SECTION_HEADERS = {
+    SECTION_HEADERS: dict[str, Any] = {
         'include': 'Include files',
         'type_defs': 'Type definitions',
         'custom_types': 'User-defined types',
@@ -88,7 +90,7 @@ class CodeTemplates:
         'common_function_decls': 'Common function declarations',
     }
 
-    STRUCT_COMMENTS = {
+    STRUCT_COMMENTS: dict[str, Any] = {
         'system_data': {'title': 'Global variable struct', 'description': 'Manages variables shared across the system'},
         'event_flags': {'title': 'Event flag struct', 'description': 'Manages flags indicating event occurrences'},
         'system_context': {'title': 'System context struct', 'description': 'Integrates global variables and event flags'},
@@ -96,13 +98,13 @@ class CodeTemplates:
         'transition_context': {'title': 'Transition context struct', 'description': 'Holds source state and event'},
     }
 
-    ENUM_COMMENTS = {
+    ENUM_COMMENTS: dict[str, Any] = {
         'state': {'title': 'State definitions', 'description': 'Enum representing states of the state machine'},
         'event': {'title': 'Event definitions', 'description': 'Enum of events that trigger state transitions'},
         'flag': {'title': 'Event flag definitions', 'description': 'Enum representing event flag identifiers'},
     }
 
-    TYPE_NAMES = {
+    TYPE_NAMES: dict[str, Any] = {
         'state': 'STATE_t',
         'event': 'EVENT_t',
         'flag': 'FLAG_t',
@@ -120,7 +122,7 @@ class CodeTemplates:
         'layer_transition_func_prefix': 'transition_',
     }
 
-    FUNCTION_NAMES = {
+    FUNCTION_NAMES: dict[str, Any] = {
         'state_machine_process': 'StateMachine_Process',
         'system_context_init': 'SystemContext_Init',
         'role_func_prefix': 'RoleFunc',
@@ -130,7 +132,7 @@ class CodeTemplates:
         'layer_process_prefix': 'StateMachine_Process_',
     }
 
-    MACRO_NAMES = {
+    MACRO_NAMES: dict[str, Any] = {
         'data_prefix': 'DATA_',
         'flag_prefix': 'FLAG_',
         'max_suffix': '_MAX',
@@ -138,7 +140,7 @@ class CodeTemplates:
         'max_consecutive_pending_events': 'MAX_CONSECUTIVE_PENDING_EVENTS',
     }
 
-    FORMATS = {
+    FORMATS: dict[str, Any] = {
         'section_header': '{start}\n *  {title}\n{end}',
         'file_header': '''/**
  * @file    {filename}
@@ -169,7 +171,7 @@ class CodeTemplates:
         'title_comment': '{indent}/* Title: {title} */',
     }
 
-    LAYER_TEMPLATES = {
+    LAYER_TEMPLATES: dict[str, Any] = {
         'types_header_comment': '''/**
  * @file    statable_types_{layer}.h
  * @brief   Type definitions for {layer} layer
@@ -183,7 +185,7 @@ class CodeTemplates:
 }} TransitionContext_{layer}_t;''',
     }
 
-    COMMON_TYPES_TEMPLATES = {
+    COMMON_TYPES_TEMPLATES: dict[str, Any] = {
         'system_context': '''typedef struct {{
     SystemData_t data;
     EventFlags_t flags;
@@ -199,7 +201,7 @@ class CodeTemplates:
 #endif''',
     }
 
-    ISR_TEMPLATES = {
+    ISR_TEMPLATES: dict[str, Any] = {
         'context_section':    '    /* ===== Context reference (auto-generated) ===== */',
         'enter_log_section':  '    /* ===== Enter log ===== */',
         'action_section':     '    /* ===== Actions (auto-generated) ===== */',
@@ -217,7 +219,7 @@ class CodeTemplates:
         'no_action_hint':     '    /* (no action defined) */',
     }
 
-    DEBUG_MESSAGES = {
+    DEBUG_MESSAGES: dict[str, Any] = {
         'function_entry': 'Enter {func_name}: state={state}, event={event}',
         'function_exit': 'Exit {func_name}: next_state={next_state}',
         'condition_check': 'Check condition: {condition_name}',
@@ -230,7 +232,7 @@ class CodeTemplates:
         'pending_event_too_long': 'Pending event chain too long ({count})',
     }
 
-    OSAL = {
+    OSAL: dict[str, Any] = {
         'os_types': {
             'non_rtos': {'name': 'NonRTOS', 'description': 'No RTOS (bare metal)', 'header': 'osal.h', 'source': 'osal.c'},
             'freertos': {'name': 'FreeRTOS', 'description': 'FreeRTOS', 'header': 'osal_freertos.h', 'source': 'osal_freertos.c'},
@@ -438,7 +440,7 @@ void OSAL_Critical_Exit(void)
         },
     }
 
-    SUPER_INCLUDE_TEMPLATES = {
+    SUPER_INCLUDE_TEMPLATES: dict[str, Any] = {
         'file_comment': '''/**
  * @file    {filename}
  * @brief   StaTable generated code super include
@@ -465,7 +467,7 @@ void OSAL_Critical_Exit(void)
     # Each layer's event processing is now wrapped in its own `{ ... }`
     # scope, so `evt` (of type EVENT_<Layer>_t) does not conflict across
     # layers. The variable name is kept as `evt` for readability.
-    SUPER_LOOP_TEMPLATES = {
+    SUPER_LOOP_TEMPLATES: dict[str, Any] = {
         'file_comment': '''/**
  * @file    {project_name}_run.c
  * @brief   State machine super loop

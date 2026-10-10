@@ -29,7 +29,7 @@ AI prompt generation class
 
 import sys
 import os
-from typing import Optional
+from typing import Any, Optional
 
 sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -385,16 +385,16 @@ class AIPromptGenerator:
                 f'    <cell source="{_esc(source)}" event="{_esc(event)}">'
             )
 
-            actions = []
+            actions: list[Any] = []
             try:
                 actions = sm.get_actions_for_cell(source, event) or []
             except Exception:
-                actions = []
-            relations = []
+                actions: list[Any] = []
+            relations: list[Any] = []
             try:
                 relations = sm.get_relations_for_cell(source, event) or []
             except Exception:
-                relations = []
+                relations: list[Any] = []
 
             if actions:
                 lines.append("      <actions>")
@@ -675,7 +675,7 @@ class AIPromptGenerator:
         ASCII-safe metadata; `message` is passed through verbatim
         (may be localized) so the AI can use it as context.
         """
-        issues = []
+        issues: list[Any] = []
         if validation_result is not None:
             issues = getattr(validation_result, 'issues', None) or []
 

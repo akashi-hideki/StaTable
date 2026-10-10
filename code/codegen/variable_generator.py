@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 class VariableGenerator:
     """Variable and flag generation class (multi-layer state machine support)"""
 
-    INIT_TEMPLATES = {
+    INIT_TEMPLATES: dict[str, Any] = {
         'comment': (
             '/**\n'
             ' * @brief  System context initialization\n'
@@ -140,7 +140,7 @@ class VariableGenerator:
     _TYPE_QUALIFIERS = ('volatile', 'const', 'static')
 
     # v1.6 sec 9.8 #92: separate macro name and field name
-    MACRO_TEMPLATES = {
+    MACRO_TEMPLATES: dict[str, Any] = {
         'data_macro': Template(
             '#define DATA_$macro_name(ctx)    ((ctx)->data.$field_name)\n'
         ),
@@ -149,7 +149,7 @@ class VariableGenerator:
         ),
     }
 
-    INIT_CODE_TEMPLATES = {
+    INIT_CODE_TEMPLATES: dict[str, Any] = {
         'array_init': Template(
             '    memset(ctx->data.$var_name, 0, sizeof(ctx->data.$var_name));\n'
         ),

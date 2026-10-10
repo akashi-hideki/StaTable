@@ -116,7 +116,7 @@ class TimerGenerator:
         return timers
 
     def _get_all_derived_timers(self, global_defs):
-        derived_timers = []
+        derived_timers: list[Any] = []
         for timer in self._get_all_timers(global_defs):
             derived_timers.extend(getattr(timer, 'derived', []))
         return derived_timers

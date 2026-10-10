@@ -38,7 +38,7 @@ v3.8.2 - role_function_library_to_element / _from_element now
 
 import xml.etree.ElementTree as ET
 import logging
-from typing import List, Tuple, Optional
+from typing import Any, List, Optional, Tuple
 
 from .model import (
     State, Event, Transition, StateType, EventKind, RoleFunction,
@@ -221,7 +221,7 @@ def _action_list_to_subelement(parent, tag: str, actions) -> None:
             if cond:
                 attrs['condition'] = cond
         # title is auto-generated; skip to keep XML compact
-        ET.SubElement(container, "Action", **attrs)
+        ET.SubElement(container, "Action", **attrs)  # type: ignore[arg-type]
 
 
 def _state_from_element(elem: ET.Element) -> State:
@@ -336,12 +336,12 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
         _trigger = getattr(event, 'trigger', '') or ''
         if _trigger:
             attrs['trigger'] = _trigger
-        event_elem = ET.SubElement(events_elem, "Event", **attrs)
+        event_elem = ET.SubElement(events_elem, "Event", **attrs)  # type: ignore[arg-type]
         # [C-51 Step 3] Structured trigger detail (optional)
         _td = getattr(event, 'trigger_detail', None)
         if _td is not None:
             td_attrs = {k: str(v) for k, v in _td.to_dict().items()}
-            ET.SubElement(event_elem, "Trigger", **td_attrs)
+            ET.SubElement(event_elem, "Trigger", **td_attrs)  # type: ignore[arg-type]
 
     # RoleFunctions
     # [v3.7] return_type / arg1_* / arg2_* are reserved fields
@@ -366,7 +366,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
             "title": rf.title,
         }
         _add_used_attrs(attrs, rf)
-        ET.SubElement(roles_elem, "RoleFunction", **attrs)
+        ET.SubElement(roles_elem, "RoleFunction", **attrs)  # type: ignore[arg-type]
 
     # Transitions
     trans_elem = ET.SubElement(root, "Transitions")
@@ -393,7 +393,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
         if label:
             attrs["label"] = label
 
-        trans_child = ET.SubElement(trans_elem, "Transition", **attrs)
+        trans_child = ET.SubElement(trans_elem, "Transition", **attrs)  # type: ignore[arg-type]
         for pre in pre_actions:
             ET.SubElement(trans_child, "PreAction", action=str(pre))
         for ea in else_actions:
@@ -406,7 +406,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
         for (source, event) in cell_keys:
             cell_elem = ET.SubElement(
                 cells_elem, "Cell",
-                source=source, event=event,
+                source=source, event=event,  # type: ignore[arg-type]
             )
 
             actions = sm.get_actions_for_cell(source, event)
@@ -613,7 +613,7 @@ def _timer_to_element(parent: ET.Element, timer: TimerBaseDef, tag: str = "Timer
     elem.set("title", timer.title)
     elem.set("interrupt_name", timer.interrupt_name)
     for derived in timer.derived:
-        ET.SubElement(elem, "Derived", **{
+        ET.SubElement(elem, "Derived", **{  # type: ignore[arg-type]
             "period_name": derived.period_name,
             "multiplier": str(derived.multiplier),
             "variable_name": derived.variable_name,
@@ -653,11 +653,11 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
     if defs.custom_types:
         ct_elem = ET.SubElement(root, "CustomTypes")
         for ct in defs.custom_types:
-            ct_child = ET.SubElement(ct_elem, "CustomType", **{
+            ct_child = ET.SubElement(ct_elem, "CustomType", **{  # type: ignore[arg-type]
                 "name": ct.name, "description": ct.description, "title": ct.title,
             })
             for member in ct.members:
-                ET.SubElement(ct_child, "Member", **{
+                ET.SubElement(ct_child, "Member", **{  # type: ignore[arg-type]
                     "name": member.name, "data_type": member.data_type,
                     "bit_width": str(member.bit_width),
                     "description": member.description, "title": member.title,
@@ -666,7 +666,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
 
     vars_elem = ET.SubElement(root, "SystemVariables")
     for var in defs.variables:
-        ET.SubElement(vars_elem, "Variable", **{
+        ET.SubElement(vars_elem, "Variable", **{  # type: ignore[arg-type]
             "name": var.name, "type": var.type, "unit": var.unit,
             "default_value": var.default_value, "group": var.group,
             "description": var.description, "title": var.title,
@@ -675,7 +675,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
 
     flags_elem = ET.SubElement(root, "EventFlags")
     for flag in defs.flags:
-        ET.SubElement(flags_elem, "Flag", **{
+        ET.SubElement(flags_elem, "Flag", **{  # type: ignore[arg-type]
             "name": flag.name, "min_value": str(flag.min_value),
             "max_value": str(flag.max_value), "group": flag.group,
             "description": flag.description, "title": flag.title,
@@ -684,14 +684,14 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
     if defs.interrupts:
         intrs_elem = ET.SubElement(root, "Interrupts")
         for intr in defs.interrupts:
-            intr_child = ET.SubElement(intrs_elem, "Interrupt", **{
+            intr_child = ET.SubElement(intrs_elem, "Interrupt", **{  # type: ignore[arg-type]
                 "name": intr.name, "description": intr.description,
                 "event_names": ",".join(intr.event_names),
                 "is_timer": "true" if intr.is_timer else "false",
                 "title": intr.title,
             })
             for act in intr.actions:
-                ET.SubElement(intr_child, "Action", **{
+                ET.SubElement(intr_child, "Action", **{  # type: ignore[arg-type]
                     "condition": act.condition, "action": act.action,
                 })
             for ref in getattr(intr, 'used_role_functions', []):
@@ -702,7 +702,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
     if defs.placeholders:
         ph_elem = ET.SubElement(root, "DevicePlaceholders")
         for ph in defs.placeholders:
-            ET.SubElement(ph_elem, "Placeholder", **{
+            ET.SubElement(ph_elem, "Placeholder", **{  # type: ignore[arg-type]
                 "name": ph.name, "description": ph.description, "title": ph.title,
             })
 
@@ -717,7 +717,7 @@ def global_defs_to_element(defs: GlobalDefinitions) -> ET.Element:
     if defs.event_queues:
         queues_elem = ET.SubElement(root, "EventQueues")
         for q in defs.event_queues:
-            ET.SubElement(queues_elem, "Queue", **{
+            ET.SubElement(queues_elem, "Queue", **{  # type: ignore[arg-type]
                 "name": q.name, "size": str(q.size),
                 "element_type": q.element_type,
                 "event_ids": ",".join(q.event_ids),
@@ -913,7 +913,7 @@ def role_function_library_from_element(elem: Optional[ET.Element]):
       read back so that the values round-trip unchanged.
     """
     if elem is None:
-        return RoleFunctionLibrary() if RoleFunctionLibrary else None
+        return RoleFunctionLibrary() if RoleFunctionLibrary is not None else None
     lib = RoleFunctionLibrary()
     for rf_elem in elem.findall("RoleFunction"):
         name = rf_elem.get("name", "")
@@ -967,7 +967,7 @@ def condition_library_to_element(lib) -> Optional[ET.Element]:
 
 def condition_library_from_element(elem: Optional[ET.Element]):
     if elem is None:
-        return ConditionLibrary() if ConditionLibrary else None
+        return ConditionLibrary() if ConditionLibrary is not None else None
     lib = ConditionLibrary()
     for ct_elem in elem.findall("Condition"):
         try:
@@ -997,7 +997,7 @@ def literal_library_to_element(lib) -> Optional[ET.Element]:
 
 def literal_library_from_element(elem: Optional[ET.Element]):
     if elem is None:
-        return LiteralLibrary() if LiteralLibrary else None
+        return LiteralLibrary() if LiteralLibrary is not None else None
     lib = LiteralLibrary()
     for lit_elem in elem.findall("Literal"):
         try:
@@ -1052,7 +1052,7 @@ def _project_settings_to_element(settings: Optional[dict]) -> ET.Element:
 
 
 def _project_settings_from_element(elem: Optional[ET.Element]) -> dict:
-    settings = {}
+    settings: dict[str, Any] = {}
     if elem is None:
         return settings
     cg = elem.find("CodeGeneration")
@@ -1139,9 +1139,9 @@ def project_from_xml(filepath: str):
     global_defs = (global_defs_from_element(gd_elem)
                    if gd_elem is not None else GlobalDefinitions())
 
-    role_function_library = (RoleFunctionLibrary() if RoleFunctionLibrary else None)
-    condition_library = (ConditionLibrary() if ConditionLibrary else None)
-    literal_library = (LiteralLibrary() if LiteralLibrary else None)
+    role_function_library = (RoleFunctionLibrary() if RoleFunctionLibrary is not None else None)
+    condition_library = (ConditionLibrary() if ConditionLibrary is not None else None)
+    literal_library = (LiteralLibrary() if LiteralLibrary is not None else None)
 
     libs_elem = root.find("SharedLibraries")
     if libs_elem is not None:

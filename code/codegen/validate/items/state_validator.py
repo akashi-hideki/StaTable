@@ -3,7 +3,7 @@
 
 import sys
 import os
-from typing import List
+from typing import Any, List
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -78,7 +78,7 @@ class StateValidator(BaseValidator):
     
     def _check_duplicate_states(self, context):
         issues = []
-        lower_names = {}
+        lower_names: dict[str, Any] = {}
         for name in context.states.keys():
             lower = name.lower()
             if lower in lower_names:

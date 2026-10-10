@@ -22,7 +22,7 @@ import sys
 import os
 import logging
 from string import Template
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -61,7 +61,7 @@ class TransitionGenerator:
     DEFAULT_TABLE_TYPE = 'array'
     DEFAULT_GENERATION_STYLE = 'table_driven'
 
-    CELL_TEMPLATES = {
+    CELL_TEMPLATES: dict[str, Any] = {
         'header': Template(
             '/**\n'
             ' * @brief  Cell transition: $state_enum -[$event_enum]-> (multi)\n'
@@ -94,7 +94,7 @@ class TransitionGenerator:
         ),
     }
 
-    CELL_PROTO_TEMPLATES = {
+    CELL_PROTO_TEMPLATES: dict[str, Any] = {
         'section_comment': '/* ===== Cell transition function forward declarations ===== */\n',
         'prototype': Template(
             'static $state_type $func_name(\n'
@@ -103,7 +103,7 @@ class TransitionGenerator:
         ),
     }
 
-    TABLE_TEMPLATES = {
+    TABLE_TEMPLATES: dict[str, Any] = {
         'func_ptr_comment': '/* Transition function pointer type */\n',
         'func_ptr_typedef': Template(
             'typedef $state_type (*$func_type)(\n'
@@ -123,7 +123,7 @@ class TransitionGenerator:
         'table_close': '};\n',
     }
 
-    TABLE_HEADER_TEMPLATES = {
+    TABLE_HEADER_TEMPLATES: dict[str, Any] = {
         'header_comment': Template(
             '/**\n'
             ' * @brief  Transition table ($layer layer)\n'
@@ -140,7 +140,7 @@ class TransitionGenerator:
         ),
     }
 
-    DICT_TEMPLATES = {
+    DICT_TEMPLATES: dict[str, Any] = {
         'struct_comment': (
             '/* Transition function dictionary entry */\n'
             '/* Used for debugging, logging, and dynamic dispatch */\n'
@@ -170,7 +170,7 @@ class TransitionGenerator:
         ),
     }
 
-    PROCESS_TEMPLATES = {
+    PROCESS_TEMPLATES: dict[str, Any] = {
         'comment': Template(
             '/**\n'
             ' * @brief  $layer layer state transition processing\n'
@@ -211,7 +211,7 @@ class TransitionGenerator:
     # [v2.6 / MISRA 17.3] LOG_ERROR removed from the generated body.
     # cppcheck does not expand the variadic LOG_ERROR macro from
     # statable_types_common.h and reports it as an implicit function.
-    GET_NEXT_TEMPLATES = {
+    GET_NEXT_TEMPLATES: dict[str, Any] = {
         'comment': Template(
             '/**\n'
             ' * @brief  Get next event for $layer layer\n'
@@ -529,7 +529,7 @@ class TransitionGenerator:
         return ''.join(parts)
 
     def _collect_child_labels(self, rel) -> set:
-        labels = set()
+        labels: set[str] = set()
         for child in (getattr(rel, 'children', None) or []):
             labels.update(getattr(child, 'members', None) or [])
             labels.update(self._collect_child_labels(child))

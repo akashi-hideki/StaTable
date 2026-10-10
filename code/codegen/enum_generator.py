@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class CEnumGenerator:
     """C enum code generation class (multi-layer state machine support)"""
 
-    ENUM_TEMPLATES = {
+    ENUM_TEMPLATES: dict[str, Any] = {
         'section_comment': Template(
             '/* $description */\n'
         ),

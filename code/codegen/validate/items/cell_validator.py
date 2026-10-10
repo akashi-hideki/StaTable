@@ -13,7 +13,7 @@ Rules:
 """
 
 import logging
-from typing import List
+from typing import Any, List
 
 from ..models import (
     ValidationIssue, ValidationSeverity, ValidationContext,
@@ -180,7 +180,7 @@ class CellValidator(BaseValidator):
             return []
         issues = []
         for (source, event) in self._iter_cells(context):
-            seen = {}
+            seen: dict[Any, Any] = {}
             for t in sm.get_transitions_for_cell(source, event):
                 cond = (getattr(t, "condition", "") or "").strip()
                 if not cond:
@@ -206,7 +206,7 @@ class CellValidator(BaseValidator):
             return []
         issues = []
         for (source, event) in self._iter_cells(context):
-            by_target = {}
+            by_target: dict[Any, Any] = {}
             for t in sm.get_transitions_for_cell(source, event):
                 target = (getattr(t, "target", "") or "").strip()
                 if not target:

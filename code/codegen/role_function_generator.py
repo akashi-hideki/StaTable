@@ -22,7 +22,7 @@ import os
 import re
 import logging
 from string import Template
-from typing import Dict, List, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -114,7 +114,7 @@ class RoleFunctionGenerator:
     # ================================================================
     # [Table 1] Declaration templates
     # ================================================================
-    DECLARATION_TEMPLATES = {
+    DECLARATION_TEMPLATES: dict[str, Any] = {
         'comment_with_desc': Template(
             '/**\n'
             ' * @brief  Role function: $title\n'
@@ -143,7 +143,7 @@ class RoleFunctionGenerator:
     # ================================================================
     # [Table 2] Implementation templates (with NULL guard)
     # ================================================================
-    IMPLEMENTATION_TEMPLATES = {
+    IMPLEMENTATION_TEMPLATES: dict[str, Any] = {
         'comment_with_desc': Template(
             '/**\n'
             ' * @brief  Role function: $title\n'
@@ -222,7 +222,7 @@ class RoleFunctionGenerator:
     # ================================================================
     # [Table 3] TRANSITION_ID_NONE constant
     # ================================================================
-    NONE_DEFINE_TEMPLATES = {
+    NONE_DEFINE_TEMPLATES: dict[str, Any] = {
         'section_comment': (
             '\n'
             '/* ============================================================== */\n'
@@ -235,7 +235,7 @@ class RoleFunctionGenerator:
     # ================================================================
     # [Table 4] Common struct for call site tables
     # ================================================================
-    ENTRY_STRUCT_TEMPLATES = {
+    ENTRY_STRUCT_TEMPLATES: dict[str, Any] = {
         'section_comment': (
             '\n'
             '/* ============================================================== */\n'
@@ -254,7 +254,7 @@ class RoleFunctionGenerator:
     # ================================================================
     # [Table 5] Transition_GetId
     # ================================================================
-    TRANSITION_ID_FUNC_TEMPLATES = {
+    TRANSITION_ID_FUNC_TEMPLATES: dict[str, Any] = {
         'prototype_comment': (
             '\n'
             '/* Transition_GetId forward declaration (body at end of file) */\n'
@@ -309,7 +309,7 @@ class RoleFunctionGenerator:
     # ================================================================
     # [Table 6] Per-function call_sites table
     # ================================================================
-    CALL_SITE_TABLE_TEMPLATES = {
+    CALL_SITE_TABLE_TEMPLATES: dict[str, Any] = {
         'table_header': Template(
             '\n/* --- call site table for $func_name --- */\n'
         ),
@@ -329,7 +329,7 @@ class RoleFunctionGenerator:
     # ================================================================
     # [Table 7] Call site comments
     # ================================================================
-    CALL_SITES_COMMENT_TEMPLATES = {
+    CALL_SITES_COMMENT_TEMPLATES: dict[str, Any] = {
         'header': ' *\n * @note   Call sites:\n',
         'line': Template(
             ' *         - [$kind]$kind_pad  $from_state$from_pad'
@@ -341,7 +341,7 @@ class RoleFunctionGenerator:
     # ================================================================
     # [Table 8] User-added area at end of file
     # ================================================================
-    TAIL_USER_SECTION_TEMPLATES = {
+    TAIL_USER_SECTION_TEMPLATES: dict[str, Any] = {
         'section_comment': (
             '\n\n'
             '/* ============================================================== */\n'

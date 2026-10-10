@@ -30,7 +30,7 @@ import sys
 import os
 import logging
 from string import Template
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -61,7 +61,7 @@ def _extract_rf_name(action) -> str:
 class StateActionsGenerator:
     """State actions (Entry / Exit / Do) code generator."""
 
-    HEADER_TEMPLATES = {
+    HEADER_TEMPLATES: dict[str, Any] = {
         'file_comment': '''/**
  * @file    statable_state_actions_{layer}.h
  * @brief   State actions (Entry / Exit / Do) for {layer} layer
@@ -80,7 +80,7 @@ class StateActionsGenerator:
         'decl_do':    'void {layer}_Do   (STATE_{layer}_t state, SystemContext_t *ctx);',
     }
 
-    SOURCE_TEMPLATES = {
+    SOURCE_TEMPLATES: dict[str, Any] = {
         'file_comment': '''/**
  * @file    statable_state_actions_{layer}.c
  * @brief   State actions (Entry / Exit / Do) for {layer} layer
