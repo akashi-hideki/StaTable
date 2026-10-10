@@ -17,7 +17,7 @@ jobs:
   # ==============================================================
   no-japanese:
     name: No Japanese characters
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -36,7 +36,7 @@ jobs:
   # ==============================================================
   syntax:
     name: Python syntax check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -61,7 +61,7 @@ jobs:
   # ==============================================================
   tests:
     name: Unit tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [syntax]
     env:
       QT_QPA_PLATFORM: offscreen
@@ -174,7 +174,7 @@ jobs:
   # ==============================================================
   generated-code:
     name: Generated C code verification
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [syntax]
     env:
       PYTHONIOENCODING: utf-8
@@ -235,7 +235,7 @@ jobs:
   # ==============================================================
   verify-c-syntax:
     name: C syntax verification (gcc + ARM)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [syntax]
     env:
       PYTHONIOENCODING: utf-8
@@ -297,7 +297,7 @@ jobs:
   # ==============================================================
   misra-check:
     name: MISRA check (informational)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [syntax]
     continue-on-error: true
     env:
@@ -371,7 +371,7 @@ jobs:
   # ==============================================================
   mypy-check:
     name: mypy check (informational)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [syntax]
     continue-on-error: true
     env:
@@ -428,7 +428,7 @@ jobs:
   # ==============================================================
   arm-link:
     name: ARM link verification
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [syntax]
     env:
       PYTHONIOENCODING: utf-8
