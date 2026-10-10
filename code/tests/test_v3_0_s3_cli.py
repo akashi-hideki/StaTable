@@ -59,7 +59,10 @@ def main() -> int:
     # --- dynamic expected version (read from pyproject.toml) ---
     _EXPECTED_VERSION = "0.0.0"
     try:
-        import tomllib
+        try:
+            import tomllib
+        except ImportError:
+            import tomli as tomllib  # type: ignore[no-redef]
         _pp = CODE / "pyproject.toml"
         if _pp.exists():
             with open(_pp, "rb") as _f:

@@ -12,7 +12,10 @@ Verifies:
 from __future__ import annotations
 
 import sys
-import tomllib
+try:
+    import tomllib  # Python 3.11+
+except ImportError:  # Python 3.10
+    import tomli as tomllib  # type: ignore[no-redef]
 from pathlib import Path
 
 # code/tests/test_v3_0_s1_packaging.py -> parents[1] = code/

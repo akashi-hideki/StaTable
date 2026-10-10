@@ -126,7 +126,10 @@ def main() -> int:
     pyproj = CODE / "pyproject.toml"
     check("pyproject.toml exists", pyproj.exists())
     if pyproj.exists():
-        import tomllib
+        try:
+            import tomllib
+        except ImportError:
+            import tomli as tomllib  # type: ignore[no-redef]
         data = tomllib.loads(pyproj.read_text(encoding="utf-8"))
         extras = data.get("project", {}).get("optional-dependencies", {})
         check("pyproject has 'gui' extras",
