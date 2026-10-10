@@ -19,17 +19,23 @@
 
 **v3.5.0 は未リリース** (段階的に開発中)
 
-### 最新コミット (CI green 3 連続)
+### 最新コミット (CI green 7 連続)
 
+- `29cf425` ci(v3.5.0): update GitHub Actions to Node.js 24 versions (S-5)
+- `1825170` fix(ci): add tomli fallback for Python 3.10 (S-4)
+- `6c39a34` ci(v3.5.0): add Python matrix (3.10-3.13) + coverage (S-4)
+- `f11fea1` docs(v3.5.0): add HANDOVER_v3_5_0.md (development status)
 - `76cd6c2` ci(v3.5.0): pin all jobs to ubuntu-24.04 (S-3 Step 1)
 - `3cd1b45` feat(v3.5.0): add mypy foundation (Phase 1a, informational)
 - `a203daa` feat(v3.5.0): expand frozen exe smoke tests to 4 levels
 
 ### 品質状態
 
-- **CI: 完全 green (8 ジョブ全て成功)**
-  - 新規: `mypy-check` (informational), 13s
-- **テスト: 46 suites / 1657 PASS / 0 FAIL**
+- **CI: 完全 green (11 ジョブ全て成功)**
+  - Unit tests は **Python 3.10 / 3.11 / 3.12 / 3.13** の 4 matrix
+  - `mypy-check` (informational)
+- **テスト: 46 suites / 1657 PASS / 0 FAIL (py3.10-3.13 全て)**
+- **coverage: htmlcov を artifact 化 (matrix 毎に 4 種)**
 - **mypy baseline: 218 errors / 23 files** (informational, 削減目標)
 - gcc + ARM 全ファイル構文検証: PASS
 - ARM Cortex-M4 リンク検証: PASS
@@ -69,6 +75,28 @@
 - 背景: ubuntu-latest が 2026-10-19〜2026-11-19 で Ubuntu 26.04 に移行
 - 移行期間中の予期せぬ自動切替を防止
 
+### S-4: Python matrix + coverage (commit 6c39a34, fix 1825170)
+
+- `tests` ジョブを Python 3.10 / 3.11 / 3.12 / 3.13 の 4 matrix に
+  - `fail-fast: false` で 1 つ落ちても他は継続
+- 各テストスイートを `coverage run --parallel-mode` でラップ
+  - `test_v3_5_s1_smoke.py` は `os._exit(0)` のため除外（coverage の atexit が走らない）
+- `coverage combine` + `coverage report` + `coverage html` を実行
+- `coverage-py3.1x` として HTML を artifact 化
+- `code/.coveragerc` 追加、`pyproject.toml` に `coverage>=7.0`
+- Python 3.10 の `tomllib` 不在対応:
+  - 4 テストファイルに `try: import tomllib / except: import tomli`
+  - `pyproject.toml` に `tomli>=2.0; python_version < '3.11'`
+  - `check.yml` の install に `tomli` 追加
+
+### S-5: GitHub Actions Node.js 24 対応 (commit 29cf425)
+
+- `actions/checkout@v4` -> `v5`（8 箇所）
+- `actions/setup-python@v5` -> `v6`（8 箇所）
+- `actions/upload-artifact@v4` -> `v5`（5 箇所）
+- 効果: Node.js 20 deprecation 警告が 21 件 -> 1 件に削減
+  - 残る 1 件は `upload-artifact@v5` 側の問題（GitHub 側の対応待ち）
+
 ### 配布パッケージ構造 (v3.4.3 以降、変更なし)
 
 - サブフォルダレイアウト:
@@ -85,6 +113,7 @@
    - Phase 1b: `CodeTemplates` の型問題解消 (~150 errors 削減)
    - Phase 1c: `Optional[X]` -> `X | None` 統一 (88 箇所)
    - S-3 Step 2: ubuntu-26.04 preview ジョブ追加 (**10/19 以降**)
+   - 完了済み: S-4 (matrix + coverage), S-5 (Node.js 24 対応)
 
 2. **ビジネス側から要望された機能**
    - ビジネススレッドからのフィードバック待ち
@@ -219,6 +248,10 @@ PowerShell で以下を実行:
 
 ## v3.5.0 コミット履歴
 
+- `29cf425` ci(v3.5.0): update GitHub Actions to Node.js 24 versions (S-5)
+- `1825170` fix(ci): add tomli fallback for Python 3.10 (S-4)
+- `6c39a34` ci(v3.5.0): add Python matrix (3.10-3.13) + coverage (S-4)
+- `f11fea1` docs(v3.5.0): add HANDOVER_v3_5_0.md (development status)
 - `76cd6c2` ci(v3.5.0): pin all jobs to ubuntu-24.04 (S-3 Step 1)
 - `3cd1b45` feat(v3.5.0): add mypy foundation (Phase 1a, informational)
 - `a203daa` feat(v3.5.0): expand frozen exe smoke tests to 4 levels
