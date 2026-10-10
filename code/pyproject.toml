@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "statable"
-version = "3.4.3"
+version = "3.5.0"
 description = "MISRA C:2012-aware state machine design and C code generation for embedded systems"
 readme = "README.md"
 requires-python = ">=3.10"
