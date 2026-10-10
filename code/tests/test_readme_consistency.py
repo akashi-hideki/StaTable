@@ -385,6 +385,9 @@ def test_full_run():
     env.setdefault("QT_QPA_PLATFORM", "offscreen")
     env.setdefault("STATABLE_DISABLE_MERMAID", "1")
     env.setdefault("PYTHONIOENCODING", "utf-8")
+    # [v3.5.0] Some tests call os._exit(0); without
+    # unbuffered stdout their TOTAL: line is lost.
+    env["PYTHONUNBUFFERED"] = "1"
 
     total_pass = 0
     total_fail = 0
@@ -417,11 +420,19 @@ def test_full_run():
             total_fail += int(m.group(3))
             total_skip += int(m.group(4))
         else:
-            # Fallback: some tests may print differently
+            # Fallback 1: "TOTAL: N PASSED: P FAILED: F"
             p = re.search(r"TOTAL:\s*(\d+)\s+PASSED:\s*(\d+)\s+FAILED:\s*(\d+)", out)
             if p:
                 total_pass += int(p.group(2))
                 total_fail += int(p.group(3))
+            else:
+                # Fallback 2: "Result: N PASS / M FAIL"
+                r2 = re.search(
+                    r"Result:\s*(\d+)\s+PASS\s*/\s*(\d+)\s+FAIL",
+                    out)
+                if r2:
+                    total_pass += int(r2.group(1))
+                    total_fail += int(r2.group(2))
 
     print(f"         Measured: PASS={total_pass} FAIL={total_fail} SKIP={total_skip}")
 
