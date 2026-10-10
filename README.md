@@ -660,6 +660,35 @@ generation causing undefined-symbol link errors.
 - S-3 Step 2: ubuntu-26.04 preview job (2026-10-19 onwards).
 
 
+### Eclipse Installer (v0.1.0 / standalone)
+
+**Separate app**, not bundled with StaTable itself.
+
+**StaTable-Eclipse-Installer.exe** copies StaTable-generated C
+code into an Eclipse CDT / ARM Cross GCC project, with optional
+scaffolding (startup.s, linker.ld, syscalls.c, main.c, Makefile,
+.project, .cproject, .settings).
+
+**Download:** see the eclipse-installer-v0.1.0 release:
+https://github.com/akashi-hideki/StaTable/releases/tag/eclipse-installer-v0.1.0
+(StaTable-Eclipse-Installer-v0.1.0-win64.zip, 45.8 MB).
+
+**Usage (GUI):**
+
+1. Launch StaTable-Eclipse-Installer.exe
+2. Select Eclipse project root (folder containing .project)
+3. Select StaTable output/ dir (from the code generator)
+4. Click Install
+
+**Usage (CLI):**
+
+StaTable-Eclipse-Installer.exe --cli --project P --output O
+
+**Verified:** Eclipse 4.41 (embedcpp) ARM Cross GCC import +
+build (0 errors), make build (firmware.elf 5528 bytes),
+QEMU netduinoplus2 UART output.
+
+
 ### v2.8.0 — AI Diagnosis Refresh ✅ Released (2026-09-27)
 
 **Status:** Released
