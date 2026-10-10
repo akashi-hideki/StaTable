@@ -136,3 +136,5 @@ github-recovery*.txt
 # Portable ZIP (distribute via GitHub Releases, not via Git)
 *.zip
 StaTable-portable-*.zip
+
+dist_package/

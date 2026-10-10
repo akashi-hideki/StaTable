@@ -1,0 +1,28 @@
+# v3.4.0: StateActionsDialog combo-based editing + role/event mgmt
+# --------------------------------------------------------------------
+
+# --- Modified files ---
+add code/statable_gui/state_actions_dialog.py
+add code/statable_gui/matrix_table.py
+add code/statable_gui/widgets.py
+add code/statable/__init__.py
+add code/codegen/__init__.py
+add code/pyproject.toml
+add code/tests/test_v2_7_p4.py
+add README.md
+add .github/workflows/check.yml
+
+# --- New test file (renamed from test_v2_7_p5.py) ---
+add code/tests/test_v3_4_0_state_actions.py
+
+# --- Patch scripts for reproducibility ---
+add code/tools/patches/patch_cooking_phase7_state_actions_context.py
+add code/tools/patches/patch_v3_4_0_regression.py
+add code/tools/patches/patch_v3_4_0_hotfix.py
+add code/tools/patches/patch_v3_4_0_version_label_fix.py
+add code/tools/patches/patch_v3_4_0_readme_section.py
+add code/tools/patches/patch_v3_4_0_finalize.py
+
+commit feat(v3.4.0): StateActionsDialog combo-based editing + role/event mgmt
+
+push origin main
