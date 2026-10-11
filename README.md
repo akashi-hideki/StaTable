@@ -7,7 +7,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/statable.svg)](https://pypi.org/project/statable/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-1793%20PASS-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-1873%20PASS-green.svg)]()
 [![MISRA](https://img.shields.io/badge/MISRA-C%3A2012-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
@@ -71,7 +71,7 @@ The New Project Wizard is fully translated to **简体中文**.
 ### Test Coverage
 
 - **+58 new tests** (`test_v3_2_s1_wizard.py`): templates, generation, rename, menu cleanup
-- Total: **1793 PASS / 0 FAIL / 2 SKIP** across 48 suites
+- Total: **1873 PASS / 0 FAIL / 2 SKIP** across 49 suites
 
 ---
 
@@ -154,7 +154,7 @@ custom tooling from scratch.
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **48 test suites, 1793 PASS / 0 FAIL / 2 SKIP**
+- ✅ **49 test suites, 1873 PASS / 0 FAIL / 2 SKIP**
 
 ### v2.7 Highlights
 
@@ -208,7 +208,7 @@ diagrams, and generate production-ready C code with a single click.*
 | **Ubuntu 22.04+** | ⚠️ **Auto tests pass on CI** | GUI not yet manually verified — feedback welcome |
 | **macOS** | ⚠️ **Not tested** | Community testing welcome |
 
-**Note for Linux users**: The automated test suite (48 suites, 1793 tests)
+**Note for Linux users**: The automated test suite (49 suites, 1873 tests)
 passes on Ubuntu via GitHub Actions, but the GUI has only been manually
 verified on Windows. If you try it on Linux, please report your experience
 via [GitHub Issues](https://github.com/akashi-hideki/StaTable/issues).
@@ -300,7 +300,7 @@ python tests/test_v2_2_p1.py
 python tests/test_v2_7_p4.py
 ```
 
-Expected: **1793 PASS / 0 FAIL / 2 SKIP** across 48 suites.
+Expected: **1873 PASS / 0 FAIL / 2 SKIP** across 49 suites.
 
 ---
 
@@ -617,6 +617,29 @@ or validation failure, please capture:
 These will drive the next iteration of the prompt and validator.
 
 ## Roadmap
+### v3.5.3 Released (2026-10-11)
+
+**Status:** Released
+
+**Highlights**
+
+- **Eclipse Installer v0.1.1** (separate standalone release):
+  - `core.py`: remove duplicate `.settings/*` write (each file
+    was written once but appeared in both `installed` and `skipped`)
+  - Templates: normalize encoding (remove UTF-8 BOM, CRLF -> LF)
+  - README.md / README_zh.md added
+- **Deep test suite** `test_v3_5_3_eclipse_installer_deep.py` (80 PASS):
+  L1 template integrity + L2 core.install edge cases
+- **E2E script** `tools/e2e_eclipse_installer.py` (local-only):
+  L3 compile, L4 link, L5 QEMU UART banner
+
+**Tests:** 49 suites / **1873 PASS** / 0 FAIL.
+
+**Remaining (v3.5.4+)**
+
+- S-3 Step 2: ubuntu-26.04 preview job (2026-10-19 onwards)
+
+
 ### v3.5.2 Released (2026-10-11)
 
 **Status:** Released
@@ -686,7 +709,7 @@ generation causing undefined-symbol link errors.
 
 **Verification**
 
-- 48 test suites / **1793 PASS** / 0 FAIL (Python 3.10-3.13).
+- 49 test suites / **1873 PASS** / 0 FAIL (Python 3.10-3.13).
 - gcc + ARM Cortex-M4 syntax + link verification: **PASS**
   (firmware.bin 28540 bytes, identical to v3.4.3).
 - GUI end-to-end: WinError 5 resolved; Clean && Regenerate flow
@@ -927,7 +950,7 @@ python tests/test_v2_3_p1.py
 # ...
 ```
 
-All 48 suites should pass (1793 PASS / 2 SKIP).
+All 49 suites should pass (1873 PASS / 2 SKIP).
 
 ---
 

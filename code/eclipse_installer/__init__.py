@@ -9,4 +9,4 @@ Usage:
     python -m eclipse_installer            # GUI
     python -m eclipse_installer --cli ...  # CLI
 """
-__version__ = "0.1.0"
+__version__ = "0.1.1"

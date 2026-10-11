@@ -158,6 +158,7 @@ jobs:
           python tests/test_v3_5_s1_smoke.py
           coverage run --parallel-mode tests/test_v3_5_gui_output_clean.py
           coverage run --parallel-mode tests/test_v3_5_1_eclipse_installer.py
+          coverage run --parallel-mode tests/test_v3_5_3_eclipse_installer_deep.py
 
       - name: Run smoke tests (levels 0-3)
         run: |
