@@ -151,12 +151,6 @@ def install(opts: InstallOptions) -> InstallResult:
         _write_template("settings/language.settings.xml",
                         root / ".settings" / "language.settings.xml",
                         opts.overwrite_scaffolding, res, repls)
-        _write_template("settings/org.eclipse.core.resources.prefs",
-                        root / ".settings" / "org.eclipse.core.resources.prefs",
-                        opts.overwrite_scaffolding, res, repls)
-        _write_template("settings/language.settings.xml",
-                        root / ".settings" / "language.settings.xml",
-                        opts.overwrite_scaffolding, res, repls)
     if opts.with_samples:
         for xml in out.glob("*.xml"):
             _copy_file(xml, root / "samples" / xml.name,
