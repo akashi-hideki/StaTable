@@ -1,4 +1,4 @@
-﻿/* main.c
+/* main.c
  * Demo entry point for StaTable-generated state machine.
  *
  * Target: STM32F405 (QEMU netduinoplus2 / real HW).

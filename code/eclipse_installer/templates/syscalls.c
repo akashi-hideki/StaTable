@@ -1,4 +1,4 @@
-﻿/* syscalls.c
+/* syscalls.c
  * Newlib syscall stubs: route printf() to USART2 (PA2=TX, PA3=RX).
  *
  * Target: STM32F405 (QEMU netduinoplus2 / real HW).
