@@ -63,8 +63,12 @@ try:
     from statable.shared.literal_library import (
         LiteralLibrary, LiteralDefinition)
 except ImportError:
-    RoleFunctionLibrary = ConditionLibrary = LiteralLibrary = None
-    LibRoleFunction = ConditionTemplate = LiteralDefinition = None
+    RoleFunctionLibrary = None  # type: ignore[misc,assignment]
+    ConditionLibrary = None  # type: ignore[misc,assignment]
+    LiteralLibrary = None  # type: ignore[misc,assignment]
+    LibRoleFunction = None  # type: ignore[misc,assignment]
+    ConditionTemplate = None  # type: ignore[misc,assignment]
+    LiteralDefinition = None  # type: ignore[misc,assignment]
 
 
 # ======================================================================
@@ -174,7 +178,7 @@ def _state_to_element(state: State) -> ET.Element:
         "do": state.do,
         "description": state.description,
     }
-    elem = ET.Element("State", **attrs)
+    elem = ET.Element("State", **attrs)  # type: ignore[arg-type]
 
     # [v2.7.0] entry / exit / do_actions are List[ActionStep]
     _action_list_to_subelement(elem, "Entry",
@@ -403,13 +407,13 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
     cell_keys = sm.get_cell_keys()
     if cell_keys:
         cells_elem = ET.SubElement(root, "Cells")
-        for (source, event) in cell_keys:
+        for (source, ev_key) in cell_keys:
             cell_elem = ET.SubElement(
                 cells_elem, "Cell",
-                source=source, event=event,  # type: ignore[arg-type]
+                source=source, event=ev_key,
             )
 
-            actions = sm.get_actions_for_cell(source, event)
+            actions = sm.get_actions_for_cell(source, ev_key)
             if actions:
                 actions_elem = ET.SubElement(cell_elem, "Actions")
                 for a in actions:
@@ -418,7 +422,7 @@ def state_machine_to_element(sm: StateMachine) -> ET.Element:
                                   trigger=a.trigger,
                                   title=a.title)
 
-            relations = sm.get_relations_for_cell(source, event)
+            relations = sm.get_relations_for_cell(source, ev_key)
             if relations:
                 rels_elem = ET.SubElement(cell_elem, "Relations")
                 for r in relations:
@@ -467,9 +471,11 @@ def state_machine_from_element(elem: ET.Element) -> StateMachine:
             params_str = event_elem.get("params", "")
             params = [p.strip() for p in params_str.split(",") if p.strip()] if params_str else []
             try:
+                _id_str = event_elem.get("id")
+                _event_id = int(_id_str) if _id_str else None
                 sm.add_event(Event(
                     name=event_elem.get("name", ""),
-                    id=int(event_elem.get("id")) if event_elem.get("id") else None,
+                    id=_event_id,
                     kind=EventKind(event_elem.get("kind", "signal")),
                     params=params,
                     priority=int(event_elem.get("priority", 0)),
@@ -1111,11 +1117,17 @@ def project_to_xml(
             or literal_library is not None):
         libs_elem = ET.SubElement(root, "SharedLibraries")
         if role_function_library is not None:
-            libs_elem.append(role_function_library_to_element(role_function_library))
+            _e = role_function_library_to_element(role_function_library)
+            if _e is not None:
+                libs_elem.append(_e)
         if condition_library is not None:
-            libs_elem.append(condition_library_to_element(condition_library))
+            _e = condition_library_to_element(condition_library)
+            if _e is not None:
+                libs_elem.append(_e)
         if literal_library is not None:
-            libs_elem.append(literal_library_to_element(literal_library))
+            _e = literal_library_to_element(literal_library)
+            if _e is not None:
+                libs_elem.append(_e)
 
     for name, sm in tabs:
         tab_elem = ET.SubElement(root, "Tab")

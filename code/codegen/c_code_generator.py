@@ -952,7 +952,7 @@ class CCodeGenerator:
             enum_code = self.enum_gen.generate_all_enums(
                 self._get_states_list(sm),
                 self._get_events_list(sm),
-                None,
+                [],
             )
             if enum_code:
                 results.append(enum_code)

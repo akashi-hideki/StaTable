@@ -22,7 +22,7 @@ import sys
 import os
 import logging
 from string import Template
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -270,12 +270,12 @@ class TransitionGenerator:
         self.layer_name: str = ""
         self._current_state_machine: Optional[StateMachine] = None
 
-        self.table_generators: Dict[str, callable] = {
+        self.table_generators: Dict[str, Callable[..., str]] = {
             'array':      self._generate_table_array,
             'switch':     self._generate_table_switch,
             'dictionary': self._generate_table_dictionary,
         }
-        self.process_generators: Dict[str, callable] = {
+        self.process_generators: Dict[str, Callable[..., str]] = {
             'table_driven': self._generate_process_table_driven,
             'switch_case':  self._generate_process_switch_case,
         }
@@ -682,7 +682,7 @@ class TransitionGenerator:
         return ''.join(parts)
 
     def generate_transition_table(self, state_machine: StateMachine,
-                                  table_type: str = None) -> str:
+                                  table_type: Optional[str] = None) -> str:
         if table_type is None:
             table_type = self.DEFAULT_TABLE_TYPE
         generator = self.table_generators.get(table_type)
@@ -749,7 +749,7 @@ class TransitionGenerator:
             state_padded = state.name.ljust(state_col_width + 2)
             cells = [cell_values[state_idx][event_idx].ljust(col_widths[event_idx])
                      for event_idx in range(len(events))]
-            row = f"    /* {state_padded}*/ {{ "
+            row: str = f"    /* {state_padded}*/ {{ "
             row += ", ".join(cells)
             row += " },\n"
             parts.append(row)
@@ -834,7 +834,7 @@ class TransitionGenerator:
         return ''.join(parts)
 
     def generate_process_function(self, state_machine: StateMachine,
-                                  generation_style: str = None) -> str:
+                                  generation_style: Optional[str] = None) -> str:
         if generation_style is None:
             generation_style = self.DEFAULT_GENERATION_STYLE
         generator = self.process_generators.get(generation_style)

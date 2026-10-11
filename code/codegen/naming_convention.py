@@ -11,6 +11,7 @@ Version: 2.2.5 (2026-09-19)
 import re
 import sys
 import os
+from typing import Any, Dict
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -23,7 +24,7 @@ except ImportError:
 class CNamingConvention:
     """Class managing C naming conventions"""
 
-    CONVERSION_PATTERNS = {
+    CONVERSION_PATTERNS: Dict[str, Dict[str, Any]] = {
         'upper_snake': {
             'patterns': [
                 (r'(.)([A-Z][a-z]+)', r'\1_\2'),

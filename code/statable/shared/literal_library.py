@@ -47,7 +47,9 @@ class LiteralLibrary:
             del self.literals[name]
 
     def get(self, name: str) -> LiteralDefinition:
-        return self.literals.get(name)
+        result = self.literals.get(name)
+        assert result is not None, f"literal not found: {name}"
+        return result
 
     def list_all(self) -> List[LiteralDefinition]:
         return list(self.literals.values())

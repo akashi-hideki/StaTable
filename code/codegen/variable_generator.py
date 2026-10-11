@@ -89,7 +89,7 @@ class VariableGenerator:
         'function_close': '}\n',
     }
 
-    INIT_FUNCTION_STEPS = [
+    INIT_FUNCTION_STEPS: List[Dict[str, Any]] = [
         {'action': 'template', 'key': 'comment'},
         {'action': 'template', 'key': 'signature',
          'format': {'func_name': '{func_name}'}},
@@ -176,7 +176,7 @@ class VariableGenerator:
         self.strings = self.templates.STRINGS
         self.formats = self.templates.FORMATS
 
-        self.step_executors = {
+        self.step_executors: Dict[str, Callable[..., Any]] = {
             'template': self._execute_template_step,
             'blank': self._execute_blank_step,
             'loop': self._execute_loop_step,

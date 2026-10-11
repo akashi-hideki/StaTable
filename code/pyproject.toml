@@ -83,3 +83,11 @@ ignore_errors = true
 [[tool.mypy.overrides]]
 module = ["codegen.*", "statable.*"]
 disable_error_code = ["no-redef"]
+
+
+# [v3.5.1 / Phase 1c] PySide6 Qt enum stubs are incomplete
+# (Qt.Checked, Qt.ItemIsUserCheckable, ...). Suppress in the
+# validation dialog which uses them heavily at module scope.
+[[tool.mypy.overrides]]
+module = ["codegen.validate.validation_dialog"]
+disable_error_code = ["attr-defined", "union-attr"]

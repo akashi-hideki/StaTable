@@ -1,6 +1,8 @@
 # codegen/validate/data/keywords.py
 """\nKeyword definitions (data only)\n"""
 
+from typing import Any, Dict
+
 IGNORE_KEYWORDS = {
     'greeting': ['Understood', 'Understood', 'Understood', 'Yes,', 'Hello'],
     'preface': ['Below', 'Analysis result', 'Validated', 'Confirmed', 'The following is'],
@@ -9,7 +11,7 @@ IGNORE_KEYWORDS = {
     'closing': ['That is all', 'The above is', 'Please confirm', 'Best regards'],
 }
 
-MARKERS = {
+MARKERS: Dict[str, Any] = {
     'primary': {
         'start': '---CHANGES_START---',
         'end': '---CHANGES_END---',

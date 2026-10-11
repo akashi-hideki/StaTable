@@ -4,9 +4,11 @@
 import logging
 import os
 from datetime import datetime
+from typing import Optional
 
 
-def setup_logger(name: str = "validate", log_dir: str = None) -> logging.Logger:
+def setup_logger(name: str = "validate",
+                 log_dir: Optional[str] = None) -> logging.Logger:
     """Setup logger"""
     logger = logging.getLogger(name)
     

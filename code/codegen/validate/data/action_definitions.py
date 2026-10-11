@@ -14,7 +14,9 @@ Action definitions (data only).
       set_early_return
 """
 
-ACTION_DEFINITIONS = {
+from typing import Any, Dict
+
+ACTION_DEFINITIONS: Dict[str, Dict[str, Any]] = {
     'set_initial': {
         'description': 'Set initial state',
         'params': {

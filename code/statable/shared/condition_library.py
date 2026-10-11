@@ -44,7 +44,9 @@ class ConditionLibrary:
             del self.condition_templates[name]
 
     def get(self, name: str) -> ConditionTemplate:
-        return self.condition_templates.get(name)
+        result = self.condition_templates.get(name)
+        assert result is not None, f"template not found: {name}"
+        return result
 
     def list_all(self) -> List[ConditionTemplate]:
         return list(self.condition_templates.values())

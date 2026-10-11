@@ -155,7 +155,7 @@ class CEnumGenerator:
         if getattr(state, 'type', None) and state.type != StateType.NORMAL:
             comments.append(f"Type: {state.type.name}")
         if getattr(state, 'title', ''):
-            comments.append(f"Title: {state.title}")
+            comments.append(f"Title: {getattr(state, 'title', '')}")
         return ' '.join(comments)
 
     def _generate_event_comment(self, event: Event) -> str:
@@ -312,7 +312,7 @@ class CEnumGenerator:
         return result
 
     def generate_all_enums(self, states: List[State], events: List[Event],
-                           flags: List[EventFlag] = None) -> str:
+                           flags: Optional[List[EventFlag]] = None) -> str:
         self._log_debug(f"=== generate_all_enums START: "
                         f"{len(states)} states, {len(events)} events, "
                         f"{len(flags) if flags else 0} flags ===")

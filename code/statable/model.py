@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Union
 
 
 class StateType(Enum):
@@ -111,10 +111,12 @@ class State:
     parent: Optional[str] = None
     # [v2.7.0] List[str] -> List[ActionStep]. Legacy str / list-of-str
     # values are auto-normalized in __post_init__.
-    entry: List[ActionStep] = field(default_factory=list)
-    exit: List[ActionStep] = field(default_factory=list)
+    # [v3.5.1] Accept str for backward compatibility (auto-normalized
+    # in __post_init__ to List[ActionStep]).
+    entry: Union[List[ActionStep], List[str]] = field(default_factory=list)
+    exit: Union[List[ActionStep], List[str]] = field(default_factory=list)
     # [v2.7.0] do activity: executed every loop while the state is active.
-    do_actions: List[ActionStep] = field(default_factory=list)
+    do_actions: Union[List[ActionStep], List[str]] = field(default_factory=list)
     # [Reserved] Not exposed in UI / not used by codegen.
     # Persisted in XML for backward compatibility only.
     do: str = ""
@@ -154,7 +156,7 @@ class EventTrigger:
 
     def to_dict(self) -> dict:
         """Serialize non-empty fields only (order stable)."""
-        d = {"type": self.type}
+        d: Dict[str, Any] = {"type": self.type}
         if self.source:        d["source"] = self.source
         if self.description:   d["description"] = self.description
         if self.edge:          d["edge"] = self.edge
