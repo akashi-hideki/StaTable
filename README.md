@@ -617,6 +617,44 @@ or validation failure, please capture:
 These will drive the next iteration of the prompt and validator.
 
 ## Roadmap
+### v3.5.2 Released (2026-10-11)
+
+**Status:** Released
+
+**Highlights**
+
+- **Phase 1c complete**: mypy baseline **58 -> 0 errors**
+  (118 source files)
+- Annotation-only changes + 2 runtime guards; no behavior change.
+- Key fixes:
+  - xml_io.py (16): ImportError fallback typing, Element kwargs
+    invariance, int(str | None) guard, append None-guards
+  - validation_dialog.py (9): PySide6 Qt enum stub suppression
+    via [[tool.mypy.overrides]]
+  - transition_generator.py (7): Callable[..., str], Optional[str]
+  - naming_convention.py (6): typed CONVERSION_PATTERNS
+  - model.py (4): Union[List[ActionStep], List[str]] for
+    State entry/exit/do_actions (backward compat)
+  - misc: enum_generator, variable_generator, c_code_generator,
+    logger, response_parser/validator, prompt_generator
+
+**Tests:** 48 suites / 1793 PASS / 0 FAIL.
+
+**Remaining (v3.5.3+)**
+
+- S-3 Step 2: ubuntu-26.04 preview job (2026-10-19 onwards)
+
+
+### v3.5.1 Released (2026-10-11)
+
+**Status:** Released
+
+- **Eclipse Installer v0.1.0** (standalone app): see the
+  `eclipse-installer-v0.1.0` release.
+- Repository additions: `eclipse_installer/` package,
+  `tools/build_and_run.py`, `test_v3_5_1_eclipse_installer.py`.
+
+
 ### v3.5.0 Released (2026-10-11)
 
 **Status:** Released
