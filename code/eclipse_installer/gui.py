@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication, QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
     QGroupBox, QLabel, QLineEdit, QPushButton, QFileDialog,
-    QCheckBox, QTextEdit, QDialogButtonBox, QMessageBox,
+    QCheckBox, QComboBox, QTextEdit, QDialogButtonBox, QMessageBox,
 )
 
 from .core import InstallOptions, install
@@ -34,6 +34,21 @@ class InstallDialog(QDialog):
         b1.clicked.connect(self._pick_project)
         row1 = QHBoxLayout(); row1.addWidget(self.ed_project); row1.addWidget(b1)
         f.addRow("Eclipse project root:", row1)
+
+        self.ed_xml = QLineEdit()
+        self.ed_xml.setPlaceholderText(
+            "(optional) StaTable XML -> auto-generate C code")
+        bxml = QPushButton("Browse...")
+        bxml.clicked.connect(self._pick_xml)
+        rowxml = QHBoxLayout(); rowxml.addWidget(self.ed_xml); rowxml.addWidget(bxml)
+        f.addRow("XML (optional):", rowxml)
+
+        self.cb_comm_mode = QComboBox()
+        self.cb_comm_mode.addItem(
+            "Auto (follow XML comm_monitor_enabled)", "auto")
+        self.cb_comm_mode.addItem("Force ON (override XML)", "on")
+        self.cb_comm_mode.addItem("Force OFF (override XML)", "off")
+        f.addRow("comm_monitor:", self.cb_comm_mode)
 
         self.ed_output = QLineEdit()
         b2 = QPushButton("Browse...")
@@ -98,6 +113,13 @@ class InstallDialog(QDialog):
         if d:
             self.ed_project.setText(d)
 
+    def _pick_xml(self) -> None:
+        f, _ = QFileDialog.getOpenFileName(
+            self, "Select StaTable XML", "",
+            "XML files (*.xml);;All files (*)")
+        if f:
+            self.ed_xml.setText(f)
+
     def _pick_output(self) -> None:
         d = QFileDialog.getExistingDirectory(
             self, "Select StaTable output directory")
@@ -111,14 +133,22 @@ class InstallDialog(QDialog):
         proj = self.ed_project.text().strip()
         out  = self.ed_output.text().strip()
         sub  = self.ed_subdir.text().strip() or "src/statable_generated"
+        xml  = self.ed_xml.text().strip()
+        mode = self.cb_comm_mode.currentData()
 
         if not proj or not Path(proj).is_dir():
             QMessageBox.warning(self, "Error",
                 "Project root is not set or does not exist.")
             return
-        if not out or not Path(out).is_dir():
+        if not out:
+            QMessageBox.warning(self, "Error", "Output dir is not set.")
+            return
+        if not xml and not Path(out).is_dir():
             QMessageBox.warning(self, "Error",
-                "Output dir is not set or does not exist.")
+                "Output dir does not exist.")
+            return
+        if xml and not Path(xml).is_file():
+            QMessageBox.warning(self, "Error", f"XML not found: {xml}")
             return
 
         opts = InstallOptions(
@@ -134,6 +164,9 @@ class InstallDialog(QDialog):
             with_samples=self.cb_samples.isChecked(),
             overwrite_generated=self.cb_overwrite_gen.isChecked(),
             overwrite_scaffolding=self.cb_overwrite_scaff.isChecked(),
+            xml_path=Path(xml) if xml else None,
+            with_comm_monitor=(
+                None if mode == "auto" else (mode == "on")),
         )
 
         self._log("--- install ---")

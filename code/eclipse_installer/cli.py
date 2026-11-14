@@ -32,6 +32,18 @@ def main(argv=None) -> int:
     p.add_argument("--overwrite-scaffolding", action="store_true",
                    help="Overwrite existing root-level scaffolding files")
 
+    # [v3.6.0] XML generation + Tri-state comm_monitor
+    p.add_argument("--xml", default=None,
+                   help="Generate C code from this StaTable XML before "
+                        "copying into the Eclipse project")
+    grp = p.add_mutually_exclusive_group()
+    grp.add_argument("--with-comm-monitor", dest="with_comm_monitor",
+                     action="store_true", default=None,
+                     help="Force comm_monitor ON (overrides XML)")
+    grp.add_argument("--no-comm-monitor", dest="with_comm_monitor",
+                     action="store_false",
+                     help="Force comm_monitor OFF (overrides XML)")
+
     args = p.parse_args(argv)
 
     opts = InstallOptions(
@@ -47,6 +59,8 @@ def main(argv=None) -> int:
         with_samples=args.samples,
         overwrite_generated=True,
         overwrite_scaffolding=args.overwrite_scaffolding,
+        xml_path=Path(args.xml) if args.xml else None,
+        with_comm_monitor=args.with_comm_monitor,
     )
     res = install(opts)
 
