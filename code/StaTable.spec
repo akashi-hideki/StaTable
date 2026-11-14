@@ -29,6 +29,14 @@ hiddenimports = [
     'statable.global_defs', 'statable.xml_io', 'statable.parser',
     'statable.cli', 'statable.smoke',
     'codegen', 'codegen.c_code_generator', 'codegen.config',
+    # [v3.6.0] comm_monitor codegen submodules
+    # Some imports are lazy (inside methods) or inside try/except;
+    # list them explicitly so PyInstaller never drops them.
+    'codegen.comm_monitor',
+    'codegen.comm_monitor.config',
+    'codegen.comm_monitor.generator',
+    'codegen.comm_monitor.registry',
+    'codegen.comm_monitor.templates',
     'statable_gui', 'statable_gui.main_window',
     'statable_gui.matrix_table', 'statable_gui.i18n', 'statable_gui.config',
     'PySide6.QtCore', 'PySide6.QtGui', 'PySide6.QtWidgets',
