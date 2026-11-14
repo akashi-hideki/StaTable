@@ -1,4 +1,4 @@
-"""CommMonitor の C コード生成器。"""
+"""CommMonitor C code generator (v3.6.0 p2 / ring buffer)."""
 from pathlib import Path
 from .config import CommMonitorConfig
 from .registry import VarMeta, registry_crc32
@@ -18,7 +18,9 @@ class CommMonitorGenerator:
         entries = "\n".join(
             f"    {{ &g_ctx.data.{v.name}, {v.size} }}," for v in self.vars
         )
-        names = "\n".join(f'    "{v.name}",' for v in self.vars)
+        names = "\n".join(
+            f'    "{v.name}",' for v in self.vars
+        )
 
         rendered = {
             "statable_comm_config.h": templates.CONFIG_H.substitute(
@@ -37,6 +39,8 @@ class CommMonitorGenerator:
             "statable_comm_registry.c": templates.REGISTRY_C.substitute(
                 entries=entries, names=names,
             ),
+            "statable_comm_ring.h": templates.RING_H.substitute(),
+            "statable_comm_ring.c": templates.RING_C.substitute(),
             "statable_comm_monitor.h": templates.MONITOR_H.substitute(),
             "statable_comm_monitor.c": templates.MONITOR_C.substitute(),
         }

@@ -49,3 +49,23 @@ def test_generated_config_has_var_count(tmp_path: Path):
 def test_period_validation_rejects_below_100():
     with pytest.raises(ValueError):
         CommMonitorConfig(period_ms=50).validate()
+
+
+def test_generator_writes_ring_files(tmp_path: Path):
+    reg = build_registry(VARS)
+    gen = CommMonitorGenerator(CommMonitorConfig(enabled=True), reg)
+    written = gen.generate(tmp_path)
+    names = {p.name for p in written}
+    assert "statable_comm_ring.h" in names
+    assert "statable_comm_ring.c" in names
+
+
+def test_monitor_c_uses_ring(tmp_path: Path):
+    reg = build_registry(VARS)
+    gen = CommMonitorGenerator(CommMonitorConfig(enabled=True), reg)
+    gen.generate(tmp_path)
+    text = (tmp_path / "statable_comm_monitor.c").read_text(encoding="utf-8")
+    assert "comm_ring_push" in text
+    assert "comm_ring_pop" in text
+    assert "process_byte" in text
+    assert "g_rx_ring" in text

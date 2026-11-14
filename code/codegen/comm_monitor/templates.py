@@ -1,4 +1,4 @@
-"""C コードテンプレート（v3.6.0 / GET 専用 / ASCII のみ）。"""
+"""C code templates (v3.6.0 p2 / ring buffer)."""
 from string import Template
 
 CONFIG_H = Template("""\
@@ -53,6 +53,61 @@ uint32_t comm_registry_read(uint8_t id)
 }
 """)
 
+RING_H = Template("""\
+#ifndef STATABLE_COMM_RING_H
+#define STATABLE_COMM_RING_H
+#include <stdint.h>
+#include <stdbool.h>
+typedef struct {
+    uint8_t *buf;
+    uint16_t size;
+    uint16_t mask;
+    volatile uint16_t head;
+    volatile uint16_t tail;
+} CommRing_t;
+void     comm_ring_init(CommRing_t *r, uint8_t *buf, uint16_t size);
+bool     comm_ring_push(CommRing_t *r, uint8_t b);
+bool     comm_ring_pop(CommRing_t *r, uint8_t *b);
+uint16_t comm_ring_count(const CommRing_t *r);
+bool     comm_ring_is_empty(const CommRing_t *r);
+#endif
+""")
+
+RING_C = Template("""\
+#include "statable_comm_ring.h"
+void comm_ring_init(CommRing_t *r, uint8_t *buf, uint16_t size)
+{
+    r->buf  = buf;
+    r->size = size;
+    r->mask = (uint16_t)(size - 1);
+    r->head = 0;
+    r->tail = 0;
+}
+bool comm_ring_push(CommRing_t *r, uint8_t b)
+{
+    uint16_t next = (uint16_t)((r->head + 1) & r->mask);
+    if (next == r->tail) return false;
+    r->buf[r->head] = b;
+    r->head = next;
+    return true;
+}
+bool comm_ring_pop(CommRing_t *r, uint8_t *b)
+{
+    if (r->head == r->tail) return false;
+    *b = r->buf[r->tail];
+    r->tail = (uint16_t)((r->tail + 1) & r->mask);
+    return true;
+}
+uint16_t comm_ring_count(const CommRing_t *r)
+{
+    return (uint16_t)((r->head - r->tail) & r->mask);
+}
+bool comm_ring_is_empty(const CommRing_t *r)
+{
+    return r->head == r->tail;
+}
+""")
+
 MONITOR_H = Template("""\
 #ifndef STATABLE_COMM_MONITOR_H
 #define STATABLE_COMM_MONITOR_H
@@ -69,19 +124,43 @@ MONITOR_C = Template("""\
 #include "statable_comm_monitor.h"
 #include "statable_comm_config.h"
 #include "statable_comm_registry.h"
+#include "statable_comm_ring.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 
 typedef enum { RX_WAIT_STX, RX_BODY, RX_CR } RxState_t;
 
-static RxState_t g_state = RX_WAIT_STX;
-static char      g_buf[COMM_MONITOR_ASCII_BODY_MAX];
-static uint8_t   g_pos;
-static CommTxFn  g_tx;
+static RxState_t  g_state = RX_WAIT_STX;
+static char       g_buf[COMM_MONITOR_ASCII_BODY_MAX];
+static uint8_t    g_pos;
+static CommTxFn   g_tx;
+static uint8_t    g_rx_buf[COMM_MONITOR_RX_RING_SIZE];
+static CommRing_t g_rx_ring;
 
-void comm_monitor_init(void) { g_state = RX_WAIT_STX; g_pos = 0; }
+static void process_byte(uint8_t b);
+static void dispatch(char *line);
+
+void comm_monitor_init(void)
+{
+    g_state = RX_WAIT_STX;
+    g_pos = 0;
+    comm_ring_init(&g_rx_ring, g_rx_buf, COMM_MONITOR_RX_RING_SIZE);
+}
 void comm_monitor_set_tx(CommTxFn fn) { g_tx = fn; }
+
+void comm_monitor_on_rx_byte(uint8_t b)
+{
+    (void)comm_ring_push(&g_rx_ring, b);
+}
+
+void comm_monitor_poll(void)
+{
+    uint8_t b;
+    while (comm_ring_pop(&g_rx_ring, &b)) {
+        process_byte(b);
+    }
+}
 
 static void tx_put(uint8_t b) { if (g_tx) g_tx(b); }
 static void tx_str(const char *s) { while (*s) tx_put((uint8_t)*s++); }
@@ -180,7 +259,7 @@ static void dispatch(char *line)
     nak(5, "cmd");
 }
 
-void comm_monitor_on_rx_byte(uint8_t b)
+static void process_byte(uint8_t b)
 {
     switch (g_state) {
     case RX_WAIT_STX:
@@ -201,6 +280,4 @@ void comm_monitor_on_rx_byte(uint8_t b)
         return;
     }
 }
-
-void comm_monitor_poll(void) { /* リングバッファ実装は次パッチ */ }
 """)
