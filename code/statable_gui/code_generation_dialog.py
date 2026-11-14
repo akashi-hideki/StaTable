@@ -11,7 +11,8 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
     QLabel, QTextEdit, QFileDialog, QMessageBox,
     QComboBox, QGroupBox, QFormLayout,
-    QProgressBar, QLineEdit
+    QProgressBar, QLineEdit,
+    QCheckBox
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
@@ -100,12 +101,13 @@ class CodeGenerationDialog(QDialog):
                  global_defs=None,
                  parent=None,
                  settings_file=None,
-                 role_function_library=None):
+                 role_function_library=None,
+                 config_manager=None):
         super().__init__(parent)
         self.state_machine = state_machine
         self.global_defs = global_defs
         self.generated_files: Dict[str, str] = {}
-        self.config_manager = ConfigManager()
+        self.config_manager = config_manager or ConfigManager()
         self.settings_file = (
             settings_file or DEFAULT_SETTINGS_FILE
         )
@@ -141,6 +143,13 @@ class CodeGenerationDialog(QDialog):
                 if 'save_with_merge' in data:
                     self.config_manager.update(
                         save_with_merge=data['save_with_merge'])
+                if 'comm_monitor' in data and isinstance(
+                        data['comm_monitor'], dict):
+                    from codegen.comm_monitor.config import (
+                        CommMonitorConfig)
+                    self.config_manager.update(
+                        comm_monitor=CommMonitorConfig(
+                            **data['comm_monitor']))
                 logger.info(
                     f"Loaded previous settings: {data}")
         except Exception as e:
@@ -149,12 +158,16 @@ class CodeGenerationDialog(QDialog):
     def _save_settings(self):
         """Save current settings"""
         try:
+            from dataclasses import asdict
             config = self.config_manager.get_config()
             data = {
                 'output_directory': config.output_directory,
                 'generation_style': config.generation_style,
                 'os_type': config.os_type,
                 'save_with_merge': config.save_with_merge,
+                'comm_monitor': asdict(config.comm_monitor)
+                    if getattr(config, 'comm_monitor', None)
+                    else None,
             }
             settings_dir = os.path.dirname(
                 self.settings_file)
@@ -216,6 +229,15 @@ class CodeGenerationDialog(QDialog):
         self.settings_btn.clicked.connect(
             self._open_settings_dialog)
         info_layout.addRow("", self.settings_btn)
+
+        # [p11] comm_monitor toggle (visible in main dialog)
+        self.comm_monitor_check = QCheckBox(
+            self.tr("Generate comm_monitor code (ASCII GET protocol)"))
+        self.comm_monitor_check.setToolTip(
+            self.tr("Generates statable_comm_*.c/h files."))
+        self.comm_monitor_check.toggled.connect(
+            self._on_comm_monitor_toggled)
+        info_layout.addRow("Comm monitor:", self.comm_monitor_check)
         
         main_layout.addWidget(info_group)
         
@@ -279,6 +301,11 @@ class CodeGenerationDialog(QDialog):
         if idx >= 0:
             self.style_combo.setCurrentIndex(idx)
         self._update_info_labels(config)
+        # [p11c] load comm_monitor state
+        if hasattr(self, "comm_monitor_check"):
+            _cm = getattr(config, "comm_monitor", None)
+            self.comm_monitor_check.setChecked(
+                bool(_cm and getattr(_cm, "enabled", False)))
 
     def _update_info_labels(self, config):
         """Update the settings info label"""
@@ -327,6 +354,23 @@ class CodeGenerationDialog(QDialog):
             self._load_config_to_ui()
             self._save_settings()
 
+
+    def _on_comm_monitor_toggled(self, checked: bool):
+        """[p11c] Sync comm_monitor checkbox to config + save."""
+        try:
+            from codegen.comm_monitor.config import (
+                CommMonitorConfig)
+            cfg = self.config_manager.get_config()
+            if getattr(cfg, "comm_monitor", None) is None:
+                cfg.comm_monitor = CommMonitorConfig()
+            cfg.comm_monitor.enabled = bool(checked)
+            self.config_manager.set_config(cfg)
+            self._save_settings()
+            logger.info(
+                f"[p11c] comm_monitor.enabled={checked}")
+        except Exception as e:
+            logger.warning(
+                f"[p11c] _on_comm_monitor_toggled failed: {e!r}")
     # ---- Warning display ----
     def _show_warnings(self, records):
         if not records:

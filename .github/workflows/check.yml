@@ -500,6 +500,17 @@ jobs:
         run: |
           python tools/verify_arm_link.py --root output_vending
 
+      - name: Generate C code (comm_monitor enabled)
+        run: |
+          python tools/gen_output_from_xml.py \
+            --xml docs/tutorial/vending_machine.xml \
+            --out output_vending_cm \
+            --with-comm-monitor
+
+      - name: Link verification (comm_monitor, ARM)
+        run: |
+          python tools/verify_arm_link.py --root output_vending_cm
+
       - name: Run R-13(B) test suite
         run: |
           python tests/test_v2_5_p8.py

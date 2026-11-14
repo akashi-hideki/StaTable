@@ -8,3 +8,10 @@ int main(void)
     }
     return 0;
 }
+/* No dynamic memory in embedded target (MISRA C:2012 Rule 21.3).
+ * newlib's snprintf can reference _sbrk; provide a failing stub
+ * so link succeeds and any actual malloc call returns NULL. */
+void *_sbrk(int incr) {
+    (void)incr;
+    return (void *)-1;
+}

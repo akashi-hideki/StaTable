@@ -1213,6 +1213,7 @@ class MainWindow(QMainWindow):
             parent=self,
             role_function_library=(
                 self.role_function_library),
+            config_manager=self.config_manager,
         )
         # Pass all layers
         dialog.all_layers = layers
@@ -1228,9 +1229,54 @@ class MainWindow(QMainWindow):
         dialog = CodeGenerationSettingsDialog(
             config_manager=self.config_manager,
             parent=self)
-        dialog.exec()
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # [p10] persist settings to JSON
+            self._persist_generation_settings_json()
         StaTableLogger.debug(
             "CodeGenerationSettingsDialog closed")
+
+    def _persist_generation_settings_json(self):
+        """Persist config_manager state to DEFAULT_SETTINGS_FILE.
+
+        CodeGenerationDialog._load_saved_settings() reads this
+        JSON and would otherwise override fresh in-memory state
+        with stale values. Saving after menu-path settings
+        changes keeps memory and JSON in sync.
+        """
+        import json as _json
+        from dataclasses import asdict as _asdict
+        try:
+            from .code_generation_dialog import (
+                DEFAULT_SETTINGS_FILE)
+        except ImportError:
+            from code_generation_dialog import (
+                DEFAULT_SETTINGS_FILE)
+        try:
+            cfg = self.config_manager.get_config()
+            data = {
+                'output_directory': cfg.output_directory,
+                'generation_style': cfg.generation_style,
+                'os_type': cfg.os_type,
+                'save_with_merge': cfg.save_with_merge,
+                'comm_monitor': (
+                    _asdict(cfg.comm_monitor)
+                    if getattr(cfg, 'comm_monitor', None)
+                    else None),
+            }
+            d = os.path.dirname(DEFAULT_SETTINGS_FILE)
+            if d:
+                os.makedirs(d, exist_ok=True)
+            with open(DEFAULT_SETTINGS_FILE, 'w',
+                      encoding='utf-8') as f:
+                _json.dump(data, f, ensure_ascii=False,
+                           indent=2)
+            StaTableLogger.debug(
+                f"[p10] persisted settings: "
+                f"comm_monitor.enabled="
+                f"{getattr(getattr(cfg,'comm_monitor',None),'enabled',None)}")
+        except Exception as e:
+            StaTableLogger.debug(
+                f"[p10] persist settings failed: {e!r}")
 
     # ------------------------------------------------------------------
     # Direct save of generated code (multi-layer + warning collection)
