@@ -43,7 +43,7 @@ from .global_defs import (
     StructMemberDef,
 )
 
-__version__ = "3.5.3"
+__version__ = "3.6.0"
 
 __all__ = [
     # model
