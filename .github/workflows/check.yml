@@ -164,6 +164,7 @@ jobs:
           coverage run --parallel-mode tests/test_v3_6_0_comm_monitor_ascii.py
           coverage run --parallel-mode tests/test_v3_6_0_comm_monitor_safety.py
           coverage run --parallel-mode tests/test_v3_6_0_comm_monitor_hotplug.py
+          coverage run --parallel-mode tests/test_v3_6_0_comm_monitor_table.py
           coverage run --parallel-mode tests/test_v3_6_0_sdk_python.py
           coverage run --parallel-mode tests/test_v3_6_0_psblog_roundtrip.py
           coverage run --parallel-mode tests/test_v3_6_0_psblog_format.py
