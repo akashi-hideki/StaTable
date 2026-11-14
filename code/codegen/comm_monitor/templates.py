@@ -128,6 +128,7 @@ MONITOR_C = Template("""\
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 typedef enum { RX_WAIT_STX, RX_BODY, RX_CR } RxState_t;
 

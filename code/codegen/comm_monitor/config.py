@@ -9,7 +9,7 @@ MAX_POLL_PERIOD_MS = 60_000
 @dataclass
 class CommMonitorConfig:
     enabled: bool = False
-    ascii_body_max: int = 96
+    ascii_body_max: int = 256
     rx_ring_size: int = 64
     tx_ring_size: int = 64
     idle_ms: int = 100
