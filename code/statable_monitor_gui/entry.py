@@ -1,11 +1,7 @@
 ﻿"""PyInstaller entry point for StaTable Monitor GUI.
 
 Build from project root:
-    pyinstaller --onefile --windowed --name StaTableMonitorGUI ^
-      --paths code ^
-      --hidden-import serial --hidden-import serial.tools.list_ports ^
-      --hidden-import PySide6.QtCore --hidden-import PySide6.QtWidgets ^
-      code\statable_monitor_gui\entry.py
+    powershell -ExecutionPolicy Bypass -File code/tools/build_monitor_gui.ps1
 """
 import sys
 from pathlib import Path
