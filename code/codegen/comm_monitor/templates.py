@@ -221,11 +221,21 @@ static void handle_get(const char *args)
     char line[COMM_MONITOR_ASCII_BODY_MAX];
     int off = snprintf(line, sizeof(line), "ACK ret=0");
 
-    char *tok = strtok(tmp, ",");
-    while (tok) {
-        while (*tok == ' ') tok++;
-        if (!isdigit((unsigned char)*tok)) { nak(1, "parse"); return; }
-        unsigned id = (unsigned)strtoul(tok, NULL, 10);
+    /* manual comma-walk strict parse (spec 3.2: id is 10-decimal) */
+    const char *p = tmp;
+    while (1) {
+        const char *comma = strchr(p, ',');
+        size_t len = comma ? (size_t)(comma - p) : strlen(p);
+        while (len > 0 && *p == ' ') { p++; len--; }
+        while (len > 0 && p[len - 1] == ' ') { len--; }
+        if (len == 0) { nak(1, "parse"); return; }
+        if (len >= 16) { nak(1, "parse"); return; }
+        char tok[16];
+        memcpy(tok, p, len); tok[len] = 0;
+        char *end = NULL;
+        unsigned long vlong = strtoul(tok, &end, 10);
+        if (end == tok || *end != 0) { nak(1, "parse"); return; }
+        unsigned id = (unsigned)vlong;
         if (id >= g_var_count) { nak(2, "idx"); return; }
         uint32_t v = comm_registry_read((uint8_t)id);
         if (compact) {
@@ -236,7 +246,8 @@ static void handle_get(const char *args)
                             " id=%u name=%s value=%lu",
                             id, g_var_names[id], (unsigned long)v);
         }
-        tok = strtok(NULL, ",");
+        if (!comma) break;
+        p = comma + 1;
     }
     respond(line);
 }
