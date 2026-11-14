@@ -92,6 +92,10 @@ def cmd_generate(args) -> int:
         _err(f"error: config setup failed: {e!r}")
         return 2
 
+    if getattr(args, "with_comm_monitor", False):
+        from codegen.comm_monitor.config import CommMonitorConfig
+        cfg.comm_monitor = CommMonitorConfig(enabled=True)
+
     try:
         from codegen.c_code_generator import CCodeGenerator
         gen = CCodeGenerator(config=cfg)
@@ -233,6 +237,9 @@ def build_parser() -> argparse.ArgumentParser:
                        help="Output directory")
     p_gen.add_argument("--format", choices=["json", "text"],
                        default="json")
+    p_gen.add_argument(
+        "--with-comm-monitor", action="store_true",
+        help="Enable comm_monitor code generation (statable_comm_*.c/h)")
     p_gen.set_defaults(func=cmd_generate)
 
     p_val = sub.add_parser("validate", help="Validate XML design file")

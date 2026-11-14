@@ -108,6 +108,8 @@ def main() -> int:
     ap.add_argument("--xml", required=True, help="input project XML file")
     ap.add_argument("--out", default="output",
                     help="output directory (default: output)")
+    ap.add_argument("--with-comm-monitor", action="store_true",
+                    help="Enable comm_monitor generation")
     args = ap.parse_args()
 
     xml_path = Path(args.xml)
@@ -133,6 +135,10 @@ def main() -> int:
     print(f"  layers: {len(layers)}")
 
     config = build_config(project_settings)
+    if args.with_comm_monitor:
+        from codegen.comm_monitor.config import CommMonitorConfig
+        config.comm_monitor = CommMonitorConfig(enabled=True)
+        print("  comm_monitor: ENABLED")
     print(f"  config: folder_structure="
           f"{getattr(config, 'folder_structure', '?')}, "
           f"project_name={getattr(config, 'project_name', '?')}")

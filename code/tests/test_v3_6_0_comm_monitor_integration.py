@@ -25,7 +25,7 @@ def test_merge_disabled_returns_unchanged():
     gen = CCodeGenerator(config=cfg)
     gd = _make_gd()
     base = {"statable_types_common.h": "/* types */"}
-    result = gen._merge_comm_monitor_files(base, None, gd)
+    result = gen._merge_comm_monitor_files(base, gd)
     assert result == base
     assert "statable_comm_config.h" not in result
 
@@ -36,7 +36,7 @@ def test_merge_enabled_adds_comm_files():
     gen = CCodeGenerator(config=cfg)
     gd = _make_gd()
     base = {"statable_types_common.h": "/* types */"}
-    result = gen._merge_comm_monitor_files(base, None, gd)
+    result = gen._merge_comm_monitor_files(base, gd)
     assert "statable_comm_config.h" in result
     assert "statable_comm_monitor.c" in result
     assert "statable_comm_ring.c" in result
@@ -50,5 +50,5 @@ def test_merge_enabled_no_vars_returns_unchanged():
     gen = CCodeGenerator(config=cfg)
     gd = _make_gd(with_vars=False)
     base = {"statable_types_common.h": "/* types */"}
-    result = gen._merge_comm_monitor_files(base, None, gd)
+    result = gen._merge_comm_monitor_files(base, gd)
     assert result == base

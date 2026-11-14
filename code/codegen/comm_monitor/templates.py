@@ -21,7 +21,7 @@ REGISTRY_H = Template("""\
 #ifndef STATABLE_COMM_REGISTRY_H
 #define STATABLE_COMM_REGISTRY_H
 #include <stdint.h>
-typedef struct { const void *ptr; uint8_t size; } VarEntry_t;
+typedef struct { const volatile void *ptr; uint8_t size; } VarEntry_t;
 extern const VarEntry_t   g_var_registry[];
 extern const uint8_t      g_var_count;
 extern const char * const g_var_names[];
@@ -45,9 +45,9 @@ uint32_t comm_registry_read(uint8_t id)
     if (id >= g_var_count) return 0;
     const VarEntry_t *e = &g_var_registry[id];
     switch (e->size) {
-    case 1: return *(const uint8_t  *)e->ptr;
-    case 2: return *(const uint16_t *)e->ptr;
-    case 4: return *(const uint32_t *)e->ptr;
+    case 1: return *(const volatile uint8_t  *)e->ptr;
+    case 2: return *(const volatile uint16_t *)e->ptr;
+    case 4: return *(const volatile uint32_t *)e->ptr;
     default: return 0;
     }
 }

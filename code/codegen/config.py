@@ -80,7 +80,9 @@ class CodeGenerationConfig:
     
     def to_dict(self) -> Dict:
         """Convert to dictionary"""
+        from dataclasses import asdict
         return {
+            'comm_monitor': asdict(self.comm_monitor),
             'generation_style': self.generation_style,
             'table_type': self.table_type,
             'os_type': self.os_type,
@@ -119,6 +121,9 @@ class CodeGenerationConfig:
         # Ignore unknown keys
         valid_keys = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in data.items() if k in valid_keys}
+        if 'comm_monitor' in filtered and isinstance(filtered['comm_monitor'], dict):
+            from .comm_monitor.config import CommMonitorConfig
+            filtered['comm_monitor'] = CommMonitorConfig(**filtered['comm_monitor'])
         return cls(**filtered)
 
 

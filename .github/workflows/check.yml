@@ -297,10 +297,22 @@ jobs:
             --xml tests/data/v22_features_test3.xml \
             --out output
 
+      - name: Generate C code (comm_monitor enabled)
+        run: |
+          python tools/gen_output_from_xml.py \
+            --xml tests/data/v22_features_test3.xml \
+            --out output_cm \
+            --with-comm-monitor
+
       - name: Verify C syntax (gcc + arm, strict)
         run: |
           python tools/verify_c_syntax.py \
             --root output --compiler both --strict
+
+      - name: Verify C syntax (comm_monitor, gcc + arm, strict)
+        run: |
+          python tools/verify_c_syntax.py \
+            --root output_cm --compiler both --strict
 
       - name: Upload verification log
         if: always()

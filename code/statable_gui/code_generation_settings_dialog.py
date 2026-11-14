@@ -165,6 +165,18 @@ class CodeGenerationSettingsDialog(QDialog):
         comment_layout.addWidget(self.enable_markers_check)
         
         layout.addWidget(comment_group)
+
+        # Communication monitor settings
+        comm_monitor_group = QGroupBox(self.tr("Communication monitor"))
+        comm_monitor_layout = QVBoxLayout(comm_monitor_group)
+        self.enable_comm_monitor_check = QCheckBox(
+            self.tr("Generate comm_monitor code (ASCII GET protocol)"))
+        self.enable_comm_monitor_check.setToolTip(
+            self.tr("Generates statable_comm_*.c/h files.\n"
+                    "UART ISR + TX hook must be wired in user code."))
+        comm_monitor_layout.addWidget(self.enable_comm_monitor_check)
+        layout.addWidget(comm_monitor_group)
+
         layout.addStretch()
     
     def _setup_log_tab(self):
@@ -359,6 +371,13 @@ class CodeGenerationSettingsDialog(QDialog):
         self.enable_comments_check.setChecked(self.config.enable_comments)
         self.enable_doxygen_check.setChecked(self.config.enable_doxygen)
         self.enable_markers_check.setChecked(self.config.enable_user_markers)
+
+        # Communication monitor
+        if getattr(self.config, 'comm_monitor', None) is not None:
+            self.enable_comm_monitor_check.setChecked(
+                self.config.comm_monitor.enabled)
+        else:
+            self.enable_comm_monitor_check.setChecked(False)
         
         # Log
         self.enable_debug_logs_check.setChecked(self.config.enable_debug_logs)
@@ -418,6 +437,12 @@ class CodeGenerationSettingsDialog(QDialog):
         self.config.enable_comments = self.enable_comments_check.isChecked()
         self.config.enable_doxygen = self.enable_doxygen_check.isChecked()
         self.config.enable_user_markers = self.enable_markers_check.isChecked()
+
+        # Communication monitor
+        from codegen.comm_monitor.config import CommMonitorConfig
+        if getattr(self.config, 'comm_monitor', None) is None:
+            self.config.comm_monitor = CommMonitorConfig()
+        self.config.comm_monitor.enabled = self.enable_comm_monitor_check.isChecked()
         
         # Log
         self.config.enable_debug_logs = self.enable_debug_logs_check.isChecked()
