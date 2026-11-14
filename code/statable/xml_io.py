@@ -1054,6 +1054,9 @@ def _project_settings_to_element(settings: Optional[dict]) -> ET.Element:
                "true" if settings.get('external_includes_in_transitions', False) else "false")
         cg.set("external_includes_in_common",
                "true" if settings.get('external_includes_in_common', False) else "false")
+        # [v3.6.0] comm_monitor (write only when enabled; keeps legacy XML stable)
+        if settings.get('comm_monitor_enabled', False):
+            cg.set("comm_monitor_enabled", "true")
     return elem
 
 
@@ -1090,6 +1093,9 @@ def _project_settings_from_element(elem: Optional[ET.Element]) -> dict:
     settings['external_includes_in_role'] = cg.get("external_includes_in_role", "true").lower() == "true"
     settings['external_includes_in_transitions'] = cg.get("external_includes_in_transitions", "false").lower() == "true"
     settings['external_includes_in_common'] = cg.get("external_includes_in_common", "false").lower() == "true"
+        # [v3.6.0] comm_monitor (absent -> False; backward compatible)
+    settings['comm_monitor_enabled'] = (
+        cg.get("comm_monitor_enabled", "false").lower() == "true")
     return settings
 
 

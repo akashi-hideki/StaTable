@@ -798,6 +798,9 @@ class MainWindow(QMainWindow):
                     config.external_includes_in_common,
                 'max_consecutive_pending_events':
                     config.max_consecutive_pending_events,
+                'comm_monitor_enabled': bool(
+                    getattr(getattr(config, 'comm_monitor', None),
+                            'enabled', False)),
             }
             StaTableLogger.debug(
                 f"Project settings: {project_settings}")
@@ -981,6 +984,16 @@ class MainWindow(QMainWindow):
             if project_settings:
                 config = self.config_manager.get_config()
                 for key, value in project_settings.items():
+                    # [v3.6.0] comm_monitor is a nested dataclass
+                    if key == 'comm_monitor_enabled':
+                        from codegen.comm_monitor.config import (
+                            CommMonitorConfig)
+                        if getattr(config, 'comm_monitor', None) is None:
+                            config.comm_monitor = CommMonitorConfig()
+                        config.comm_monitor.enabled = bool(value)
+                        StaTableLogger.debug(
+                            f"  config.comm_monitor.enabled = {value}")
+                        continue
                     if hasattr(config, key):
                         setattr(config, key, value)
                         StaTableLogger.debug(
