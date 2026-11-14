@@ -576,7 +576,7 @@ class PStaBlogLogger:
     def start(self):
         self._f = self.path.open("w", encoding="utf-8", newline="\\n")
         t0 = datetime.now(timezone.utc).astimezone()
-        self._f.write("# PStaTable UART Monitor Log\\n")
+        self._f.write("# StaTable UART Monitor Log\\n")
         self._f.write("@schema       psblog/v1\\n")
         self._f.write(
             f"@captured_at  {t0.isoformat(timespec='milliseconds')}\\n")

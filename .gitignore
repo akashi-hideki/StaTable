@@ -144,3 +144,9 @@ code/mypy_report.txt
 
 __pycache__/
 *.pyc
+
+# temporary build/test artifacts
+tmp_*
+
+# user-local GUI settings (comm_monitor toggle, output dir, etc.)
+code/statable_gui/codegen_settings.json
