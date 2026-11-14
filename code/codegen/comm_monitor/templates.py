@@ -278,6 +278,12 @@ static void process_byte(uint8_t b)
         if (b == 0x02) { g_pos = 0; g_state = RX_BODY; }
         return;
     case RX_BODY:
+        if (b == 0x02) {
+            /* STX reentry in RX_BODY: discard partial frame,
+             * start a fresh one (spec 3.1 / 7). */
+            g_pos = 0;
+            return;
+        }
         if (b == 0x0D) { g_state = RX_CR; return; }
         if (b >= 0x20 && b <= 0x7E
             && g_pos < COMM_MONITOR_ASCII_BODY_MAX - 1) {
@@ -288,6 +294,13 @@ static void process_byte(uint8_t b)
         return;
     case RX_CR:
         if (b == 0x03) { g_buf[g_pos] = 0; dispatch(g_buf); }
+        if (b == 0x02) {
+            /* CR not followed by ETX, but STX starts a new
+             * frame immediately. */
+            g_pos = 0;
+            g_state = RX_BODY;
+            return;
+        }
         g_state = RX_WAIT_STX;
         return;
     }
