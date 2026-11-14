@@ -29,7 +29,7 @@ def _make_logger(tmp_path):
     return PStaBlogLogger(
         path=tmp_path / 'session.psblog',
         source='COM_TEST',
-        firmware='PStaTable v3.6.0',
+        firmware='StaTable v3.6.0',
         period_ms=200,
         variables=VARS,
     )
@@ -42,7 +42,7 @@ def test_header_keys(tmp_path):
     doc = parse(tmp_path / 'session.psblog')
     assert doc.header['@schema'] == 'psblog/v1'
     assert doc.header['@source'] == 'uart:COM_TEST'
-    assert doc.header['@firmware'] == 'PStaTable v3.6.0'
+    assert doc.header['@firmware'] == 'StaTable v3.6.0'
     assert doc.header['@protocol'] == 'pstable-uart/v1'
     assert doc.header['@period_ms'] == '200'
     assert '@captured_at' in doc.header

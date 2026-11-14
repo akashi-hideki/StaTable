@@ -144,7 +144,7 @@ class StaTableMonitor:
         return PStaBlogLogger(
             path=path,
             source=source,
-            firmware='PStaTable v{}'.format(fw),
+            firmware='StaTable v{}'.format(fw),
             period_ms=200,
             variables=variables,
             options=LogOptions(),

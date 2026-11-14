@@ -26,10 +26,10 @@
 
 | 層 | 成果物 | 所有者 |
 |---|---|---|
-| デバイス側 | プロトコル層・変数レジストリ（生成 C コード） | PStaTable |
-| ワイヤ | ASCII フレーミング（`STX + 本文 + CR + ETX`） | PStaTable |
-| モニター SDK | Python（`statable-monitor`） / C#（`StaTable.Monitor`、v3.6.1） | PStaTable |
-| ログ形式 | psblog/v1（writer = PStaTable / reader = PowerSimBuilder） | PStaTable / PSB |
+| デバイス側 | プロトコル層・変数レジストリ（生成 C コード） | StaTable |
+| ワイヤ | ASCII フレーミング（`STX + 本文 + CR + ETX`） | StaTable |
+| モニター SDK | Python（`statable-monitor`） / C#（`StaTable.Monitor`、v3.6.1） | StaTable |
+| ログ形式 | psblog/v1（writer = StaTable / reader = PowerSimBuilder） | StaTable / PSB |
 | GUI | ユーザーが SDK を使って構築 | ユーザー |
 
 ### 1.3 スコープ外
@@ -536,7 +536,7 @@ def frame_to_xml(line: str, t_ms: int) -> str:
 | `@schema` | `psblog/v1` |
 | `@captured_at` | `logger.start()` 時の PC 時刻（ISO 8601 with TZ） |
 | `@source` | `uart:<portName>` |
-| `@firmware` | `PING` 応答の `fw` から `PStaTable v<ver>` に整形 |
+| `@firmware` | `PING` 応答の `fw` から `StaTable v<ver>` に整形 |
 | `@protocol` | `pstable-uart/v1` |
 | `@baud` | 接続ボーレート |
 | `@period_ms` | ポーリング周期（100 以上保証） |
