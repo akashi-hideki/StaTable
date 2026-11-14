@@ -36,7 +36,8 @@ class PStaBlogLogger:
         self._f.write('@period_ms    {}\n'.format(self.period_ms))
         for v in self.variables:
             desc = v.get('description', '')
-            desc_q = '"{}"'.format(desc) if desc else ''
+            # Always emit quoted description (spec §10.3)
+            desc_q = '"{}"'.format(desc)
             line = '@var {} {} {} {} {}\n'.format(
                 v['name'], v['type'],
                 v.get('unit', '-'), v.get('group', '-'), desc_q)
@@ -47,6 +48,20 @@ class PStaBlogLogger:
             return
         t_ms = int(round(host_ts * 1000))
         self._f.write('@{} {}={}\n'.format(t_ms, name, value))
+        self._samples += 1
+
+    def write_many(self, name_values, host_ts):
+        """Write multiple name=value pairs on one Data line (spec §8).
+
+        One call = one sample. The sample counter increments once.
+        """
+        if self._f is None:
+            return
+        if not name_values:
+            return
+        t_ms = int(round(host_ts * 1000))
+        pairs = ' '.join('{}={}'.format(k, v) for k, v in name_values.items())
+        self._f.write('@{} {}\n'.format(t_ms, pairs))
         self._samples += 1
 
     def stop(self):
