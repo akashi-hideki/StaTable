@@ -69,3 +69,40 @@ def test_monitor_c_uses_ring(tmp_path: Path):
     assert "comm_ring_pop" in text
     assert "process_byte" in text
     assert "g_rx_ring" in text
+
+
+def test_render_returns_dict_without_writing(tmp_path: Path):
+    reg = build_registry(VARS)
+    gen = CommMonitorGenerator(CommMonitorConfig(enabled=True), reg)
+    result = gen.render()
+    assert isinstance(result, dict)
+    assert "statable_comm_config.h" in result
+    assert "statable_comm_monitor.c" in result
+    assert "statable_comm_ring.c" in result
+    # no files written to tmp_path
+    assert not list(tmp_path.iterdir())
+
+
+def test_render_matches_generate(tmp_path: Path):
+    reg = build_registry(VARS)
+    gen = CommMonitorGenerator(CommMonitorConfig(enabled=True), reg)
+    rendered = gen.render()
+    gen.generate(tmp_path)
+    for name, content in rendered.items():
+        on_disk = (tmp_path / name).read_text(encoding="utf-8")
+        assert on_disk == content
+
+
+def test_config_has_comm_monitor_field():
+    from codegen.config import CodeGenerationConfig
+    cfg = CodeGenerationConfig()
+    assert hasattr(cfg, "comm_monitor")
+    assert cfg.comm_monitor.enabled is False
+
+
+def test_config_comm_monitor_can_be_enabled():
+    from codegen.config import CodeGenerationConfig
+    from codegen.comm_monitor.config import CommMonitorConfig
+    cfg = CodeGenerationConfig(
+        comm_monitor=CommMonitorConfig(enabled=True))
+    assert cfg.comm_monitor.enabled is True

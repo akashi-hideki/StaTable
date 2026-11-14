@@ -7,6 +7,11 @@ Centralizes generation options
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+try:
+    from .comm_monitor.config import CommMonitorConfig
+except ImportError:
+    from comm_monitor.config import CommMonitorConfig
+
 
 @dataclass
 class CodeGenerationConfig:
@@ -67,6 +72,11 @@ class CodeGenerationConfig:
     
     # ===== Reserved event limit =====
     max_consecutive_pending_events: int = 16
+
+    # ===== Communication monitor (v3.6.0) =====
+    comm_monitor: CommMonitorConfig = field(
+        default_factory=CommMonitorConfig
+    )
     
     def to_dict(self) -> Dict:
         """Convert to dictionary"""

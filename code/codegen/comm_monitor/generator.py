@@ -1,4 +1,4 @@
-"""CommMonitor C code generator (v3.6.0 p2 / ring buffer)."""
+"""CommMonitor C code generator (v3.6.0 p3a / render+generate)."""
 from pathlib import Path
 from .config import CommMonitorConfig
 from .registry import VarMeta, registry_crc32
@@ -11,18 +11,14 @@ class CommMonitorGenerator:
         self.config = config
         self.vars = variables
 
-    def generate(self, out_dir: Path) -> list[Path]:
-        out_dir.mkdir(parents=True, exist_ok=True)
+    def render(self) -> dict[str, str]:
+        """生成ファイルを filename -> content の dict で返す（書込なし）。"""
         crc = registry_crc32(self.vars)
-
         entries = "\n".join(
             f"    {{ &g_ctx.data.{v.name}, {v.size} }}," for v in self.vars
         )
-        names = "\n".join(
-            f'    "{v.name}",' for v in self.vars
-        )
-
-        rendered = {
+        names = "\n".join(f'    "{v.name}",' for v in self.vars)
+        return {
             "statable_comm_config.h": templates.CONFIG_H.substitute(
                 enabled=int(self.config.enabled),
                 body_max=self.config.ascii_body_max,
@@ -45,8 +41,10 @@ class CommMonitorGenerator:
             "statable_comm_monitor.c": templates.MONITOR_C.substitute(),
         }
 
+    def generate(self, out_dir: Path) -> list[Path]:
+        out_dir.mkdir(parents=True, exist_ok=True)
         written: list[Path] = []
-        for name, body in rendered.items():
+        for name, body in self.render().items():
             p = out_dir / name
             p.write_text(body, encoding="utf-8")
             written.append(p)
