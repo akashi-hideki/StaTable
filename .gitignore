@@ -157,3 +157,12 @@ code/statable_gui/codegen_settings.json
 /build/
 /dist/
 *.spec
+# === [v3.6.0] untracked cleanup ===
+# Personal / legal documents (must not be public)
+docs/ip/
+
+# Generated promotion assets (regenerable by tools/)
+wechat_images/
+
+# Duplicate download artifact at repo root (newer demo, not tracked)
+demo (1).gif
