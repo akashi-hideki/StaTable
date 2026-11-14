@@ -1,3 +1,46 @@
+## [3.6.0] — in development
+
+### Added
+- **comm_monitor protocol layer** (ASCII mode): PING / LIST / GET / HELP.
+  Generated: `statable_comm_monitor.c/h`, `statable_comm_config.h`,
+  `statable_comm_registry.c/h`, `statable_comm_ring.c/h`,
+  `statable_types.h` aggregator (by_layer mode).
+- **`statable-monitor` Python SDK** (`code/statable_monitor/`):
+  `StaTableMonitor`, `PStaBlogLogger` (psblog/v1 writer), `xml_mapper`
+  (`frame_to_xml`, `data_line_to_xml`), `simulator`.
+- **`statable_monitor_gui` reference GUI** (`code/statable_monitor_gui/`):
+  simulator (triangle wave) + real COM (pyserial), live values,
+  psblog logging with one batched Data line per sample.
+  PyInstaller EXE: `code/tools/build_monitor_gui.ps1`.
+- **GUI integration** (`statable_gui`):
+  "Communication monitor" checkbox in code generation settings and
+  in the code generation dialog, JSON persistence (p5, p9-p11c).
+
+### Fixed
+- `NameError: 'state_machine'` in `generate_all_layers` /
+  `_generate_all_by_layer` when `comm_monitor.enabled=True` (p6).
+- `statable_types.h` aggregator missing in by_layer mode (p7).
+- `-Wdiscarded-qualifiers` in `comm_registry_read` under `-Werror` (p8).
+- `_sbrk` undefined reference during ARM link with `snprintf` (p13).
+- STX reentry in `RX_BODY` / `RX_CR` broke hot-plug recovery (p10c).
+- Lenient GET id parsing (`GET 1x`, `GET 0,`, `GET 0,,1`) (p10b).
+
+### Changed
+- `PStaTable` → `StaTable` in logger/spec/tests (12 occurrences).
+- `psblog_logger.write_many()` (spec §8 batched Data line).
+- `@var` description always quoted (`""`) per spec §10.3.
+- `CodeGenerationConfig.comm_monitor` persisted in to_dict/from_dict.
+
+### Test coverage
+- 85 comm_monitor + 23 psblog = 108 passed, 2 xfailed.
+- ARM link: `firmware.bin` 39,696 bytes (30 .c files).
+
+### Known limitations
+- `statable_comm_commands.c` deferred to v3.6.1.
+- `COMM_MONITOR_IDLE_MS` auto-clear deferred to v3.6.1.
+
+---
+
 # Changelog
 
 All notable changes to StaTable will be documented in this file.

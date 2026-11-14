@@ -1833,3 +1833,75 @@ to see.
 ---
 
 End of TUTORIAL_en.md v2.0
+
+---
+
+## Appendix Z. Communication Monitor (v3.6.0)
+
+v3.6.0 adds a global variable monitor over UART (ASCII mode).
+This appendix is the shortest path. Full spec:
+`code/docs/SPEC_COMM_MONITOR_v1_2.md`.
+
+### Z.1 Declare variables in XML
+
+Use "Edit -> Global definitions" to declare monitorable variables
+(`uint8_t` / `uint16_t` / `uint32_t` / `int*` / `float` / `bool`).
+
+Example:
+    g_system_tick     uint32_t  1ms     Timer
+    oven_current_temp uint16_t  degC    Hardware
+    heater_top_duty   uint8_t   %       Hardware
+
+### Z.2 Generate code (GUI)
+
+1. Settings -> Code generation settings
+2. Basic settings tab: enable **Communication monitor**
+3. Code generation dialog: enable **Comm monitor:**
+4. Generate -> new files:
+   - statable_comm_config.h
+   - statable_comm_monitor.c/h
+   - statable_comm_registry.c/h
+   - statable_comm_ring.c/h
+   - statable_types.h (by_layer aggregator)
+
+### Z.3 Wire UART hooks on the device
+
+Generated code expects you to provide UART. STM32 HAL example:
+
+    comm_monitor_init();
+    comm_monitor_set_tx(tx_fn);
+    HAL_UART_Receive_IT(&huart2, &rx_byte, 1);
+
+    void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+        if (huart->Instance == USART2) {
+            comm_monitor_on_rx_byte(rx_byte);
+            HAL_UART_Receive_IT(&huart2, &rx_byte, 1);
+        }
+    }
+
+    while (1) { comm_monitor_poll(); }
+
+### Z.4 Capture logs with the PC GUI
+
+1. `cd code && python -m statable_monitor_gui`
+   (or `dist\StaTableMonitorGUI.exe`)
+2. Simulator mode:
+   - Connect -> 5 variables
+   - Period (ms) = 200, Max samples = 100
+   - Start Log... -> session.psblog
+   - wait 20 s -> auto stop (@samples 100)
+3. Real hardware: uncheck Simulator, pick COM port, Connect
+
+### Z.5 Plot in PowerSimBuilder
+
+Open the generated .psblog in PowerSimBuilder to see the trace.
+The simulator triangle (25->200->25, 4 s period) confirms the end-to-end path.
+
+### Z.6 Troubleshooting
+
+| Symptom | Check |
+|---|---|
+| No `ACK ret=0 fw=...` | UART TX/RX wiring, baud (default 115200) |
+| `NAK ret=1 reason=parse` | Frame must be STX + body + CR + ETX |
+| psblog values all 0 | `comm_monitor_poll()` called in while(1)? |
+| PowerSimBuilder cannot import | `@source` must be `uart:<port>` |

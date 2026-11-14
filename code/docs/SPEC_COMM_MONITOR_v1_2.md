@@ -670,3 +670,40 @@ CI 登録：`check.yml` に T1〜T9 を追加。T10 は既存 E2E ジョブに�
 | XML CRC32 照合 | 接続時に照合、不一致なら拒否 |
 | ユーザーコマンド | マーカー間にエントリ追加で拡張可能 |
 ```
+
+
+---
+
+## 17. 実装ノート v3.6.0（追記）
+
+本仕様書 §1-§16 は設計仕様です。以下は v3.6.0 実装時点での差分・補足です。
+
+### 17.1 実装済み
+
+| 項目 | 実装 | 備考 |
+|---|---|---|
+| ASCII フレーミング | OK | STX + body + CR + ETX |
+| コマンド | OK | PING / LIST / GET / HELP |
+| GET compact | OK | `ACK ret=0 3=25 7=100` |
+| GET 厳格 parse | OK | `GET 1x` / `GET 0,` → NAK ret=1 |
+| ホットプラグ復帰 | OK | STX reentry in RX_BODY / RX_CR |
+| psblog/v1 writer | OK | `write_many()` バッチ形式 |
+| Python SDK | OK | `statable-monitor` |
+| PC 側 GUI | OK | `statable_monitor_gui` + EXE |
+| PowerSimBuilder 連携 | OK | `.psblog` 直接読み込み |
+
+### 17.2 v3.6.1 以降の TODO
+
+| 項目 | 理由 |
+|---|---|
+| `statable_comm_commands.c` 生成 | §8 / §11 ユーザーコマンドテーブル（マーカー保持） |
+| `COMM_MONITOR_IDLE_MS` 実装 | §7 アイドルタイムアウト（現状 STX reentry で復帰） |
+| CRC 付きフレーム / バイナリモード | §1.3 スコープ外 |
+| 配列アクセス | §1.3 スコープ外 |
+
+### 17.3 実装上の注意
+
+- `psblog_logger.py` は `@var` 行で description を常に `"..."` で出力（空でも `""`）。§10.3 準拠。
+- `frame_to_xml()`（§9.5 サンプル）は compact 形式 `3=25` を `<var id="3" value="25"/>` として展開（複数 `<var>` 要素）。
+- GUI の `Start Log` は即時 1 サンプル書き込み（QTimer は 1 interval 後に発火）。
+- ARM リンクは `_sbrk` スタブ（`tools/arm_template/stub_main.c`）で newlib の `snprintf` 依存を解決。

@@ -13,6 +13,38 @@
 
 ---
 
+## What's New in v3.6.0 (Communication Monitor)
+
+**Release date**: TBD (in development)
+
+### Highlights
+
+- **Global variable monitor over UART (ASCII mode)** — generated code
+  includes a `comm_monitor` protocol layer exposing StaTable XML
+  variables over UART. Commands: `PING`, `LIST`, `GET`, `HELP`.
+  Spec: `code/docs/SPEC_COMM_MONITOR_v1_2.md`.
+- **Python SDK** (`statable-monitor`) — `StaTableMonitor` with
+  `connect()`, `ping()`, `list_variables()`, `get()`, `get_many()`,
+  `create_logger()` (psblog/v1 writer).
+- **PC-side reference GUI** — `python -m statable_monitor_gui`
+  (independent tool). Simulator mode + real COM (pyserial enumeration),
+  live values, psblog logging.
+  Standalone EXE: `code/tools/build_monitor_gui.ps1`
+  → `dist/StaTableMonitorGUI.exe` (~47 MB onefile).
+- **PowerSimBuilder integration** — generated `.psblog` files can be
+  opened directly in PowerSimBuilder for trace plotting.
+
+### Test coverage
+
+- 85 comm_monitor tests + 23 psblog tests (108 passed, 2 xfailed).
+- ARM link verification: `firmware.bin` 39,696 bytes
+  (comm_monitor enabled, 30 .c files).
+
+### Known limitations (v3.6.1 candidates)
+
+- `statable_comm_commands.c` (user-extensible command table) not yet generated.
+- `COMM_MONITOR_IDLE_MS` auto-clear (idle timeout) declared but not wired.
+
 ## What's New in v3.4.0
 
 **StateActionsDialog: combo-based editing + role/event management**

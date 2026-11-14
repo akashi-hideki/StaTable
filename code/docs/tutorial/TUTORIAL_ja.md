@@ -707,3 +707,79 @@ Application 層に「在庫切れ表示」を促すイベントを追加して�
 | Vending タブ版 XML | `docs/tutorial/vending_machine_vending_tab.xml` |
 | コンパイル検証ツール | `tools/verify_c_syntax.py` |
 | 生成ツール | `tools/gen_output_from_xml.py` |
+
+
+---
+
+## 付録 Z. 通信モニター入門（v3.6.0 追加）
+
+StaTable で定義したグローバル変数を、UART 経由で PC から読み出せる
+「通信モニター」機能を v3.6.0 で追加しました。本付録では最短手順を
+示します。詳細は `code/docs/SPEC_COMM_MONITOR_v1_2.md` を参照。
+
+### Z.1 XML で変数を宣言
+
+StaTable の「Edit → Global definitions」で、モニターしたい変数を
+宣言します（型は `uint8_t` / `uint16_t` / `uint32_t` / `int*` / `float` / `bool`）。
+
+例:
+    g_system_tick     uint32_t  1ms     Timer
+    oven_current_temp uint16_t  degC    Hardware
+    heater_top_duty   uint8_t   %       Hardware
+
+### Z.2 コード生成（GUI）
+
+1. 「Settings → Code generation settings」を開く
+2. 「Basic settings」タブ下部の **Communication monitor** を ON
+3. 「Code generation」ダイアログで **Comm monitor:** を ON
+4. Generate → 以下が追加生成される:
+   - `statable_comm_config.h`
+   - `statable_comm_monitor.c/h`
+   - `statable_comm_registry.c/h`
+   - `statable_comm_ring.c/h`
+   - `statable_types.h`（by_layer アグリゲータ）
+
+### Z.3 デバイス側の UART フック（手動）
+
+生成コードは「ユーザーが UART を用意する」前提です。STM32 HAL 例:
+
+    comm_monitor_init();
+    comm_monitor_set_tx(tx_fn);   // 1 byte 送信関数を渡す
+    HAL_UART_Receive_IT(&huart2, &rx_byte, 1);
+
+    void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+        if (huart->Instance == USART2) {
+            comm_monitor_on_rx_byte(rx_byte);
+            HAL_UART_Receive_IT(&huart2, &rx_byte, 1);
+        }
+    }
+
+    while (1) {
+        comm_monitor_poll();
+    }
+
+### Z.4 PC 側 GUI でログ取得
+
+1. `cd code && python -m statable_monitor_gui`
+   （または `dist\StaTableMonitorGUI.exe`）
+2. **Simulator** モードで試す:
+   - Connect → 5 変数表示
+   - Period (ms) = 200, Max samples = 100
+   - Start Log... → `session.psblog`
+   - 20 秒待機 → 自動停止（`@samples 100`）
+3. 実機の場合は **Simulator OFF** → Port コンボで COM 選択 → Connect
+
+### Z.5 PowerSimBuilder で波形表示
+
+生成した `.psblog` を PowerSimBuilder で開くと、変数ごとの時系列
+波形がプロットされます。シミュレータの三角波（25→200→25, 周期4秒）が
+正常に確認できればエンドツーエンド成立です。
+
+### Z.6 トラブルシューティング
+
+| 症状 | 対処 |
+|---|---|
+| `ACK ret=0 fw=...` が返らない | UART の TX/RX 配線、ボーレート（既定 115200）を確認 |
+| `NAK ret=1 reason=parse` | 送信フレームが `STX + body + CR + ETX` になっているか |
+| psblog の値が 0 のまま | `comm_monitor_poll()` が while(1) で呼ばれているか |
+| PowerSimBuilder で読めない | psblog の `@source` が `uart:<port>` 形式か確認 |

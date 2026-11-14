@@ -1928,3 +1928,74 @@ A. 为了用左→右表达时间流向，并利用横向显示器。
 ---
 
 End of TUTORIAL_zh.md v2.0
+
+---
+
+## 附录 Z. 通信监视器（v3.6.0 新增）
+
+v3.6.0 增加了通过 UART（ASCII 模式）读取全局变量的通信监视器功能。
+完整规范见 `code/docs/SPEC_COMM_MONITOR_v1_2.md`。
+
+### Z.1 在 XML 中声明变量
+
+在 "Edit -> Global definitions" 中声明可监视变量
+（uint8_t / uint16_t / uint32_t / int* / float / bool）。
+
+示例：
+    g_system_tick     uint32_t  1ms     Timer
+    oven_current_temp uint16_t  degC    Hardware
+    heater_top_duty   uint8_t   %       Hardware
+
+### Z.2 生成代码（GUI）
+
+1. Settings -> Code generation settings
+2. Basic settings 标签底部启用 **Communication monitor**
+3. Code generation 对话框中启用 **Comm monitor:**
+4. Generate -> 新增文件：
+   - statable_comm_config.h
+   - statable_comm_monitor.c/h
+   - statable_comm_registry.c/h
+   - statable_comm_ring.c/h
+   - statable_types.h（by_layer 聚合）
+
+### Z.3 设备侧 UART 挂接
+
+生成的代码由用户提供 UART。STM32 HAL 示例：
+
+    comm_monitor_init();
+    comm_monitor_set_tx(tx_fn);
+    HAL_UART_Receive_IT(&huart2, &rx_byte, 1);
+
+    void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+        if (huart->Instance == USART2) {
+            comm_monitor_on_rx_byte(rx_byte);
+            HAL_UART_Receive_IT(&huart2, &rx_byte, 1);
+        }
+    }
+
+    while (1) { comm_monitor_poll(); }
+
+### Z.4 用 PC GUI 采集日志
+
+1. `cd code && python -m statable_monitor_gui`
+   （或 `dist\StaTableMonitorGUI.exe`）
+2. Simulator 模式：
+   - Connect -> 5 个变量
+   - Period (ms) = 200, Max samples = 100
+   - Start Log... -> session.psblog
+   - 等 20 秒 -> 自动停止（@samples 100）
+3. 真实硬件：取消 Simulator，选择 COM 端口，Connect
+
+### Z.5 在 PowerSimBuilder 中绘图
+
+用 PowerSimBuilder 打开生成的 .psblog，可看到变量时序波形。
+若仿真器三角波（25->200->25，周期 4 秒）显示正常，则端到端链路成立。
+
+### Z.6 故障排查
+
+| 症状 | 检查 |
+|---|---|
+| 无 `ACK ret=0 fw=...` | UART TX/RX 接线、波特率（默认 115200） |
+| `NAK ret=1 reason=parse` | 帧格式必须为 STX + body + CR + ETX |
+| psblog 值全为 0 | `comm_monitor_poll()` 是否在 while(1) 中调用 |
+| PowerSimBuilder 无法导入 | `@source` 必须为 `uart:<port>` 格式 |

@@ -10,6 +10,34 @@
 
 ---
 
+## v3.6.0 新增功能（通信监视器）
+
+**发布日期**：TBD（开发中）
+
+### 亮点
+
+- **基于 UART 的全局变量监视（ASCII 模式）** — 生成代码中集成
+  `comm_monitor` 协议层。命令：`PING` / `LIST` / `GET` / `HELP`。
+  规范：`code/docs/SPEC_COMM_MONITOR_v1_2.md`。
+- **Python SDK**（`statable-monitor`）— `StaTableMonitor` +
+  `PStaBlogLogger`（psblog/v1 写入器）+ `xml_mapper`。
+- **PC 端参考 GUI** — `python -m statable_monitor_gui`（独立工具）。
+  仿真器模式 + 真实 COM 端口 + 实时值显示 + psblog 日志。
+  可打包为独立 EXE：`code/tools/build_monitor_gui.ps1`。
+- **PowerSimBuilder 集成** — 生成的 `.psblog` 可直接在
+  PowerSimBuilder 中打开并绘制曲线。
+
+### 测试覆盖
+
+- 通信监视器 85 项 + psblog 23 项（108 通过、2 预期失败）。
+- ARM 链接验证：`firmware.bin` 39,696 字节。
+
+### 已知限制（v3.6.1 计划）
+
+- `statable_comm_commands.c`（用户扩展命令表）暂未生成。
+- `COMM_MONITOR_IDLE_MS` 空闲超时暂未接线。
+
+
 ## v3.1 新功能
 
 > **简体中文界面支持** — 2026-10-01 发布
