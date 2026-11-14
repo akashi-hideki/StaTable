@@ -50,6 +50,8 @@ try:
     from .code_templates import CodeTemplates
     from .code_merger import CodeMerger
     from .config import CodeGenerationConfig, ConfigManager
+    from .comm_monitor.generator import CommMonitorGenerator
+    from .comm_monitor.registry import build_registry
 except ImportError:
     from type_mapper import CTypeMapper
     from naming_convention import CNamingConvention
@@ -1600,6 +1602,50 @@ class CCodeGenerator:
     def _generate_super_loop(self, sm, gd):
         return self._run_steps(self.super_loop_filename, sm, gd)
 
+    def _collect_comm_monitor_variables(self, global_defs):
+        """GlobalDefinitions.variables を build_registry 用 dict に変換。"""
+        result = []
+        variables = getattr(global_defs, 'variables', None) or []
+        for v in variables:
+            ctype = getattr(v, 'type', None)
+            if not ctype:
+                continue
+            if getattr(v, 'array_size', 0) > 0:
+                continue  # 配列は v3.6.0 では非対応
+            result.append({
+                'name': getattr(v, 'name', ''),
+                'type': str(ctype),
+                'unit': getattr(v, 'unit', '') or '-',
+                'group': getattr(v, 'group', '') or '-',
+                'description': getattr(v, 'description', '') or '',
+            })
+        return result
+
+    def _merge_comm_monitor_files(self, generated_files,
+                                  state_machine, global_defs):
+        """comm_monitor.enabled なら生成物を dict に追加して返す。"""
+        cfg = getattr(self.config, 'comm_monitor', None)
+        if cfg is None or not cfg.enabled:
+            return generated_files
+        var_dicts = self._collect_comm_monitor_variables(global_defs)
+        if not var_dicts:
+            logger.warning(
+                'comm_monitor enabled but no variables; skipping')
+            return generated_files
+        try:
+            registry = build_registry(var_dicts)
+            gen = CommMonitorGenerator(cfg, registry)
+            rendered = gen.render()
+        except ValueError as e:
+            logger.warning(f'comm_monitor: {e}; skipping')
+            return generated_files
+        for name, content in rendered.items():
+            generated_files[name] = content
+        logger.info(
+            f'comm_monitor: {len(rendered)} files merged '
+            f'({len(var_dicts)} vars)')
+        return generated_files
+
     def generate_all(self, state_machine, global_defs,
                      role_function_library=None):
         self._setup_layer_generators(state_machine)
@@ -1620,6 +1666,8 @@ class CCodeGenerator:
                 generated_files[filename] = method(
                     state_machine, global_defs
                 )
+            generated_files = self._merge_comm_monitor_files(
+                generated_files, state_machine, global_defs)
             return generated_files
         finally:
             self._current_role_function_library = prev
@@ -1661,6 +1709,8 @@ class CCodeGenerator:
                 generated_files[filename] = self._run_steps_multi(
                     filename, norm_layers, global_defs
                 )
+            generated_files = self._merge_comm_monitor_files(
+                generated_files, state_machine, global_defs)
             return generated_files
         finally:
             self._current_role_function_library = prev
@@ -1715,6 +1765,8 @@ class CCodeGenerator:
                     fname, layers, global_defs
                 )
                 generated_files[fname] = content
+            generated_files = self._merge_comm_monitor_files(
+                generated_files, state_machine, global_defs)
             return generated_files
         finally:
             self._current_role_function_library = prev
