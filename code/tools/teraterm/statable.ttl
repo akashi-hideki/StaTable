@@ -1,0 +1,41 @@
+; statable.ttl - TeraTerm macro for StaTable comm monitor (ASCII mode)
+; Usage: TeraTerm -> Control -> Macro -> Load this file
+; Wire: STX(0x02) + body + CR(0x0D) + ETX(0x03)
+
+:loop
+  listbox 'StaTable Commands' 'PING|LIST|HELP|GET|Custom|Quit'
+  if result == 0 goto end
+  if inputstr == 'PING' goto send_ping
+  if inputstr == 'LIST' goto send_list
+  if inputstr == 'HELP' goto send_help
+  if inputstr == 'GET' goto send_get
+  if inputstr == 'Custom' goto send_custom
+  if inputstr == 'Quit' goto end
+  goto loop
+
+:send_ping
+  send #2 'PING' #13 #3
+  goto loop
+
+:send_list
+  send #2 'LIST' #13 #3
+  goto loop
+
+:send_help
+  send #2 'HELP' #13 #3
+  goto loop
+
+:send_get
+  inputbox 'Enter variable ID(s)' 'GET'
+  if result == 0 goto loop
+  send #2 'GET ' inputstr #13 #3
+  goto loop
+
+:send_custom
+  inputbox 'Command text (without STX/CR/ETX)' 'GET 0,1 compact'
+  if result == 0 goto loop
+  send #2 inputstr #13 #3
+  goto loop
+
+:end
+  end
