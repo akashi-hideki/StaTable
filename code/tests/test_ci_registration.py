@@ -30,7 +30,7 @@ def find_registered() -> set[str]:
     #           python tests\\test_xxx.py
     #           coverage run --parallel-mode tests/test_xxx.py
     return set(re.findall(
-        r"(?:python|coverage\s+run(?:\s+--parallel-mode)?)\s+tests[\\/](test_\w+\.py)",
+        r"(?:python|coverage\s+run(?:\s+--parallel-mode)?(?:\s+-m\s+pytest)?)\s+tests[\\/](test_\w+\.py)",
         text,
     ))
 
