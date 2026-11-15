@@ -1,1 +1,1 @@
-"""v3.6.0 通信モニター生成器。"""
+"""v3.6.0 communication monitor generator."""

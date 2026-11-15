@@ -12,7 +12,7 @@ class CommMonitorGenerator:
         self.vars = variables
 
     def render(self) -> dict[str, str]:
-        """生成ファイルを filename -> content の dict で返す（書込なし）。"""
+        """Return generated files as a filename -> content dict (no writing)."""
         crc = registry_crc32(self.vars)
         entries = "\n".join(
             f"    {{ &g_ctx.data.{v.name}, {v.size} }}," for v in self.vars

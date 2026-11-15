@@ -1,4 +1,4 @@
-"""XML からレジストリを構築。"""
+"""Build the registry from XML."""
 import zlib
 from dataclasses import dataclass
 from xml.etree import ElementTree as ET

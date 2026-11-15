@@ -1,4 +1,4 @@
-"""PC 側ポーリング制御（最小 100 ms）。"""
+"""PC-side polling control (minimum 100 ms)."""
 import threading
 import time
 

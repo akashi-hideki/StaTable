@@ -1,4 +1,4 @@
-"""XML 変数モデルからレジストリ（ID 順）を構築。"""
+"""Build the registry (ordered by ID) from the XML variable model."""
 from dataclasses import dataclass
 from typing import Iterable
 import zlib

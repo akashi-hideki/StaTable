@@ -1603,7 +1603,7 @@ class CCodeGenerator:
         return self._run_steps(self.super_loop_filename, sm, gd)
 
     def _collect_comm_monitor_variables(self, global_defs):
-        """GlobalDefinitions.variables を build_registry 用 dict に変換。"""
+        """Convert GlobalDefinitions.variables to a dict for build_registry."""
         result = []
         variables = getattr(global_defs, 'variables', None) or []
         for v in variables:
@@ -1611,7 +1611,7 @@ class CCodeGenerator:
             if not ctype:
                 continue
             if getattr(v, 'array_size', 0) > 0:
-                continue  # 配列は v3.6.0 では非対応
+                continue  # arrays are not supported in v3.6.0
             result.append({
                 'name': getattr(v, 'name', ''),
                 'type': str(ctype),
@@ -1622,7 +1622,7 @@ class CCodeGenerator:
         return result
 
     def _merge_comm_monitor_files(self, generated_files, global_defs):
-        """comm_monitor.enabled なら生成物を dict に追加して返す。"""
+        """Add generated files to the dict if comm_monitor.enabled, then return."""
         cfg = getattr(self.config, 'comm_monitor', None)
         if cfg is None or not cfg.enabled:
             return generated_files

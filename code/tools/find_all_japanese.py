@@ -6,7 +6,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 JP_RE = re.compile(r'[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\uFF00-\uFFEF]')
 
-DIRS = ["statable", "statable_gui", "codegen"]
+DIRS = ["statable", "statable_gui", "codegen", "statable_monitor", "statable_monitor_gui", "eclipse_installer"]
 SKIP = {"tools", "tests", "__pycache__", "_backup"}
 
 hits = 0

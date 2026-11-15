@@ -1,4 +1,4 @@
-"""CommMonitor の設定値（v3.6.0 / GET 専用 / ASCII のみ）。"""
+"""CommMonitor configuration (v3.6.0 / GET-only / ASCII-only)."""
 from dataclasses import dataclass
 
 MIN_POLL_PERIOD_MS = 100
