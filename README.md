@@ -15,7 +15,7 @@
 
 ## What's New in v3.6.0 (Communication Monitor)
 
-**Release date**: TBD (in development)
+**Released**: 2026-11-15
 
 ### Highlights
 
@@ -753,6 +753,31 @@ generation causing undefined-symbol link errors.
 - S-3 Step 2: ubuntu-26.04 preview job (2026-10-19 onwards).
 
 
+### Eclipse Installer v0.1.2 (standalone) — Released 2026-11-15
+
+**Fixes the "progress dialog appears stuck" bug on the frozen EXE.**
+
+- **Async install on QThread** — `install()` runs on a worker thread with
+  a modal `QProgressDialog`, so the GUI stays responsive during code
+  generation and file copy.
+- **Startup preload** — `_preload_codegen_modules()` scheduled via
+  `QTimer.singleShot(100, ...)` in `main()` to avoid frozen-EXE lazy
+  imports stalling the first Install.
+- **Output directory guard** — `_validate_output_dir()` refuses to write
+  into the installer's own folder.
+- **Diagnostic logging** — `%TEMP%\eclipse_installer_debug.log` (UTF-8).
+- **Spec hiddenimports** — `statable.*` / `codegen.*` added to
+  `eclipse_installer.spec`.
+
+Verified: Install completes in ~1s on frozen EXE (was: indefinite stall).
+
+### StaTable Monitor GUI v3.6.0 (standalone) — Released 2026-11-15
+
+- PC-side reference GUI (`python -m statable_monitor_gui`)
+- Simulator mode + real COM (pyserial enumeration)
+- psblog/v1 logging, PowerSimBuilder integration
+- Standalone EXE: `StaTableMonitorGUI-v3.6.0-win64.zip` (~47 MB)
+- See `code/docs/SPEC_COMM_MONITOR_v1_2.md` for the protocol spec.
 ### Eclipse Installer (v0.1.0 / standalone)
 
 **Separate app**, not bundled with StaTable itself.

@@ -1,4 +1,4 @@
-## [3.6.0] — in development
+﻿## [3.6.0] — 2026-11-15
 
 ### Added
 - **comm_monitor protocol layer** (ASCII mode): PING / LIST / GET / HELP.
