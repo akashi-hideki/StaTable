@@ -1767,6 +1767,9 @@ class CCodeGenerator:
             # "statable_types.h" directly (flat-mode compatible name).
             # Provide an aggregator unifying common + per-layer headers.
             _agg = [
+                '#ifndef STATABLE_TYPES_H',
+                '#define STATABLE_TYPES_H',
+                '',
                 '/**',
                 ' * @file    statable_types.h',
                 ' * @brief   Aggregator of per-layer type headers',
@@ -1784,6 +1787,7 @@ class CCodeGenerator:
             _agg.append('')
             _agg.append('extern SystemContext_t g_ctx;')
             _agg.append('')
+            _agg.append('#endif /* STATABLE_TYPES_H */')
             generated_files['statable_types.h'] = '\n'.join(_agg) + '\n'
             generated_files = self._merge_comm_monitor_files(generated_files, global_defs)
             return generated_files

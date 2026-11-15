@@ -1,4 +1,4 @@
-# StaTable
+﻿# StaTable
 
 **MISRA C:2012-aware state machine design and C code generation for embedded systems.**
 
@@ -7,7 +7,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/statable.svg)](https://pypi.org/project/statable/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-1917%20PASS-green.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-2065%20PASS-green.svg)]()
 [![MISRA](https://img.shields.io/badge/MISRA-C%3A2012-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
@@ -103,7 +103,7 @@ The New Project Wizard is fully translated to **简体中文**.
 ### Test Coverage
 
 - **+58 new tests** (`test_v3_2_s1_wizard.py`): templates, generation, rename, menu cleanup
-- Total: **1917 PASS / 0 FAIL / 2 SKIP** across 54 suites
+- Total: **2065 PASS / 0 FAIL / 2 SKIP** across 61 suites
 
 ---
 
@@ -186,7 +186,7 @@ custom tooling from scratch.
 - ✅ **Marker-based user code preservation** — regenerate without losing your custom code
 - ✅ **Cell-level actions and relations** — pre/post actions, sequential/exclusive/group relations
 - ✅ **Pure Python** — easy to integrate into your CI/CD pipeline
-- ✅ **54 test suites, 1917 PASS / 0 FAIL / 2 SKIP**
+- ✅ **61 test suites, 2065 PASS / 0 FAIL / 2 SKIP**
 
 ### v2.7 Highlights
 
@@ -240,7 +240,7 @@ diagrams, and generate production-ready C code with a single click.*
 | **Ubuntu 22.04+** | ⚠️ **Auto tests pass on CI** | GUI not yet manually verified — feedback welcome |
 | **macOS** | ⚠️ **Not tested** | Community testing welcome |
 
-**Note for Linux users**: The automated test suite (54 suites, 1917 tests)
+**Note for Linux users**: The automated test suite (61 suites, 2065 tests)
 passes on Ubuntu via GitHub Actions, but the GUI has only been manually
 verified on Windows. If you try it on Linux, please report your experience
 via [GitHub Issues](https://github.com/akashi-hideki/StaTable/issues).
@@ -332,7 +332,7 @@ python tests/test_v2_2_p1.py
 python tests/test_v2_7_p4.py
 ```
 
-Expected: **1917 PASS / 0 FAIL / 2 SKIP** across 54 suites.
+Expected: **2065 PASS / 0 FAIL / 2 SKIP** across 61 suites.
 
 ---
 
@@ -665,7 +665,7 @@ These will drive the next iteration of the prompt and validator.
 - **E2E script** `tools/e2e_eclipse_installer.py` (local-only):
   L3 compile, L4 link, L5 QEMU UART banner
 
-**Tests:** 54 suites / **1917 PASS** / 0 FAIL.
+**Tests:** 61 suites / **2065 PASS** / 0 FAIL.
 
 **Remaining (v3.5.4+)**
 
@@ -741,7 +741,7 @@ generation causing undefined-symbol link errors.
 
 **Verification**
 
-- 54 test suites / **1917 PASS** / 0 FAIL (Python 3.10-3.13).
+- 61 test suites / **2065 PASS** / 0 FAIL (Python 3.10-3.13).
 - gcc + ARM Cortex-M4 syntax + link verification: **PASS**
   (firmware.bin 28540 bytes, identical to v3.4.3).
 - GUI end-to-end: WinError 5 resolved; Clean && Regenerate flow
@@ -1007,7 +1007,7 @@ python tests/test_v2_3_p1.py
 # ...
 ```
 
-All 54 suites should pass (1917 PASS / 2 SKIP).
+All 61 suites should pass (2065 PASS / 2 SKIP).
 
 ---
 
